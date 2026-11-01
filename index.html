@@ -12039,6 +12039,7 @@
   #pharmacyPage .ph-fx .icn { width: 15px; height: 15px; flex: none; color: var(--ph-herb); }
   #pharmacyPage .ph-fx b { display: inline-block; color: var(--ph-ink); font-weight: 700; font-variant-numeric: tabular-nums; }
   #pharmacyPage .ph-fx b.warn { color: var(--ph-zero-deep); }
+  #pharmacyPage .ph-fx > .g.sent .icn { color: var(--ph-good-deep); }
   #pharmacyPage .ph-fx .of { color: var(--ph-faint); font-variant-numeric: tabular-nums; }
   #pharmacyPage .ph-fx .ph-pf-chips { margin: 0; }
   #pharmacyPage .ph-fx .ph-pf-chip { height: 28px; padding: 0 10px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white, #fff); color: var(--ph-herb-deep); font: 600 var(--fs-12-5)/1 var(--font-body); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; cursor: pointer; }
@@ -21009,6 +21010,16 @@
   #pharmacyPage .ph-mc-grp.fits .gl svg { color: var(--ph-herb); }
   #pharmacyPage .ph-mc-grp .gcw { display: grid; grid-template-rows: 1fr; }
   #pharmacyPage .ph-mc-grp .gc { display: flex; flex-wrap: wrap; gap: 6px; min-height: 0; overflow: hidden; }
+  /* the groups fold (her 2026-11-01 picks, idea 11): the plan's own groups stay, the rest behind one "All · n ▾" chip
+     (the Dropdown shape, 32px / 6px); open = the other groups unfold below as the same rows. On the phone it is a row like
+     the groups above it (the container block below). */
+  #pharmacyPage .ph-mc-grp.all { grid-template-columns: minmax(0, 1fr); padding: 4px 10px 6px; }
+  #pharmacyPage .ph-mc-grp.all .gl { width: max-content; height: 32px; line-height: 30px; padding: 0 12px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); color: var(--ph-herb-deep); font-size: var(--fs-13); font-weight: 600; cursor: pointer; flex-wrap: nowrap; }
+  #pharmacyPage .ph-mc-grp.all .gl:hover { border-color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-mc-grp.all .gl em { color: var(--ph-soft); }
+  #pharmacyPage .ph-mc-grp.all .gl .gchev { display: block; margin-left: 2px; transition: transform .25s; }
+  #pharmacyPage .ph-mc-grp.all.open .gl .gchev { transform: rotate(180deg); }
+  @media (prefers-reduced-motion: reduce) { #pharmacyPage .ph-mc-grp.all .gl .gchev { transition: none; } }
   @container mc (max-width: 880px) {
     #pharmacyPage .ph-mc-grp { grid-template-columns: minmax(0, 1fr); gap: 0; }
     #pharmacyPage .ph-mc-grp .gl { cursor: pointer; flex-wrap: nowrap; }
@@ -21020,6 +21031,9 @@
     #pharmacyPage .ph-mc-grp.open .gcw { padding-top: 6px; }
     #pharmacyPage .ph-mc-grps { gap: 2px; }
     #pharmacyPage .ph-mc-grp:not(.open) { padding-top: 4px; padding-bottom: 4px; }
+    #pharmacyPage .ph-mc-grp.all { padding: 4px 10px; }
+    #pharmacyPage .ph-mc-grp.all .gl { width: 100%; height: auto; line-height: 32px; padding: 0; border: 0; background: none; color: var(--ph-soft); font-size: var(--fs-12); }
+    #pharmacyPage .ph-mc-grp.all .gl .gchev { margin-left: auto; }
   }
   /* Plan phases: every phase of a template with the wording it uses; a choice is written on the TEMPLATE */
   #pharmacyPage .ph-mc-pvh { display: flex; align-items: center; gap: 8px; margin: 10px 0 4px; padding: 0 10px; font-size: var(--fs-10-5); font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); }
@@ -60679,8 +60693,11 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       if (e.target.closest("[data-ck-save-tmpl]")) { phCkSaveTemplate(); return; }
       // Copy message = the message alone; the number copies from its own Copy button (data-ck-copy-num)
       const ckCopyBtn = e.target.closest("[data-ck-copy]");
-      if (ckCopyBtn) { phCkCopy(phCkCurrentText(), "✓ Message copied", ckCopyBtn); return; }
+      if (ckCopyBtn) { phCkCopy(phCkCurrentText(), ["✓ Copied", null, () => phCkSentMark("copy", "✓ Copied")], ckCopyBtn); return; }
       if (e.target.closest("[data-ck-gmsg]")) { phCkOpenMessages(); return; }
+      // the panel's Text / Email links leave the same mark as they go (her 2026-11-01 pick 8); the row still closes on Done
+      const ckLnk = e.target.closest("#phCkSms, #phCkMail");
+      if (ckLnk && ckLnk.getAttribute("aria-disabled") !== "true") phCkSentMark(ckLnk.id === "phCkSms" ? "sms" : "email", "");
       // bulk re-type (Settings) -- see the BULK RE-TYPE section
       if (e.target.closest("[data-ph-retype-apply]")) { phRetypeApply(); return; }
       if (e.target.closest("[data-ph-retype-undo]")) { phRetypeUndoApply(); return; }
@@ -69612,7 +69629,8 @@ or changing anything in Cliniko.
     let list = [];
     if (row.rec && Array.isArray(row.rec.checkins)) list = row.rec.checkins;
     else if (row.patientKey) list = (phPatientPeek(row.patientKey) || {}).contactLog || [];
-    const last = list.slice().sort((a, b) => (b.at || 0) - (a.at || 0))[0];
+    // a "sent today" mark (phMsgSentMark) carries no outcome: it never shadows the last real one
+    const last = list.filter(c => !c.sent).sort((a, b) => (b.at || 0) - (a.at || 0))[0];
     return last ? last.going : null;
   }
   // tabKey = which plan tab the message is for (null = the first); phaseSel = a phase she tapped (null = the live one)
@@ -69906,7 +69924,7 @@ or changing anything in Cliniko.
   function phMsgGroupsHtml(row, c, f, tabs, tab) {
     const groups = phCkGroupedMoments(phCkAllMoments(), tabs, tab, f.grpOpen, f.tmpl, !!row.rec);
     setTimeout(phMcFitGroups, 0);
-    return groups.map(g => {
+    const draw = g => {
       const tags = g.mine.map(t => `<span class="ptag" style="--cc:${phMcColour(t.tpl)}"><i></i><span>${esc(t.title)}</span></span>`).join("");
       let chips = g.moments.length
         ? g.moments.map(m => `<button type="button" class="ph-mc-chip${f.tmpl === m ? " on" : ""}" data-ck-tmpl="${esc(m)}" aria-pressed="${f.tmpl === m}">${esc(phCkMomentLabel(m))}</button>`).join("")
@@ -69917,7 +69935,16 @@ or changing anything in Cliniko.
         chips = `<details class="ph-mc-dd"><summary class="ph-mc-chip dd${onIn ? " on" : ""}">${esc(onIn ? phCkMomentLabel(f.tmpl) : g.label + " messages")}</summary><div class="ddl">${chips}</div></details>`;
       }
       return `<div class="ph-mc-grp${g.lead ? " fits" : ""}${g.plan2 ? " plan2" : ""}${g.moments.includes(f.tmpl) ? " has-on" : ""}${g.open ? " open" : ""}" data-mc-grp="${esc(g.track)}"><button type="button" class="gl" data-mc-gfold="${esc(g.track)}" aria-expanded="${g.open}">${phMcIc(g.icon)}<span class="gn">${esc(g.label)}</span><em>${g.moments.length}</em>${phMcIc("i-chev-d", "gchev")}${tags}</button><div class="gcw"><div class="gc">${chips}</div></div></div>`;
-    }).join("");
+    };
+    // the fold (her 2026-11-01 picks, idea 11 of the 29 Oct audit): the plan's own groups + Herbs when herbs are on stay (the
+    // groups phCkGroupedMoments already calls fitting, and the one holding her pick); with no plan on file the row's own kind
+    // stays (Herbs for a herb row, Every visit for an acupuncture one); the rest sit behind "All · n ▾" (f.allOpen, one tap)
+    let shown = groups.filter(g => g.fitting || g.moments.includes(f.tmpl));
+    if (!shown.length) { const own = row.rec ? "herbs" : "everyVisit"; shown = groups.filter(g => g.track === own); }
+    const rest = groups.filter(g => !shown.includes(g));
+    if (!shown.length || !rest.length) return groups.map(draw).join("");
+    const allRow = `<div class="ph-mc-grp all${f.allOpen ? " open" : ""}" data-mc-grp="all"><button type="button" class="gl" data-mc-all="1" aria-expanded="${!!f.allOpen}" title="${f.allOpen ? "Fewer" : "Every message group"}"><span class="gn">All</span><em>${rest.length}</em>${phMcIc("i-chev-d", "gchev")}</button></div>`;
+    return shown.map(draw).join("") + allRow + (f.allOpen ? rest.map(draw).join("") : "");
   }
   // a group whose joined bar would wrap onto a second line becomes the same dropdown (TAPPABLE THINGS rule 3); runs after each paint
   function phMcFitGroups() {
@@ -70018,7 +70045,7 @@ or changing anything in Cliniko.
     const n = msg ? msg.length : 0;
     return `<div class="ph-mc-meta"><button type="button" class="ph-mc-chip mine" data-ck-save-tmpl="1" title="Keep this wording as your own ${esc(tmplRow ? tmplRow.name : "")} message">＋ Save mine</button><div class="ph-mc-long${n > 400 ? " on" : ""}" data-mc-long><div><span>Long message · <b>${n}</b> characters</span></div></div></div>`;
   }
-  const phMcFormDefaults = () => ({ tabKey: null, phase: null, driver: "", symOn: false, symOff: [], view: "pick", chooser: null, tplOpen: {}, otherOpen: false, justPlanned: [] });
+  const phMcFormDefaults = () => ({ tabKey: null, phase: null, driver: "", symOn: false, symOff: [], view: "pick", chooser: null, tplOpen: {}, otherOpen: false, allOpen: false, justPlanned: [] });
   // the message text for a form: the wording, tone, layers, and (when the layer is on) the symptoms sentence
   const phMcTemplate = (f, c, name) => phCkTemplate(f.tmpl, c, f.tone, f.sup, f.bbt && phCkBbtOffered(f.tmpl, name), f.symOn ? phMsgSymIncluded(name, f) : null);
   /* ---- motion (her 2026-10-13 picks: typing dots then the text grows; gold on what a layer adds; the tone thumb slides;
@@ -70167,7 +70194,7 @@ or changing anything in Cliniko.
     const k = phMsgPhaseKey(tab.phases[i]);
     return tab.tpl ? (tab.tpl.phases || []).findIndex(p => phMsgPhaseKey(p) === k) : -1;
   };
-  const PH_MC_HOOKS = "[data-mc-gfold],[data-mc-tab],[data-mc-ph],[data-mc-view],[data-mc-sym-layer],[data-mc-sym],[data-mc-wp],[data-mc-set],[data-mc-reset],[data-mc-other],[data-mc-tplfold],[data-mc-chmore],[data-mc-nowording]";
+  const PH_MC_HOOKS = "[data-mc-gfold],[data-mc-all],[data-mc-tab],[data-mc-ph],[data-mc-view],[data-mc-sym-layer],[data-mc-sym],[data-mc-wp],[data-mc-set],[data-mc-reset],[data-mc-other],[data-mc-tplfold],[data-mc-chmore],[data-mc-nowording]";
   // every click on the composer's own controls (plan tabs, phase pills, Her symptoms, Plan phases ...). One handler for the
   // check-in panel and the profile Messages page: `f` = that surface's form, `refresh` = how it repaints. True = handled.
   function phMcClick(e, f, row, refresh) {
@@ -70187,6 +70214,7 @@ or changing anything in Cliniko.
       g.classList.toggle("open", open); el.setAttribute("aria-expanded", open); f.grpOpen[g.dataset.mcGrp] = open;
       return true;
     }
+    if (t.closest("[data-mc-all]")) { f.allOpen = !f.allOpen; phMcPre("view"); refresh(); return true; }
     if ((el = t.closest("[data-mc-tab]"))) {
       if (tab && el.dataset.mcTab === tab.key) return true;
       phMcPre("tab"); repick(el.dataset.mcTab, null); refresh(); return true;
@@ -70276,9 +70304,18 @@ or changing anything in Cliniko.
     const w = window.open(PH_CK_GMSG_NEW, PH_CK_GMSG_TARGET);
     if (w && w.focus) w.focus();
     if (phCkForm) { phCkForm.sent = true; if (!phCkForm.going) phCkForm.going = "noreply"; }
-    phFlashShow("✓ Number + message copied — paste it into Google Messages");
-    phCkRender();
+    phCkSentMark("gmsg", "✓ Copied for Google Messages");
     phMcBtnDone(document.querySelector("[data-ck-gmsg]"), "Copied · opening");
+  }
+  // the check-in panel's four taps leave the one "sent today" mark (her 2026-11-01 pick 8), with keepRows: the open row stays
+  // on Communications → Due until her Done, as before; the panel repaints for its "Sent · remind me tomorrow" state
+  function phCkSentMark(via, prefix) {
+    const row = phCkRow();
+    if (row && phCkForm) {
+      phCkForm.sent = true;
+      phMsgSentAfter(row.rec ? row.rec.patient : row.patientName, row, via, phCkForm, true, prefix);
+    }
+    phCkRender();
   }
   // ---- "already booked" awareness (her ask 2026-09-03: "i already have this
   // patient booked for a followup. how to auto retrieve this data from
@@ -72726,6 +72763,53 @@ or changing anything in Cliniko.
     });
     savePharmacy();
     return stats;
+  }
+  // ---- the "sent today" mark (her 2026-11-01 picks, idea 11 of the 29 Oct audit; BUILD-NOTES "Messages: one sent mark") ----
+  // The Text / Messages / Copy / Email tap on the one composer writes ONE entry on the patient's contact log (the list the
+  // phase record and the last-outcome reader already read), then closes every due or overdue row of that patient on
+  // Communications → Due through the same done doors ✓ Done uses (so the Dashboard count and the menu badge follow); a row
+  // not due yet stays. The check-in panel passes keepRows: its row closes on her Done, as before. Returns the undo (the mark
+  // out, every flag back), null when the save failed. Nothing is sent by the app, as ever.
+  const PH_MSG_VIA = { sms: "by text", gmsg: "by Messages", copy: "copied", email: "by email" };
+  function phMsgSentMark(name, row, via, f, keepRows) {
+    const rec = phPatientRec(name); if (!rec) return null;
+    const key = phPatientKey(name), today = keyOf(TODAY), moment = (f && f.tmpl) || "";
+    const mark = { id: uid(), at: Date.now(), date: today, kind: row.kind, sent: via, moment, label: moment ? phCkMomentLabel(moment) : "", going: null, concerns: [], next: null, note: "" };
+    rec.contactLog = rec.contactLog || []; rec.contactLog.push(mark);
+    const flipped = [];
+    let acuWas = null, quietWas, acuDone = false, quietDone = false;
+    if (!keepRows) {
+      (PHARMACY.followups || []).forEach(r => {
+        if (phPatientKey(r.patient) !== key) return;
+        ["checkIn", "review"].forEach(k => {
+          const c = r[k]; if (!c || c.done) return;
+          if ((c.on && c.on <= today) || (row.rec && row.rec.id === r.id)) { c.done = true; flipped.push({ r, k }); }
+        });
+      });
+      if (phCommAcuRows().some(r => !r.done && r.patientKey === key)) { acuWas = rec.acuFu ? Object.assign({}, rec.acuFu) : null; acuDone = true; phAcuFuSetDone(name, true); }
+      if (phCommQuietRows(new Set()).some(r => r.patientKey === key)) { quietWas = rec.quietDismissedTouch; quietDone = true; phCommQuietDismiss(name); }
+    }
+    if (savePharmacy() === false) return null;
+    return () => {
+      rec.contactLog = (rec.contactLog || []).filter(x => x.id !== mark.id);
+      flipped.forEach(({ r, k }) => { r[k].done = false; });
+      if (acuDone) { if (acuWas) rec.acuFu = acuWas; else delete rec.acuFu; }
+      if (quietDone) { if (quietWas === undefined) delete rec.quietDismissedTouch; else rec.quietDismissedTouch = quietWas; }
+      savePharmacy();
+    };
+  }
+  // the latest mark on a patient: the Messages band's first tile
+  const phMsgLastSent = key => ((phPatientPeek(key) || {}).contactLog || []).filter(c => c.sent).sort((a, b) => (b.at || 0) - (a.at || 0))[0] || null;
+  const phMsgSentWords = m => `Sent · ${m.label || "message"} ${PH_MSG_VIA[m.sent] || ""}`.trim();
+  // after a tap on either surface: the mark, the one toast with Undo (6 s), the band repainted in place (its sig is the mark's id)
+  function phMsgSentAfter(name, row, via, f, keepRows, prefix) {
+    const undo = phMsgSentMark(name, row, via, f, keepRows);
+    const sync = () => { try { presBandsSync(document.getElementById("pharmacyPage")); } catch (e) {} };
+    if (!undo) { presSavedToast("Could not be saved"); return null; }
+    const moment = f && f.tmpl ? ` · ${phCkMomentLabel(f.tmpl)}` : "";
+    presSavedToast(prefix ? `${prefix} · sent today${moment}` : `✓ Sent today${moment}`, { undo: () => { undo(); sync(); if (phCkOpen) phCkRender(); } });
+    sync();
+    return undo;
   }
   function phMsgMarkSent(id, sent) {
     const m = phMsgPrepared().find(x => x.id === id); if (!m) return;
@@ -82680,7 +82764,10 @@ or changing anything in Cliniko.
     const nx = phCkNextAppt(key), today = keyOf(TODAY);
     // her 2026-10-13 pick: a slim band, each tile one label over one line (value + a small note beside it)
     const rel = nx ? phFuRelDay(nx.date) : "", relCap = rel ? rel.charAt(0).toUpperCase() + rel.slice(1) : "";
+    const sent = phMsgLastSent(key);
     return [
+      // her 2026-11-01 pick (idea 11): the latest "sent today" mark leads the band; the sig is the mark's id, so the tap repaints it in place
+      ...(sent ? [{ cls: "sent", sig: sent.id, ic: "check", v: sent.date === today ? "Today" : presBandDay(sent.date), t: phMsgSentWords(sent) }] : []),
       { cls: "plan", sig: planned.join(","), ic: "msg", v: planned.length, t: planned.length ? `Planned · next ${presBandDay(planned[0])}` : "Nothing planned" },
       { cls: "next", sig: nx ? `${nx.date}${nx.time || ""}` : "", ic: "cal", v: nx ? (nx.date === today ? "Today" : presBandDay(nx.date)) : "—", t: `Next visit · ${nx ? [nx.date === today ? "" : relCap, nx.time ? phCkTime12(nx.time) : (nx.date === today ? "booked" : "")].filter(Boolean).join(" · ") || "booked" : "not booked"}` },
       // the number and the email stay tap-to-copy (her 2026-10-13: "mobile - show somewhere so i can copy");
@@ -121250,7 +121337,7 @@ or changing anything in Cliniko.
           ? `${pd(a.date)} — herbs only, no acupuncture${a.outcome ? ` (${esc(a.outcome)})` : ""}`
           : `${pd(a.date)}${a.points ? ` — ${esc(a.points)}` : ""}${a.outcome ? ` (${esc(a.outcome)})` : ""}`).join("; ")),
         line("Dispensed", rc.dispenses.map(x => `${pd(x.date)} ${esc(x.formula || x.what || "")}`).join("; ")),
-        line("Check-ins", rc.checkIns.map(c => [pd(c.date), c.going, c.next, c.note].filter(Boolean).map(esc).join(" · ")).join("; ")),
+        line("Check-ins", rc.checkIns.map(c => [pd(c.date), c.sent ? `sent · ${c.label || "message"}` : null, c.going, c.next, c.note].filter(Boolean).map(esc).join(" · ")).join("; ")),
         line("Periods", rc.periods.map(p => pd(p.lmp)).join(", ")),
       ].filter(Boolean);
       // her pick 3, 2026-09-22 (soft skip): a skipped phase marks itself
@@ -123135,7 +123222,7 @@ or changing anything in Cliniko.
     }
     if (kind === "outcome") {
       // the last three: enough to read a direction, short enough to sit in a cell
-      const gathered = rc.checkIns.slice(-3).map(ck => {
+      const gathered = rc.checkIns.filter(ck => !ck.sent).slice(-3).map(ck => {
         const going = (PH_CK_GOING.find(x => x[0] === ck.going) || [])[1] || "";
         const txt = (ck.note || "").trim();
         return line(`${txt ? `“${esc(txt)}”` : ""}${going ? `${txt ? " " : ""}<b>${esc(going)}</b>` : ""} ${d(ck.date)}`);
@@ -134060,8 +134147,10 @@ Please let me know if you have any questions.`;
     const c = phCkContext(row);
     const withPhone = txt => c.phone ? `${c.phone}\n${txt}` : txt;
     // Copy message = the message alone (her 2026-10-13 ask); the number has its own tap-to-copy in the Reach tile
+    // her 2026-11-01 picks (idea 11): each of these four taps leaves the one "sent today" mark (phMsgSentAfter: the mark on the
+    // patient, this patient's due rows closed, the band's first tile, the toast with Undo). A blocked copy leaves none.
     const copyBtn = e.target.closest("[data-pres-msg-copy]");
-    if (copyBtn) { phCkCopy(presMsgCurrentText(), "✓ Message copied", copyBtn); return true; }
+    if (copyBtn) { phCkCopy(presMsgCurrentText(), ["✓ Copied", null, () => phMsgSentAfter(row.patientName, row, "copy", f, false, "✓ Copied")], copyBtn); return true; }
     const gBtn = e.target.closest("[data-pres-msg-gmsg]");
     if (gBtn) {
       const text = withPhone(presMsgCurrentText());
@@ -134069,9 +134158,12 @@ Please let me know if you have any questions.`;
       const w = window.open(PH_CK_GMSG_NEW, PH_CK_GMSG_TARGET);
       if (w && w.focus) w.focus();
       phMcBtnDone(gBtn, "Copied · opening");
-      presSavedToast("✓ Number + message copied — paste it into Google Messages");
+      phMsgSentAfter(row.patientName, row, "gmsg", f, false, "✓ Copied for Google Messages");
       return true;
     }
+    // the Text and Email links go on to the phone's or the computer's own app; the mark is left as they go (false: the link still opens)
+    const lnk = e.target.closest("#presFuMsgSms, #presFuMsgMail");
+    if (lnk && lnk.getAttribute("aria-disabled") !== "true") { phMsgSentAfter(row.patientName, row, lnk.id === "presFuMsgSms" ? "sms" : "email", f, false, ""); return false; }
     if (e.target.closest("[data-pres-msg-sched-toggle]")) { f.schedOpen = !f.schedOpen; presFuMsgRefresh(); return true; }
     const schedBtn = e.target.closest("[data-pres-msg-schedule]");
     if (schedBtn) { presMsgSchedule(t, row, f, c, schedBtn); return true; }
