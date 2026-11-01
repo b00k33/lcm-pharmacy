@@ -426,10 +426,16 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 - **Consistency across pages is MY job to enforce before she ever notices** —
   a header variant, button shape, or spacing rule that exists on one page
   only is a bug even if it works. Every page goes through
-  `phShellHead(title, "N things", strip?)` + `PH_TOPBAR_ACTIONS` (the first
-  non-ghost verb becomes the one round primary-action disc, `ghost:true`
-  items fold into the single ⋯ menu); never hand-build a page-only header or
-  override `.ph-shell-titlebar` locally.
+  `phShellHead(title, "N things", strip?)` + `PH_TOPBAR_ACTIONS`; never
+  hand-build a page-only header or override `.ph-shell-titlebar` locally.
+  **The head is Cliniko's (her synth22 picks 2026-11-01, Cliniko look):** a
+  light band (the struct tokens inside `.ph-shell-topblock`), and on a
+  computer the page's actions are ONE joined bar (`.ph-tbm-bar`): the first
+  non-ghost verb first and solid, up to three more with their words, any
+  others in the bar's own ⋯. The phone keeps one row: ☰ · title · the one
+  main disc · ⋯. Calendar blocks take Cliniko's clear colours
+  (`phCkClear`; Break alone keeps `phCkTone`), a past day stays full colour
+  with its ticks, and the name comes first.
 - **Information in a REAL table, not a sheet of sub-rows/steppers**, is the
   default for any multi-item editor — one row per item, one column per
   field, hairline cells, labels repeated per group. **A merged widget's

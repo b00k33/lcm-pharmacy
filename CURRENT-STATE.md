@@ -34,7 +34,11 @@ timeout had fired before the sync's own `<script>` was parsed, so the housekeepi
 ## Appointments & calendar
 The app opens here. It mirrors Cliniko's day view: solid blocks coloured from `PH_CLINIKO_TYPE_COLOURS` (her Settings →
 Appointment types, 21 types read live; words white or dark, whichever measures higher, `phCkInkByContrast`, her yes), a time
-gutter; the page scrolls, no inner scroller (except "Whole day" below). Grid opens by default at every width (List a tap away). A
+gutter; the page scrolls, no inner scroller (except "Whole day" below). **Cliniko look (her picks 2026-11-01):** the colours
+are the clear ones Cliniko paints (`phCkClear`, seven sampled off her Cliniko calendar; Break keeps the deeper `phCkTone`); a
+block reads the name first in bold, then "10:00 – 11:00", then the day's ticks (`phApptBlockTicksHtml`: ✓ visit saved, jar =
+herbs out, copy = copied for Cliniko); a past day keeps its full colour (no fade); a booking or event new since the last paint
+drops into its time with a gold ring (`phApptBlkFresh`), a new tick pops, a plain repaint plays nothing. Grid opens by default at every width (List a tap away). A
 "long day" (≥600 min span) gets a minute-precision map (45+min gaps fold to free bands). Range: 30 minutes before the earliest
 booking on screen to the last booking's end (half hours; 4 hours at least; nothing booked = 7 AM to 9 PM). The live "now" line
 ticks only while the tab is visible.
