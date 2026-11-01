@@ -7948,3 +7948,45 @@ the rule (their hover never set a useful layer).
 **LIVE** 2026-11-01, build 20261101-183100 (publish a88ca3d8, on her "push live"; it also carried two notes-only commits, 9fde75bb
 and 01c24a59; the commit list matched the dry run). Checked on the live page: the build stamp, the visit hover rule with no layer,
 the open event at 19, and the old `z-index: 20` hover rule gone.
+
+## Dashboard page audit (2026-11-01)
+Her words: "audit the dashboard page for consistency too". Audit = apply: measured at 1220, 800 and 360 against TAPPABLE THINGS,
+Terse, Separation & grouping and the reserved gold. Code 7a97d76d: one dated CSS block, "Dashboard page audit", at the end of the
+main `<style>` after the Stocktake block, every rule scoped to `#phDashboardWrap`, plus wording. The sections, their order and her
+two plain lists (her 09/15 herbs-only and 09/18 "B · Two plain lists" picks) are untouched.
+**Heads:**
+- One section head: Wrap up the day (`.ph-eod-lbl`, 10.5px / 800 / .07em, faint) and Going out today (`.ph-dash-sh`, 11px / 800 /
+  .06em) take Urgent stock's (12px / 700 / .09em, herb deep). Below 900px the app-wide `#pharmacyPage h2 { 16.5px !important }`
+  cap had made Urgent stock, Order these and Refill these 16.5px capitals (two lines on the phone); they are 12px, the phone 11px.
+- Formulas / Herbs heads take the one label look (700, .08em; were 800, .05em).
+- No rule beside any head (four lines).
+**Going out today (`.ph-dash-task`):**
+- The patient's name opened the prescription as coloured words: it is a chip now (32px, 1px line).
+- Prepare and Resume were solid red blocks (two solids on the page): they are the Button. Fix (no address) is a red line, as
+  Restart and Order now. The stocktake card's Resume (a 1px line, 600) is the Button too.
+- No outline and no 4px red bar on the cards (every card there is due today; the section says so); 10px corners (16px). The
+  Relocation row matches (its → is the sprite chevron, like Wrap up the day's row).
+- The line under the name wraps: "Address needed before this can go out" was cut to "go…".
+- The address fix: the input was the browser's own 2px inset pill in Arial; it is a tint field. Save the one solid (40px), Cancel
+  a chip (it was solid too).
+**Codes:** muted figures before the name. The plain lists' codes were `--ph-gold-deep` (gold is reserved for the brand accent);
+Urgent stock's were a tinted tag.
+**Phone (≤640):** buttons, chips and dropdowns 28px / 6px / 12.5px: Prepare / Fix / Resume were 999px pills (a phone rule holds
+`.ph-load-btn` at 32px `!important`, so the block's min-height is `!important`), See all / To order 34px dashed 10px boxes, Plan ▾
+36px pills; Made ✓ a 28px circle; the Made and address fields keep 16px words (the zoom guard).
+**Terse:** the Order these / Refill these heads' "Most-used first · September–October" line went with `phSigWindowSubheadHtml` (its
+only callers): the lists sort empty first, then fewest days of cover, so it was also wrong. Empty states: "Nothing to order",
+"Nothing to refill", "Order list empty" (was "… — Plan ▾ on any row below adds to it."), plain words, not a box.
+**Kept:** the sections and their order; the two plain lists and their row lines; Plan ▾ menus; Urgent stock's Empty / Low tags and
+their left colour stripe (they carry the status); the dark caption bands on Order these / Refill these; the count grid; the
+top bar's To order / Formula refill; "Address needed before this can go out" (the same words as the Scheduled list).
+**Tested (sandbox, seeded usage, two schedules due today, a count in progress):**
+- 1220, 800, 360: every control re-measured, none off-size; no sideways scroll (360 of 360).
+- The address fix opened and measured; the count grid opened (fields and buttons already on the rules).
+- Wrap up the day and the Relocation row measured from their own markup (the clock was before 16:00; no relocation in the sandbox).
+- No console errors. Prescriptions search 3 → 2 → 1 → 0 → 3.
+- Pictures: shots/da-audit-page-{before,after}.jpg (1220), shots/da-audit-phone-{before,after}.jpg (360).
+**Not tested:** a real Made ✓, Count Done, Prepare or Fix save (their handlers are untouched); the order queue under To order
+(`phDashOrderQueueHtml`: every door to it now goes to the To order page); her Key2 by hand.
+**Pages checked for the fact:** the Dashboard only (no count or list changed; the To order and refill counts still read
+`phOnOrderList` / `phDashRefillList`).
