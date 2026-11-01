@@ -8629,3 +8629,17 @@ CSS only, every selector inside To order (`#phRestockWrap`, `.ph-osm-*`, the hea
 order's render; console clean in a fresh tab; Prescriptions search 8 → 2 → 8. On a 1x screen Chrome draws the 1.5px line as
 1px (as every Button). Pictures: shots/to2-audit-*.jpg / .png (board, tab, phone; -before / -after; btn-rule / btn-keep = the
 question). **Not tested:** her real records, her phone (Key2), the Snoozed list (none in the sandbox).
+
+## 2026-11-02 — Checked: the per-herb shelf → after bar on Dispense was already built; two waiting lines closed
+
+Her "continue" pick after the heartbeat scan went live was the parked "per-herb shelf→after-stock bar on Dispense". Measured first
+(her 27 Oct export, read only): 94 dispenses in the last 90 days, a usual one 2 herb lines of 15 g; 9 counted jars hold less than
+their usual dispense, 6 more would cross their low line on one; 31 of the 94 recent dispenses have a herb short on today's stock.
+Then the code and a sandbox run (a made-up patient, 1440 and 375) showed the bar is already there: the herb table's In stock column on
+the Dispense stage reads "50 → 20 g" with a bar whose fill is the share of the shelf left after this bag (`presIngStockCellCore`;
+green, gold once it lands at or under the low line, red "short N g" when the bag takes more than the shelf holds, "out" at zero),
+eased in place on every grams / dose change (`presIngStockRefresh`, the Dispense Cockpit of 2026-10-01), on the phone too (84px
+column, 68px bar). Nothing to build. The OPEN line and CURRENT-STATE's "Not built" sentence were stale and are gone; the Stock level
+bar rule stays the Inventory / To order reading (stock vs the low line), this column is its own reading (shelf → after this bag).
+
+Also off the list on her word tonight: "Usual period shows Wheel | Chart" (her pick: keep). Docs only, no code.
