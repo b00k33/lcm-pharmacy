@@ -7836,3 +7836,43 @@ Collagen → Hidden (row faint), an own kind appears with ✕ and ✕ removes it
 Supplements nav item, Prescriptions search "zz f" → Face only, "cyc" → Cycle only, cleared → all; no console errors. Pictures
 `shots/au-build-*.png` (1440 + 375).
 **LIVE:** build 20261101-172600 (publish c0c9b53c, on her "push live", 2026-11-01). The first push hit a network reset after the stamp commit; the same commit then went up as the script's own fast-forward step, nothing forced.
+
+## 2026-11-01 · Gui Zhi Jia Long Gu Mu Li Tang: integrate33 run 18
+Her Gui Zhi Jia Long Gu Mu Li Tang table (a symptom list /5 headed "REN", a pulse, tongue and build list /5 headed "BING", conditions,
+key pattern, important differentiation) + "add to fang bing ren", through the parent session. Matrix:
+`fbr-integrate33-guizhilonggu-2026-11-01.html` (root until live, then mocks/), published to her as an artifact.
+- **Swap:** her headings are the other way round from the app's, as in her Huang Qin Tang, Shen Qi Wan and Dang Gui Shao Yao San tables
+  (Zhi Gan Cao Tang's had them the app's way). By her 2026-10-14 swap rule the 16 symptoms are Bing and the pulse, tongue and build lines Ren.
+- **Family** `PH_FORMULAS.guizhilonggu`, the 36th: Bing 16 lines (ceiling 69), Ren 10 lines (35), her numbers as weights. `or` lines:
+  abdominal pulsing / chest throb; low energy / nervous exhaustion; one constitution line (thin, delicate · slim · fair · pale, white ·
+  fine-textured skin · pale complexion · Cinnamon Twig type) at 4, her "thin physique" (3) merged into it at the higher weight. Her "and"
+  line (irritability and restlessness) adds both halves (her Da Chai Hu answer). Key pattern, differentiation and conditions are in `core`;
+  the 19 conditions had no ratings and score nothing (asked).
+- **Minus points**, -3 a line (her Wen Jing Tang / Zhi Gan Cao size), Ren side only (the Huang Qin Tang place), each scored once: a deep,
+  thin, excessive or large forceful pulse (5 pool rows); a thick, greasy, yellow or dry coat (8 pool rows + the new greasy coat).
+- **New rows:** Bing `calm_hard_now` "Mind & mood: hard to calm down"; Ren `tongue_tender_red` "Tongue: tender, red", `coat_greasy_tend`
+  "Tongue coat: greasy", `glans_cold_tend` "Sex & fertility: cold at the tip of the penis (yin tou han)" (`PH_SIGN_ONLY_M`), `hair_loss_tend`
+  "Hair: loss" (twin of `hair_loss`, `PH_FBR_TWINS_DRAFT`). Each in one board group; the two tongue rows in `PH_FBR_TP_GROUPS`.
+- **Wired:** tongue chart (`phTngSignChips`): Tender AND Red or Crimson → tender, red; Greasy → greasy coat; old chart words
+  (`PH_FBR_CHART_PREFILL`); `PH_TRI_COMPOUND` ticks tender, red when both halves are ticked. Ask her, Mood: "Hard to calm down" (Right now
+  only, DRAFT). Body figure (`PH_REN_DRAW`): the cold glans and hair loss marks. Patterns: `bt_guizhilonggu` in Qi deficiency and Yin
+  deficiency; `PH_FBR_TO_CLUE` tender red → red tongue, greasy coat → greasy, hard to calm down → stress, hair loss (both rows) → blood
+  deficiency signs. Search words (`PH_BING_ALIAS`) for the new rows and her words for older ones (jumpy, wet dreams, throbbing at the navel).
+  Filed under Gui Zhi, last in `PH_REN_FAM_GROUPS` so the four before keep their shades (its own #31434A). `PH_BTJ.guizhilonggu` (桂枝加龙骨
+  牡蛎汤, DRAFT line). Formula picture `SC.guizhilonggu`: heart and navel rings pound, sweat drops fall, Long Gu and Mu Li stones sink;
+  7 herbs in 3 groups; `PAT` qidef; DRAFT labels.
+- **Not wired (no honest source):** Medical history, bloods, the cycle; low-grade fever, seminal emissions and the cold glans stay a tap (no
+  men's question exists for them; one would need her word); hair loss reaches only Patterns.
+- **Tested** (sandbox, made-up patients, deleted): all 36 families lead their own full picture; Gui Zhi's full picture Gui Zhi 100% (this one
+  55%, second); her full table 100%; key pattern only 58% (Gui Zhi 21, Zhi Gan Cao 18); real charts that fit (tender + red tongue, thin white
+  coat, Floating) 61% first, "agree"; same symptoms with the wrong pulse and coat 28% (first by a hair, "split"; Wen Dan 26, Huang Lian 25,
+  Chai Hu Long Gu 25); a Chai Hu Long Gu patient: Chai Hu Long Gu 31% first, this one 4th 21%. Each minus line takes 3 once (Ren 15 → 12 → 9).
+  Pages checked: the Fang Bing Ren board (under Gui Zhi, 61% ring, "Tender, red +5" and "Thin, white +5" ticked from the chart), Quick
+  assess (clear lead after 22 answers), Ask her (Mood, Right now), Patterns (Yin deficiency possible, Qi deficiency hint), the body figure,
+  the formula picture's three stops, Prescriptions search narrows and comes back, 375px no sideways scroll, no console errors.
+- **Measured for her questions:** conditions at 4 each (19, 8 new rows): Bing ceiling 145, key pattern 45%, still first; minus on both sides:
+  the wrong-pulse patient 4th at 24%.
+- **Not checked:** her real records; the Key2 phone; the Settled stop by eye; the Guide card's edit flow.
+- **Needs her word:** conditions as notes or 4 each; minus Ren-only or both sides; "thin physique" merged or its own line; DRAFT words (card
+  line, "Hard to calm down", the four new row names, picture labels, figure marks), the Gui Zhi filing, Patterns Qi + Yin deficiency.
+- **Not live:** waits for her "push live".
