@@ -1238,6 +1238,9 @@ before touching an area that smells similar.
   copy paints only while the original is drawn; a copy placed outside the original's container also loses every rule scoped to it (an
   SVG shape whose only fill came from such a rule paints black). Give a copy its own ids (`phSvgOwnIds`) and diff its computed
   styles against the original (BUILD-NOTES "MSK Enlarge: the back figure drawn black").
+- `renderPharmacy` sets the page's action cluster (`phTopbarActionSet`) before the page draws its own bar, so the cluster
+  lands whole only through `phMobileDedupeTitles` at the end of every render path (the remembered merge, 2026-11-01); a render
+  path that skips that call gets its disc from the 0 ms retry instead, and its bar grows after paint.
 
 ---
 
@@ -1340,9 +1343,6 @@ origin/main:index.html`; don't trust this list's age.
   built-in templates (the mechanism is live).
 - Ma Huang, Da Huang and Fu Zi Ren rows were never checked against her own
   tables (Ren audit 2026-10-13): she needs to re-send them.
-- The "Post Ovulation" house-blend formula is missing from her live
-  inventory: recreate it with "+ Add formula" or restore it from a backup
-  (no code can bring it back).
 - Fang Bing Ren reference formulas waiting on her tables: Gui Zhi Fu Ling
   Wan, Chai Hu Gui Zhi Tang (Huang Lian Jie Du Tang, Da Chai Hu Tang, Wen Jing
   Tang and Ling Gui Zhu Gan Tang are families now).
@@ -1357,8 +1357,7 @@ Chart.
 - The per-herb shelf→after-stock bar on Dispense.
 - Whether the standing tongue / abdomen charts carry over day to day
   (unchecked).
-- A heartbeat field on IVF scans; folding `#phRenUndoToast` into the one
-  toast; the ~19px title-bar shift; baking `PH_HERB_SEED`.
+- A heartbeat field on IVF scans; baking `PH_HERB_SEED`.
 - Larger work, knowingly parked: a desktop build beyond the PWA; AI intake
   extraction (no backend, no safe place for a key; don't re-raise without an
   architecture change); bulk past-period entry from the patient's phone.

@@ -8194,3 +8194,41 @@ search 8 → 6 → 4 → 2 → 8. Pictures: shots/ap-audit-{card,list,dialog,pho
 **Not tested:** a patient with several plans (the plan dropdown) or a phone on file (the circles live), the paste preview rows
 (`.ap-prow`: ✕, clinic chip), a real Save / Cancel / Book; her Key2 by hand.
 **Pages checked for the fact:** Appointments (Grid, List, card, dialog); no count or record changed.
+
+## 2026-11-01 — Two parked fixes: the photo Undo in the one toast; the title bar lands whole before paint
+
+**Her word:** "continue", twice, after the data check went live; the OPEN list's parked line held these two small fixes, so they
+were the next thing. Both have left that line.
+
+- **One toast (★★★ rule 5).** A photo delete's "Photo deleted · Undo" used its own `#phRenUndoToast` pill at the bottom of the
+  page (its own CSS, its own `[data-ren-undo-delete]` click branch, `phRenUndoToastHtml` / `phRenUndoToastRefresh`). It is the one
+  toast now: `phRenDeletePhotosWithUndo` (every photo delete, the patient's Photos page and Records → Photos alike) calls
+  `presSavedToast("Photo deleted" | "n photos deleted", { undo: phRenUndoRestore, ms: 8000 })`; `phRenUndoRestore` is the old
+  click branch as a function (every record back exactly as stored, one reload per patient, `phRecPhotosRefresh`); a failed
+  restore reads through the toast too (it used `phFlashShow`, banned on a patient page). `phRenUndoState` keeps its 8 s window,
+  so a second delete still supersedes the first. The pill's markup and CSS are gone.
+- **The title bar grew after paint** (known since the Refill chip build, BUILD-NOTES 2026-09-02 "Known, NOT fixed": ~19px then,
+  with the 44px disc). Cause: `renderPharmacy` sets the page's action cluster (`phTopbarActionSet(tab)`) before the page draws
+  its own `phShellHead`, so the merge found no visible bar; the 0 ms retry dropped the disc in after paint and the bar grew on
+  every repaint of every page with a primary action. Fix: `phMobileDedupeTitles` (the one call every render path makes last)
+  runs the merge again, synchronously, with the set the pre-render call remembered (`window.__phTbmArgs`: its tab is the
+  normalised one; a first version passed `PHARMACY.activeTab` and lost the disc when that held a stale name renderPharmacy maps
+  to Inventory). The retry and the 40 ms heal stay as they were (they find the cluster on screen and do nothing).
+  Measured in the `_ia-page.html` harness, the HEAD copy against the fixed one, the visible bar right after `renderPharmacy()`
+  and 350 ms later: before, Inventory / Prescriptions / Stocktake / a stale tab name 50.5px with no cluster → 58px with the disc
+  (7.5px of growth; Stock movements, Communications and Settings have no primary action and never grew; Formula refill sets its
+  own cluster and never grew); after, every one of the ten pages the same height at both moments with the cluster in the bar
+  from the first paint (58 or 50.5 at 1440; 47 at 375, ☰ · title · disc · ⋯).
+- **Left as it was:** Appointments at desktop width repaints its own bar twice after opening (about 100 and 300 ms, its own
+  render path) and the 40 ms heal puts the cluster back each time; that short flicker predates this build and is Appointments'
+  own, not the shell's.
+- **Post Ovulation (OPEN since 2026-10-21):** read on her live records tonight (read only): the jar is back already (240 g, low
+  125, $0.20/g, Lyttleton default with a Koda PO row, 9 dispenses, the last 1 Oct). Nothing to add; the OPEN line is gone.
+
+**Tested (sandbox, `_ia-page.html` harness at 1440 and 375):** the one toast shows "Photo deleted" with Undo wired to
+`phRenUndoRestore`; Undo with two stubbed records put both back (one load, one refresh), cleared the state and closed the toast;
+no `#phRenUndoToast` element, `phRenUndoToastHtml` / `phRenUndoToastRefresh` gone from the reloaded copy; the title-bar
+heights above on Inventory, Stock movements, Communications, Settings, Appointments, Dashboard, Formula refill, Stocktake,
+Prescriptions and a stale tab name; the Prescriptions search with three in-memory rows narrowed to one on "Beta" and gave all
+three back when cleared; no console errors. **Not exercised:** a real photo delete on her records;
+her phone; Appointments' own repaint.
