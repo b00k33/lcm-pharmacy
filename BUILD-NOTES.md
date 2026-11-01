@@ -8697,3 +8697,74 @@ scratchpad mt-b1-table / mt-b2-grid / mt-b3-check / mt-b4-phone.
 **LIVE** 2026-11-02, her "push" then "Push all three": build 20261102-095100 (publish 760a974f) carries the To order page audit,
 second pass (8fdedb84), Medical alert after the name (266e6fe3), the other patient pages in the card language (cceaedd9) and
 Meals as a clean table (4fd3c6e0). Checked on the live copy: all seven To order rules are in it.
+
+
+## 2026-11-01 — Menus + dishes: McDonald's, Hungry Jack's, KFC, Oporto, El Jannah, Chagee, Chinese and Vietnamese in the food list
+
+Her synth22 batch (the same night as MEALS TABLE): "i need more foods in database, some foods are missing e.g. chagee beverage menu,
+congee, Dầu cháo quẩy (often called quẩy) ... known as youtiao in China"; "include mcdonalds menu, hungry jacks, kfc, oporto, el
+jannah"; "include chinese and vietnamese foods". Her picks: **whole menus** (every item and size with published numbers), **everyday
+dishes, about 30 each**, a place with no numbers of its own = **the closest match, its source in the food's hover**, names **as
+she'd say them** (Phở bò, Quẩy (youtiao)); search finds either name, accents optional.
+
+**What went in** (`PH_FOOD`, 212 → 768 rows; per 100 g, per 100 ml for a drink; a count's grams = one; the "MENUS + DISHES" block
+in place of the old "t" Wicked Wings line; each place a group in `PH_FOOD_GRP`):
+- **McDonald's 261**: mcdonalds.com/au item data (per serve ÷ the site's serve weight; .com.au itself answers 403). Fibre only where
+  above 0 (the site's 0.0 is a placeholder). Nuggets 16.2 g a piece, McWings 70 g; Nashville Shaker McWings kept as 3 / 5 / 10 pc
+  packs (the sachet does not scale). Frozen Fanta's five flavours are one row a size (same numbers; the Raspberry medium's carbs 0.0
+  is a source slip, Orange used). Skipped: Happy Meals, bundles, Big Breakfast Deal, Half & Half nuggets, Pop Tops; teas, long black,
+  sparkling water medium only. Kept as published: Iced Latte medium's protein 16.4 g.
+- **Hungry Jack's 78**: its Nutritional Guide PDFs (2026 dates). Drinks medium only, sundaes small, chips S / M / L, onion rings
+  M / L. Coke Zero's sugar is Sprite's figure in the wrong row: null. **Kept as published**: HJ's fat runs high for its energy
+  (Whopper and Whopper Veggie Cheese +20%, Chicken Royale +36%, Napoletana Grilled Chicken +32% between 17P+17C+37F and HJ's kJ).
+  Jack's Cafe's PDF stops at Chai, so no latte, flat white, long black or hot chocolate. Skipped: bundles, Kid's Meals, every Trial
+  item, plant-milk versions, and to stay near 450 chain rows the extra Grill Masters, Whopper Triple and the rest the helper's notes
+  list (all in HJ's PDFs to add later).
+- **KFC 74**: its AU Nutrition & Allergen Guide (per serve + average serve). Original Recipe by cut (drumstick 77 g, thigh 94 g,
+  wing 48 g, breast 164 g) from CalorieKing Australia, as KFC gives only an average piece (87 g). **Wicked Wings** stays the row she
+  had (38 g, 1442 kJ / 100 g, CalorieKing); KFC's own panel now reads 41.3 g and 1314 kJ / 100 g, the same energy a wing within 1%.
+  Its group moved from Takeaway to KFC. Skipped: combos, boxes, buckets, kids meals.
+- **Oporto 53**: CalorieKing Australia (Oporto publishes kJ per item only after a store is picked, no panel). No drinks listed there.
+  Strips 40 g each (CalorieKing's 5 and 8 piece agree). Skipped: combo meals.
+- **El Jannah 18**: it publishes kJ per item only (its order site's menu data), so each item is its nearest food (AFCD, USDA FNDDS or
+  SG FoodID) at El Jannah's kJ ÷ that food's: chicken = AFCD barbecued chicken with skin (¼ 202 g, ½ 404 g, whole 809 g, the sauce
+  apart), toum = a recipe (garlic, canola oil, lemon, salt from AFCD; 2390 kJ / 100 g), chips, tabouli, pickles, hommous, a bag of
+  bread, the roll, coleslaw, chilli sauce (a weak match). Skipped: babaghanouj, tahini, fattoush, cheese garlic pocket, small chips.
+- **Chagee 10**: no Australian store and no open numbers; the eight milk teas of CHAGEE Malaysia's Milk Tea Series (+ jasmine less /
+  no sugar) as SG FoodID's freshly made milk teas, no topping, a 500 ml cup.
+- **Chinese 32** and **Vietnamese 31**: Singapore's SG FoodID (lab data per 100 g with its portion), USDA FNDDS for egg drop soup and
+  bánh flan; the nearest SG dish where SG lacks it (bún bò Huế, bún chả, cơm tấm, bánh cuốn, xôi, cà phê sữa đá, chè ba màu ...;
+  congee = SG Teochew porridge). Quẩy (youtiao) and Youtiao are both there (1615 kJ / 100 g, a stick 117 g). Portions moved to a
+  Sydney serve: bánh xèo a whole one 152 g (SG's 38 g wedge × 4), chả giò 34 g a roll (usual 3), gỏi cuốn 102 g a roll (usual 2),
+  bún chả 408 g a serve, bún thịt nướng a bowl 408 g. Source slips set to null: SG roast duck's calcium (512 mg, bone), SG
+  pancake's fibre (11.7 g). SG gives few micronutrients and no choline or iodine (null = not given, never 0).
+- **The hover** (`PH_FOOD_SRC`, 51 close matches; `phFoodSrcTip`): "Close match: Teochew porridge (plain) · SG FoodID", before her
+  reactions in the same title (`phFoodTipAt`), on the add list's rows and the picker's chips. The Targets credits line names the new
+  sources.
+
+**How she finds them:**
+- **Menus ▾** in the add list's bar (Everyday | Drinks | Menus ▾ | My dishes; `PH_FOOD_MENUS`, `phMealTabsHtml`): a list of the nine
+  places and kitchens under the bar (Thisbowl moved in from its own tab); the place picked shows on the chip ("Hungry Jack's ▾").
+- **Search** (`phFoodNrm`, `phFoodWordsN`): accents off on both sides, a place's name counts ("pho bo" → Phở bò, "quay" → Quẩy
+  (youtiao), Youtiao, Roast duck (vịt quay), "toum", "big mac", "chagee"). Lebanese bread's "banh mi det" was taken out (it led
+  "banh mi").
+- **Names**: a place's foods keep their capital in a meal ("1 Whopper"; `PH_FOOD_NAMED` in `phFoodLc`), a dish does not ("1 bowl
+  phở bò"). New units: bowl, plate, serve, piece, roll, stick, bun, tub (`PH_FOOD_UNITS`).
+- Never on the shopping list (menu groups, as Thisbowl).
+
+**Kept fast for her phone (measured on the test copy):** the 557 rows made each tap in the add list about 3× slower (20 → ~70 ms on
+this computer). A menu's rows are now drawn only when its pane opens or a search starts (`phMealMenuFill`, a `data-mlk-lazy` pane;
+the list's one row builder `phMlkFoodRow` draws them, so a lazy row is the same row, reactions hover included); a tap is back to
+19–43 ms. In the snack picker and a dish's Made of, a menu's chips show on a search only, never under All foods
+(`data-meal-srch` in `phFoodPickHtml` / `phFoodFilter`): All foods ▾ went 34 → 18 ms and stays a short list. **The bar on a phone**:
+a place's name ("Hungry Jack's ▾") is wider than the phone's sheet, so the bar keeps each word whole and scrolls in itself like the
+phone's tab strip; a pick scrolls it into view.
+
+**Tested** (test copy, her week seeded through the temporary `_mt-shot.html`; 1440 and 360 wide): Menus ▾ opens and shuts, a pick
+fills its pane (78 Hungry Jack's rows), the chip reads the place; adding a Whopper to Mon dinner ("1 Whopper") and Phở bò ("1 bowl
+phở bò"), each leaving the list; search finds across every menu with the panes not yet drawn (the eight filled at once); the
+close-match hover on congee and toum; the lazy row and the drawn row are the same markup; snack picker: All foods shows no menu,
+"whopper" / "chagee" / "pho" find them; no console errors, every inline script parses. Integration: the Meals table's cells and
+numbers, the meal's list in the column, the snack picker, Shopping (left out), the reactions hover. **Not tested**: her real Key2
+(timings are this computer's); a dish's Made of was not opened (it draws the same chip picker, and its "From" line keeps a place's
+capital in code). Pictures: scratchpad mt-c1-menus, mt-c2-hj, mt-c3-quay, mt-c4-phone, mt-c6-phhj.
