@@ -605,7 +605,9 @@ saved set was moved once by `phMigrateInvLean`). The ⋮ menu holds Add to order
 faint figures in its field. **The edit drawer** (`#phHerbForm`; her 2026-11-01 audit): Essentials (Formula source only for a
 formula), Suppliers & pricing and Notes folded, Clinical reference, Stock history ("No movements" + Adjust stock); one label
 look, no lines, 32px controls, Kind one joined bar; what a field means sits in its hover, never in its label. **Suppliers:** a row opens its herb list; each
-row ends in **Review prices** (Price review on that supplier); Price review is no longer in the sidebar.
+row ends in **Review prices** (Price review on that supplier); Price review is no longer in the sidebar. **A store with nothing counted yet**
+(every qty null: a brand-new row, or a fresh profile on the built-in list, which is her live inventory baked 2026-11-01 as `PH_HERB_SEED`,
+stock null) opens Inventory with no status filter (`phStatusStart`); one counted jar brings the everyday default back.
 
 **Patient profile list on a computer (her audit: "make it more space saving make it cleaner") [Patient profile list audit]:** the
 five tiles are the filters (tap again = all; "No history" only while anyone has none), no Filters button or chip row; "Schedule"

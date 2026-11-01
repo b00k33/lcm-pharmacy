@@ -1361,7 +1361,7 @@ Chart.
 - The per-herb shelf→after-stock bar on Dispense.
 - Whether the standing tongue / abdomen charts carry over day to day
   (unchecked).
-- A heartbeat field on IVF scans; baking `PH_HERB_SEED`.
+- A heartbeat field on IVF scans.
 - Larger work, knowingly parked: a desktop build beyond the PWA; AI intake
   extraction (no backend, no safe place for a key; don't re-raise without an
   architecture change); bulk past-period entry from the patient's phone.

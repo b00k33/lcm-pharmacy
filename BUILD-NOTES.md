@@ -8402,3 +8402,33 @@ narrow check-in page with Change and How did it go open, Compose, Templates, Pre
 1220 and 360; console clean; Prescriptions search 3 → 1 → 3. Integration: the composer checked on the check-in panel, the
 narrow check-in page and the patient's Messages page. **Not tested:** her real records, her phone (Key2), sending (the Text /
 Email links were not followed).
+
+## 2026-11-01 — The built-in herb list is her live list (PH_HERB_SEED baked)
+
+**Her word:** "C · Bake the built-in herb list" (her pick after the Appointments blink went live; the last parked item but the
+heartbeat field).
+
+- **What the seed is for (measured in the code first):** `loadPharmacy` seeds `PH_HERB_SEED` only into a store with no herbs at all
+  (a fresh profile, or a stored object never seeded). On a device's first-ever boot the sync base is set from that local copy, so
+  the first pull reads local as unchanged and the cloud row wins whole: the seed never reaches an existing row. It is what a
+  **brand-new row** (a new clinic login, whose empty cloud side the empty-guard refuses) and a **fresh profile before its first
+  pull** (the sandbox too) start with. Since the 2026-10-14 dead-code sweep that was the raw 2026-07-23 galcott.com export: 301
+  entries, `code / name / cost / qty / low / note` only, no supplier rows, no stopped or phasing flags, 142 with stock numbers.
+- **Baked:** the line is now her inventory as read on her live build tonight (read only, 302 jars): `name`, `cost`, `low`, `note`,
+  `suppliers` (name · code · bottleCost · isDefault, the rows her app keeps), `supplier`, `stopped` (113), `phaseOut` (31), `kind`
+  (3 formulas), `source` (7 onsite, 1 premade), `overstockAt`, `usedByHH`; `qty` is null on every entry (no stock numbers in a public
+  file, and a new row has no stock to claim); ids are given at seeding as before. Dropped: the ordering and arrival state
+  (`order`, `ordered`, `snoozedUntil`, `restockHistory` …), `prevQty`, `refill*`. The notes are herb notes (functions, ingredients,
+  her supplier price jottings); scanned for anything personal: nothing. The header comment above the line says what it is now.
+- **One rule with it:** a store where nothing is counted yet (every `qty` null) opens Inventory with **no status filter**
+  (`phStatusStart`): the everyday default hides Untracked, which would have shown "0 of 302 herbs" on a brand-new row or in the
+  sandbox. Her own store (144 counted jars) keeps the default exactly; one counted jar brings it back on the next open.
+
+**Tested (sandbox harness, `_ia-page.html`, truly fresh profile = the pharmacy store and the one-time migration flags removed, put
+back after):** 302 jars, `seeded` true, 113 stopped, 31 phasing out, 3 formulas, every qty null, 302 distinct ids; the supplier
+directory backfilled to her 9 names (Evergreen, Koda, In house, Doane, Lyttleton, GMP, Huang Huang, Mick, KPC); Twin jars finds the
+same 7 pairs as her live list; Inventory opens on "Status ▾" with 40 rows on page 1 (3 Yellows · Abx · Allergies Chronic …), no
+errors; the sandbox's own store (142 counted of 301) still opens on "Status · 5 ▾", 142 of 301; the HEAD copy on the same fresh
+profile showed 142 of 301 with the old names (the comparison); the Prescriptions search with three in-memory rows narrowed to one
+and gave all three back; no console errors. **Not exercised:** a real brand-new login; her phone. Her own records are untouched
+(read once, nothing written; the clipboard carried the list and was put back as it was).
