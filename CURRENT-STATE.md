@@ -67,8 +67,10 @@ before-hours items: `phC22FoldRowHtml(…, bare)`), the cycle day at the right; 
 two lines when tall; no card (edge to edge, blocks stop 16px short of the right edge); text inset 7px, 66px an hour. The Saved
 pill stays as it is (it fades after 2 s).
 
-**Appointment popup** (any booking tap): avatar, name, time/kind/ET pills, a plan picker, a gold "✦ New to you" flag, chips Full
-profile / Call / Text / Cancel, then one summary line that unfolds the detail rows (Focus, Herbs, Logged, Cycle, Scan) with Book
+**Appointment popup** (any booking tap): avatar, name (the title, not a door: Full profile is), time/kind/ET pills, a plan picker
+(no plan = "no plan yet" + a "pick a condition" chip), a gold "✦ New to you" flag, Start visit (today; the one solid) and Full
+profile Buttons, then Call / Text 32px circles and Cancel (a red line) on a second line (Appointments page audit 2026-11-01; the
+List card's Profile / Edit and circles match), then one summary line that unfolds the detail rows (Focus, Herbs, Logged, Cycle, Scan) with Book
 another / Edit at its foot. A positive-hCG flag (🌸 + gestational week) shows in the popup and on Grid blocks once
 `rec.pregTest.result ===
 "positive"`. Edit opens on an autofocused Date field (no separate Reschedule). The Service field is a `<select>` of the 21 Cliniko

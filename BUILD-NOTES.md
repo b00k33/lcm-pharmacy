@@ -8151,3 +8151,40 @@ so the search box is not focused on open there, as on a phone); the Key2.
 **Pages checked for the fact:** Appointments grid (week, day, phone), the Me form (Event), Settings › Calendar; the toast and its
 Undo; the booking card still opens on a booking.
 **Not live:** waits for her "push live", then Update on each device, then her presets go into her Me row.
+
+## Appointments page audit (2026-11-01)
+Her words: "audit the appointments page for consistency too". Audit = apply: measured at 1220, 800 and 360 against TAPPABLE
+THINGS, Terse, Separation & grouping and the reserved gold. Code 3bf75853: one dated CSS block, "Appointments page audit", at the
+end of the main `<style>` after the Dashboard block, every rule scoped to `#phApptPop`, `#phAppointmentsWrap` or `#phApptModal`,
+plus one wording cut. **Kept:** the grid (Cliniko colours, time gutter, the page scrolls), the toolbar and Up next's buttons (her
+10/23 picks), the gold NOW line and Today tag ("you are here"), the Me pane (already on the rules). The three NEVER-break points
+hold: the week in colour at a glance, block → card → Call / Text / Profile, Cliniko's day-view shape.
+**The booking card (`phApptPopRender`'s view, `#phApptPop`):**
+- Acts were 55px tiles with 10px corners and 10.5px words: Start visit (today) the one solid and Full profile are Buttons on line
+  one; Call / Text 32px circles (like Up next's) and Cancel (a red line `#F1C4BF`, at the line's end) on line two (`order` + an
+  `::after` break). No line above the acts or the summary.
+- The name opened the profile as plain words beside Full profile: it is the card's title (`pointer-events: none`); the List
+  card's name too (Profile is there), and a phone List row's name (the row opens the card).
+- Close: a 32px circle (a 30px square, 10px corners). The plan: one plan a 32px row with 6px corners, several a dropdown with
+  its ▾ (both were 36px pills), none = "no plan yet" plain + a "pick a condition" chip (a pill + grey words).
+- Focus / Herbs labels and the brief's labels: 10.5px / 700 / .08em (9.5px / 800 / .05em). An empty focus or goal is its field
+  (tint), not grey words. Add to order, ＋ Book another and Edit are Buttons; Cancel / Keep a chip; Save 32px / 6px (a 29px
+  pill); Yes, cancel it a red line (a solid red pill). The edit and brief fields tint with 6px corners (white, a line, 10px or
+  999px: those inputs lack `field-bare`, so the app's `--field-radius !important` needed an `!important` 6px).
+- Terse: the brief's "· blank = keep the plan's text" went (the plan's words already show greyed in the field).
+**The List:** day heads take the label look (11px / 800); rows 6px (8px); "No plan yet" a tint (a dashed line); the card's
+labels 10.5px / 700 / .08em (10px / 800), "New Treatment Care Plan" a chip (a 21px dashed pill), the plan picks 32px with 6px
+corners (9px), Profile / Edit Buttons + Call / Text circles; a compact row (≤900) grows to hold its "add focus" field (29 → 32px
+on the phone, 36px at 800).
+**The Add appointments dialog (Quick add):** Quick add | Paste list one joined bar with 6px ends (a 29px pill with a sliding
+thumb, kept); the time and name fields tint (38px pills with a line); Add and the paste's Add the one solid, 32px / 6px (38 / 40px
+pills); Home visit / Repeat, the repeat picks and the visit count take the day chips' look (32px / 6px / 13px), the picks and
+the count joined; Pick another day, the trash buttons and the paste's ✕ 32px circles; booked-ahead heads 700 / .08em; a repeat
+day's line and time herb, not the reserved gold. The paste area keeps its corners.
+**Phone (≤640):** Buttons, chips, fields and circles 28px / 12.5px; labels 11px / .06em; fields keep 16px words (the zoom guard).
+**Tested (sandbox, 10 bookings, three today):** 1220, 800, 360: every control re-measured, none off-size; no sideways scroll; the
+card in view, edit, brief and cancel modes; the List and its card; the dialog with Repeat open; no console errors; Prescriptions
+search 8 → 6 → 4 → 2 → 8. Pictures: shots/ap-audit-{card,list,dialog,phone,phone-dialog}-{before,after}.jpg.
+**Not tested:** a patient with several plans (the plan dropdown) or a phone on file (the circles live), the paste preview rows
+(`.ap-prow`: ✕, clinic chip), a real Save / Cancel / Book; her Key2 by hand.
+**Pages checked for the fact:** Appointments (Grid, List, card, dialog); no count or record changed.
