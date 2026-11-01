@@ -7945,3 +7945,6 @@ or focus rule on either block kind sets a layer (CSS rule walk), an opened event
 hover there).
 **Pages checked for the fact:** Appointments grid (week and day), her events and visits; the chips above and below the day share
 the rule (their hover never set a useful layer).
+**LIVE** 2026-11-01, build 20261101-183100 (publish a88ca3d8, on her "push live"; it also carried two notes-only commits, 9fde75bb
+and 01c24a59; the commit list matched the dry run). Checked on the live page: the build stamp, the visit hover rule with no layer,
+the open event at 19, and the old `z-index: 20` hover rule gone.
