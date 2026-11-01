@@ -8365,3 +8365,40 @@ she had and her usual sheet show no chips; the card shows the chips; no console 
 in a frame): `shots/meal-repeats-1220|ask-1220|375-2026-11-01.png`. **Not tested:** her real records, her phone (Key2), a second
 device on an old build (it still reads her usual meal; days changed here read their own foods only there until it updates).
 **LIVE:** build 20261101-231600 (publish ead3b3db, 2026-11-01).
+
+## Communications page audit (2026-11-01)
+Her "audit the communications page for consistency too" (Audit = apply). Measured at 1220 / 800 / 360 against TAPPABLE
+THINGS, Terse and Separation & grouping; every rule-covered finding fixed in one pass.
+- **Due:** the filter chips (loose 26px pills) are one joined bar (on the phone it fits its chips and scrolls if more); names are
+  chips; Check in / Review are the Button, Done a chip; "3 not shown" (plain words) a chip. The Not shown line had no break
+  between its items and ran past the page (23px at 1220, 170px at 800): a break after each dot.
+- **Check-in panel:** ✕ a 32px circle; the heading's Cliniko taps are chips without the floating "or ·"; They are / Concerns /
+  Next are joined two-across blocks; Other and the note are tint fields; Done the Button, Remind me tomorrow a chip; the line
+  above the foot gone. **Narrow check-in page (phone):** Change ▾ / How did it go ▾ / Add a concern ▾ were 15px plain words
+  that tap, now rows like the facts row above them; Copy / Email were 40 × 28 ovals, now 28px circles.
+- **Compose:** To / Subject / Body and the template editor's fields are tint with 6px corners (pills with lines; the body boxes
+  had 16px corners); the dropdowns 32px / 6px; Private health rebates ▸ and Manage templates (plain coloured words) are chips.
+- **Templates:** the rule line by the heading and the 43px gap above it gone; on the phone the heading was 16.5px (the tablet
+  cap), now the label size, and a template's tag sits under its name (it squeezed long names onto four lines).
+- **Prepared:** Copy and the link are Buttons, Sent a chip (solid once sent); the batch line was 16px ink, now 12px faint.
+- **The one composer** (here and on a patient's Messages page): "+ Save mine" a solid line (was dashed), Copy / Email the
+  Button's 1.5px line; on the phone its chips and buttons are 28px / 6px (were 24px and 30px pills), Formal | Casual one joined
+  bar (a pill inside a pill; Formal's word was white on pale), an open group's messages one joined two-across block.
+- **Words cut (Terse):** "No one matches." / "Nothing due." → "No matches" / "Nothing due"; Prepared's empty line → "Nothing
+  prepared" + [Compose]; "Nothing sent yet." → "Nothing sent"; Templates' "Starting points — make them yours"; Draft message's
+  "written for you · edit anything" (panel and page); the check-in's "Saved to History & Notes and the Done list · never
+  printed"; the token key's "editing only changes future prepares …"; the letter key now "{first} first name · a line on its
+  own = a heading"; Planned for later's "· each shows on Communications → Due on its day".
+- **Kept:** the Due table's rows and tags, the More menu rows, Compose's stat tiles, the Tokens legend, every message's words
+  (code3), the ‹ in the dark band.
+
+**Code:** one dated block "Communications page audit" at the end of the main `<style>` (after Appointments),
+`#pharmacyPage#pharmacyPage #phMessagesWrap …`, a ≤900 heading line and the phone media; the composer's phone lines are global
+(`.ph-mc-chip`, `.ph-mc-seg`, `.ph-mc-grp.open .gc`, `.ph-mc-btn`). The ten wording lines: `phCommDueBodyHtml`,
+`phCkPageHtml`, `phCkPanelHtml`, `phMsgTemplatesHtml`, `phMsgPreparedHtml`, `phMsgSentHtml`. Commit fdd719fc.
+**Tested** (sandbox, seeded follow-ups with no bookings and three prepared messages): every control measured at 1220 / 800 /
+360 with before / after pictures (the block switched off and on); no sideways scroll at all three; the check-in panel, the
+narrow check-in page with Change and How did it go open, Compose, Templates, Prepared; the patient's Messages page composer at
+1220 and 360; console clean; Prescriptions search 3 → 1 → 3. Integration: the composer checked on the check-in panel, the
+narrow check-in page and the patient's Messages page. **Not tested:** her real records, her phone (Key2), sending (the Text /
+Email links were not followed).
