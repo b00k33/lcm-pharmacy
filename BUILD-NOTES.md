@@ -8156,7 +8156,9 @@ table cut "12:30 …" and "Every 2 w…" and clipped the ✎ circle: Colour 104,
 hold their widest value, Name (and From) share the rest and wrap. On a phone the Settings column grew to fit a table with a floor
 (this one and Supplements' kinds table alike, 672px on a 375px screen): `.ph-settings-cards` now has `max-width: 100%`, so each
 table scrolls inside its card (checked at 375 for both; 1220 unchanged).
-**Not live:** waits for her "push live", then Update on each device, then her presets go into her Me row.
+**LIVE** 2026-11-01, build 20261101-192000 (publish c2e456da, made by the Appointments-audit session on her "push live"; it
+carried cc8f4a17 + 58d15c5f). Checked on the live page: the build stamp, `phQkOpen`, the `.ph-qk[hidden]` rule and the Settings
+column's max-width. The mock moved to `mocks/`. Her presets go into her Me row after she taps Update on the computer and the phone.
 
 ## Appointments page audit (2026-11-01)
 Her words: "audit the appointments page for consistency too". Audit = apply: measured at 1220, 800 and 360 against TAPPABLE
