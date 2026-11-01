@@ -8567,3 +8567,23 @@ Dating scan read Done · 2 Nov · twins from IVF history; 375: no overflow, chip
 to the one name and gave the list back; 0 errors over the path. Pictures `shots/hb-after-*.png` (seven; six sent to her as the mock
 round). **Not tested:** her real records, her phone (Key2), the beat by eye in motion (headless pictures are stills).
 **LIVE:** build 20261102-004400 (publish 0207faf1, 2026-11-02 ~01:55), with two build-notes commits from the other LCM sessions. The live copy carries `phIvfHbOf` and the scan line; her computer and phone still need the gold Update button.
+
+## 2026-11-01 · Cliniko look, stage 3: the patient pages
+Her approved build order (synth22, 14 picks): stage 3 = the patient pages in the mock's Patient tab. **Measured** (sandbox, a
+made-up patient, 1200 and 375): the head was the dark band (white name, cream age, a search pill and gold ring built for dark);
+the rail's open row a solid deep-teal pill; Patient details' card heads 10.5px capitals on paper; no booking anywhere on
+Patient details; the Appointments page plain lines. **Built:** the head on the light band with "Name / Page"
+(`presBandPageSync`, after each render and each in-place rail repaint) and Book appt. · Text (`.ph-band-bar`, the stage 1
+`.ph-tbm-seg` look; hidden ≤640); search pill, back, camera, cycle-day words recoloured for the light band; a Gynae / MSK
+case is a 3px line under the band. Rail: the open row and step pale teal with a 3px teal edge (was the solid pill, her
+2026-10-13 pick B; her 2026-11-01 mock pick wins, the edge bar keeps it easy to spot), a done step's number teal; count
+badges `.ph-rc` for Supplements (`phSuppTaking`), Blood tests (`rec.bloods`) and Appointments, rolled in once on a change
+(`presFlowLast.cnt`). Patient details: `.ph-pd-card` white with a pale-blue head band, teal labels, striped rows (still
+fields); `phPdApptsHtml` right column; `data-pd-appt` Open handler sets `phApptDeepLink` and opens Appointments. The
+Appointments page is one table with a head row, stripes, the type dot and Open; "No appointments yet". Supplements:
+`thead th` only (its supplement names are row `th`s: a first try painted that whole column blue). **Not built (asked):**
+the mock's "+ Medical alert" strip (a new field); the band heads on Medical history, Ren, Blood tests, IVF history, Messages,
+Log. **Tested:** the scripts parse; the page name follows Supplements, Messages (from Text), Appointments; Book another opens
+the booking dialog with her name filled; Open lands on Appointments with that booking's card; a ticked supplement's badge
+appears and rolls once; phone 375 no sideways scroll, the search icon visible. Pictures: shots/cliniko-patient-*-2026-11-01.jpg.
+**Not tested:** her real records, a Gynae / MSK case band, a formula's band, the 641–1099px widths by eye.
