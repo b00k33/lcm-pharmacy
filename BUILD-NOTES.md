@@ -8434,3 +8434,8 @@ and gave all three back; no console errors. **Not exercised:** a real brand-new 
 (read once, nothing written; the clipboard carried the list and was put back as it was).
 
 **LIVE:** build 20261101-233700 (publish 902cfb31, 2026-11-01), together with the Communications page audit (fdd719fc) from the bugs session.
+
+**Communications page audit LIVE:** fdd719fc + notes 30a12928 went out in build 20261101-233700 (publish 902cfb31, made by the
+B33 C4 LCM session with its built-in herb list f8aaf07e, on her "Push both"); build 20261101-233900 (9bcff7de) re-stamped the same
+code (this session's publish had waited on the lock and found nothing new). Checked on the live copy: the Not shown break, the
+phone composer block and "Nothing prepared" + Compose.
