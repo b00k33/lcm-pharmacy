@@ -953,18 +953,27 @@ under Food, and Had it | Edit; BUILD-NOTES "A calmer meal"): every meal list (he
 the line ON TOP (hers): **↻ Repeat meal ▾** (every food in it at once) and, once that day has changes of its own, **↺ Undo**
 (back to what repeats) · the meal as a small table (name + its mark, a cup on a drink · − amount + · kJ in the planner · ✕; on
 HER day's meal each food has its **repeat chip** on a line under it, see MEAL REPEATS) · **+ Add food or drink** opens the list UNDER the meal (search or type + New; one bar
-Everyday | Drinks | Thisbowl | My dishes; a row a food with its usual amount and +; Thisbowl R | L, Build your own; a thing in the
-meal is NOT listed; Done adding) · one numbers line, small numbers behind a tap · **Eating out | Skipped** one bar (beside Had it on
+Everyday | Drinks | **Menus ▾** | My dishes, the place picked showing on it ("Hungry Jack's ▾"; the bar keeps every word whole and
+scrolls in itself where it is too wide, a phone's sheet); Menus' list: McDonald's, Hungry Jack's, KFC, Oporto, El Jannah, Chagee,
+Thisbowl, Chinese, Vietnamese (`PH_FOOD_MENUS`, `phMealTabsHtml`); a menu's rows are drawn when its pane opens or a search starts
+(`phMealMenuFill`, never on every paint); a row a food with its usual amount and + (`phMlkFoodRow`, the one row); Thisbowl R | L,
+Build your own; a thing in the meal is NOT listed; Done adding) · one numbers line, small numbers behind a tap · **Eating out | Skipped** one bar (beside Had it on
 her card, beside + Add in the planner's foot). **Skipped** is on every meal (her 2026-10-28 "give option to skip meals"):
 today or before = she skipped it; a day ahead = that day planned Skipped; on while so, a second tap takes it back. Its cell reads Skipped. No sideways scroll; long names wrap, never cut; the cursor goes to Search on the
-computer only. The snack picker (Snacks · drinks) is unchanged. Code: "A CALMER MEAL" (`phMealListHtml`, `phMealTblHtml`,
+computer only. The snack picker (Snacks · drinks) and a dish's Made of keep their chips; a menu's foods show there on a search
+only, never under All foods (`data-meal-srch`). Code: "A CALMER MEAL" (`phMealListHtml`, `phMealTblHtml`,
 `phMealAddHtml`, `phMealNumsHtml`, `phMealInstHtml`).
-**Food numbers**: foods from `PH_FOOD` (212 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
+**Food numbers**: foods from `PH_FOOD` (768 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
 credited on Targets; AUSNUT 2023 by FSANZ for what AFCD lacks: the curry meat pie, the kebab wraps, creamy milk; choline and beef
 bacon from USDA FoodData Central; matcha powder from the Standard Tables of Food Composition in Japan 2020 (MEXT); Thisbowl's June
 2026 sheet; groups include **Snacks** (packet chips) and **Takeaway** (pies, sausage roll, kebabs,
-hot chips, KFC Wicked Wings from CalorieKing Australia's KFC listing, a wing the unit), her word; **Water** is a drink in ml, every
-number 0), stored `food:<id>*<q>`, shown in kitchen
+hot chips), her word; **Water** is a drink in ml, every number 0; **the menus and dishes** (her synth22 2026-11-01, whole menus,
+everyday dishes; BUILD-NOTES "Menus + dishes"): McDonald's 261, Hungry Jack's 78, KFC 74 (the Wicked Wings row kept), Oporto 53,
+El Jannah 18, Chagee 10, Chinese 32, Vietnamese 31, each place a group of its own; a place or dish with no numbers of its own counts
+as its closest food, named in its hover ("Close match: … · SG FoodID", `PH_FOOD_SRC`, `phFoodSrcTip`, `phFoodTipAt` with her
+reactions); names as she says them (Phở bò, Quẩy (youtiao)) and search finds either name, accents optional (`phFoodNrm`,
+`phFoodWordsN`, a place's name included); a place's foods keep their capital ("1 Whopper", `PH_FOOD_NAMED`), a dish does not
+("1 bowl phở bò"); never on the shopping list), stored `food:<id>*<q>`, shown in kitchen
 words with − / + (each food its own step; a dish `dish:<id>*<q>` steps in serves). A dish's **Made of** adds its numbers itself
 (typed numbers only for what is not on the list); with no Made of a dish counts by itself (`phDishAuto`: the Thisbowl bowl in its
 name, else its typed ingredients matched) and Made of starts filled with that bowl. Nutrients add every item. The time is a small
