@@ -961,7 +961,7 @@ until a repeat of that meal changes (days from today on are then kept the new wa
 foods as they show. Data: `d.meals["rp|<id>"]` {sl, x, r d · w · e · k (wd), fr, to}; a day's entry with `ad: 1` = that day's own
 foods in `v` (a repeat's food at another amount = that day's amount) + `off` [bases]. Code: "MEAL REPEATS" (`phMealRepAll`,
 `phMealRepOn`, `phMealRepOf`, `phMealPlan`, `phMealDayPut`, `phMealRepSet` / `Rm` / `Q`, `phMealRpRowHtml`, `phMealRpMenuHtml`).
-NOT live until her "push live".
+LIVE build 20261101-231600.
 **Shop foods** (her "download woolworth and coles and aldi food database because i buy from them"; her pick "Search as I type"):
 the shops share no product data and FSANZ's Branded Food Database is not public, so the products are Open Food Facts' Australian
 ones (shoppers' label scans, ODbL, credited on Targets) in `foods-au.json`, fetched the first time she types in a meal's add list
