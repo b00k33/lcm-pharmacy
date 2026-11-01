@@ -7835,3 +7835,4 @@ the four seeds, Folate "400 mcg daily" saved on change and `phSuppKindDose("fola
 Collagen → Hidden (row faint), an own kind appears with ✕ and ✕ removes it, products table 655 in 657, Reference count 2, no
 Supplements nav item, Prescriptions search "zz f" → Face only, "cyc" → Cycle only, cleared → all; no console errors. Pictures
 `shots/au-build-*.png` (1440 + 375).
+**LIVE:** build 20261101-172600 (publish c0c9b53c, on her "push live", 2026-11-01). The first push hit a network reset after the stamp commit; the same commit then went up as the script's own fast-forward step, nothing forced.
