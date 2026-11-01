@@ -8480,3 +8480,16 @@ scroll. Pictures: shots/cliniko-look-calendar-2026-11-01.jpg, -head-, -phone-.
 **Not tested:** her real records (live data), the 641–900px tablet band by eye, the Acupreg login's sage blocks.
 **Pages checked for the colour fact:** the grid, the booking card's colour square and the List strip read the same
 `phCkTypeColour`.
+**LIVE** 2026-11-01, her "Push live" pick: build 20261102-001000.
+
+## 2026-11-01 · Phone Appointments: the page ends with the calendar
+Her Cliniko phone screenshot + "I like the cliniko mobile where the page ends with edge of calendar, not details. Move that
+somewhere else". **Measured:** at 375x812 the grid stopped at the last booking + 1 h, and the Day summary + Quick actions widget
+(`#phApptDayInline`) sat under it, so the page ended in cards. **Built:** on a phone (≤640, no long-day map) `phApptCalEnd` runs
+on in whole hours until the grid reaches the bottom of the screen (capped at midnight); the widget, its render
+(`phApptDayInlineRender`), `phApptDayEnsureKey` and `phApptCalDayKey` are gone, with their CSS; a tap on the date opens
+`phApptDayOpen` on every width (a bottom sheet on the phone, the card beside the grid on the computer). The sheet's cards no
+longer take the timeline's 200px flex basis (dead space under Quick actions). Terse: Up next with no one left reads "No one else
+today · last ended 4:00 pm". **Tested (sandbox, 375 and 1024):** the scripts parse; the phone grid runs 3 PM to 11 PM with
+nothing under it; the date tap opens the sheet (Day summary + Quick actions, fits its content); the computer's card unchanged.
+Pictures: shots/phone-calendar-to-edge-2026-11-01.jpg, shots/phone-day-sheet-2026-11-01.jpg. **Not tested:** her real records.
