@@ -8525,3 +8525,6 @@ drawer opened from Edit; the select bar with one row ticked; every inline script
 Prescriptions search 8 → 2 → 8. Pictures: shots/inv2-audit-*.jpg / .png (table, tab, phone, drawer, bulk, twin; -before /
 -after). **Not tested:** her real records, her phone (Key2), the head's ⋯ menu on a page with overflow by eye (same rule as
 the row ⋮).
+**LIVE** 2026-11-01: build 20261102-003300 (publish 868755d1, made by the session that shipped the phone Appointments calendar
+f393cc20; af046e67 + notes rode along from the shared branch). Checked on the live copy: the select-bar, `#phInvChips::after`,
+`.ph-rp-mi` 32px, the sheet close, Columns hidden ≤900, the drawer heads, Merge and the phone `#phKindSel` rules are all in it.
