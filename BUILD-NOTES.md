@@ -8324,3 +8324,5 @@ with the disc in the bar (before: two dips to 50.5px); `renderPhAppointmentsPage
 phone bar held 47px with ☰ · disc · ⋯ through 600 ms; the Prescriptions search with three in-memory rows narrowed to one on
 "Gamma" and gave them all back when cleared; no console errors. **Not exercised:** her records; her phone; a real Cliniko load
 landing mid-open.
+
+**LIVE:** build 20261101-230200 (publish 31c21c8e, 2026-11-01).
