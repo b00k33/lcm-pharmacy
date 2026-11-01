@@ -49140,7 +49140,17 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   const phTripIsNj = t => !!t && (t.src === "c5" || /nanjing|南京/i.test(`${t.city || ""} ${t.t || ""}`));
   const phTripTzOf = t => Number.isFinite(+t.tz) && t.tz !== "" && t.tz != null ? +t.tz : null;
   const phTripTzLbl = tz => { const a = Math.abs(tz); return `UTC${tz < 0 ? "−" : "+"}${Math.floor(a / 60)}${a % 60 ? ":" + String(a % 60).padStart(2, "0") : ""}`; };
-  const phTripHomeTz = k => { const d = parseKey(k); d.setHours(12); return -d.getTimezoneOffset(); };
+  // home's own clock (minutes ahead of UTC) from the time-zone database, never the computer's: found 2026-11-01, her laptop
+  // set to China time in Nanjing made SYD → NKG read 7 h 50 (it is 10 h 50) and the flight home 14 h 05 (11 h 05)
+  const PH_TRIP_HOME_ZONE = "Australia/Sydney";
+  function phTripZoneOff(ms) {
+    try {
+      const p = {};
+      new Intl.DateTimeFormat("en-AU", { timeZone: PH_TRIP_HOME_ZONE, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric" }).formatToParts(new Date(ms)).forEach(x => { p[x.type] = +x.value; });
+      return Math.round((Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute) - Math.floor(ms / 60000) * 60000) / 60000);
+    } catch (e) { return -new Date(ms).getTimezoneOffset(); }
+  }
+  const phTripHomeTz = k => { const [y, m, d] = k.split("-").map(Number); return phTripZoneOff(Date.UTC(y, m - 1, d, 2)); };   // 02:00 UTC = midday at home
   const phTripHm = v => { const m = /^(\d{1,2}):(\d{2})/.exec(String(v || "")); return m && +m[1] < 24 && +m[2] < 60 ? `${String(+m[1]).padStart(2, "0")}:${m[2]}` : ""; };
   const phTripMin = v => { const h = phTripHm(v); return h ? +h.slice(0, 2) * 60 + +h.slice(3) : null; };
   const phTripClock = v => { const h = phTripHm(v); return h ? phCkTime12(h) : ""; };
@@ -50039,6 +50049,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   function phTripTodayHtml(t) {
     const tk = phTripTodayKey(), s = phTripState(t), N = phTripLen(t), st = t.stay || {}, tz = phTripTzOf(t);
     const nowD = new Date(), here = tz != null ? new Date(nowD.getTime() + (tz + nowD.getTimezoneOffset()) * 60000) : null;
+    const homeD = new Date(nowD.getTime() + (phTripZoneOff(nowD.getTime()) + nowD.getTimezoneOffset()) * 60000);   // Sydney's clock, whatever the computer is set to
     const hm = d => phCkTime12(`${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`);
     const left = N - s.day;
     // the day in time order with what comes Next (her pick 8): its place in Chinese and that place's driver card
@@ -50048,7 +50059,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     const plan = next ? `<div class="ph-trip-card ph-trip-next"><span class="nt">Next${next.tm ? " · " + esc(next.tm) : ""}</span>${next.html}${then ? `<span class="nt">Then${then.tm ? " · " + esc(then.tm) : ""}</span>${then.html}` : ""}${nv && nv.nz ? `<div class="zh" lang="zh">${esc(nv.nz)}</div><button type="button" class="ph-trip-btn solid" data-trip-drv="${esc(nv.id)}">${phTripIc("car")}Driver card</button>` : ""}</div>${later.length ? `<div class="ph-trip-card"><div class="ph-trip-tl">${later.map(phTripTlrHtml).join("")}</div></div>` : ""}`
       : `<div class="ph-trip-card"><div class="ph-trip-ch"><h4>Today</h4></div>${rows.length ? `<div class="ph-trip-tl">${rows.map(phTripTlrHtml).join("")}</div>` : `<div class="ph-trip-none">Nothing planned</div>`}</div>`;
     const back = phApptList().filter(a => a.date > t.to && a.patient && a.service !== "Break").sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.time || "") < (b.time || "") ? -1 : 1)[0];
-    return `<div class="ph-trip-card ph-trip-day1"><b>${s.day}</b><div>${esc(phTripDl(tk))} · ${esc(phTripCity(t))}<small>${left > 0 ? `${left} day${left === 1 ? "" : "s"} left` : "Last day"}${here ? ` · ${esc(hm(here))} here · ${esc(hm(nowD))} ${PH_TRIP_HOME}` : ""}</small></div></div>
+    return `<div class="ph-trip-card ph-trip-day1"><b>${s.day}</b><div>${esc(phTripDl(tk))} · ${esc(phTripCity(t))}<small>${left > 0 ? `${left} day${left === 1 ? "" : "s"} left` : "Last day"}${here ? ` · ${esc(hm(here))} here · ${esc(hm(homeD))} ${PH_TRIP_HOME}` : ""}</small></div></div>
       ${plan}
       ${st.nz || st.az || st.n ? `<div class="ph-trip-card ph-trip-hotel"><div class="ph-trip-ch"><h4>Hotel</h4></div>${st.nz || st.az ? `<div class="zh" lang="zh">${esc(st.nz || "")}${st.nz && st.az ? "<br>" : ""}${esc(st.az || "")}</div>` : ""}${st.n || st.ae ? `<div class="en">${esc([st.n, st.ae].filter(Boolean).join(" · "))}</div>` : ""}
         <div class="acts">${st.nz || st.az ? `<button type="button" class="ph-trip-btn" data-trip-drv="1">${phTripIc("car")}Driver card</button>` : ""}${st.tel ? `<a class="ph-trip-btn" href="tel:${esc(String(st.tel).replace(/[^\d+]/g, ""))}">${phTripIc("phone")}Call hotel</a>` : ""}</div></div>` : ""}
