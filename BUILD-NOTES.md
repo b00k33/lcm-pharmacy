@@ -7653,3 +7653,10 @@ Formula and shows it, Cancel saves nothing); the Status menu opens fully on scre
 **Not tested:** Select mode's bulk bar, Stocktake, a herb with stock history rows, + Add supplier's new-supplier field, her real
 catalog, the Key2 at 360 × 469.
 **Pages checked for the fact:** Inventory (table, narrow list, drawer), To order (its estimate pill untouched, scoped).
+**LIVE:** build 20261101-134100 (publish 6d0bb7a0 by the B33 C4 LCM session, on her "push live" there; her "Push live" in this
+session's popup the same hour).
+**Her pick "Chips only"** (same popup; the question was "On the phone, Zero 4 · Low 17 · Overstock 193 show twice"): up to 900px
+(no sheet) the strip drops its Zero / Low / Overstocked cells and the chips under the search say them (they tap, and stay in view
+by her mockup 13). The non-sheet tiles carry `data-ph-inv-count` (the sheet's carry `data-ph-inv-tile`, so desktop's seven tiles
+are untouched); at 641–900px the strip is a 7-column grid, so the cells left flow as equal columns. Commit b7f63442. Tested at
+360 (four cells, no sideways scroll), 800 (four equal cells) and 1220 (seven tiles). NOT live yet.
