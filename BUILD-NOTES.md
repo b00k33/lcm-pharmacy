@@ -7607,3 +7607,48 @@ handler).
 sheet, the phone cards, the check-in panel), the Dashboard count and the menu badge (both read `phCommDueRows`, so they
 follow), the Care Plan phase record (Check-ins line, outcome cell), the Prepared / Sent tabs (untouched: a mark is not a
 prepared message).
+
+## Inventory page audit (2026-11-01)
+Her words: "audit the inventory page for consistency too". Audit = apply (commit ba7d4eb1; one dated CSS block, "Inventory page
+audit (her 2026-11-01 ...)", at the end of the main `<style>` after the Dispense block, plus the herb drawer's words).
+**Measured** in the sandbox (the built-in catalog, 356 herbs and formulas) at her 1220px (the table and the edit drawer), at
+800px (641–900px shows the narrow list and the phone's compact filter row) and at 360px (the list, the Filter panel, the
+Status menu and the drawer full screen). The table itself was already clean from the 10/30 pass.
+**Fixed (desktop):**
+- Bottle $ worked out from $/g × the pack (no bottle price typed) was a navy 10.5px / 800 pill inside the tint field (a box in a
+  box, a second value look): plain figures in `--ph-faint` (4.8:1 on the tint), its hover still says it is an estimate. Scoped to
+  `#phInvWidget`: To order keeps its own `.ph-cost-computed`.
+- The page circles (‹ ›) had lost their line: the sheet's own rule (`#phInvWidget.ph-inv-sheet .ph-page-btn`) outranked the 10/23
+  circle rule. "197 of 356 herbs" (11.5px / 400) takes the one capitals label (10.5px / 700 / .08em).
+- The edit drawer (`#phHerbForm`): section labels 800 → 700 like the field labels, and lose the 3px bar beside them (labels and
+  fields now share one left edge); no lines between sections (space) or above the footer (the footer a faint tone); fields
+  28–30px / 10px corners / 13.33px → 32px / 6px / 13px; Kind (two 36px pills in a pill) = one joined 32px bar, picked
+  `--ph-herb`; + Add supplier (a 28px pill, centred) and + Adjust stock (20px words that tap) = chips, Add on the rows' left
+  edge; the supplier row's fields 32px / 6px / 13px, its ★ and × 32px circles (30px square, 22px).
+- Terse: the labels' explaining words went into hover titles: Low at "(reorder point)", Cautions "(shown as a flag on any
+  prescription using this)", the Suppliers & pricing sentence (★ = the active one ...) on its heading; In stock's "(blank = not
+  tracked)" became the empty field's own placeholder "not tracked", Overstock at's "(blank = auto-estimate from usage)" the
+  placeholder "auto" (hover "Blank = estimated from usage"); Notes' "(function, ingredients, price…)" and its example
+  placeholder went (the Notes heading names it); **Formula source shows for formulas only** (its label said "formulas only"; the
+  field lacked the `data-ph-kindonly="formula"` that `phHerbSyncSourceFromSupplier` already expected, and `.field`'s display beat
+  `[hidden]`: `#phHerbForm .field[hidden]`). Its value is kept when hidden (a select; `phHerbApplyKindVisibility` blanks inputs only).
+  The empty history reads "No movements" with no dashed box. The Stock status options keep their "(stock written off to 0)" /
+  "(sell stock down to 0)": a warning that stops a mistake.
+**641–900px:** the compact filter row (`.ph-mchips > *` 10.5px !important, 23px buttons, a 10px dropdown) and the Zero / Low /
+Overstock chips (21px pills, 10px) = the desktop chip, 32px / 6px / 13px; the row wraps (two lines at 800) instead of hiding
+Select / Stocktake past the edge; each row's status chip (8.5px / 800 capitals) = the table's: 32px, 13px, normal case, ▾.
+**Phone (≤640px):** Filter, the panel's controls, the three stock chips, Show everything again and each row's status chip = the
+phone's 28px / 6px / 12.5px (an older phone rule sets min-height 32px !important on `.ph-load-btn`, so mine is !important too);
+the search box 6px corners (a pill); one 11px / 700 / .06em label in the drawer; drawer fields one 32px (Herb 34, Stock status 36).
+**Kept on purpose:** the table's sort heads (table cells), the 44px menu rows of ⋮ / Status / Columns (menus are rows), the
+dark top bar, the strip, the Stock and Level cells, Cancel / Save (the shared Button base). The phone shows Zero 4 / Low 17 twice
+(the strip and the chips): the chips stay out from under Filter by her 2026-08-16 mockup 13 ("always visible ... at a glance"),
+so that one is asked, not changed.
+**Tested:** the scan before and after: desktop table 3 findings → 0 (left: sort heads, a 1-digit stock field read as an icon,
+the top bar), the drawer 16 controls off the one size (7 fields, the supplier row 3 + ★ + ×, Kind 2, Add, Adjust) → 0 and 2 label looks → 1; 800px 10 → 0; phone all controls 28px / 12.5px, no sideways scroll
+at 360 / 800 / 1220; Kind Formula ↔ Single herb shows and hides Formula source (a formula opens with it, a new "Gui Zhi Tang" turns
+Formula and shows it, Cancel saves nothing); the Status menu opens fully on screen at 360; the Prescriptions search narrows
+4 → 1 → 4; no console errors from the app (two from my own test scripts).
+**Not tested:** Select mode's bulk bar, Stocktake, a herb with stock history rows, + Add supplier's new-supplier field, her real
+catalog, the Key2 at 360 × 469.
+**Pages checked for the fact:** Inventory (table, narrow list, drawer), To order (its estimate pill untouched, scoped).

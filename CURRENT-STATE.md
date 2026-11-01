@@ -581,7 +581,10 @@ A row in Urgent stock opens the edit drawer; the name is plain text.
 
 **Inventory (her pick "Lean table, the row opens the rest"; built, NOT live yet):** Name · Supplier · Bottle $ · Stock (g) ·
 Level · ⋮; the row opens the edit drawer, the name is plain text; the other columns wait in Columns (`PH_INV_LEAN_HIDDEN`; her
-saved set was moved once by `phMigrateInvLean`). The ⋮ menu holds Add to order. **Suppliers:** a row opens its herb list; each
+saved set was moved once by `phMigrateInvLean`). The ⋮ menu holds Add to order. A Bottle $ worked out from $/g is plain
+faint figures in its field. **The edit drawer** (`#phHerbForm`; her 2026-11-01 audit): Essentials (Formula source only for a
+formula), Suppliers & pricing and Notes folded, Clinical reference, Stock history ("No movements" + Adjust stock); one label
+look, no lines, 32px controls, Kind one joined bar; what a field means sits in its hover, never in its label. **Suppliers:** a row opens its herb list; each
 row ends in **Review prices** (Price review on that supplier); Price review is no longer in the sidebar.
 
 **Patient profile list on a computer (her audit: "make it more space saving make it cleaner") [Patient profile list audit]:** the
