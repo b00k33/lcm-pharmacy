@@ -8823,3 +8823,53 @@ no longer finds Coke Zero).
 **Tested** (test copy, 1440): 947 foods, 257 in the Hungry Jack's pane (drawn on opening it, 66 ms on this computer), "1 Whopper
 Triple" lands in Tue dinner, taps 20–40 ms with the pane open, searches "oat milk" (19), "frozen fanta" (44), "storm",
 "mayo", "grill masters", "sprite"; no errors, every inline script parses. Not tested on her Key2.
+
+## 2026-11-02 — Photos increment 2: the Comparison table's Pair (Before ▾ ⇄ After ▾ in the heads), Records → Photos by shot with a date chip, the standard chips
+
+**Her word:** "continue" → "Try again" (the last parked build, OPEN "Photo organising increments 2+"); mock
+`photos-picker-mock-2026-11-02.html` (artifact C6cJDAGdnEuddewGyU1rBL); **her 8 picks, every one the recommended option:**
+1 the column heads are the pickers · 2 time runs left → right · 3 Records → Photos By type splits Tongue by shot · 4 fixing a photo
+from the table stays in the viewer (no per-cell chips) · 5 a date chip on Records → Photos' tiles · 6 the phone opens on the Pair ·
+7 the pair is remembered for the session only, All dates on the next open · 8 the Photos page's old pill chips become the standard
+32px / 6px chips. Measured first on her 27 Oct export: 14 tongue rows have 3 or 4 dates, none more, so a calendar (the 10/19 idea)
+would be mostly empty months; the chips had grown to a row of five and kept the newest on the left with no swap.
+
+**What changed (`phRenGalTableHtml`, `phRenGalPairOf`, the click + change handlers, `phRenDateMove`, `phRecPhotosBodyHtml`,
+`phRecPhotosThumbHtml`, `.ph-gal-chip`, `.ph-gal-datesel`, `.ph-gal-swap`, the 640px block):**
+- **All dates | Pair**, one joined bar (`.ph-recphotos-seg`, the page's own) above the table once a patient has two or more
+  dates. All dates = every column, **oldest left, newest right** (`allDates` sorts ascending; it used to be reversed). Pair = two
+  columns whose heads are the pickers: BEFORE 8 Sep ▾ · ⇄ · AFTER 20 Oct ▾ (`select.ph-gal-datesel.field-bare`, a 32px 6px chip with its own
+  chevron; `field-bare` keeps it out of the app-wide `select:not(.field-bare)` pill rule, the Field-input trap from the 10/29
+  audits; on a phone it keeps STYLE-LCM's 16px value size), opening on
+  **first ↔ latest**; the ⇄ (`.ph-gal-swap`, a 32px circle) swaps the two dates; a pick in a head repaints the section in place.
+  `phRenGalCmp` now holds `{ mode, a, b }` per patient key for the session (never written to the record): no entry = All dates on a
+  computer, the **Pair on a phone** (`phRenGalPairOf`). The old "Show" chip row, its max-two FIFO and the "pick a second date" hint
+  are gone. The swap column is a narrow `th.sw` / `td.sw` so the group heads' colspan counts it.
+- **Phone (≤640px, inside the one PHONE REDESIGN block):** `.ph-gal-table.pair` lets the two columns fit the screen (`fit` cells
+  lose their 220px floor, the row head wraps in an 84px column at 10.5px, the head dropdown loses some padding, the swap column is 36px: 296px of card, 296px of table at 375). All dates is one
+  tap away and scrolls sideways inside the card as before.
+- **Records → Photos, By type** groups by `phRenRowKeyOf` in `phRenRowsFor`'s order: Tongue · Natural light, Tongue · Flash,
+  Tongue · Sublingual, Tongue · Side, Tongue · unsorted (no shot yet), then the other kinds; a shot change on a tile now moves it
+  between groups (`phRecPhotosLabel`'s `moved` test counts the shot). Each tile's date is the patient page's own date chip
+  (`phRenGalDateBtnHtml`, the hidden native date input) in place of the date words; the one `change` handler serves both pages
+  through **`phRenDateMove`** (the write through `phRenBulkPatch` → `phRenPhotoPut`; on Records the page's flat cache is patched by
+  hand and the tile repaints in place, or the body with the scroll kept when grouped By date, `phRecPhotosQuiet` held through the
+  reload so nothing jumps; Undo in the one toast).
+- **The standard chips:** `.ph-gal-chip` (All · Unsorted · the kinds) is 32px, 6px corners, 13px, picked = solid teal (Unsorted
+  picked = solid amber `--ph-low-press`, white text); the tongue **shot row** (Any shot · Natural · Flash · Sublingual · Side) is one
+  joined bar that scrolls in itself on a narrow screen. Not joined: the kind chips carry counts and vary per patient, so a joined
+  bar would wrap at 375px (the rule's own exception says dropdown, which would hide the counts) — they stay loose standard chips.
+
+**Tested** (HEAD copy through `_ia-page.html`, port 8994; a seeded test patient with 9 photos on 4 dates, 1280 and 375 wide):
+All dates heads 8 Sep · 22 Sep · 6 Oct · 20 Oct; Pair opens Before 8 Sep / After 20 Oct, 4 cells a row, group heads colspan 4;
+Before → 22 Sep repaints; ⇄ gives 20 Oct / 22 Sep; All dates returns every column; chip 32px / 6px / 13px, picked rgb(22,92,116) +
+white; the shot row is a `.ph-recphotos-seg` 32px / 6px; Records By type = Tongue · Natural light 4 · Tongue · Sublingual 2 · Face 2
+· Eyelid 1, 9 date chips; a date fix (22 → 23 Sep) moves the tile's chip, the toast "Moved to 23 Sep · Undo", both caches and the
+stored record follow, the scroll stays, By date shows "Wed 23 Sep 1", the put-back restores "Tue 22 Sep 1" and the store reads
+2026-09-22; a Flash tap moves the tile to Tongue · Flash and back; 375: the table opens on the Pair, two columns fit the card with
+no sideways scroll; Prescriptions search narrows to the typed name, hides it on a miss and comes back when cleared; console clean
+(only the sandbox's unreachable hosts). Integration: the Compare screen (`phRenCompare`, "Compare first ↔ latest"), the viewer's
+shot / kind / date tools, the Tongue page's pairs and the BBT strip read `phRenDateKeyOf` / `phRenPhotoCache` as before and were
+not changed. **Not tested:** her real photos, the Key2, a real native date picker (the hidden input was set by script), a patient
+with photos on one date only (no bar, one column, as before by code).
+Pictures: `shots/ph-before-*.png` and `shots/ph-after-*.png` (table, pair, pair-swap, 375, bytype, records-bytype).
