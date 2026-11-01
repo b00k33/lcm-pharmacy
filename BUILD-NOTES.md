@@ -8326,3 +8326,42 @@ phone bar held 47px with ☰ · disc · ⋯ through 600 ms; the Prescriptions se
 landing mid-open.
 
 **LIVE:** build 20261101-230200 (publish 31c21c8e, 2026-11-01).
+
+## 2026-11-01 · Meal repeats: each food is daily, on set days, or that day only
+Her words: "need an easier way to organise meals based on daily or one day" (screenshot of the Meals week, Thu 29 – Sun 1). Her
+4th report on this area (10/26 ✎ Usual, 10/27 the bar on top, 10/28 pick B and "i dont need an every lunch and everyday
+button"), so the layer was wrong: her answers said she wants all four of make a day her daily, add one thing daily, change one
+day only and plan by weekday; her meals "change day to day"; every hard part ticked (can't find every day, can't tell what
+repeats, a changed day stays stuck, too many taps). One fixed usual meal a slot was the wrong model: what repeats is a food.
+Sample: `meal-repeat-mock-2026-11-01.html` (artifact https://claude.ai/artifact/28ee7czCndUhpCQeiHdf74). **Her 8 picks, all
+the recommended:** C · Both (a chip on each food + ↻ Repeat meal), the ↻ mark look, ✕ on a repeat asks Just · on · Every day ·
+Keep, a new food starts that day only, ✎ Usual goes, a repeat runs from its day on, an amount change on a repeat asks the same,
+"Yes, build it".
+
+**What changed** (code "MEAL REPEATS" above `phMealPlan`; CSS "MEAL REPEATS" after A CALMER MEAL's):
+- A repeat = `d.meals["rp|<id>"]` {sl, x, r d · w · e · k (wd), fr, to}. `phMealPlan(day, sl)` (the one read every page uses:
+  cells, card, calendar, macros, Shopping list, Had it) = the repeats on that day less the day's `off`, at the day's amounts, +
+  the day's own foods (an entry with `ad: 1`). Her usual meal (`def|<sl>`) counts as Every day foods (`phMealRepAll` makes them
+  virtual repeats, so nothing moved and an old build still reads it); changing one moves it out of the usual meal into a repeat
+  of its own (`phMealRepCut`, carrying on to the day before). A day kept before (no `ad`) still reads as its whole meal; when a
+  repeat of that meal changes, its days from today on are kept the new way first (`phMealLegacyUp`), so they follow.
+- Every write to her day goes through `phMealDayPut` (the day's list as she wants it, kept against what repeats): `phMealPlanSet`
+  "day", Copy a day (`phMplCopyDays` copies the day's foods as they show), and the list's add / ✕ / − + paths.
+- The chip (`phMealRpRowHtml`, a line under each food of HER day's meal; not a patient's, her usual sheet or a meal she had),
+  its list (`phMealRpMenuHtml`: <Thu> only · Every day · Weekdays · Weekends · Every <Thu> · the M–S joined bar), ↻ Repeat meal
+  on the top line (`phMealDayTopHtml`, with ↺ Undo once the day has its own changes; "Same as every <meal>" and "<Thu> only"
+  went), the ask on ✕ and on − / + of a repeat (`phMealRpUi`; − / + keep changing the shown amount until she picks),
+  `phMealRepSet` / `phMealRepRm` / `phMealRepQ` (one save each, its Undo puts every entry back).
+- Planner: a ↻ before a food that repeats, a food for that day only bold (`.ph-mpl-ml.rpx`); the key reads "↻ repeats · bold =
+  that day only"; the ✎ Usual buttons (row heads) and the phone's Usual / Every chips are gone; the picker always opens on the day.
+
+**Tested** (sandbox, her real week's shape seeded: milk every day from her usual, cocoa on Thu, water at lunch, a Fri lunch
+emptied, Sun and Tue 3 kept the old way): every day read the same as before the build; Repeat meal → Every day on Thu made
+cocoa daily from Thu (Mon–Wed unchanged) and reached Sun and Tue 3; the toast's Undo put it back; ✕ milk on Fri → the ask →
+Just Fri took it off Fri only; + + on Sat's milk showed 350 ml with the ask → Sat on: 250 ml up to Fri, 350 ml from Sat; the
+day bar (Sat off, then Sun off) went Every day → "Mon Tue Wed Thu Fri Sun" → Weekdays with no extra entries left; a banana
+added = "Mon only", bold in the cell; Copy a day Mon → Sat kept the weekday cocoa as Sat's own; Skipped ahead and back; a meal
+she had and her usual sheet show no chips; the card shows the chips; no console errors. Pictures (headless Edge, 1220 and 375
+in a frame): `shots/meal-repeats-1220|ask-1220|375-2026-11-01.png`. **Not tested:** her real records, her phone (Key2), a second
+device on an old build (it still reads her usual meal; days changed here read their own foods only there until it updates).
+Waits for her "push live".
