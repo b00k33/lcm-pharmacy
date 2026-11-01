@@ -8796,6 +8796,8 @@ every control measured at 1220 / 800 / 360 with before / after pictures (the blo
 open and closed; no sideways scroll (1220 / 785 / 360); console clean after a reload; Prescriptions search 2 → 1 → 2. On a 1x
 screen Chrome draws the 1.5px line as 1px (as Prepare). Pictures: shots/da2-audit-*.jpg / .png (board, tab, phone, fix;
 -before / -after). **Not tested:** her real records, her phone (Key2), the stocktake nudge (no count open in the sandbox).
+**LIVE** 2026-11-02, her "Push live": build 20261102-104900 (publish d240a918) carries the Dashboard page audit, second pass
+(7616f6f6). Checked on the live copy: all four rules are in it.
 
 
 ## 2026-11-02 — Hungry Jack's whole menu (Menus + dishes, follow-up)
