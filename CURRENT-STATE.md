@@ -127,6 +127,16 @@ Me:** the Appointments dialog's title bar switches to the Me pane (Event · To-d
 thing, colours = her C22 Modes then C22's groups, "Coming up" beside it); every save and delete has Undo in the one toast. Code:
 "ME · HER OWN THINGS LIVE IN LCM".
 
+**Click a free time to add (her picks 2026-11-01) [Event quick add].** On the grid with her events showing, a click on a free
+time (or a drag down a free column for a longer time) opens a card beside it (a bottom sheet on a phone; it closes any booking
+card): Search events, then her event presets grouped under her colours; one tap adds the event at that time with the preset's
+length, colour and repeat, Undo in the one toast. A repeating preset whose routine already runs adds that day only; otherwise it
+starts the routine and the toast offers Only this day. "New “x”" saves a new preset with the event. A preset = name · colour ·
+length · usual time · repeat, kept in the Me row's `pre` map (merged like items); edited in Settings › Calendar › Event presets
+(one table, ✎ per row, + Preset) or from the card's Edit list ›. The Me form's Event title lists the names and a picked one fills
+the rest. Her own names are data in her Me row, never in this file. Patients stay in Cliniko. Code: "QUICK ADD · A CLICK ON A
+FREE TIME" (`phQk*`; `phQa*` is Quick assess).
+
 **One calendar, work + life (her picks) [One calendar: work + life].** **The row above each day** (`phC22FoldRowHtml`): a birthday
 = cake + name + the age it turns (`phC22BdayChipHtml`, tap = the birthday card), then the day's one-offs outside the patients'
 hours, then ONE ⟳ chip for its routines whose ring fills as they are ticked (`phC22RtChipHtml`; tap unfolds that day's chips, ▴
