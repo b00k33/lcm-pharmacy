@@ -7925,3 +7925,23 @@ the formulas count's card (same classes).
 **LIVE** 2026-11-01, build 20261101-181400 (publish 76c694cc, on her "push live" by popup, keeping the card's shelf-side sizes; it also
 carried the Fang Bing Ren run 18 build adbbd7b0; the commit list matched the dry run). Checked on the live page: the build stamp, the
 card's tinted count box rule, the phone order bar rule, "No stocktakes", the Restart warning and the history kind words.
+
+## 2026-11-01 · Calendar: hover no longer hides a block
+**Her words:** "when i hover my mouse over an event the block disappears".
+**Cause (measured on her live week 2–7 Nov, build 20261101-181400):** a block's layer is its place in the nest (`--z`, set by
+`phApptCalBlockStyle` / `phC22JointLay`: the later block sits over the earlier one). Hover forced its own layer on top of that:
+her events to 6 (`.ph-c22-life:hover`, left from the dashed design), visits to 20 (`.ph-appt-block:hover`). So hovering an
+afternoon lecture (layer 3) lifted it over the Lunch and Herbs blocks drawn inside it (layer 5) and they vanished; 14 such
+overlaps that week alone. Hovering a visit with one of her events inside it did the same, and an event at layer 7+ was pushed
+down on hover.
+**Fix (CSS only):** hover keeps the block's own layer: it brightens and rings, nothing else (her seamless pick 7, "hover
+brightens, nothing grows", and pick D, "hover brightens only"). The open block (`.sel`) still rises, now 19 for her events too,
+like a visit's, so an open one is never under a neighbour.
+**Tested:** her live page in my own Chrome tab: before, hovering "Dr Zhang Xueguang 2:00" gave it layer 6 and the
+spot under Lunch read the lecture; with the new rules (put into that tab only, then removed) the lecture stays at 3, brightens,
+and Lunch and Herbs stay in view (shots/calendar-hover-before-2026-11-01.png, -after). The edited file in the sandbox: no hover
+or focus rule on either block kind sets a layer (CSS rule walk), an opened event and an opened visit read 19.
+**Not tested:** a real mouse hover on the edited file itself (the hidden sandbox pane did not take the hover); her phone (no
+hover there).
+**Pages checked for the fact:** Appointments grid (week and day), her events and visits; the chips above and below the day share
+the rule (their hover never set a useful layer).
