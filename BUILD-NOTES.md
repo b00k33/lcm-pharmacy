@@ -8566,3 +8566,4 @@ second transfer pre-filled today + heartbeat with the line's fade-in; → miscar
 Dating scan read Done · 2 Nov · twins from IVF history; 375: no overflow, chips 32px, no text cut; the Prescriptions search narrowed
 to the one name and gave the list back; 0 errors over the path. Pictures `shots/hb-after-*.png` (seven; six sent to her as the mock
 round). **Not tested:** her real records, her phone (Key2), the beat by eye in motion (headless pictures are stills).
+**LIVE:** build 20261102-004400 (publish 0207faf1, 2026-11-02 ~01:55), with two build-notes commits from the other LCM sessions. The live copy carries `phIvfHbOf` and the scan line; her computer and phone still need the gold Update button.
