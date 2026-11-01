@@ -7558,3 +7558,4 @@ looks 4 → 1; no
 sideways scroll at 360 / 800; no console errors; the drawer open and closed; the More menu open.
 **Not tested:** a logged or scheduled prescription (Calculate link, Log done states), a mail-order dispense, a formula
 template (isF) page, the Key2 at 360 × 469, her real catalog.
+**LIVE:** build 20261101-124300 (publish 85724340, on her "push live").
