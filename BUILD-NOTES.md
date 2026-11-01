@@ -7607,6 +7607,7 @@ handler).
 sheet, the phone cards, the check-in panel), the Dashboard count and the menu badge (both read `phCommDueRows`, so they
 follow), the Care Plan phase record (Check-ins line, outcome cell), the Prepared / Sent tabs (untouched: a mark is not a
 prepared message).
+**LIVE:** build 20261101-134100 (publish 6d0bb7a0, on her "push live", 2026-11-01).
 
 ## Inventory page audit (2026-11-01)
 Her words: "audit the inventory page for consistency too". Audit = apply (commit ba7d4eb1; one dated CSS block, "Inventory page
