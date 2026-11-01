@@ -525,8 +525,11 @@ allows.
 **Formula refill** is one card grammar across To make / Below the line / Snoozed / All recipes. One list at every width (a phone
 stacks each row: tick, jar, name + grams, then its week chips); To make is banded by week (Overdue / This week / Next
 week / Later / No week yet), a short row with "Fix short ▾". "When" is WEEKS ("Wk 39"; overdue = "last week" in amber, sorted first); Plan ▾ = This
-week / Next week / Pick a week. The date popover is mounted globally; no `window.prompt()` anywhere. Week tiles (Overdue / This
-week / Next week, tap filters); the header primary is the gold "+ Plan a formula" (search sheet).
+week / Next week / Pick a week. The date popover is mounted globally; no `window.prompt()` anywhere; its footers are chips
+(Clear · More weeks; under the Not now label, Snooze 1 week · Take off the list). Week tiles (Overdue / This
+week / Next week, tap filters); the header primary is the gold "+ Plan a formula" (search sheet; each formula's weeks one joined
+bar, This week filled). No hint line under the tabs; an empty tab says two words ("Nothing snoozed"; All recipes with none:
+"No recipes" + a "+ New recipe" chip) [Formula refill page audit].
 **One line per formula, its facts beside the list (her picks) [Formula refill: one line, facts beside]:** a row = tick (Below the
 line, All recipes) · jar (filled to the stock line) · name (plain text, wraps) with grams · 12 weekly bars + patients · next
 booking ("Today · 2 booked", the patients in the hover) · its step (Wk + Make on To make; This week | Next week | ▾ elsewhere) ·
@@ -550,6 +553,9 @@ stored. Motion off under reduced motion. Dispense's In stock cell says "To make 
 always stacks (Make refill, then the ingredients at full width; her "i cant edit the formula at all": two columns split inside the
 640px sheet). Every row with a recipe ends in a "Recipe" button (pencil icon, `phRfcRecipeBtn`, `data-pres-open`) opening that
 recipe's herbs and grams in the same side sheet (her "how do i edit recipes?") [Formula refill: a Recipe button on every row].
+In that sheet Grams and Name are fields and Type a dropdown, ⋯ is an icon circle beside the one solid Make refill, Label preview
+and Edit as a plain list are chips, the code column is 80px (the phone folds it away, as Dispense does), and the match line says
+"✓ all N ingredients matched" only [Formula refill page audit].
 
 **To Order: two steps (her pick; built, NOT live yet)** [Inventory: stock truth, To order in two steps, lean Inventory, Price
 review in Suppliers]. Desktop (>900px) = a 2-column board that fills the window: **To order** (a To order | Running low switch;
