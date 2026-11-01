@@ -7517,3 +7517,4 @@ Pictures `shots/e5-build-*.png` (Ask her 1440 / 1200 / 375, Care Plan 1440, Trea
 reach the hidden pane), the Timeline's lanes view (layout "b"), the Key2 at 360 × 469.
 **Pages checked for the fact:** Ask her (wide, 1200, phone), Care Plan Findings, Treatment's summary column, the Timeline list view,
 Blood tests (unchanged), Today's visit (its Ask her tile reads `phAhDone`, unchanged).
+**LIVE:** build 20261101-120600 (publish 1b2a81b6, on her "push live", 2026-11-01).
