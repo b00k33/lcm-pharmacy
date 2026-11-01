@@ -8364,4 +8364,4 @@ added = "Mon only", bold in the cell; Copy a day Mon → Sat kept the weekday co
 she had and her usual sheet show no chips; the card shows the chips; no console errors. Pictures (headless Edge, 1220 and 375
 in a frame): `shots/meal-repeats-1220|ask-1220|375-2026-11-01.png`. **Not tested:** her real records, her phone (Key2), a second
 device on an old build (it still reads her usual meal; days changed here read their own foods only there until it updates).
-Waits for her "push live".
+**LIVE:** build 20261101-231600 (publish ead3b3db, 2026-11-01).
