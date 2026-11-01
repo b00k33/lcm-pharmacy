@@ -8106,3 +8106,48 @@ herb's own history (`phHerbMovements` reads the re-pointed ids), Communications 
 visit, Patient details and the Start here card (same fields, same handlers), the Log's "all" view.
 
 **LIVE:** build 20261101-185300 (publish e5af3669, 2026-11-01), together with Ling Gui Zhu Gan Tang (integrate33 run 19, 028d9af2) from the bugs session.
+
+## 2026-11-01 · Calendar: click a free time to add, from her event presets
+**Her words:** "i want to be able to click the calendar and add an event like a calendar. i need all events to be organised and
+preset so i can just search and select instead of free selecting all the time."
+**Measured first:** her Me row held 137 events with 57 titles, many the same thing typed differently (Gym / GYmn, Mandarin class /
+Chinese class 1 hr, three spellings of one seminar); most had no colour. Effort today (her answer): all four, typing the name,
+picking the colour, setting time + length, getting to the box.
+**Her picks** (mock `event-quick-add-mock-2026-11-01.html`, published to her; all as recommended except 4, where she added Repeat):
+1 A a click on a free time opens a card there, a drag down sets a longer time first · 2 A one tap on a row saves, Undo in the toast ·
+3 A before typing the whole list shows, grouped under her colours · 4 a preset holds Length + Usual time + Repeat (not Note) ·
+5 A the list starts from her own events, tidied, and every new name she types is kept · 6 A one table in Settings › Calendar plus
+an "Edit list" row on the card · 7 A Me only (patients stay in Cliniko) · the card sits BESIDE the clicked time, not docked in the
+column (opening it closes any booking card) · a repeating preset whose routine already runs adds THAT DAY only; with no routine yet
+it starts one and the toast offers "Only this day".
+**Built:** a click on a free time of the grid (the day column itself, never a block; Appointments, Grid, Me events showing:
+`phQkArmed`) opens `#phQk` beside that time (right of the column, else left, kept on screen; a bottom sheet at ≤640px; centred
+from Settings), with a ghost block holding the time and, for a mouse, a hover band that says where a click lands. The card: the
+date + time (or the dragged range), Search events (name and colour words, names that start with the words first, then the most
+used), the list grouped by colour (`phMeColours()`: her Modes, then C22's groups; no colour last), each row its usual time and
+length; arrows + Enter pick; the last row "New “x”" for a name not on the list (the form: Name, Colour, Length, Usual time,
+Repeat as one joined bar Once · Daily · Weekly · 2 weeks · Monthly; the clicked time fills Usual time); Edit list ›. One tap =
+one `phMeSave` writes the item (clicked time, the preset's length or the dragged one, its colour, its repeat on that weekday or
+day) and, for a new name, the preset; the one toast says "✓ Gym · Tue 3:00 pm · Weekly" with Undo (both go) and Only this day
+when a repeat was started. Esc, ✕ or a press outside closes. Settings › **Calendar** (a new group) › Event presets: one table
+Name · Colour · Length · Usual time · Repeat (· From your events, the titles a preset was tidied from), ✎ opens the row in the
+same card (rename, a duplicate name is refused; Delete with Undo), + Preset. The Me form's Event title lists the names (native
+datalist) and a picked name fills colour, time, length and repeat (Once when that routine already runs).
+**Data:** presets are a new Me map `pre` (`{id, t, mode|c|g, len, at, rep, from?, up, del?}`), merged entry by entry like items
+(`phMeBlank`, `phMeNormData`, `phMeMerge`, `phMeAhead`). An older build drops `pre` when it writes the Me row, so her 43 tidied
+presets (her names: data, never in this public file) are entered into her Me row only after she taps Update on the computer and
+the phone. Code: "QUICK ADD · A CLICK ON A FREE TIME" (`phQk*`, CSS `.ph-qk*`, `data-qk`). The first build used `phQa*` and
+collided with Quick assess's `phQaHtml` (the card drew Quick assess): phQa / ph-qa / data-qa belong to Quick assess.
+**Tested (sandbox, port 8996, made-up presets, 1220px):** Tue 3 pm click → the card beside the column, four groups, ghost 3:00 pm;
+"gy" + Enter → weekly Gym on Tuesday, toast with Only this day + Undo; Only this day → the repeat gone; Gym on Wednesday while the
+weekly one runs → a one-off; "Dentist" → New, colour + 45 min, Save → preset + event, Undo → both gone; drag Fri 1:00–2:30 → the
+card says the range, Lunch takes 90 min; Esc and an outside press close; a block click opens the booking card, not this one; near
+the right edge the card flips left; Settings: the Calendar group, the table, ✎ rename + 2 weeks saves, a duplicate refused,
++ Preset, Delete + Undo; the Me form: typing "Pilates" fills 07:30–08:00, Fitness, Once. 375px: the bottom sheet, full width,
+the scrim, no sideways scroll. Prescriptions search 3 → 1 ("zz f") → 0 → 3 (the load-time banner in the sandbox is its own false
+alarm: all three made-up patients start "Zz"). No console errors.
+**Not tested:** her real data and her 43 presets (not entered yet); a real finger on the phone (the pane reports a coarse pointer,
+so the search box is not focused on open there, as on a phone); the Key2.
+**Pages checked for the fact:** Appointments grid (week, day, phone), the Me form (Event), Settings › Calendar; the toast and its
+Undo; the booking card still opens on a booking.
+**Not live:** waits for her "push live", then Update on each device, then her presets go into her Me row.
