@@ -7922,3 +7922,6 @@ order bars; table row hairlines; the dark caption bands; history rows; the share
 **Not tested:** a real count saved (Confirm, Save and next and Abandon not pressed; their handlers are untouched); her Key2 by hand;
 the formulas count's card (same classes).
 **Pages checked for the fact:** Stocktake (page, card, queue); the Dashboard's stocktake nudge is untouched (no shared rule).
+**LIVE** 2026-11-01, build 20261101-181400 (publish 76c694cc, on her "push live" by popup, keeping the card's shelf-side sizes; it also
+carried the Fang Bing Ren run 18 build adbbd7b0; the commit list matched the dry run). Checked on the live page: the build stamp, the
+card's tinted count box rule, the phone order bar rule, "No stocktakes", the Restart warning and the history kind words.
