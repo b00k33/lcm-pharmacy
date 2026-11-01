@@ -8150,6 +8150,12 @@ alarm: all three made-up patients start "Zz"). No console errors.
 so the search box is not focused on open there, as on a phone); the Key2.
 **Pages checked for the fact:** Appointments grid (week, day, phone), the Me form (Event), Settings › Calendar; the toast and its
 Undo; the booking card still opens on a booking.
+**Fixed after the first commit (same day, found taking her pictures):** a closed card stayed on screen as an empty 20px
+white strip (`.ph-qk`'s `display: grid` beat its own `hidden`, the CLAUDE.md trap): `.ph-qk[hidden]` now hides it. The presets
+table cut "12:30 …" and "Every 2 w…" and clipped the ✎ circle: Colour 104, Length 72, Usual time 96, Repeat 112 and ✎ 52px now
+hold their widest value, Name (and From) share the rest and wrap. On a phone the Settings column grew to fit a table with a floor
+(this one and Supplements' kinds table alike, 672px on a 375px screen): `.ph-settings-cards` now has `max-width: 100%`, so each
+table scrolls inside its card (checked at 375 for both; 1220 unchanged).
 **Not live:** waits for her "push live", then Update on each device, then her presets go into her Me row.
 
 ## Appointments page audit (2026-11-01)
