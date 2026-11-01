@@ -7552,8 +7552,9 @@ Taken chips keep their height (her phone Dispense chips) with 12.5px words (were
 − / + and ×, the first audit's table-cell call), its green head (her Cockpit exception) and its codes (a code gives way, …);
 the 60px tiles (rows over 52px); the script card in the band (a two-line tile); the Dosage rows' hairlines (a key / value
 table); "+ Add" (the shared Button base); the More menu's rows and its ⧉ / ⇄ glyphs (text symbols, not emoji).
-**Tested:** the scan before and after on both patients: desktop taps off-rule 38 → 0 outside the kept items, label looks 7 → 1
-(codes and formula names are data), cut words 1 → 0; 800px 4 → 0; phone 26 → 0 under 28px / 12.5px, label looks 5 → 1; no
+**Tested:** the scan before and after on both patients: desktop taps off-rule 10 → 0 (38 flagged, 28 of them the kept steps, cells and card),
+label looks 6 → 1 (codes and formula names are data), cut words 1 → 0; 800px 4 → 0; phone 25 → 0 under 28px / 12.5px, label
+looks 4 → 1; no
 sideways scroll at 360 / 800; no console errors; the drawer open and closed; the More menu open.
 **Not tested:** a logged or scheduled prescription (Calculate link, Log done states), a mail-order dispense, a formula
 template (isF) page, the Key2 at 360 × 469, her real catalog.
