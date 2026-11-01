@@ -7518,3 +7518,42 @@ reach the hidden pane), the Timeline's lanes view (layout "b"), the Key2 at 360 
 **Pages checked for the fact:** Ask her (wide, 1200, phone), Care Plan Findings, Treatment's summary column, the Timeline list view,
 Blood tests (unchanged), Today's visit (its Ask her tile reads `phAhDone`, unchanged).
 **LIVE:** build 20261101-120600 (publish 1b2a81b6, on her "push live", 2026-11-01).
+
+## Dispense page audit (2026-11-01)
+Her words: "audit the dispense page for consistency too". Audit = apply (commit 1fc1c24b; one dated CSS block, "Dispense page
+audit (her 2026-11-01 ...)", at the end of the main `<style>`, plus one word: the chip "or Schedule" reads "Schedule").
+**Measured** in the sandbox (the two made-up patients, each given an 8-line prescription from the sandbox catalog) at her
+1220px (the one-screen `.ph-dsp-fit` layout), at 800px (no one-screen layout) and at 360px. The page had never been measured
+(the 10/30 pass had no herbs to show); its Dosage panel dates from the 10/03 and 10/08 one-screen build, before the
+joined-bar standard (10/16) and the one-size rule (10/23), which win.
+**Fixed (desktop):**
+- Dosage & price: Objective, Dose, the spoon dropdown, times a day, Grams and Supply's "other" were 26px fields with 10px
+  corners; Supply / Grams / Taken bars 26px at 12.5px: 32px, 6px, 13px. The left column still fits one screen (612 of 720px at
+  900px tall; the cycle patient 600 of 742).
+- Price: preset $ / gram $ / markup × were three 24px pills with gaps (one category): one joined bar, the picked one solid.
+- Plan formula's "Use" (19px pill, 10.5px), "↻ back to ×1" (16px), the label's "⧉ Copy" (44px, 10px corners): the Button.
+- Patient letter / Schedule / ⋯ More were 11px words that tap: chips (the "or" left the Schedule chip).
+- Total: "cost · profit · %" (no wrap) ran 38px past its column and lost its end ("· 12"): it wraps, whole. (The Total line
+  keeps grams · days · cost · profit, the protected fact.)
+- "Today's visit isn't finished": a gold tone in its card, no dashed box in a box.
+- Herbs fold (a case that seldom takes herbs, "Not typical for this case"): a row on a faint surface, not a bare heading.
+- Band: back ‹ (10px square, no line) and + (36px) are 32px circles like the ⋯ beside them.
+- History drawer: ✕ a 32px circle (a bare 22px glyph); "Follow-up" was said twice (the drawer's head and the block's own):
+  once; the follow-up line that opens it a row on a faint surface, its Review date a 6px chip; no line under the drawer head;
+  no line under the herb search (the green head separates).
+- One label: Dosage & price and Today (11px / 600), Bag / Lasts / Total (9.5px), Label text (10px / 400), the herb table's
+  heads (.07em, Code 12px), the tiles' Visit history / Follow-up / Message (9.5px): 10.5px / 700 / .08em.
+**641–900px** (no one-screen layout) also shows Show (history) and Edit as a plain list (15px words) and Write message (a 28px
+pill): chips. These two are `display: none` on the one-screen layout: the chip rules set no `display` (a first try did and
+brought "Edit as a plain list" back under the table; caught at 1220 and taken out).
+**Phone (≤640px):** the same words-that-tap and small pills at the phone's 28px / 6px / 12.5px; the 40px Supply / Grams /
+Taken chips keep their height (her phone Dispense chips) with 12.5px words (were 11.5px); one 11px / 700 / .06em label.
+**Kept on purpose:** the three numbered steps (protected: Calculate → Dispense & copy label → Log); the herb table's cells (Qty
+− / + and ×, the first audit's table-cell call), its green head (her Cockpit exception) and its codes (a code gives way, …);
+the 60px tiles (rows over 52px); the script card in the band (a two-line tile); the Dosage rows' hairlines (a key / value
+table); "+ Add" (the shared Button base); the More menu's rows and its ⧉ / ⇄ glyphs (text symbols, not emoji).
+**Tested:** the scan before and after on both patients: desktop taps off-rule 38 → 0 outside the kept items, label looks 7 → 1
+(codes and formula names are data), cut words 1 → 0; 800px 4 → 0; phone 26 → 0 under 28px / 12.5px, label looks 5 → 1; no
+sideways scroll at 360 / 800; no console errors; the drawer open and closed; the More menu open.
+**Not tested:** a logged or scheduled prescription (Calculate link, Log done states), a mail-order dispense, a formula
+template (isF) page, the Key2 at 360 × 469, her real catalog.
