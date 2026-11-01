@@ -1240,7 +1240,9 @@ before touching an area that smells similar.
   styles against the original (BUILD-NOTES "MSK Enlarge: the back figure drawn black").
 - `renderPharmacy` sets the page's action cluster (`phTopbarActionSet`) before the page draws its own bar, so the cluster
   lands whole only through `phMobileDedupeTitles` at the end of every render path (the remembered merge, 2026-11-01); a render
-  path that skips that call gets its disc from the 0 ms retry instead, and its bar grows after paint.
+  path that skips that call gets its disc from the 0 ms retry instead, and its bar grows after paint. A page that rebuilds its own
+  bar with `innerHTML` wipes the cluster; the shell's `#pharmacyPage` observer puts it back in the same task, before paint (a removed
+  `.ph-tbmerge` with none left, 2026-11-01): never add a page-level heal or a timed re-merge.
 
 ---
 

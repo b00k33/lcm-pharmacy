@@ -8299,3 +8299,28 @@ live, then mocks/), published to her as an artifact.
   items); DRAFT words (the 20 row names, the Ask her answers, the card line, English name and picture labels, the Ban Xia filing, Damp).
 - **LIVE:** build 20261101-220200 (publish 6715e32b, on her "push live"; this commit rode along). The matrix moves to mocks/. The four questions
   above are still hers.
+
+## 2026-11-01 — A wiped title-bar cluster comes back before paint (the Appointments blink)
+
+**Her word:** "A · Fix the Appointments flicker too" (her pick after the two parked fixes went live, build 20261101-220200).
+
+- **Measured first** (the `_ia-page.html` harness, the visible `.ph-shell-titlebar` sampled every 25–50 ms after `renderPharmacy()`):
+  at desktop width Appointments' bar lost its action cluster about 100 ms and 300 ms after opening and got it back 40–50 ms
+  later each time (58px → 50.5px → 58px): the disc blinked twice. Cause: `phPinApptZones` runs at 0 and 250 ms; when the grid
+  was drawn for a different room than it measures it schedules a 60 ms refit (`phApptCalRepaintKeep` → `renderPhAppointmentsPage`),
+  which rebuilds the whole head with `innerHTML` and so wipes the merged cluster; the shell's heal (the `#pharmacyPage`
+  MutationObserver in `phTitlebarMerge`) only looked 40 ms later. The same wait blinked the disc on every page that repaints
+  its own bar (a search keystroke on Appointments, a Dashboard zone rebuild).
+- **Fix, in the shell, not the page:** the observer now checks its records first: when a removed node is (or holds) a
+  `.ph-tbmerge` and no slot is left in the page, it runs `phTopbarActionSet` at once, in the same task (a MutationObserver
+  callback is a microtask, so it lands before the frame paints), with the tab the pre-render call remembered
+  (`window.__phTbmArgs[0]`, the normalised name). Only a removed slot takes that path: a page with no bar never runs the merge
+  on every mutation. The 40 ms heal stays for the odd off-screen case; Appointments' own refit is untouched (the grid still
+  redraws for its room, as it should).
+
+**Tested (sandbox harness, 1440 and 375):** Appointments opened through `renderPharmacy()`: 33 samples over 800 ms all 58px
+with the disc in the bar (before: two dips to 50.5px); `renderPhAppointmentsPage()`, `phApptCalRepaintKeep()` and
+`renderPhDashboardPage()` called directly each wipe the slot synchronously and have it back by the next task; at 375 the
+phone bar held 47px with ☰ · disc · ⋯ through 600 ms; the Prescriptions search with three in-memory rows narrowed to one on
+"Gamma" and gave them all back when cleared; no console errors. **Not exercised:** her records; her phone; a real Cliniko load
+landing mid-open.
