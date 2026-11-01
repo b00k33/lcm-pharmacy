@@ -7659,7 +7659,7 @@ session's popup the same hour).
 (no sheet) the strip drops its Zero / Low / Overstocked cells and the chips under the search say them (they tap, and stay in view
 by her mockup 13). The non-sheet tiles carry `data-ph-inv-count` (the sheet's carry `data-ph-inv-tile`, so desktop's seven tiles
 are untouched); at 641–900px the strip is a 7-column grid, so the cells left flow as equal columns. Commit b7f63442. Tested at
-360 (four cells, no sideways scroll), 800 (four equal cells) and 1220 (seven tiles). NOT live yet.
+360 (four cells, no sideways scroll), 800 (four equal cells) and 1220 (seven tiles). LIVE build 20261101-141700 (publish afa6ae22, on her "push live"; it also carried the trip session's 7a301a3f).
 
 ## Flight lengths and "Sydney" time read home's own clock (2026-11-01)
 **Her words:** "add my flights", then "yes fix it" (after I showed her MU792 SYD → NKG reading 7 h 50, which is 10 h 50).
