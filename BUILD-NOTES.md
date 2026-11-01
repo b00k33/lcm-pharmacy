@@ -7676,3 +7676,6 @@ day k (midday in Sydney, clear of both clock changes); the Today card's "Sydney"
 `phTripFlightMin`), the Prescriptions search (the sandbox draws no list; checked on the live page after the push instead).
 **Pages checked for the fact:** Travel (flights), the trip's Today card. Her data: flights entered 2026-11-01 from her Trip.com
 emails (MU792 / MU791, seat 44A, PNR in `ref`), in her own Me row, not code.
+**LIVE** 2026-11-01, build 20261101-141700 (publish afa6ae22 by the "B33 C4 LCM bugs" session on her "push live"; her "push live"
+here the same minute). Checked on the live page in her Chrome: MU792 10 h 50, MU791 11 h 05, home offset 660; the
+Prescriptions search narrows 41 → 1 → 0 → 41.
