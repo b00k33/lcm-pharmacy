@@ -7724,7 +7724,9 @@ the popover's chips on one line at 288px, codes fit their 80px column); "+ New r
 closes it with nothing saved; no console errors from the app (the two in the log were my measuring script and the sandbox's
 update probe). Pictures: shots/rf-audit-{list,pop,plan,recipe,phone,phrecipe}-{before,after}.png.
 **Not tested:** a real Make → Finish save (the weighing rows were measured, not finished), Made today's rows (measured from the
-CSS only), the popover opened from Dashboard / Inventory / To order (same markup and placement code, only its CSS changed), the
-Prescriptions search (the sandbox draws no list; check on the live page after the push).
+CSS only), the popover opened from Dashboard / Inventory / To order (same markup and placement code, only its CSS changed).
 **Pages checked for the fact:** Formula refill (all four tabs, the panel, Make), the week popover, Plan a formula, the recipe
 side sheet; the match line's wording is shared with the patient prescription editor (same words there now).
+**LIVE** 2026-11-01, build 20261101-150500 (publish 5fcf19a9, on her "push live" by popup; the commit list matched the dry run). Checked on the
+live page: the build stamp, the week picker and recipe-column rules, the "+ New recipe" chip; the hint function and the "dispensing
+will deduct" tail are gone. The Prescriptions search filters live in the sandbox with this build (12 -> 3 -> 0 -> 12).
