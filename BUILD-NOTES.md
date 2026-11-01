@@ -7782,3 +7782,56 @@ the band tones, menu rows (⋮, Refill ▾, Snoozed ▾), the empty states ("Not
 - The Dashboard's phone order queue rows (same predicate, measured on the desktop button only).
 - The older-arrivals chip (no arrival older than 14 days in the sandbox; CSS only).
 **Pages checked for the fact (the order count):** To order (board, tablet, phone), the side badge, the Dashboard, Stock statistics.
+
+
+## 2026-11-01 — App usage audit: Communications folds behind More ▾, Supplements moves into Settings
+
+**Her ask:** after the 29 Oct patient-profile audit closed, "Usage audit of the rest of the app" (her popup pick). Same method on
+her 27 Oct export, read only: every page outside the patient file measured, before pictures, a report
+(`app-usage-audit-2026-11-01.html`, artifact 8eovNZH3iHHs1KQbxq3ffi, the 19 `ia/au-before-*.png` inside it), two popup rounds.
+
+**What the export said (Aug · Sep · Oct):** dispenses 25 · 33 · 34, appointments — · 118 · 115, To order arrivals 1 · 1 · 1:
+daily. Formula refill batches 5 · 5 · 2 against 15–20 a month for five years (she still makes batches; the logging lagged, fixed
+29 Oct). Stocktake fixes 182 · 49 · 18 (the counts are landing). Communications: Due in use, Compose 3 messages ever (Sep, 0
+sent), Templates 92 seeds and none of hers, Prepared / Sent never used. Price review 0 sessions ever (moved into the Suppliers rows
+29 Oct, her pick). Relocation set up, no date, 0 told. Guide 1 learned of 37 (built 21 Oct). Supplements reference: four
+researched items as fixed text, read nowhere else. Dashboard, Stock statistics, Dispense history, Stock movements, Patient
+directory, Intake review, End of day only read, so the export cannot tell; she opens them all (her answer).
+
+**Her picks (rounds 1–2):** Communications = Due only, the other four behind one More ▾ chip; Formula refill, Stocktake,
+Relocation, Guide, the read-only pages: keep as they are; Supplements reference folds into Settings › Patients › Supplements.
+Mock `app-usage-mock-2026-11-01.html` (artifact 8Kknv1d7r79rJ2Khveu3hS, pictures `ia/au-mock-*.png` = the real app, a patched
+copy through the `_ia-page.html` harness); eight mock picks, all the recommended ones: the More ▾ chip beside the strip with a
+menu (not an inline unfold), menu lines with counts, the list as a table Kind · Usual dose · Shown, the researched text dropped
+from the screens, Reference keeps its two lines, a patient's row pre-fills the usual dose (editable), Communications always opens
+on Due, ✕ on her own kinds.
+
+**Built:**
+- `phCommSectionStripHtml` (next to `let phMsgSection`) draws the strip: Due, then the folded section that is open (if one is),
+  then `<details class="ph-comm-more">` More ▾ with Compose · Templates n · Prepared n · Sent n (`PH_COMM_FOLDED`). The
+  `[data-ph-msg-section]` click handler is unchanged; "Manage templates" in Compose and the Prepare landing still work, the
+  picked section shows beside Due. CSS block after `.ph-msg-seg-opt.on`; on the phone the chip takes the strip's pill radius and
+  the menu hangs from the right edge.
+- `phSuppKindUsual(id)` = her dose from `PHARMACY.suppKindDose[kind]` (an emptied field is her word), else `PH_SUPPLEMENTS`'
+  dose; `phSuppKindDose` = a product's usual dose first, then that. `phSuppSettingsHtml`'s "The list" is now the table
+  `.ph-supp-ktbl` (Kind · Usual dose · Shown · ✕ on her own kinds): `[data-supp-kind-dose]` saves on change like the product
+  fields (same `change` listener), `[data-supp-kind-toggle]` as before, `[data-supp-kind-drop]` removes an own kind (the name
+  `data-supp-kind-rm` already belongs to the patient's table). The dose-adjustment letter reads `phSuppKindDose` too.
+- The Supplements reference page is gone: nav button, `#phSupplementsWrap`, the tab-list entry, the two `tab === "supplements"`
+  lines, `renderPhSupplementsPage` and its CSS. `PH_SUPPLEMENTS` stays (seed doses, the letter's words). Reference reads 2.
+- Found on the way: the shared `.ph-vc-tbl { min-width: 760px }` sits later in the source than `.ph-supp-ptbl { min-width:
+  640px }`, so the products table was 760px in a 657px card and its ✕ column sat past the edge. Both tables now use
+  `#pharmacyPage .ph-vc-tbl.…` (two classes) and measure 655 in 657.
+
+**Judgment calls:** a stale `activeTab = "supplements"` (a device that had the page open) renders the Inventory fallback, as
+any unknown tab does; the boot forces Appointments anyway. The old page's `why` text lives on only in the letter composer. A
+hidden kind still leaves every patient's table (unchanged rule); ✕ on an own kind also drops its usual dose.
+
+**Tested (sandbox, the real file through `_ia-page.html`):** strip Due* → menu Compose|Templates 92|Prepared 0|Sent 0 →
+Templates picked shows Due|Templates* → Due folds it → Compose → Manage templates lands on Templates; Settings table 24 rows,
+the four seeds, Folate "400 mcg daily" saved on change and `phSuppKindDose("folate")` returns it, an emptied D3 stays empty,
+Collagen → Hidden (row faint), an own kind appears with ✕ and ✕ removes it, products table 655 in 657, Reference count 2, no
+Supplements nav item, Prescriptions search "zz f" → Face only, "cyc" → Cycle only, cleared → all; no console errors. Pictures
+`shots/au-build-*.png` (1440 + 375).
+**LIVE** 2026-11-01, build 20261101-160400 (publish 1be24c60, on her "push live" by popup; the commit list matched the dry run). Checked on the
+live page: the build stamp, `phOnOrderList` (1 definition + 7 readers), the phone row buttons' red-line rule and the arrival fix's Undo arrival rule.
