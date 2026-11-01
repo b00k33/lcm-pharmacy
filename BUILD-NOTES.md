@@ -7660,3 +7660,19 @@ session's popup the same hour).
 by her mockup 13). The non-sheet tiles carry `data-ph-inv-count` (the sheet's carry `data-ph-inv-tile`, so desktop's seven tiles
 are untouched); at 641–900px the strip is a 7-column grid, so the cells left flow as equal columns. Commit b7f63442. Tested at
 360 (four cells, no sideways scroll), 800 (four equal cells) and 1220 (seven tiles). NOT live yet.
+
+## Flight lengths and "Sydney" time read home's own clock (2026-11-01)
+**Her words:** "add my flights", then "yes fix it" (after I showed her MU792 SYD → NKG reading 7 h 50, which is 10 h 50).
+**Found:** `phTripHomeTz` took the COMPUTER's clock as Sydney's. In Nanjing her laptop is set to China time (UTC+8), so the
+out flight read 7 h 50 (10 h 50) and the flight home 14 h 05 (11 h 05); the trip's Today card read "10:47 am here · 10:47 am
+Sydney". The routine pauses (`phMeTripWin`) compare clock times only and were not affected.
+**Built:** `PH_TRIP_HOME_ZONE = "Australia/Sydney"` and `phTripZoneOff(ms)` (the zone's minutes ahead of UTC at that moment, from
+`Intl.DateTimeFormat(...).formatToParts`; the computer's offset only if Intl throws). `phTripHomeTz(k)` asks it at 02:00 UTC of
+day k (midday in Sydney, clear of both clock changes); the Today card's "Sydney" time is Sydney's wall clock (`homeD`).
+**Tested** in the sandbox with the computer on China time: home offset 660 on 30 Oct / 15 Nov / 4 Oct / 1 Jan, 600 on 15 Jun /
+5–6 Apr; her two flights 10 h 50 and 11 h 05 on the Travel page (`phTripTravHtml`, real render), a June trip 8 h 50; Today card
+"10:47 am here · 1:47 pm Sydney" (Sydney's real time then: 13:47); no console errors. Picture: shots/flight-times-home-clock-fixed-2026-11-01.jpg.
+**Not tested:** a computer on Sydney time (the code path is the same Intl read), the calendar flight card (it reads the same
+`phTripFlightMin`), the Prescriptions search (the sandbox draws no list; checked on the live page after the push instead).
+**Pages checked for the fact:** Travel (flights), the trip's Today card. Her data: flights entered 2026-11-01 from her Trip.com
+emails (MU792 / MU791, seat 44A, PNR in `ref`), in her own Me row, not code.

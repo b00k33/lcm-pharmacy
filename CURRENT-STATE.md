@@ -997,8 +997,9 @@ Her work trips live in LCM; Nanjing is the first. Data in her Me row, entry by e
 - **Her file**: a step per trip in her Life group, ONE joined tab bar: Prepare (six area tiles + the to-do table; while away
   "Today": day n, a gold-ringed **Next / Then** card (the next travel strip or session, its venue in Chinese and that venue's
   solid Driver card), the rest of the day in time order, the hotel in Chinese + Driver card, the day the clinic opens again) ·
-  Travel (flights, each end in its own clock; hotel; getting around) · Docs · **Plan = the trip's program** (her 2026-10-30
-  picks, `trip-program-full-mock-2026-10-30.html`): desktop = a week bar (Mon–Sun weeks of the trip's days) + one solid Add + a
+  Travel (flights, each end in its own clock; home's clock is Sydney's from the time-zone database, `phTripHomeTz` /
+  `phTripZoneOff`, never the computer's, which she sets to the trip's clock while away; hotel; getting around) · Docs ·
+  **Plan = the trip's program** (her 2026-10-30 picks, `mocks/trip-program-full-mock-2026-10-30.html`): desktop = a week bar (Mon–Sun weeks of the trip's days) + one solid Add + a
   **week grid** (rows: breakfast = her own Me meal, a tap opens its card · travel to the first session · Morning · travel between
   venues · Afternoon · back to the hotel · Evening = hers; a full day spans Morning to Afternoon; flights as strips; an empty
   Morning / Afternoon / Evening cell adds into that part of the day). A **card** = its kind's stripe and tag (Observe · Lecture ·
