@@ -7679,3 +7679,52 @@ emails (MU792 / MU791, seat 44A, PNR in `ref`), in her own Me row, not code.
 **LIVE** 2026-11-01, build 20261101-141700 (publish afa6ae22 by the "B33 C4 LCM bugs" session on her "push live"; her "push live"
 here the same minute). Checked on the live page in her Chrome: MU792 10 h 50, MU791 11 h 05, home offset 660; the
 Prescriptions search narrows 41 → 1 → 0 → 41.
+
+## Formula refill page audit (2026-11-01)
+**Her words:** "audit the formula refill page for consistency too" (Audit = apply: measure, fix every rule-covered finding, report
+before / after, push only on her "push live").
+**Measured** in the sandbox (5 seeded jars, onsite recipes; one herb set short for Fix short; one formula un-planned for the Plan
+a formula sheet; nothing saved) at 1220 / 800 / 360: To make (bands, week tiles, rows, the panel beside the list, Make's weighing
+rows), Below the line (ticks, the dark bulk bar), Snoozed, All recipes, the week popover, Plan a formula, the ⋯ menu, the recipe
+side sheet (#refPresPanel). Refill history opens Stock movements (another page, not audited here).
+**Fixed** (one dated CSS block "Formula refill page audit" after the Inventory block, commit b52faf7d):
+- One label look (10.5px / 700 / .08em; phone 11px / .06em) for the band heads, the week tiles' names, the panel's numbered heads,
+  the weigh table head, the sheet's "Which formula?", Fix short's SHORT and Made today (they were 11px / 600 in four spacings).
+- Week tiles 10px corners (12); Made today without its dashed line; weigh Finish 32px (36); Fix short's three actions 32px / 6px /
+  13px (27px pills, 12.5px), the short herb tag 6px; the search box white with 12px words (its own later rule had put paper + 13px
+  back over the app-wide search look).
+- The week popover (the one week picker, also opened from Dashboard / Inventory / To order): 10px corners (16), its two footers
+  parted by space (no lines), Clear / More weeks / Snooze 1 week / Take off the list are 32px chips (they were coloured words; the
+  Not now row wrapped to "Snooze 1 / week"), Not now is the label over its two, width 288px (260).
+- Plan a formula: no line under the head or over the foot (the foot is the paper tone), search 32px / 6px / 12px with the
+  magnifier (40px, 10px corners, 14px), Done 32px (34px, 10px corners), each formula's This week | Next week | Another week… one
+  joined bar (three loose pills), This week still filled as her 2026-10-22 mock drew it; Planned / Snoozed tags 6px.
+- The recipe sheet: Grams and Name are fields (they had the browser's own 2px boxes, Name a pill), Type a 32px dropdown that shows
+  its whole word (it read "Herba"), the ⋯ beside Make refill an icon circle (it was a second filled button), Label preview and Edit
+  as a plain list are chips (coloured words), the table head one label (CODE was gold 12px on the dark head, the rest 9.5px; Qty
+  had a rounded notch), Qty boxes 6px corners, no lines between its parts or round the sheet, "Formula" said once (the band's own
+  line; the FORMULA tag hides there), the code column 80px with a 6px inset (100607-2 ran into "Suan Zao Ren"); on the phone the
+  code column folds away as Dispense's does (it ran under the names).
+- Phone (≤640): row Wk / Make / Recipe, the panel's Jar / Recipe, Not now, Finish, the popover chips, Done, the sheet's week bar,
+  the empty-state chip, the bulk bar and the joined bar 28px / 12.5px; search 6px corners (pill); the Plan a formula sheet 16px
+  corners (20); the recipe sheet's buttons 28px, the ⋯ a 28px circle, its fields 32px with no box.
+- Terse (JS): the hint lines under the tabs are gone ("Planned for the clinic’s making days." / "Hidden until their week comes
+  round." / "Every recipe and its jar."; `phRfcHintHtml` and `#phRfcHint` removed); the empty Snoozed and Below the line tabs lose
+  their sentences; All recipes with none = "No recipes" + a "+ New recipe" chip (`data-rfc-newrecipe` → `presStartNew("formula")`,
+  the rule's own example); Plan a formula's empty search shows nothing (was "Type a name or abbreviation."); the recipe editor's
+  match line = "✓ all N ingredients matched" (the "— dispensing will deduct stock for every one" tail went, both
+  `presEditMatchHtml` and `presEditMatchStatic`), "No ingredients yet." (the "pick them from the inventory above" tail went). The
+  "not in the inventory (won't deduct stock)" warning stays (it stops a mistake).
+**Kept (her rules or her choices):** the solid Make on every row (her 2026-10-22 mock), the tab bar (menu), the week chip as a
+tinted field (the 10/22 "the week is a field" rule), menu rows in the popover and the ⋯ menu, the 40px fold row, the weigh
+table's tick cells and its 24px tick-all (table cells, as Dispense's Qty − + ×), the recipe table's × cells, the stat-like week
+tiles, the dark bulk bar, the count pills.
+**Tested:** every surface above re-measured at 1220 / 800 / 360 after the change (no off-size control left, no sideways scroll,
+the popover's chips on one line at 288px, codes fit their 80px column); "+ New recipe" opens the new-recipe sheet and its Cancel
+closes it with nothing saved; no console errors from the app (the two in the log were my measuring script and the sandbox's
+update probe). Pictures: shots/rf-audit-{list,pop,plan,recipe,phone,phrecipe}-{before,after}.png.
+**Not tested:** a real Make → Finish save (the weighing rows were measured, not finished), Made today's rows (measured from the
+CSS only), the popover opened from Dashboard / Inventory / To order (same markup and placement code, only its CSS changed), the
+Prescriptions search (the sandbox draws no list; check on the live page after the push).
+**Pages checked for the fact:** Formula refill (all four tabs, the panel, Make), the week popover, Plan a formula, the recipe
+side sheet; the match line's wording is shared with the patient prescription editor (same words there now).
