@@ -7875,4 +7875,49 @@ key pattern, important differentiation) + "add to fang bing ren", through the pa
 - **Not checked:** her real records; the Key2 phone; the Settled stop by eye; the Guide card's edit flow.
 - **Needs her word:** conditions as notes or 4 each; minus Ren-only or both sides; "thin physique" merged or its own line; DRAFT words (card
   line, "Hard to calm down", the four new row names, picture labels, figure marks), the Gui Zhi filing, Patterns Qi + Yin deficiency.
+- **Her answers** (same day, "1 as built, 2 as built, 3 as built, wording ok"): conditions stay notes and score nothing; minus points on the
+  Ren side only; "thin physique" stays inside "pale, thin or delicate" at 4; the wording is hers now (card line, row names, "Hard to calm
+  down", picture labels, figure marks), read as a yes to the rest of that point too (the Gui Zhi filing, Patterns Qi + Yin deficiency). The
+  code's DRAFT comments now read "her yes". Nothing on screen changed. The matrix page shows her answers.
 - **Not live:** waits for her "push live".
+
+## Stocktake page audit (2026-11-01)
+Her words: "audit the stocktake page for consistency too". Audit = apply: measured at 1220, 800 and 360 against TAPPABLE THINGS,
+Terse and Separation & grouping. Code 196d5df6: one dated CSS block, "Stocktake page audit", at the end of the main `<style>` after
+the To order block, every rule scoped to `#phStocktakeWrap` (the page) or `#phStocktakeModal` (the counting card; its classes are
+shared with five other pop-ups), plus three wording lines.
+**The page:**
+- One label look (10.5px / 700 / .08em caps; phone 11px / .06em) for In the jar, the lists' heads and Count them in this order. They
+  were 11px / .05em, 10.5px / .07em and a 12.5px herb-green normal-case line.
+- No lines: the section heads' rules, the counting band's top and bottom borders. The history's empty state is plain faint words
+  (a box in a box): "No stocktakes" (was "No stocktakes recorded yet.").
+- Corners on the scale: the start cards and the lists' cards 10px (16px).
+- Buttons at the one size, 32px / 6px / 13px. Resume was a 54px solid beside Save and next (two solids on one screen): it is a
+  herb-line Button now, on one row with Restart and Abandon. Save and next (44px, 10px corners) stays the one solid. Restart and
+  Restart from the top a red line; Keep going a Button (it was solid); each row's count a 1px-line button like To order's rows
+  (a 34px tint pill).
+- The count box in the band is a 32px white field (tint on the tint band could not be seen), focus ring in herb.
+- History rows say the kind once: Herbs / Formulas / Herbs + formulas (the panel already says Stocktake history).
+- The Restart warning keeps what stops a mistake: "The N adjustments you've already made stay. Restarting re-counts those herbs —
+  it does not put the old numbers back." (the middle sentence on the movements log went).
+- Phone (≤640): page buttons 28px / 12.5px (44px from the retired floor); the order bars at least 28px: a word that wraps at 360
+  ("Most grams used") grows its bar to 33px instead of spilling out of it; the count box keeps 16px words (the zoom guard).
+**The counting card (`#phStocktakeModal`):** keeps its shelf-side sizes (her 2026-08-24, "this card is used shelf-side, so nothing
+here gets smaller"): the 66–69px count box, the 54–56px Confirm, the 43–44px status and Back / Skip / Ignore buttons, the 40px
+Close queue. What changed: the one label look on progress, queue, App has and Real count (they were four different looks, one
+lower case); the count box a tint field with no outline (white, 2px grey box); 6px corners on every button, the find box and Queue
+(16px and pills); the card and the queue sheet 16px (18px; the phone sheet `16px 16px 0 0`); the close circle 32px (31px); the find
+box has the magnifier; no line above Back / Skip / Ignore, under the queue's head, or round the "already counted" note (dashed).
+**Kept (her rules or her choices):** the card's sizes above; the ⏸ / ✓ / ☰ symbols (the app's own status vocabulary); the joined
+order bars; table row hairlines; the dark caption bands; history rows; the shared `.ph-widget` 16px panel.
+**Tested (sandbox):**
+- 1220: page, card and queue re-measured, no off-size control left.
+- 800: every page button 32px / 6px / 13px, no sideways scroll (785 of 800; the shell title bar's own bleed).
+- 360: Resume / Restart / Abandon on one row (317 of 336px), order bars 33px with nothing spilling, the card's labels 11px caps,
+  count box tint with 16px words, queue sheet `16px 16px 0 0`, find box 6px + magnifier, no sideways scroll.
+- The Restart warning and the history rows read on screen; Keep going / Restart from the top 32px with their lines.
+- No console errors. Prescriptions search 3 → 2 → 1 → 0 → 3 (three seeded prescriptions).
+- Pictures: shots/st-audit-page-{before,after}.jpg (1220), shots/st-audit-card-{before,after}.jpg (360).
+**Not tested:** a real count saved (Confirm, Save and next and Abandon not pressed; their handlers are untouched); her Key2 by hand;
+the formulas count's card (same classes).
+**Pages checked for the fact:** Stocktake (page, card, queue); the Dashboard's stocktake nudge is untouched (no shared rule).
