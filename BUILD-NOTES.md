@@ -8432,3 +8432,5 @@ errors; the sandbox's own store (142 counted of 301) still opens on "Status · 5
 profile showed 142 of 301 with the old names (the comparison); the Prescriptions search with three in-memory rows narrowed to one
 and gave all three back; no console errors. **Not exercised:** a real brand-new login; her phone. Her own records are untouched
 (read once, nothing written; the clipboard carried the list and was put back as it was).
+
+**LIVE:** build 20261101-233700 (publish 902cfb31, 2026-11-01), together with the Communications page audit (fdd719fc) from the bugs session.
