@@ -9512,3 +9512,37 @@ list's rows and the pork row (none for crab and squid); parts in each hover (`PH
 PH_FOOD 951; Vietnamese 34.
 **Tested** (test copy): 17 numbers each; "bun" lists Bún riêu and Bún mắm under Everyday › Vietnamese; "banh xeo" finds the new
 plate; the hovers read the parts; console clean. Picture `shots/bun-dishes.jpg`. **Not tested:** her real Meals page and devices.
+
+## Calendar click: my event OR a patient (2026-11-02)
+Her ask, with a picture of the click card ("David Dinh" typed, the Lease invoice preset, New "David Dinh"): "how do i know if i
+am adding personal event or patient?", then "show me mock", then: "i am referring to when i click the calendar, how do i add
+personal events vs patients". Her newest word wins over 1 Nov's pick 7 (Me only): the click now offers both. **Mock:**
+`event-card-wording-mock-2026-11-02.html` (Today | A one card with a switch | B one box, both lists | C ask first; the cards copy
+the real `.ph-qk` styles). **Her 8 picks (two popups, every one the recommended option):** 1 A, one card with a My event |
+Patient bar; 2 opens on My event; 3 a patient row = Name · last visit; 4 the dragged length, else 30 min; 5 "New patient" books
+the name only (like Quick add); 6 a Home visit chip on the Patient side; 7 Repeat stays in Add appointments; 8 before typing, her
+recent patients.
+**Built** (all in the click card's code, "QUICK ADD · A CLICK ON A FREE TIME", and its CSS): the card's state gets `side`
+(ev | pat), `home`, `len`; the list view shows the card's own `.qk-bar` as `.qk-side` (My event | Patient, icons i-cal / i-user)
+under the time; the event side's box says "Search my events" and its new row "New event “…”". The Patient side
+(`phQkPatListHtml`): a Patient name box; before typing, RECENT = the last ten people seen (`phQkPatients()`: every name from her
+prescriptions, her bookings (never a Break) and her records, last visit = the latest past booking or `phLastVisitKey`); typing
+searches them all (starts-with first, then most recent), with "New patient “…”" when no name matches; a row = the patient's Case
+colour dot (`phQkPatDot`: gynae / MSK via `phCaseAccentClass` of `phApptScriptFor`, else teal), the name, "last visit 28 Oct" or
+"new"; chips (32px): Home visit (on = solid teal) and the length (30 min; a tap cycles 15 · 30 · 45 · 60 · 90 and clears a dragged
+span; a drag down sets it first; Home visit fixes it at 2 h and greys the chip). One tap (`phQkBook`) books through
+`phApptImport` with `date, time, patient, service (Home Visit when picked), durationMin`, so it is the same booking Quick add makes
+(the same block, the same list, the draft-account rule under the all-herbs default); then the card closes, the page repaints and
+`presSavedToast` shows "✓ Name · Mon 4:00 pm[ · Home visit]" with Undo (`phApptDeleteIds`). "Already booked" when the same name sits
+at that time. Enter books the selected row; the ghost on the column takes the Patient side's length. The dialog's label is "Add to
+the calendar". Repeat, Paste list and the booking's type stay in Add appointments.
+**Tested** (sandbox copy on port 8996, fresh storage, Me on, two made-up "Zz" patients with past bookings; 1280×900 and 375×812):
+the bar opens on My event; "Zz" → "New event “Zz”", New event opens the preset form, Back returns with the bar; Patient side:
+RECENT shows the two with their last visits, "Alp" → the row + New patient “Alp”, the length chip 30 → 45 (ghost grows), Home visit
+→ chip on + "2 h" greyed (ghost 2 h), a tap books 4:00 pm · 45 min, the block shows at once, the toast's Undo removes it; New patient
+“Zz Gamma Test” books 5:00 pm · 30 min; Enter on "Bet" books Zz Beta Test; Home visit books Zz Alpha Test 7:00 pm · 2 h · service
+Home Visit (purple away block); the phone sheet holds the bar, RECENT and both chips at 32px with no sideways scroll; console clean
+(the sandbox's own service-worker fetch line only). Pictures: `shots/calendar-click-{event-side,patient-side,phone}.jpg`.
+**Not tested:** her real patient list (hundreds of names: the search is a plain filter, no index), her devices, a Case-coloured dot
+on a real gynae / MSK patient (the sandbox has none), the Key2's 469px height.
+**Next:** her "push live"; then the mock moves to `mocks/`.

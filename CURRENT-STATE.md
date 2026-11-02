@@ -135,14 +135,14 @@ Me:** the Appointments dialog's title bar switches to the Me pane (Event · To-d
 thing, colours = her C22 Modes then C22's groups, "Coming up" beside it); every save and delete has Undo in the one toast. Code:
 "ME · HER OWN THINGS LIVE IN LCM".
 
-**Click a free time to add (her picks 2026-11-01) [Event quick add].** On the grid with her events showing, a click on a free
+**Click a free time to add: her event or a patient (her picks 2026-11-01 and 2026-11-02) [Event quick add; Calendar click: my event OR a patient].** On the grid with her events showing, a click on a free
 time (or a drag down a free column for a longer time) opens a card beside it (a bottom sheet on a phone; it closes any booking
-card): Search events, then her event presets grouped under her colours; one tap adds the event at that time with the preset's
+card). A My event | Patient bar sits under the time (opens on My event). **My event:** Search my events, then her event presets grouped under her colours; one tap adds the event at that time with the preset's
 length, colour and repeat, Undo in the one toast. A repeating preset whose routine already runs adds that day only; otherwise it
-starts the routine and the toast offers Only this day. "New “x”" saves a new preset with the event. A preset = name · colour ·
+starts the routine and the toast offers Only this day. "New event “x”" saves a new preset with the event. A preset = name · colour ·
 length · usual time · repeat, kept in the Me row's `pre` map (merged like items); edited in Settings › Calendar › Event presets (her 43 tidied presets entered 2026-11-02)
 (one table, ✎ per row, + Preset) or from the card's Edit list ›. The Me form's Event title lists the names and a picked one fills
-the rest. Her own names are data in her Me row, never in this file. Patients stay in Cliniko. Code: "QUICK ADD · A CLICK ON A
+the rest. Her own names are data in her Me row, never in this file. **Patient** (her 2026-11-02 "how do i add personal events vs patients"): a Patient name box; before she types, RECENT = her ten most recent patients (every name from her prescriptions, bookings and records; a row = the Case colour's dot · name · "last visit 28 Oct"); typing searches them all; "New patient “x”" books the name only (like Quick add); chips Home visit (2 h, its service) and the length (the dragged span, else 30 min; a tap cycles 15–90); one tap books through Quick add's own path (`phQkBook` → `phApptImport`): the same block, the same list, Undo in the toast. Repeat and Paste list stay in Add appointments; the patient diary stays in Cliniko. Code: "QUICK ADD · A CLICK ON A
 FREE TIME" (`phQk*`; `phQa*` is Quick assess).
 
 **One calendar, work + life (her picks) [One calendar: work + life].** **The row above each day** (`phC22FoldRowHtml`): a birthday

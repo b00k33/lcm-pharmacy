@@ -6117,6 +6117,16 @@
   #pharmacyPage .ph-qk .qk-btn.solid { background: var(--ph-herb); color: #fff; }
   #pharmacyPage .ph-qk .qk-btn.del { border-color: var(--ph-line); color: var(--ph-soft); }
   #pharmacyPage .ph-qk .qk-btn svg { width: 14px; height: 14px; }
+  /* the card's two sides (her 2026-11-02 "when i click the calendar, how do i add personal events vs patients"): My event | Patient
+     on the card's own bar; the Patient side's chips are the app's standard 32px chips (picked = solid teal) */
+  #pharmacyPage .ph-qk .qk-side button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+  #pharmacyPage .ph-qk .qk-side button svg { width: 13px; height: 13px; }
+  #pharmacyPage .ph-qk .qk-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  #pharmacyPage .ph-qk .qk-chip { height: 32px; min-height: 0; margin: 0; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--ph-line); border-radius: 999px; background: var(--ph-white); color: var(--ph-ink); font: 600 var(--fs-13)/1 var(--font-body, inherit); cursor: pointer; }
+  #pharmacyPage .ph-qk .qk-chip.on { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
+  #pharmacyPage .ph-qk .qk-chip[aria-disabled="true"] { color: var(--ph-soft); cursor: default; }
+  #pharmacyPage .ph-qk .qk-chip svg { width: 14px; height: 14px; }
+  #pharmacyPage .ph-qk .qk-gh svg { width: 11px; height: 11px; }
   #pharmacyPage .ph-qk .qk-nudge { animation: phQkNudge .45s ease-out; }
   @keyframes phQkNudge { 0%, 100% { transform: none; } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
   /* Settings › Calendar › Event presets: one table, a row each; ✎ opens the row in the card (two classes: the shared .ph-vc-tbl 760px floor sits later in the source) */
@@ -54890,7 +54900,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     sc.addEventListener("click", () => phQkClose());
     el = document.createElement("div");
     el.id = "phQk"; el.className = "ph-qk"; el.hidden = true;
-    el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Add an event");
+    el.setAttribute("role", "dialog"); el.setAttribute("aria-label", "Add to the calendar");
     el.addEventListener("click", phQkClick);
     el.addEventListener("input", phQkInput);
     el.addEventListener("change", phQkChange);
@@ -54928,12 +54938,12 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     if (!q || !q.day) { phQkGhostAt(null); return null; }
     const cd = phQkCols(), i = cd ? cd.days.findIndex(d => d.key === q.day) : -1;
     if (i < 0) { phQkGhostAt(null); return null; }
-    return phQkGhostAt(cd.cols[i], q.s, q.e != null ? q.e : q.s + (q.form ? (+q.form.len || 60) : 60));
+    return phQkGhostAt(cd.cols[i], q.s, q.e != null ? q.e : q.s + (q.side === "pat" ? phQkPatMins() : q.form ? (+q.form.len || 60) : 60));
   }
   function phQkOpen(day, s, e) {
     if (!phMeOk()) return;
     phApptPopClose();   // one card at a time (her pick)
-    phQk = { day, s, e: e != null && e > s ? e : null, view: "list", q: "", sel: 0, flat: [], form: null, uses: phQkUses() };
+    phQk = { day, s, e: e != null && e > s ? e : null, view: "list", q: "", sel: 0, flat: [], form: null, uses: phQkUses(), side: "ev", home: false, len: 0 };
     phQkPaint(true);
   }
   function phQkClose() {
@@ -54980,6 +54990,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   function phQkListHtml() {
     const q = phQk, s = phQkNorm(q.q), all = phMePreLive();
     q.flat = [];
+    if (q.side === "pat") return phQkPatListHtml();
     const hl = t => { const i = s ? t.toLowerCase().indexOf(s) : -1; return i < 0 ? esc(t) : esc(t.slice(0, i)) + "<b>" + esc(t.slice(i, i + s.length)) + "</b>" + esc(t.slice(i + s.length)); };
     const row = p => {
       const i = q.flat.push({ a: "pick", id: p.id }) - 1, c = phQkColOf(p), mt = [p.at ? phCkTime12(p.at) : "", phQkLen(p.len)].filter(Boolean).join(" · ");
@@ -54992,7 +55003,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       let h = hits.map(row).join("");
       if (!all.some(p => phQkNorm(p.t) === s)) {
         const i = q.flat.push({ a: "new" }) - 1;
-        h += `<button type="button" class="qk-row new${i === q.sel ? " sel" : ""}" role="option" aria-selected="${i === q.sel}" data-qk="new"><i class="pl">${phApptIc("plus")}</i><span class="nm">New “${esc(q.q.trim())}”</span></button>`;
+        h += `<button type="button" class="qk-row new${i === q.sel ? " sel" : ""}" role="option" aria-selected="${i === q.sel}" data-qk="new"><i class="pl">${phApptIc("plus")}</i><span class="nm">New event “${esc(q.q.trim())}”</span></button>`;
       }
       return h;
     }
@@ -55003,7 +55014,13 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     const when = D ? `${DAY_SHORT[D.getDay()]} ${D.getDate()} ${MON_SHORT[D.getMonth()]} · ${phQkT12(q.s)}${q.e != null ? " – " + phQkT12(q.e) : ""}` : q.view === "edit" ? "Event preset" : "New preset";
     const h = `<div class="qk-h"><span class="qk-when">${esc(when)}</span><button type="button" class="qk-x" data-qk="close" aria-label="Close">${phApptIc("x")}</button></div>`;
     if (q.view === "list") {
-      return h + `<label class="qk-f">${phApptIc("search")}<input type="text" data-qk-q="1" value="${esc(q.q)}" placeholder="Search events" aria-label="Search events" autocomplete="off"></label>
+      // her 2026-11-02: a click on the calendar adds her own event OR a patient; the bar says which (opens on My event)
+      const pat = q.side === "pat";
+      const bar = q.day ? `<div class="qk-bar qk-side" role="group" aria-label="What to add"><button type="button" data-qk="side" data-qk-v="ev" class="${pat ? "" : "on"}" aria-pressed="${!pat}">${phApptIc("cal")}My event</button><button type="button" data-qk="side" data-qk-v="pat" class="${pat ? "on" : ""}" aria-pressed="${pat}">${phApptIc("user")}Patient</button></div>` : "";
+      if (pat) return h + bar + `<label class="qk-f">${phApptIc("user")}<input type="text" data-qk-q="1" value="${esc(q.q)}" placeholder="Patient name" aria-label="Patient name" autocomplete="off"></label>
+        <div class="qk-lst" role="listbox" aria-label="Your patients">${phQkListHtml()}</div>
+        <div class="qk-chips"><button type="button" class="qk-chip${q.home ? " on" : ""}" data-qk="home" aria-pressed="${!!q.home}">${phApptIc("home")}Home visit</button><button type="button" class="qk-chip" data-qk="len"${q.home ? ` aria-disabled="true"` : ""} aria-label="Length of the visit">${esc(phQkLen(phQkPatMins()))}</button></div>`;
+      return h + bar + `<label class="qk-f">${phApptIc("search")}<input type="text" data-qk-q="1" value="${esc(q.q)}" placeholder="Search my events" aria-label="Search my events" autocomplete="off"></label>
         <div class="qk-lst" role="listbox" aria-label="Your events">${phQkListHtml()}</div>
         <button type="button" class="qk-link" data-qk="list">Edit list${phApptIc("chev-r")}</button>`;
     }
@@ -55020,6 +55037,61 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       <label class="qk-f" title="Usual time">${phApptIc("clock")}<input type="time" data-qk-f="at" value="${esc(f.at)}" aria-label="Usual time"></label>
       <div class="qk-bar" role="group" aria-label="Repeat">${reps.map(([v, l]) => `<button type="button" data-qk="rep" data-qk-v="${v}" class="${f.rep === v ? "on" : ""}" aria-pressed="${f.rep === v}">${esc(l)}</button>`).join("")}</div>
       <div class="qk-foot">${q.view === "edit" ? `<button type="button" class="qk-btn del" data-qk="del">${phApptIc("trash")}Delete</button>` : q.day ? `<button type="button" class="qk-btn" data-qk="back">Back</button>` : ""}<span class="sp"></span><button type="button" class="qk-btn solid" data-qk="save">Save</button></div>`;
+  }
+  // THE PATIENT SIDE (her 2026-11-02 "when i click the calendar, how do i add personal events vs patients"; her picks: a
+  // My event | Patient bar that opens on My event, rows Name · last visit with the Case colour's dot, the dragged length else
+  // 30 min, "New patient" books the name only, a Home visit chip, Repeat stays in Add appointments, her recent patients
+  // before she types). A booking made here is the one Quick add makes (phApptImport), so it is the same block, the same list.
+  const PH_QK_LENS = [15, 30, 45, 60, 90];
+  const phQkPatMins = () => { const q = phQk; return !q ? 30 : q.home ? PH_HOME_VISIT.mins : q.e != null ? q.e - q.s : (q.len || 30); };
+  // every name she has: her prescriptions, her bookings (never a Break), her records; last visit = the latest past session or booking
+  function phQkPatients() {
+    const today = keyOf(TODAY), by = {};
+    const add = (name, last) => { const k = phPatientKey(name); if (!k) return; const p = by[k] || (by[k] = { k, name: phTitle(name), last: "" }); if (last && last < today && last > p.last) p.last = last; };
+    (PRESC.items || []).forEach(t => { if (!presIsFormula(t)) { const n = presPatientFor(t); if (n) add(n, ""); } });
+    phApptList().forEach(a => { if (a.patient && a.service !== "Break") add(a.patient, a.date); });
+    Object.keys(PHARMACY.patients || {}).forEach(k => add(k, phLastVisitKey(PHARMACY.patients[k])));
+    return Object.values(by);
+  }
+  // the row's dot: the patient's Case colour (gynae / MSK), else teal
+  function phQkPatDot(k) {
+    const t = phApptScriptFor(k), cls = t ? phCaseAccentClass(t) : "";
+    return cls.includes("gyn") ? "var(--ph-gyn)" : cls.includes("msk") ? "var(--ph-msk)" : "var(--ph-herb)";
+  }
+  function phQkPatListHtml() {
+    const q = phQk, s = phQkNorm(q.q), all = phQkPatients();
+    const hl = t => { const i = s ? t.toLowerCase().indexOf(s) : -1; return i < 0 ? esc(t) : esc(t.slice(0, i)) + "<b>" + esc(t.slice(i, i + s.length)) + "</b>" + esc(t.slice(i + s.length)); };
+    const row = p => {
+      const i = q.flat.push({ a: "pat", name: p.name }) - 1, D = p.last ? parseKey(p.last) : null;
+      return `<button type="button" class="qk-row${i === q.sel ? " sel" : ""}" role="option" aria-selected="${i === q.sel}" data-qk="pat" data-qk-name="${esc(p.name)}"><i style="background:${phQkPatDot(p.k)}"></i><span class="nm">${hl(p.name)}</span><span class="mt">${D ? `last visit ${D.getDate()} ${MON_SHORT[D.getMonth()]}` : "new"}</span></button>`;
+    };
+    if (!s) {
+      const recent = all.filter(p => p.last).sort((a, b) => b.last.localeCompare(a.last)).slice(0, 10);
+      return (recent.length ? `<div class="qk-gh">${phApptIc("user")}Recent</div>` : `<div class="qk-gh">Type a name</div>`) + recent.map(row).join("");
+    }
+    const toks = s.split(" "), starts = p => p.name.toLowerCase().startsWith(s) ? 0 : 1;
+    const hits = all.filter(p => { const hay = p.name.toLowerCase(); return toks.every(t => hay.includes(t)); })
+      .sort((a, b) => starts(a) - starts(b) || (b.last || "").localeCompare(a.last || "") || a.name.localeCompare(b.name));
+    let h = hits.map(row).join("");
+    if (!all.some(p => p.k === phPatientKey(s))) {
+      const i = q.flat.push({ a: "newpat" }) - 1;
+      h += `<button type="button" class="qk-row new${i === q.sel ? " sel" : ""}" role="option" aria-selected="${i === q.sel}" data-qk="newpat"><i class="pl">${phApptIc("plus")}</i><span class="nm">New patient “${esc(q.q.trim())}”</span></button>`;
+    }
+    return h;
+  }
+  // one tap books the patient at the clicked time: the same booking Quick add makes, Undo in the toast
+  function phQkBook(name) {
+    const q = phQk, nm = phTitle(String(name || "").trim());
+    if (!q || !q.day || !nm) return;
+    const en = { date: q.day, time: phLcmHm(q.s), patient: nm, service: q.home ? PH_HOME_VISIT.service : "", durationMin: phQkPatMins() };
+    const before = new Set(phApptList().map(a => a.id));
+    phApptImport([en]);
+    const ids = phApptList().filter(a => !before.has(a.id)).map(a => a.id);
+    const D = parseKey(q.day), when = `${DAY_SHORT[D.getDay()]} ${phQkT12(q.s)}`, home = q.home;
+    phQkClose();
+    if (!ids.length) { presSavedToast(`Already booked · ${nm} · ${when}`); return; }
+    renderPharmacy();
+    presSavedToast(`✓ ${nm} · ${when}${home ? " · Home visit" : ""}`, { undo: () => { phApptDeleteIds(ids); renderPharmacy(); } });
   }
   function phQkNudge(k) {
     const i = document.querySelector(`#phQk [data-qk-f="${k}"]`), f = i && i.closest(".qk-f");
@@ -55120,6 +55192,11 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     if (a === "close") return phQkClose();
     if (a === "pick") return phQkPick(el.dataset.qkId);
     if (a === "new") return phQkNewView();
+    if (a === "pat") return phQkBook(el.dataset.qkName);
+    if (a === "newpat") return phQkBook(phQk.q);
+    if (a === "side") { if (phQk.side !== el.dataset.qkV) { phQk.side = el.dataset.qkV; phQk.q = ""; phQk.sel = 0; phQkPaint(true); } return; }
+    if (a === "home") { phQk.home = !phQk.home; return phQkPaint(false); }
+    if (a === "len") { if (phQk.home) return; const i = PH_QK_LENS.indexOf(phQkPatMins()); phQk.e = null; phQk.len = PH_QK_LENS[(i + 1) % PH_QK_LENS.length]; return phQkPaint(false); }
     if (a === "back") { phQk.view = "list"; phQk.form = null; return phQkPaint(true); }
     if (a === "rep") { phQk.form.rep = el.dataset.qkV; return phQkPaint(false); }
     if (a === "save") return phQk.view === "edit" ? phQkSaveEdit() : phQkSaveNew();
@@ -55146,7 +55223,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     if (e.key === "Enter" && t.dataset.qkF && t.tagName === "INPUT") { e.preventDefault(); return phQk.view === "edit" ? phQkSaveEdit() : phQkSaveNew(); }
     if (!t.dataset.qkQ) return;
     if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); phQk.sel = Math.max(0, Math.min(phQk.flat.length - 1, phQk.sel + (e.key === "ArrowDown" ? 1 : -1))); phQkListPaint(); }
-    else if (e.key === "Enter") { e.preventDefault(); const x = phQk.flat[phQk.sel]; if (x && x.a === "pick") phQkPick(x.id); else if (x && x.a === "new") phQkNewView(); }
+    else if (e.key === "Enter") { e.preventDefault(); const x = phQk.flat[phQk.sel]; if (x && x.a === "pick") phQkPick(x.id); else if (x && x.a === "new") phQkNewView(); else if (x && x.a === "pat") phQkBook(x.name); else if (x && x.a === "newpat") phQkBook(phQk.q); }
   }
   // the hover band: where a click lands, "+ 3:15 pm" (a computer's mouse only)
   function phQkHov(fr, y) {
