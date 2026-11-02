@@ -8973,3 +8973,4 @@ day (rings and the day header follow), no sideways scroll. Pictures: `shots/meal
 too (a frame matter; the headless phone picture shows five across).
 **Integration:** a day's fast is worked out on read (logged fasts, else the meal gap), never stored. Checked: the rings (computer and
 phone), Table, Grid, Numbers; unchanged and still the running fast: the top Fasting chip, Your fasts ›, the fasting ring on today.
+**LIVE** build 20261102-123700 (her "Push live", 2026-11-02; publish abe2ee67, build ec2841bf); her devices need Update.
