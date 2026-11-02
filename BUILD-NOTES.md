@@ -9413,3 +9413,27 @@ words: chicken soup, chicken broth / stock, ji tang, gai tong, canh ga, nuoc dun
 **LIVE** 2026-11-02 (Body pages, one look): f7af8edf went to main in this session's publish 172700 (8a2dc2b5, on her "push live";
 its Pages deploy did not finish) and is served since 174100 (edd8bd1e) / the re-stamp 174300 (9d1f405d); checked on the live page:
 its rules are there (the deploy drops CSS comments). Her devices need the gold Update.
+
+## 2026-11-02 · Meals: the foods behind a ring, on hover (not live)
+Her screenshot of the Meals rings + "when i hover, show breakdown of foods that contributed to hte macro". Built at once (a
+competence call, her "table first" taste): pointing at the kJ, protein, carbs or fat ring (not Fasting), a Numbers cell, a Table
+kJ · P · C · F cell or a Grid Total number opens one box under it (above when there is no room).
+- **The box** (`phMacBkHtml`): the number, "+ N planned" (today), "of" her goal; a row a food, most first, had then planned (pale,
+  the ring's own pale): the food with its amount, its meal (Breakfast · Lunch · Dinner · Snack · Drink, `phMacSlW`), a bar of its
+  share, the amount, the %; past 12 rows (and crumbs under 1) one "+ N more" row (a single one shows itself, "<1 g"); "Not counted ·
+  …" for what could not count it (Eating out, a dish with no numbers, C22's logged numbers for kJ / carbs / fat).
+- **One read** (`phMacFoods`): `phDietSum` now also returns `rows` ({nm, sl, x, v}: each thing's own numbers), its items carry their
+  meal (`phDietMyDay`, `phMplPlanSum`: [v, nut, sl], snacks "s"); had = `phDietMyDay`'s rows; today and a day to come add
+  `phMplPlanSum`'s rows for meals not in the had list = planned. The same rows the ring adds up, never a second sum. Whole numbers by
+  largest remainder: the had rows add up to the ring's number, the planned ones to "+ N planned", the % to 100 (first draft showed
+  45 + 19 + … = 85 of 83).
+- **The box's life** (`#phMacBk`, `phMacBkShow` / `phMacBkHide`, `data-mac-bk="day|number"`): 150 ms after the pointer lands; the
+  record's colour copied from the ring (`--ph-mac-c/pl/tr`); any other point, a tap elsewhere, a scroll or Esc closes it; the goal
+  field never opens it. A phone: a tap on a ring opens it, a tap elsewhere closes it.
+- **Tested** (test copy, made-up meals: Break Fast had, Lunch past its time with an Eating out item, a snack, Dinner still planned;
+  yesterday; tomorrow): every ring today / yesterday / tomorrow / an empty day (the rows add up to the ring, % 100, "Not counted · Out ·
+  Thai larb", "Nothing planned yet"); hover on the ring (1000 wide), a Numbers cell, a Grid Total; the goal field closes it; a phone
+  tap opens it under the rings, a tap elsewhere closes it; console clean. Pictures `shots/meals-ring-breakdown-2026-11-02.jpg`,
+  `shots/meals-ring-breakdown-phone-2026-11-02.jpg`. **Not tested:** her real meals, her devices.
+- **Integration (★★):** the rings, Numbers, Table and Grid numbers share one box and one read (`phDietSum` rows); the Diet / More
+  lines and Targets bars are untouched.
