@@ -9495,3 +9495,20 @@ parts (`PH_FOOD_SRC`, "Close match: a recipe: …", the toum precedent). PH_FOOD
 **Tested** (test copy): 17 numbers; "com tam" shows both plates under Everyday › Vietnamese; the hover reads the parts; console
 clean. Picture `shots/com-tam.jpg`. **Not tested:** her real Meals page and devices.
 **LIVE** 2026-11-02 in build 20261102-181100 (publish 56f55f80, her "Push live"). Her devices need the gold Update.
+
+## Bún riêu, Bún mắm, Bánh xèo from parts (2026-11-02)
+Her asks "add banh xeo to food list" (popup pick **"Parts, with the plate"**), then "add bun mam", "and bun rieu". No open source
+measures these dishes, so each is worked out from its parts, the Cơm tấm way: the list's own rows + AFCD parts, choline from the
+list's rows and the pork row (none for crab and squid); parts in each hover (`PH_FOOD_SRC`, "a recipe: …").
+- `vn_banh_xeo` rebuilt (was SG's Korean seafood pancake, 152 g): one bánh xèo with its plate, 278 g: rice flour 40, coconut milk 25,
+  oil 10, pork belly 25 (F006860), prawns 30, bean sprouts 40 (F008806), mung beans 5, spring onion 3; lettuce 30, mint 10 (F005700);
+  nước chấm 40 (fish sauce, sugar, lime, garlic, water). 1906 kJ, protein 22 g, carbs 40 g, fat 22 g, sodium 960 mg, choline 68 mg.
+- `vn_bun_rieu` new, a bowl 716 g: rice noodles 150, broth 330 (Clear chicken soup's numbers), crab 30 (F003243), egg 25, pork mince
+  25, tomato 60, tofu 40, oil 6, shrimp paste 5, fish sauce 5, sprouts 20, lettuce 15, mint 5. 2261 kJ, protein 36 g, carbs 54 g,
+  fat 19 g, sodium 1473 mg, choline 145 mg.
+- `vn_bun_mam` new, a bowl 699 g: rice noodles 150, broth 330, fish sauce 12, snapper 40, prawns 30, pork belly 30, squid 20
+  (F008825), eggplant 30, sugar 5, garlic 3, oil 4, sprouts 20, lettuce 20, mint 5. 2531 kJ, protein 46 g, carbs 59 g, fat 19 g,
+  sodium 2155 mg, choline 131 mg.
+PH_FOOD 951; Vietnamese 34.
+**Tested** (test copy): 17 numbers each; "bun" lists Bún riêu and Bún mắm under Everyday › Vietnamese; "banh xeo" finds the new
+plate; the hovers read the parts; console clean. Picture `shots/bun-dishes.jpg`. **Not tested:** her real Meals page and devices.
