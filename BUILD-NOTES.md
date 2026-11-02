@@ -8942,3 +8942,34 @@ price… 12.75 → $25.50. Integration: the side menu's count, the head's "6 on 
 ("Planned" on the same herbs) agree. Prescriptions search 2 → 1 → 0 → 2. Console clean but the sandbox's offline-script fetch.
 Pictures: `shots/to-order-cliniko-built-{1220,low-1220,1100,phone}-2026-11-02.png`. **Not tested:** her real records, her Key2 and
 her computer, a real clipboard, a real window resize (the hidden pane sends none; the event was dispatched), Stock statistics.
+
+## 2026-11-02 — Meals: Rings follow + Numbers (her picks on the "Meals day numbers" mock)
+**Her words** (with a screenshot of today's rings): "does this show when i click on a day? mock ways i can view this day by day, or
+compare the days over the week like a table format. show mock". Answer then: no; a computer's rings always showed today, a phone's
+followed its day. Mock canvas "Meals day numbers" (claude.ai artifact HFLbpeDbZhrvPXztgaexCL; boards A Rings follow, B Day in the
+column, C Numbers table, D Ring table, E Bars by number, F her D + E together), her real week 26 Oct – 1 Nov.
+**Her picks** (ask28, 11 answers): seeing one day = **A Rings follow**; comparing the week = **D Ring table + E Bars by number**;
+it lives in a third view, **Numbers**; a past day's fast = **Logged, else meal gap**; how D and E sit = "show me", then (real-size
+pictures of three layouts) **A Bars below**; a cell = **ring, number, over/under**; the bottom row = **Average a day**; columns =
+**Fasting, kJ, P, C, F** (not choline, water or fibre); days still ahead = **pale planned**; phone = **a rings row a day**; build = yes.
+**Built** (index.html, "RINGS FOLLOW + NUMBERS" beside `phMplDayNums`): `phMplRk` (the computer's rings day, null = today);
+`phMacRingsHtml(…, nav)` (the ‹ day › · Today head on a computer; "under" on a past day; `data-arc` on its arcs); the motion helper
+(`phMoScan`) sweeps an arc with `data-arc` from what it showed (inline style for 0.5 s, then the attribute again; off under reduced
+motion); `phMplFastGoalSel` (the fast goal field, now one function for both fasting rings); `phMplEatAt`, `phMplDayFast`,
+`phMplDayFastRingHtml`; `phMplRactsHtml(past)` (Your fasts › only off today); Numbers = `phMplNumData` / `phMplNumCell` /
+`phMplNumAvg` / `phMplNumRing` → `phMplNumHtml` (computer: table + The week's bars) and `phMplNumPhHtml` (phone rows);
+`phMplLay` takes "num"; the toolbar's Numbers; the phone's Numbers chip; Table's row tint and Grid's head (`th.rk`) follow the rings
+day, today's day name teal (`.ph-mpl-dy.now`); clicks `data-mpl-rk` (a day / bar / phone row) and `data-mpl-rd` (‹ › Today);
+a day's name (`data-mpl-day`) also moves the rings; the toolbar's Today and the Eat step bring them back. CSS: "RINGS FOLLOW +
+NUMBERS" after the Meals copy-motion rules; the phone's in PHONE REDESIGN after `.ph-mpl-helpers`.
+**Tested** (sandbox harness, her mock week with three logged fasts and the rest by meal gap, fast goal 14 h): Numbers at 1440 and
+1220 (7 rows, Average 21:15 "6 of 6 days ✓", 35 bars, nothing cut), a day button → the rings, row and five bars follow (Wed 28: 19:00
+Fasted ✓ goal, 9,168 kJ 1,168 over …); ‹ › (Thu 29), the arc sweep (156 → 16 px over 0.5 s, the inline style gone after); the rings'
+Today (fixed: it first added 0 days to the picked day); a bar → that day; Table: a day's name opens its column and moves the rings, its
+row tinted; Grid: the head tinted; the phone at 360: Numbers chip on / off (`lcm-mpl-view` num ↔ table), 7 rows + Avg, a row → the
+day (rings and the day header follow), no sideways scroll. Pictures: `shots/meals-numbers-{1440,1220,table,phone}-2026-11-02.png`.
+**Not tested:** her real records, her Key2 and her computer, a fast across a clock change, the breakfast fast goal on a past day
+(its "short" counts from her hours). The test frame's own scrollbar pushed the phone's fifth ring to a second line on today's view
+too (a frame matter; the headless phone picture shows five across).
+**Integration:** a day's fast is worked out on read (logged fasts, else the meal gap), never stored. Checked: the rings (computer and
+phone), Table, Grid, Numbers; unchanged and still the running fast: the top Fasting chip, Your fasts ›, the fasting ring on today.
