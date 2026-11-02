@@ -1131,7 +1131,7 @@ names what could not count it. Read from the rows the ring adds up (`phDietSum` 
 `phDietMyDay` = had, today's or a day to come's `phMplPlanSum` meals not had = planned; `phMacFoods`), whole numbers by largest
 remainder, so the rows add up to the ring's number, the pale ones to "+ N planned", the % to 100. One box (`#phMacBk`,
 `phMacBkHtml` / `phMacBkShow` / `phMacBkHide`, `data-mac-bk="day|number"`), the record's colour copied from the ring; any other
-point, a tap elsewhere, a scroll or Esc closes it; the goal field never opens it. Phone: a tap on a ring. NOT live.
+point, a tap elsewhere, a scroll or Esc closes it; the goal field never opens it. Phone: a tap on a ring. LIVE build 20261102-175700.
 **Food reactions**: a meal she had (her card, under Had it) and a patient's noted day or usual meal (Diet sheet, "Usually after it")
 take an **After it**: Gut / Body / Felt good chips + her own words (+ Own, they stay), ONE How strong bar, Started, From (which
 thing), a Note. The mark (the first reaction's picture in a pale red circle, green for Felt good) shows on the grid block, the Me

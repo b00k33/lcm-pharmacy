@@ -9437,6 +9437,7 @@ kJ · P · C · F cell or a Grid Total number opens one box under it (above when
   `shots/meals-ring-breakdown-phone-2026-11-02.jpg`. **Not tested:** her real meals, her devices.
 - **Integration (★★):** the rings, Numbers, Table and Grid numbers share one box and one read (`phDietSum` rows); the Diet / More
   lines and Targets bars are untouched.
+**LIVE** 2026-11-02 in build 20261102-175700 (publish db392e3f, her "push live"). Her devices need the gold Update.
 
 ## Chinese and Vietnamese with the everyday foods (2026-11-02)
 She asked to add Phở gà, then Bún bò Huế: both were already in the list (since 11/1), but Chinese and Vietnamese sat behind Menus ▾
