@@ -1062,7 +1062,7 @@ inside, then the number and how far over or under, or ✓ goal), the **average a
 "n of m days ✓"; numbers over the days she had something), then **The week**: each number's seven bars under its column, the goal
 a dashed line, the picked day outlined; the Table's colours (under 60% amber, over deep, planned pale) and a fast reached green; a day
 to come pale, as planned. Phone: a **Numbers** chip (first of the chips) swaps the day's meals for a row a day of five small rings
-+ Avg (`phMplNumPhHtml`); a row = that day (the rings and the day above follow). NOT live.
++ Avg (`phMplNumPhHtml`); a row = that day (the rings and the day above follow). LIVE build 20261102-123700.
 **Macros against her goal** (her picks: the Macros row AND today's rings) [Meals macros against goal]: energy, protein, carbs, fat.
 **Goals** (`phDietGoal`): kJ 8000 (her word 2026-10-28, "daily energy goal is 8000kj"), hers to change; water 2000 ml (C22's 8
 glasses; a target typed in glasses reads × 250); protein 50 g and carbs 50 g are hers (her word: "set carbs to 50g a day"); fat is hers,
