@@ -9130,3 +9130,39 @@ on the Start button, every course at once. (The mock showed 1 A; the build follo
   **Not tested:** her real records, her phone (Key2), IVF / Pregnancy picked from Course ▾ (their questions come first).
 **LIVE** 2026-11-02 on her "Push live": build 20261102-135900 (publish e4c93032, code 17ba5020). Checked on the live copy: the
 stamp, `phCcAddWords`, `data-cc-addwords`, `.ph-tp-dmenu`, `phCcPlanMenuPlace`, `phTpDoorPick`, the "Plan type" pill style.
+
+## Relocation taps (2026-11-02)
+Her "yes fix the relocation taps", after the Week pages audit found 11 plain-text taps on Relocation at 360 (Edit the move, Open
+the full list, nine list ⋯ 10px wide). Going one step past them, every state of the page was measured at 1220 / 800 / 360: the
+lists, an open list, the add and edit row forms, the ⋯ / ⋮ menus, the move picker, a list's delete confirm, the notices screen
+(table and phone cards) and the four dialogs. All rule-covered (TAPPABLE THINGS, the one-size line, Separation), so no question.
+- **The four dialogs were broken** (Edit the move, Add a list, a patient's notes on the notices screen, Export): they put
+  `.ph-hx-modal` (the full-screen fixed frame meant to hold a `.ph-hx-card`) on the card itself, so each drew see-through, 380px
+  wide and full height at the left edge, over the side menu. Now a white 16px card in the middle (`translate(-50%, -50%)`), a
+  sheet from the bottom on the phone; Cancel / Save sit apart by space (the base `.form-actions` line is off here).
+- **Cancel is a chip** in every form and dialog here (the app's base `.btn-cancel` is solid, so Cancel and Add / Save were two
+  solids side by side); the edit row's Delete and a list's delete confirm are the red act line.
+- **Plain-text taps are chips:** Edit the move; Open the full list (its own width: on the computer it was an 856px chip); ＋ more
+  details; the move picker's Cancel and its list names (tinted, no line before); a patient's name in the notices table.
+- **Icon-only = a circle:** a list's ⋯ (10px wide on the phone) and a row's ⋮ (4px wide at every size). A list's head keeps 52px
+  on its right (48px on the phone) for its ⋯, which sat on the bar's end and covered the arrow at every width.
+- **Fields:** the add / edit row fields and the dialogs' fields (36px or 32px pills with a line); "＋ Add something to this list…"
+  is the empty field it opens into (a dashed 10px box); Treated for / How they did in the notices table (bare words). The notices
+  search is the app's search box (32px, 6px, the magnifier; it was 38px with 10px corners).
+- **Joined bars:** Still to tell | Told | Everyone | Not on the list (four tinted chips, picked = an outline) and How they did
+  (five 30px pills with 11.5px words; two across, Too early on its own row), the picked one solid.
+- **One solid:** Print and Export are the Button (two solids under the head's Back to Relocation). Menu rows 32px / 6px; the
+  In person / SMS / Email ticks 6px corners, and a ticked one's ✓ and date fit its 40px box (the date ran out below it).
+- **Phone (360):** all of the above 28px / 12.5px, circles 28px; the phone cards' SEEN / SMS / EMAIL ticks (her 08-27 spec §4)
+  keep their 34px boxes.
+- **Kept:** the overdue / due this week / waits-on chips (status tones), the row tick boxes, the stat tiles and every word.
+  The other pages' phone search boxes are still 34-36px pills (an older phone rule); Relocation's follows the one-size line.
+
+**Code:** one dated block "Relocation taps" at the end of the main `<style>`, CSS only, every selector inside `#phRelocationWrap`
+or on the `.ph-reloc-*` classes. Commit 99323ce6 (staged as HEAD + the block: another session had open edits in the file).
+**Tested** (sandbox on its own port; three made-up "Zz" patients given a dispense in memory so the notices table and cards have
+rows): every state above measured at 1220 / 800 / 360, before / after with the block switched off and on in the page; the four
+dialogs open as cards (1220 / 800) and sheets (360); no sideways scroll at 360; the notices table fits its box at 800 (776px, as
+before); console clean after a reload. Pictures: shots/reloc-audit-*.jpg (list, dialog, phone -before / -after; sheet-after).
+**Not tested:** her real records and devices, a row that is overdue or due this week (none in the test copy), Print and Export
+themselves (their dialogs only).

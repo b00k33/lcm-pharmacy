@@ -647,6 +647,10 @@ the six months say each fact once (meanings in hover titles, the profit tiles to
 its two buttons the Button. Empty states: "No forms waiting", "None missing" / "No patients", "No match" / "Nothing dispensed".
 App-wide: the last column's drag grip stays inside its table (the "wider than the screen" note shows only on a table that really
 scrolls); a hidden `.ph-load-btn` stays hidden.
+**Relocation (her 2026-11-02 "fix the relocation taps") [Relocation taps]:** its four dialogs are white cards in the middle (a
+sheet on the phone); Cancel a chip, Save the one solid; Edit the move, Open the full list, more details and names are chips;
+list ⋯ and row ⋮ circles; the row and dialog fields tint; the notices filters and How they did joined bars; Print / Export the
+Button.
 
 **Patient profile list on a computer (her audit: "make it more space saving make it cleaner") [Patient profile list audit]:** the
 five tiles are the filters (tap again = all; "No history" only while anyone has none), no Filters button or chip row; "Schedule"
