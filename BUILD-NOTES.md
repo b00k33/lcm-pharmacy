@@ -10081,3 +10081,32 @@ search did not step; a snack photo: "banana" picked = a snack + dot "@<time>"; B
 ticked Had it at 7:40; Broccoli (in the meal, no dot) listed under the search, one tap = dot 3; phone 375: the sheet at the foot, no
 sideways scroll, rows fit; relay names parse (with id, without id, a random part starting with r); Prescriptions search: Jane narrows,
 Zzqx none, clear returns. **Not tested:** a real phone (touch, keyboard lift), the relay end to end with ids, her real Meals. **LIVE** build 20261102-214600 (publish df157b5b); mock in mocks/.
+
+## Compare herbs, one line (2026-11-02)
+Her words, with two screenshots of the Compare tab: "ban xia is not a jar, its a herb" (a column headed "Ban Xia" over "Xiao Ban Xia
+Tang · No recipe · No jar") and "i want gram only, the table needs to be one line, the low out can be replaced by a more simple dot hover
+for more info". Her words named each change, so no mock.
+- **Head = the formula** (`c.rname`; `PH_CMP_BASE` maps a body type to its base formula). The body-type name is gone from the Herbs table
+  (the Signs tables keep the family names: there the column IS the family). Her formula jar = one dot after the name, "Jar · <jar> ·
+  <state> · <g>" in the hover; no jar = **+ Add jar** (`.ph-cmp-addjar`, the Button: 32px, 6px, 1.5px teal line, 13px bold ink) with
+  `data-ph-recipe-add-inventory` (her recipe's id, or empty) + `data-ph-jar-name` (the formula); the door is B33 C4 LCM's 53fbe0ed
+  (`phOpenHerbAddDrawerNamed`, LIVE 214100). Line 2 of a head (`.th2`) = "Your recipe · n g" or "No recipe", Recipe ▾, the button.
+- **Row = one line:** the herb's name + one 6px stock dot (`phCmpStock` replaced `phCmpStockChip`: green in stock, amber low, red out or
+  negative, grey stopped or untracked, bronze phasing out, a red ring = not in her inventory); the hover on the name and dot says jar ·
+  state · grams. The count line's "none" dots are rings to match. The name column's head reads "Herb".
+- **Cell = her grams only.** The classic's dose moved into the cell's hover ("3 liang in the classic · 25% of your recipe · 27% of the
+  classic"); a column she has no recipe for shows a faint dot where the classic has the herb (its dose in the hover). **Left out on
+  purpose:** no liang → gram conversion for a classic she has no recipe for: her recipes run about 3.3–5 g a liang, and a worked-out gram
+  dose would be a recipe suggestion (NEVER break these: no recipe auto-suggestion).
+- Legend: "grey = the classic's dose · bold = your recipe's grams" became a faint "● in the classic"; the other three marks stay.
+**Code:** `phCmpStock`, `phCmpHerbsTableHtml` (head, rows, cells, legend); the CSS block "Compare herbs, one line" after
+`.ph-cmp-tbl.herbs .mk`. Commit dab44909.
+**Tested** (test copy, Browser pane at 1220 and 375, sandbox data + a made-up Gui Zhi Tang recipe; Gui Zhi · Xiao Ban Xia Tang · Wai Tai Fu
+Ling Yin): heads read the formula names; every row 28px (one line) at both widths; cells grams only with the dose in the hover; no-recipe
+columns faint dots; + Add jar on Xiao Ban Xia Tang opened Add a herb with "Xiao Ban Xia Tang", Kind Formula (closed unsaved) and the head
+tap did not fire; a head tap faded 10 rows, a second reset it; Missing only listed Da Zao, Ren Shen, Zhi Shi, Huang Qi; the button measured
+32px / 6px / 1.5px teal / 13px ink; phone: the table scrolls inside its card, no page sideways scroll; Prescriptions search: Zz → the one
+made-up patient, Qqx → "0 match", clear → both. **Not tested:** her real recipes and jars (the sandbox jars are all untracked, so only the
+grey dot was seen; the other colours by CSS), + Add jar on a column with her recipe (tested by B33 C4 LCM on Formula refill). Pages
+checked: the Herbs table was the only place these chips were drawn; the Families and Herbs tabs' stock chips (`.ph-gd-stock`) are untouched.
+Picture `shots/compare-one-line-2026-11-02.jpg`.

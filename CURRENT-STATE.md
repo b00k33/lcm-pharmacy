@@ -887,9 +887,12 @@ the category once and each line's sign faintly; every column that weighs the sig
 shade (bold = Key, red = against); All · Key · Shared · Tells · Unique with counts (a Tell = a 4 or 5 in one formula and a blank in
 another; Tells opens first), Ren | Bing | Both, "Shared by all n" above the table, the one search box filters the rows. **Herbs:** a
 column = the formula's classical recipe (`phHuFormulas()`, DRAFT; a body type's = its base formula, `PH_CMP_BASE`) over her own recipe
-(her formula prescriptions by name; Recipe ▾ when she has several) with her formula jar's state in the head; a row = a classic herb by the
-Herb use key with its jar's stock chip (the live jar first; "Not in inventory" when none), the classic's dose in grey over her grams in
-bold, an amber dot when her share of the formula is more than a quarter off the classic's (liang / zhu / jin weighed, pieces and sheng
+(her formula prescriptions by name; Recipe ▾ when she has several), headed by the formula's own name, never the body type (her "ban xia is
+not a jar, its a herb"), with her formula jar as one dot (its words in the hover) or **+ Add jar** (`phOpenHerbAddDrawerNamed`: the recipe's
+name when she has one, else the formula's); **every row is one line** (her "i want gram only, the table needs to be one line, the low out can be
+replaced by a more simple dot hover for more info"): a classic herb by the Herb use key + one stock dot (green in stock, amber low, red out,
+grey stopped / untracked, a red ring when not in her inventory; jar · state · grams in the hover; the live jar first), her grams only in a
+cell (the classic's dose and the two shares in the hover; a faint dot in a column she has no recipe for), an amber dot when her share of the formula is more than a quarter off the classic's (liang / zhu / jin weighed, pieces and sheng
 shown only), a red "—" where the classic has a herb her recipe lacks, a blue dot on a stand-in (`PH_CMP_STANDIN`, DRAFT: Dang Shen for
 Ren Shen …), "In your recipe only" for the rest; a count line (not in inventory · out · low · stopped · no recipe · no jar), Missing only
 (the marked rows), Can make now (the columns whose every classic herb is stocked, low, untracked or phasing out). Copy = both tables as
