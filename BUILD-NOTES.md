@@ -9449,6 +9449,7 @@ off the shopping list (`phFoodMenu`, bought made) and the words Chinese / Vietna
 **Tested** (test copy): All foods open shows Chinese 31 and Vietnamese 28 with Phở gà and Bún bò Huế, closed hides them as before;
 Menus ▾ = McDonald's … Thisbowl; "bun bo hue" finds it, "vietnamese" finds 31; console clean. Picture `shots/kitchens-everyday.jpg`.
 **Not tested:** her real Meals page and devices; the 64 rows now painted with All foods open (fine against the 557 menu rows kept lazy).
+**LIVE** 2026-11-02 in build 20261102-180100 (her "Push live", then "Push both live"; published by the phone-rail session's run, with its rail). Her devices need the gold Update.
 
 ## Phone rail: one bar + the rail as a drawer (2026-11-02)
 **Her ask:** a phone screenshot of her record (the stage strip "✓ Profile · 2 Today's visit · 3 Fang Bing Ren …" cut off at both
