@@ -9668,3 +9668,52 @@ The sources line now reads "matcha, hojicha: Standard Tables of Food Composition
 **Tested** (test copy): 17 numbers each; "hojicha" and "houjicha" list the seven in Drinks; hovers read the parts; console clean.
 Picture `shots/hojicha-milks.jpg`. **Not tested:** her real Meals page and devices.
 **LIVE** 2026-11-02 in build 20261102-190400 (publish 9224fefe, her "Push live"). Her devices need the gold Update.
+
+## 2026-11-02 · Chai Ling Tang: integrate33 run 22
+Her Chai Ling Tang table (15 symptoms /5 headed "REN", 9 signs /5 headed "BING", conditions, a caution note) + "integrate33", and her pattern:
+"chgzgjt - anxious chai hu person / chai ling tang - wet chai hu / chai gui tang - blood stasis chai hu / chai po tang - phlegm chai hu. see the
+pattern?" Matrix `fbr-integrate33-chailing-2026-11-02.html` (root until live, then mocks/), published to her as an artifact.
+- **Her pattern:** each is a Chai Hu person, and the kind names what rides with Chai Hu (Chai Ling = Xiao Chai Hu Tang with Wu Ling San). The kind
+  leads the card line (`PH_BTJ` arch): "The wet Chai Hu person." and "The anxious Chai Hu person." (run 21's). Chai Gui Tang and Chai Po Tang are
+  not families yet: they wait for her tables (her run 20 answer 2). That settles run 21's open question: run 20's "Dry palms/soles (women): Wen
+  Jing Tang, Chai Gui Tang" names the blood stasis Chai Hu, not Chai Hu Gui Zhi Tang, so its Chai Gui half waits for Chai Gui Tang's table.
+- **Swap:** her headings run the other way round from the app's, as in runs 18, 19 and 21; by her 2026-10-14 swap rule the symptoms are Bing and
+  the signs Ren, every line at her weight.
+- **Family** `PH_FORMULAS.chailing`, the 40th: Bing 15 lines (ceiling 56), Ren 9 lines + office work (34). Filed last under Chai Hu
+  (`PH_REN_FAM_GROUPS`). `or` lines (each scored once): edema / fluid accumulation (`edema_surf`, `ascites`, `pleural_effusion`); fever (feels
+  feverish, mild, or with chills); aversion to cold (chills, or sensitive to cold). Reused: nausea, vomiting, diarrhea (loose stools), fatigue
+  (`fatigue_now`), acid reflux, sensitivity to drafts = dislikes wind, itchy skin, body aches (`joint_ache`), no desire to drink = no thirst, reduced
+  appetite, splashing = the sloshing row; Ren: thick coat (`coat_thick`), tooth-marked tongue = `tongue_swollen_toothmark` (the chart's Teeth marks
+  chip alone ticks it), mild lower-limb edema = `edema_tend`, sallow complexion. Office work 4 (run 20's pointer line for the Chai Hu formulas). Her
+  conditions (the leukaemias and cancers as her source describes them, digestive, fluid, exterior, general) score nothing (her run 18 answer); her
+  caution sits in `core`: the source's cancer uses are not evidence it treats cancer. No differentiation lines, so no minus points.
+- **New rows:** Bing `nausea_after_drink_now` "Stomach: nausea after drinking water"; Ren `pulse_wiry_slippery` "Pulse: wiry, slippery",
+  `tongue_dusky_pale_puffy` "Tongue: dusky-pale, puffy", `melasma_tend` and `skin_red_papules_tend` (the Ren twins of the Bing skin rows),
+  `ldh_high` "Diagnosis: high LDH". Twins in `PH_FBR_TWINS_DRAFT`. Board groups: Digestive; Tongue, Pulse, Build, skin & complexion, Diagnoses;
+  the Tongue & pulse block's body and pulse rows (`PH_FBR_TP_GROUPS`); the Skin colour subgroup (`PH_RQ_SUBGROUPS`); LDH in the first
+  diagnosis area (`PH_FBR_DX_AREA`).
+- **Wired:** tongue chart: Pale or Dusky AND Swollen → the new tongue row (`phTngSignChips`; old-chart words in `PH_FBR_CHART_PREFILL`), Teeth marks →
+  the teethmarks row and Thick → the thick coat (already); pulse chart: Wiry AND Slippery → the new pulse row (`PH_FBR_CHART_PREFILL`, tappable on the
+  Pulse page through `PH_TRI_INLINE.pulse`); belly chart: water sounds → the sloshing row (already); blood tests: a new LDH marker (`PH_BLD_MARKERS`,
+  U/L, DRAFT upper limit 250; a lab's own range wins) ticks the high LDH row (`PH_TRI_BLOOD`). Ask her (DRAFT label): Appetite & digestion "Nausea after
+  drinking water" (Right now). Patterns: `bt_chailing` in Qi stagnation (with the Chai Hu formulas) and Damp / phlegm (with Wu Ling San, her "wet");
+  `PH_FBR_TO_CLUE` the pulse → wiry + slippery, the tongue → pale + swollen. Body figure: the face for the dark spots (`PH_REN_DRAW`). Search words
+  (`PH_BING_ALIAS`; melasma and skin_red_papules already cover their twins). Red caution (`PH_FBR_AVOID`): pregnancy (Ban Xia), bronchiectasis
+  (Gui Zhi), drug liver damage (Chai Hu). `PH_BTJ.chailing` (柴苓汤, her English name, DRAFT card line). Picture `SC.chailing`: the ribs tight, water
+  rising to a queasy mouth, water pooled low in the belly, puffy at the hips; Chai Hu + Huang Qin open the ribs, Ban Xia + Sheng Jiang send the
+  stomach down, Ren Shen + Da Zao + Gan Cao build, the Wu Ling San herbs drain; 12 herbs in 4 groups; inset "Puffy, thick coat / Wiry, slippery";
+  `PAT` damp; DRAFT labels.
+- **Not wired (no honest source):** Medical history (the cancers are conditions, scoring nothing), the cycle, the skin rows on Ask her (no Skin
+  topic), fluid in the belly or chest on the belly chart beyond the sloshing row.
+- **Tested** (sandbox port 8995, a made-up patient, deleted after): every pool and `or` key valid, each new row in one group, no duplicate keys;
+  all 40 families lead their own full picture; her full table 100% (next Ling Gui Zhu Gan 24); the 5s only (nausea, vomiting, swelling, thick coat,
+  wiry slippery pulse) 28% first (next Ban Xia 7); a fitting patient 56% first on the board, gold, under Chai Hu (next Ling Gui Zhu Gan 17).
+  Look-alikes: Xiao Chai Hu's full picture puts it 22nd, Wu Ling San's 9th, both together 9th (30%; each scores its own table, so Chai Ling's rows
+  are not theirs). One tick: nausea after drinking 4%, the pulse 7%, LDH alone 1%, each first (no other family weighs them). Charts: Pale + Swollen
+  and Dusky + Swollen tick the tongue row, Pale alone, Swollen alone or Red + Swollen do not; Wiry + Slippery ticks the pulse row, either alone does
+  not; LDH 310 ticks, 180 does not. Ask her: the answer's row is listed; that row adds 4 points (52 → 56%; set in code, not tapped). Patterns: the body-type clue, wiry and slippery from the new pulse
+  row. Red caution: all three lines. Picture: Trouble, Formula at work and Settled by eye, no overlaps. 375 px: no sideways scroll on Fang Bing Ren
+  and Ask her. No console errors (one 404 from my own wrong address).
+- **Not checked:** her real records; the Key2 phone; Prescriptions search.
+- **Needs her word:** see the matrix (fever with chills scored once; fluid in the belly or chest counting as fluid accumulation; the LDH range;
+  DRAFT words: 6 row names, the Ask her answer, the card lines, the picture labels).

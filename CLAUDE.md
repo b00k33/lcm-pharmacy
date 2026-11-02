@@ -1392,11 +1392,15 @@ origin/main:index.html`; don't trust this list's age.
 - Ma Huang, Da Huang and Fu Zi Ren rows were never checked against her own
   tables (Ren audit 2026-10-13): she needs to re-send them.
 - Fang Bing Ren reference formulas waiting on her tables: Gui Zhi Fu Ling
-  Wan, Chai Hu Gui Zhi Tang, and the formulas her 2026-11-01 pointer list names
-  (Si Jun Zi, Mai Men Dong, Huang Lian E Jiao, Li Zhong, Zhu Ling, Ma Xing Shi Gan
-  and more: the run 20 note). Huang Lian Jie Du Tang, Da Chai Hu Tang, Wen Jing
-  Tang, Ling Gui Zhu Gan Tang, Wai Tai Fu Ling Yin and Chai Hu Gui Zhi Gan Jiang
-  Tang are families now.
+  Wan, Chai Hu Gui Zhi Tang, Chai Gui Tang (her "blood stasis Chai Hu"; run 20's
+  dry palms and soles line waits for it), Chai Po Tang (her "phlegm Chai Hu"), and
+  the formulas her 2026-11-01 pointer list names (Si Jun Zi, Mai Men Dong, Huang
+  Lian E Jiao, Li Zhong, Zhu Ling, Ma Xing Shi Gan and more: the run 20 note). Huang
+  Lian Jie Du Tang, Da Chai Hu Tang, Wen Jing Tang, Ling Gui Zhu Gan Tang, Wai Tai
+  Fu Ling Yin, Chai Hu Gui Zhi Gan Jiang Tang and Chai Ling Tang are families now.
+  Her Chai Hu kinds (2026-11-02) lead each one's card line (`PH_BTJ` arch): anxious
+  (Chai Hu Gui Zhi Gan Jiang Tang), wet (Chai Ling Tang), blood stasis (Chai Gui
+  Tang), phlegm (Chai Po Tang).
 
 **Paused or not built:**
 - Larger work, knowingly parked: a desktop build beyond the PWA; AI intake
