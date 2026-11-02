@@ -1432,9 +1432,14 @@ card 900 px or wider (`phCxCardBHtml`; narrower and the phone keep the layout ab
 folded until tapped) over a 3-column table **Complaint · Today · Change** (Change = baseline → today, a small line + the +/− pill,
 `phCxChgHtml`; no Baseline / Trend / From baseline / Note columns); Energy is the last row ("am · pm · ev", its 1–10 bars in the
 panel); the pain tools are one joined bar under it (＋ Pick areas · Close-ups · Surgeries · Pain intake). Beside it the **panel**
-(`phCxPnlHtml`) holds the asked row large: area, name, Goal (the Goal lives only here), Today, the body drawing, Baseline · Last ·
-Since + its chart, last visit's note, then ✎ Note · Details ▾ (side, detail, Move baseline) · Next: X ›. A tap on a row puts it in
-the panel; a score moves the gold row and the panel on. The count is said once, on the Ask step: no "Asked n of m", no gold
+(`phCxPnlHtml`; plain on the card since her 2026-11-02 "E Plainer": no box, no side line, no boxes inside) holds the asked row
+large: its name (it wraps, never cut) with ✎ Note · ⋯ Details · › Next as three 32px circles on the same line (each name in its
+hover; › solid, an open one solid, a second tap closes it), the Goal (one tinted field with a flag; the Goal lives only here), Today
+(the slider and its plain number), the body drawing; on a return visit its chart (`phCxRowChartSvg(s, true)`: the line, its dots
+and each score over its dot, no grid or axis, the dates in the hover; it runs to today) and last visit's note on one ✎ line; today's
+note shows as its own line, its box a tinted field. No area label, Main tag or side tag (the table row says them; the side is in
+Details with the detail, how long and Move baseline), no Baseline · Last · Since line. The asked row in the table is the gold tint
+alone, no left line (her "Tint only"). A tap on a row puts it in the panel; a score moves the gold row and the panel on. The count is said once, on the Ask step: no "Asked n of m", no gold
 progress line, no count pill on the Ask / Look / Treat headings (`phTodaySecHd`). The header's switches never squeeze; From ·
 switches · Chart ▾ wrap down together (`.ph-cx-tools`).
 **Details, any number of Mains, a sign on the bar** (her picks): every row's Details ▾ (the panel; the drawer on a narrow card)

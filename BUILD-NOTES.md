@@ -9167,3 +9167,39 @@ before); console clean after a reload. Pictures: shots/reloc-audit-*.jpg (list, 
 **Not tested:** her real records and devices, a row that is overdue or due this week (none in the test copy), Print and Export
 themselves (their dialogs only).
 **LIVE** 2026-11-02 on her "Push live": build 20261102-140800 (publish 97097d8a). Checked on the live copy: the dialog card, Cancel the chip, the row circle, the joined filter bar, the head room for ⋯ and How they did are in it. Her devices need the gold Update.
+
+## The Compass panel, plainer (2026-11-02)
+Her screenshot of the Came in for side panel on a wide card + "i dont like this box design, too many elements, make it more
+simple - show mock". First mock (`scratchpad cx-panel-mock`: Now · A Quiet · B Bare · C No drawing): her look answer "none. i dont
+like the visual elements. like line on left box border. make design more simple"; Drawing = Keep it; Goal = Flag + words; Buttons =
+Three circles. Second mock (D Plain · E Plainer): her picks **E Plainer**, the table's gold row **Tint only**, last visit's note
+**Keep the line**, "Yes, build it".
+- **No box:** the panel sits on the card's white (no grey fill, no coloured side line, no white boxes inside). The area label
+  (PAIN), the MAIN pill and the side tag (C) are gone from it (the table row says them; the side is in Details).
+- **✎ Note · ⋯ Details · › Next** are three 32px circles on the name's line (`.ptools`, `.ph-cx-pic`; each name in its hover and
+  aria-label, "Note: <words>" once a note is written). › is solid; ✎ and ⋯ turn solid while open and a second tap closes them
+  (✎ was open-only; it still closes when she leaves the box). No foot line.
+- **The name wraps** (two lines for "Trying to conceive"), never cut with "…".
+- **Goal** = one tinted Field with a flag (the `#i-flag` sprite, `.gfl`; shown only in the panel), no "Goal" word, no side line on
+  her own wording; its edit box is the same tint.
+- **Today** = the slider and its plain number (no white box).
+- **Return visit** = the chart, plain (`phCxRowChartSvg(s, true)`: the line, its dots and each score over its dot; no grid, axis,
+  baseline line or date labels, the dates in each dot's hover; it still runs to today, so an unscored today leaves room on the
+  right), then last visit's note on one ✎ line. The Baseline · Last · Since line is gone (no number line, her E). Today's note
+  shows as its own ✎ line when the box is closed; the box is a tinted Field (no outline).
+- **The table's asked row** is the gold tint alone: `.ph-cx-askbar` lost its 3px gold left line (her "Tint only"; CLAUDE.md's
+  "tint AND a left accent bar" line now names this one exception). The group colour lines on each row stay.
+
+**Code:** CSS in the Compass panel block (`.ph-cx-pnl`, `.ph-cx-gl`, `.ph-cx-slv`, `.pchart`, `.note`, `.pdet`, `.ptools`,
+`.ph-cx-pic`, `.pnote .ph-cx-note-in`; the `.palab` and `.pfoot` rules removed) and `.ph-cx-askbar`; `phCxPnlHtml` rewritten,
+`phCxRowChartSvg(s, plain)`, the flag in `phCxGoalHtml`, the `data-cx-nbox` handler toggles. The narrow card, the phone and the
+Chart ▾ chart are unchanged (the flag is hidden there; the full chart is the same call without `plain`).
+**Tested** (sandbox on its own port; a made-up patient, a Natural fertility plan with scores 7 / 6 / 5 on 12 / 19 / 26 Oct and a
+note, and an MSK low back plan on a first visit): pictures at 1440 and 1220 (first visit, return visit, note open, Details open)
+matched against mock E; 900 (the narrow card: its drawer's Goal still reads "Goal …", no flag); ✎ opens the box with the cursor in it, the words save as typed and
+show as today's line, a second ✎ tap and leaving the box both close it; ⋯ opens and closes Details (aria-expanded follows); › moves
+the panel to Energy; a tap on the table row brings it back; the Goal field opens its edit box and closes on leaving it; the chart
+labels read 7 · 6 · 5; no console errors. Integration: the Goal, chart and notes are the same reads as the table and the Chart ▾
+view; the Treatment tab's "How <name> is" card does not use the panel (not changed).
+**Not tested:** her real records and devices; a sign row and a typed complaint in the panel (same code path as before, only the
+tags left); a score dragged on the panel's slider by hand (the slider itself is unchanged).
