@@ -9960,3 +9960,31 @@ Gui Zhi …; 375: the page is not wider than the screen, the tables scroll insid
 Prescriptions search: Zz → the one made-up patient, Qq → "0 match", clear → the list. Console: the sandbox's own service-worker line only.
 **Not tested:** her real devices; the slide in a visible tab at her speed (the pane was hidden: the classes and counts were checked, not
 the frames); reduced motion on a real device.
+
+## Calm week (2026-11-02)
+**Her words** (a screenshot of her 2–7 Nov week in Nanjing, 6 days, 1182px): "too many colours textures shapes features. too busy
+and overwhleming. - show mock before fix". **Mock:** `calm-week-mock-2026-11-02.html` (artifact 3So175L3LMc544CTtKUgWe; her real
+week, patients as initials; one lever per part, C = now; a live count measured off the page: now 10–11 colours, 2 stripes, 5
+shapes). **Her 11 picks:** 1 her events stay solid · 2 patients keep Cliniko colours · 3 meal blocks stay · 4 herb doses = a leaf
+mark · 5 no stripes · 6 the trip = one quiet line · 7 the cycle day in grey words · 8 birthdays only in the row above · 9 a grey
+plane for a booking while away · 10 Add appointments alone in the top bar · 11 one colour for the trip; then "Yes, build it".
+**Build** (commit 4928c00c, the hand block "CALM WEEK" before `</style>`):
+- Herb doses: `phC22DayLayout` moves them from `grid` to `marks` (no lane, so a lecture beside a dose keeps the day's width; the
+  mock drew it at half width); `phHbMarkHtml` draws a 20px leaf circle at the dose time on the right edge, the same tap
+  (`phHbAct`), due = the gold glow, taken = filled green.
+- Trip: `phTripRowHtml` adds a dot and "· <city> time" (once she has flown, `phTripTzOf`); `phTripTzHtml` and the per-day label
+  went; trip day columns plain white (the 5% wash and the 135° stripes gone, the long-day map's gap bands flat); day names grey;
+  `phTripDayItems` paints every program row the observation teal (`PH_TRIP_KINDS[0][3]`) on the calendar only; her own rows
+  keep the trip's colour.
+- Day head: `phC22CdHtml`'s chip restyled as grey words (a line on hover), the drop rose; `phFastHeadHtml` left the multi-day
+  head (the phone's one-day row keeps it).
+- Row above: the ⏸ n paused-routines chip went (`phTripPzChipHtml` removed; the Me drawer's "Paused · back …" line stays);
+  birthdays white chips with a grey cake. **Note for her:** the ⏸ chips were the routines her trip PAUSED, not a routine count
+  (my mock called them routine counts); the ⟳ chip for an untimed routine stays.
+- Away: `phTripAwayTagHtml` = a grey plane (title "Away · <trip>"), the red inset edge gone.
+- Top bar: the `appointments` action set = Add appointments only (Fasting: toolbar ring + Me drawer; Herbs: Me drawer).
+**Tested** on a test copy at 1182 (recycled): her week seeded (trip 30 Oct–15 Nov Nanjing UTC+8, the program rows, two
+birthdays, two bookings on trip days; her doses and cycle day stubbed): 12 leaf marks (2 today with the tick, 10 opening cards, 1
+due glow, 1 taken), lectures full width, the line "Study Tour · day 4 of 17 · Nanjing time", CD 3–8 in grey words, no ⏸ chip, no
+day label, 2 grey planes, Add appointments alone; console clean. Picture `shots/calm-week-build-2026-11-02.jpg`. **Not tested:**
+her real doses and cycle record (stubbed), a tick on a dose, the phone.

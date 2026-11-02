@@ -146,13 +146,14 @@ the rest. Her own names are data in her Me row, never in this file. **Patient** 
 FREE TIME" (`phQk*`; `phQa*` is Quick assess).
 
 **One calendar, work + life (her picks) [One calendar: work + life].** **The row above each day** (`phC22FoldRowHtml`): a birthday
-= cake + name + the age it turns (`phC22BdayChipHtml`, tap = the birthday card), then the day's one-offs outside the patients'
+= a white chip, grey cake + name + the age it turns (`phC22BdayChipHtml`, tap = the birthday card), then the day's one-offs outside the patients'
 hours, then ONE ⟳ chip for its routines whose ring fills as they are ticked (`phC22RtChipHtml`; tap unfolds that day's chips, ▴
 folds; at All they are plain chips); the row below holds the evening the same way. A routine that meets the patients is a block
 like any of her events. **Her cycle day in the date line** (`phC22CdHtml`): "CD n" beside the big date, read from HER OWN patient
 record through the Cycle page's own reads (`phMeCycleAt` = `phBbtCycleStarts` → `phCycFacts` → `phTpCycleCompute`; derived on
-read, nothing stored but the record's name); a period day is rose with the drop, the expected period a dashed rose pill, nothing
-three weeks past an unlogged period; its card = Day n · phase, one line ("Period in ~3 days · 28-day cycle"), **Period started**
+read, nothing stored but the record's name); small grey words (a line shows on hover: it still taps), a rose drop only on a period
+day (her 2026-11-02 pick), nothing three weeks past an unlogged period; the fast's clock is no longer under today's date (the
+toolbar's ring keeps it; the phone's one-day row still shows it); its card = Day n · phase, one line ("Period in ~3 days · 28-day cycle"), **Period started**
 (the Cycle page's `phCycleLogPeriod`, days up to today only; corrections on the Cycle page) · **Cycle** (her own Cycle page).
 Which record is hers = **My profile** in the Me drawer (`lcm-me` `profile`, synced like the rest, so both logins read it), with a
 Cycle row "Day n · Phase · L-day" opening the same page. Once named, her card opens her record (`phMineOpen`, past the no-plan
@@ -980,8 +981,8 @@ come in once (Bring in). No cheer lines, no cycle advice.
 - **On Meals**: a thin clock bar tops her Meals page (time, to Breakfast / of goal, Goal ▾, aim · n planned, **Your fasts ›**,
   Start / Stop / Continue); the planner draws each day's fast 5 am → 5 am (cream eating, green fasted, striped to come, a line at
   now). The Fasting step is off her rail (grp `off`); Your fasts › opens it under a ‹ Meals chip (ring, goal bar, Stop + Undo,
-  Continue last fast, tiles, last 14 / 30 / 90 days by cycle phase, history). Every Fasting door (band chip, Me drawer line, ⋯ menu)
-  opens Meals; Appointments also has a toolbar chip (computer only).
+  Continue last fast, tiles, last 14 / 30 / 90 days by cycle phase, history). Every Fasting door (band chip, Me drawer line)
+  opens Meals; Appointments also has a toolbar chip (computer only); its top bar holds Add appointments alone (her 2026-11-02 pick).
 - **Goal** 14 · 16 · 18 h · **Breakfast** · Other ▾ (Breakfast = her next Breakfast event at least 2 h on, `fastTo` beside
   `fastGoal`; none = the hours). **Aim**: 3–5 a week (two fields) + her planned days as a Mon–Sun bar (`fastAim = {lo, hi, wd, up}`);
   a fast on any day counts. A night's planned fast: Dinner → Fast this night, Just <day> | Every <day> (`fp` 1 / 0 on that day's
@@ -1011,8 +1012,9 @@ Her own prescription's doses at clock times SHE types, nothing pre-filled ("i ne
   times") · Today · 7 days · Left · Dispense (dispensed) or Edit (typed: its fields + Remove with Undo). + Formula = a name (her
   prescriptions + the formula list as a native list) + times a day + Add, More ▾ for the rest. Rail: "N taking". Days left green,
   ran out amber on every surface.
-- **Elsewhere**: Me drawer Herbs (a tick per dose today); each dose its own green block on the grid (`#15803D`, leaf; today's tap =
-  taken with Undo, another day's opens its card; untimed folds above the day); Herbs in the Appointments ⋯ menu. Due = a gold glow
+- **Elsewhere**: Me drawer Herbs (a tick per dose today); each dose a leaf mark at its time on the day's right edge (`phHbMarkHtml`, a
+  20px circle that takes no lane, her 2026-11-02 pick; filled green once taken; today's tap = taken with Undo, another day's opens
+  its card; untimed folds above the day); the Herbs page opens from the Me drawer (it left the Appointments top bar 2026-11-02). Due = a gold glow
   until ticked; a late tick counts any time that day; a fasting day keeps them. Code: "HERBS · HER OWN DOSES" (`phHb*`).
 - **A dose rides on the meal before it** (her pick 2026-10-29, the Me audit; `phHbMealOf`): the last meal planned at or before the
   dose's time (8:00 → Breakfast, 16:00 → Lunch; a dose before the first meal rides on that meal; untimed = none). That meal's card
@@ -1226,11 +1228,13 @@ Her work trips live in LCM; Nanjing is the first. Data in her Me row, entry by e
   the booking's own Edit; herbs running out while away with Dispense; fertility Timeline items opening or closing on a trip day with
   Open; "Message the N booked patients" into the one composer) · Guide (Nanjing only). A phone during a trip opens on its Today a
   moment after load (only while still on Appointments with nothing open).
-- **Calendar**: one band across the trip's days in the row above (day n of N, a red count of bookings, a tap opens the trip); trip
-  days striped in its colour; "<city> time" on the days after she flies; flights as her items (card: Open the trip); program
-  rows in their kind's colour (hers in the trip's), over their part of the day when they have no times, the card naming the kind
-  and the venue + 中文 with Plan opening that session; trip to-dos as tick chips on their due day; a red Away tag + red edge on
-  a booking on a trip day.
+- **Calendar** (calmer on her 2026-11-02 picks, BUILD-NOTES "Calm week"): one quiet line across the trip's days in
+  the row above (white, a thin line, the trip's colour as a dot; "day n of N · <city> time" once she has flown; the count of
+  bookings in a grey ring; a tap opens the trip); trip days plain white, no stripes, the day names grey; flights as her items
+  (card: Open the trip); program rows all ONE teal on the calendar (the observation kind's; her own rows in the trip's colour),
+  over their part of the day when they have no times, the card naming the kind and the venue + 中文 with Plan opening that
+  session; the trip page keeps the kinds' colours; trip to-dos as tick chips on their due day; a small grey plane on a booking on
+  a trip day (`phTripAwayTagHtml`, no red).
 - **The night before** (Settings · this device, "Trip program, the night before"): at 8 pm in the trip's city, while LCM is open
   on the phone (even in the background), one notification for the next day's first session (venue + 中文, when to leave, its
   notes) and one for a shuttle bus between venues; a tap opens that session on Plan (sw.js `TRIP_OPEN` / `#trip=`). Once per day
@@ -1242,7 +1246,7 @@ Her work trips live in LCM; Nanjing is the first. Data in her Me row, entry by e
 - **A trip pauses her routines**, by itself, from her flight out until she lands home (no flight = the trip's whole days). Meals and
   a routine ticked **Keep on trips** (`kt`, in its Edit) keep going; one-offs, birthdays, her herb doses untouched. `phMeOccurs`
   (the one read) = `phMeOccursRaw` minus `phMeTripPauses`, so grid, meals, drawer, This week, Habits and Health follow it.
-  `phMeTripPausedOn(k)` lists the paused: one ⏸ n chip in the row above each day (`phTripPzChipHtml`, opens the trip), the drawer's
+  `phMeTripPausedOn(k)` lists the paused (no chip on the calendar since her 2026-11-02 "birthdays only" pick): the drawer's
   one line "Paused · back <day>" with the list under All (`phTripPzRowHtml`), "away" on This week. A fast week holding a trip day
   reads "–" and neither counts nor breaks Weeks on aim.
 
