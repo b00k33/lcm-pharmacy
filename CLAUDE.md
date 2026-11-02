@@ -1395,7 +1395,8 @@ origin/main:index.html`; don't trust this list's age.
   Wan, Chai Hu Gui Zhi Tang, and the formulas her 2026-11-01 pointer list names
   (Si Jun Zi, Mai Men Dong, Huang Lian E Jiao, Li Zhong, Zhu Ling, Ma Xing Shi Gan
   and more: the run 20 note). Huang Lian Jie Du Tang, Da Chai Hu Tang, Wen Jing
-  Tang, Ling Gui Zhu Gan Tang and Wai Tai Fu Ling Yin are families now.
+  Tang, Ling Gui Zhu Gan Tang, Wai Tai Fu Ling Yin and Chai Hu Gui Zhi Gan Jiang
+  Tang are families now.
 
 **Paused or not built:**
 - Larger work, knowingly parked: a desktop build beyond the PWA; AI intake

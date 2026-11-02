@@ -9560,3 +9560,56 @@ step ½. "cheung fun" now finds only the two Chinese rows; "cha lua" finds bánh
 **Tested** (test copy): 17 numbers; "banh" lists Bánh cuốn · 1 plate under Vietnamese; the hover reads the parts; console clean.
 Picture `shots/banh-cuon.jpg`. **Not tested:** her real Meals page and devices.
 **LIVE** 2026-11-02 in build 20261102-183600 (publish 4a3737d2, her "Push live"). Her devices need the gold Update.
+
+## 2026-11-02 · Chai Hu Gui Zhi Gan Jiang Tang: integrate33 run 21
+Her Chai Hu Gui Zhi Gan Jiang Tang table (19 symptoms /5 headed "REN", 5 findings /5 headed "BING", conditions) + "integrate33". Matrix:
+`fbr-integrate33-chaihuguijiang-2026-11-02.html` (root until live, then mocks/), published to her as an artifact.
+- **Swap:** her headings run the other way round from the app's, as in runs 18 and 19; by her 2026-10-14 swap rule the symptoms are Bing and the
+  findings Ren, every line at her weight.
+- **Family** `PH_FORMULAS.chaihuguijiang`, the 39th: Bing 19 lines (ceiling 69), Ren 5 lines + office work (25). Filed last under Chai Hu
+  (`PH_REN_FAM_GROUPS`; the others keep their shades). `or` lines: spontaneous sweating / from the neck upward (`spont_sweat`, `sweat_head_now`);
+  dry mouth / thirst without the wish to drink; pulsations in the chest and abdomen (`pulsate`, `chest_throb_now`, run 18's pair); insomnia / light
+  sleep (`insomnia_dream`, `sleep_onset_hard`, `sleep_wakes`). Reused: chest and hypochondriac pain = `chest_hypo_full` (5), alternating fever and
+  chills, irritability, urinary difficulty, poor appetite, aversion to wind, night sweats, loose stools (`diarrhea`), vivid dreams, tinnitus, cough,
+  emotional symptoms after stress or overwork = `mood_stress`; Ren: dry tongue body = `tongue_very_dry_tend` (the chart's one Dry chip ticks it),
+  slight binding in the chest and hypochondrium = `chest_hypo_tend`, soft abdomen = `abd_wall_weak_tend` (the chart's thin wall or soft tension).
+  Office work 4 (run 20's pointer line for the Chai Hu formulas). Her conditions had no ratings: notes in `core`, scoring nothing (her run 18
+  answer). No differentiation lines, so no minus points.
+- **New rows:** Bing `sternum_pain_now` "Chest & ribs: breastbone pain, worse on pressure", `sweat_head_now` "Sweat: mostly from the head and neck",
+  `fatigue_exert_now` "Energy: exhausted after activity", `energy_swings_now` "Energy: big ups and downs", `thirst_no_drink_now` (the Bing twin of
+  `thirst_no_drink_tend`); Ren `coat_thick_white` "Tongue coat: thick, white", `sweat_head_tend`. Twins: the two sweat rows, the two thirst rows
+  (`PH_FBR_TWINS_DRAFT`). Board groups: Pain & body, Skin, sweat & complexion, Subjective; Ren Build, skin & complexion and Tongue; the Coat row
+  of the Tongue & pulse block (`PH_FBR_TP_GROUPS`).
+- **Wired:** tongue chart: Thick AND White chips → `coat_thick_white` (`phTngChipLinks`; old-chart words in `PH_FBR_CHART_PREFILL`); Dry →
+  the dry tongue row (already); belly chart: tender / distended / tight under the ribs → the chest and rib rows, thin wall or soft tension → the
+  soft wall (already). Ask her (DRAFT labels): Sweat "Mostly head and neck" (both versions), Thirst "Thirsty, no wish to drink" gains its Right now
+  version, Head & chest "Breastbone pain" and Mood "Worse with stress or overwork" (Right now). Body figure: the breastbone (`PH_BING_SITE`), the
+  head for the sweating (`PH_BING_SITE`, `PH_REN_DRAW`). Patterns: `bt_chaihuguijiang` in Qi stagnation (with the other Chai Hu formulas);
+  `PH_FBR_TO_CLUE` exhausted after activity → fatigue, thick white coat → thick coat. Search words (`PH_BING_ALIAS`; `sweat_head` covers both
+  twins). Red caution (`PH_FBR_AVOID`): drug liver damage (a Chai Hu formula) and bronchiectasis (Gui Zhi). `PH_BTJ.chaihuguijiang` (柴胡桂枝干姜汤,
+  her English name, DRAFT card line). Formula picture `SC.chaihuguijiang`: sweat beads on the head and neck, a dry mouth, the ribs and the breastbone
+  sore, cold and loose below; Chai Hu + Huang Qin open the ribs, Tian Hua Fen + Mu Li moisten, Gui Zhi + Gan Jiang + Gan Cao warm; 7 herbs in 3
+  groups; her table names no pulse, so the inset reads "Dry tongue / Thick white coat"; `PAT` qistag; DRAFT labels.
+- **Fixed on the way:** the built-in coat link (`PH_LINKS_BUILTIN` "coat") set a white coat against "Tongue coat: thick, dry", so her formula's own
+  picture (a dry tongue with a thick white coat) raised "1 clash: both of these can't be true". The link is now white vs yellow: the thick, dry
+  coat left it (a dry coat can be white), the thick white coat joined the white side. No score changes. Asked: whether "thick, dry" should read
+  only the coat's own Dry chip (today a dry tongue body plus any thick coat ticks it, so Da Huang's families score it).
+- **Not wired (no honest source):** pulse (her table names none), bloods, Medical history (cholecystitis and the rest are conditions, scoring
+  nothing), the cycle (dysmenorrhea and menopausal syndrome likewise); the two energy rows have no Ask her place (Energy is left to the Energy
+  card) and stay taps; the breastbone has no belly-chart zone. Run 20's "Dry palms/soles (women): Wen Jing Tang, Chai Gui Tang" waits: Chai Gui
+  Tang may be Chai Hu Gui Zhi Tang (asked).
+- **Tested** (sandbox port 8995, a made-up patient, deleted with the phone-rail test records): every pool and `or` key valid, each new row in one
+  group, no duplicate keys; all 39 families lead their own full picture; her full table 100% (next Ling Gui Zhu Gan 23); the 5s only (rib pain,
+  dry tongue, thick white coat) 24% first (next Shi Gao 6); a fitting patient 48% first (next 11); tired, poor sleep and irritable only: 7th, 5%.
+  Look-alikes: Xiao Chai Hu's full picture puts it 7th (19), Chai Hu Long Gu's 5th (20), Da Chai Hu's 18th, Gui Zhi Long Gu's 16th. One tick:
+  breastbone pain 3%, a thick white coat 10% (first: no other family weighs that row). Tongue chart: Thick + White + Dry ticks the coat row and the
+  dry tongue and the board shows 20% under Chai Hu with no clash; thin white or thick yellow does not tick it. Ask her: Usually shows the sweat and
+  thirst answers, Right now all four; a tap on "Breastbone pain" ticked the row, 20% → 23%. Patterns: with her Ren taps it leads the Ren side and
+  the body-type clue shows under Qi stagnation; the thick coat clue too. Red caution: both lines on the tile's list. The picture's Trouble and
+  Formula at work stops (a herb label moved under the tongue inset's words). Search: breastbone, sternum, head sweat, exhausted after exercise,
+  energy ups and downs, thick white coat, thirsty but does not want to drink each find the new row first. Prescriptions search 4 → 1 → 0 → 4.
+  375 px: no sideways scroll on Fang Bing Ren and Ask her. No console errors.
+- **Not checked:** her real records; the Key2 phone; the new body-figure spots by eye; the Settled stop of the picture by eye.
+- **Needs her word:** Chai Gui Tang in the dry palms line; the thick, dry coat reading a dry tongue body; "Tongue: very dry" as her dry tongue body
+  (or a plain "Tongue: dry" row); the energy rows on Ask her; DRAFT words (the 7 row names, the 4 Ask her answers, the card line, picture labels),
+  the Chai Hu filing, Patterns Qi stagnation.
