@@ -212,7 +212,11 @@ live on the plan stage's tabs. **The door has no template to pick (her pick
 its general one, else its first; a man's Fertility = Men's fertility). No
 concern yet = Came in for only; no sex + DOB yet = Start here only. IVF and
 Pregnancy still ask their questions first; the band's Course ▾ switches it
-after. "+ New" (a second plan) keeps the course cards. Step 9 is when she
+after. "+ New" (a second plan) keeps the course cards. **Never make her choose
+the case first (her 2026-11-02 picks):** Came in for keeps HER words (top row
+`+ "her words"`, plan types under it); the plan type is read from her words
+or left empty ("Plan type ▾"); Start always shows ("Blank plan" when no course
+fits) with a joined **Course ▾** listing every course at once. Step 9 is when she
 shapes and uses that shell after Fang Bing Ren, not when it is first created.
 **Why:** Fang Bing Ren READS tongue, pulse, abdomen. It must come after
 them. (The Oct 10 tab order put it before, so it opened empty on a first

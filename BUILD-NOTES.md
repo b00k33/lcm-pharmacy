@@ -9097,3 +9097,34 @@ reload. Pictures: shots/wk-audit-*.jpg (disp, moves, stats, stats2, supp, photos
 -before / -after). **Not tested:** her real records, her phone (Key2), Photos with photos in it, Intake with forms waiting,
 Relocation on the phone.
 **LIVE** 2026-11-02 on her "Push live": build 20261102-133700 (publish 28d249ad). Checked on the live copy: the last-column grip, the hidden chip, the Suppliers Button, the hover titles and the empty-state words are in it. Her devices need the gold Update.
+
+## 2026-11-02 — Came in for: her words first, never the case first (her 4 picks)
+Her ask, on the Treatment Care Plan tab: "change the selection of case. i dont want to choose case first" (her popup: "in
+treatment care plan tab"). Measured first: the no-plan door's "What brought her in?" box only ever picked a plan type (the case):
+"Hay fever sneezing" ⏎ saved "Cold, flu, immune" and dropped her words; "Ringing in the ears" ⏎ saved nothing, so no Start
+button. Mock `mocks/came-in-for-words-first-mock-2026-11-02.html` (artifact RawAGSUAZT6iV8mDbvyZcf). **Her 4 picks:** 1 B the
+list stays, her words the top row; 2 A the plan type is read from her words; 3 A Start still shows when none fits; 4 A Course ▾
+on the Start button, every course at once. (The mock showed 1 A; the build follows her pick B.)
+- **Add box** (`phCcMenuPaint`): `+ "her words"` first (highlighted, Enter takes it, `data-cc-addwords`), the matching plan types
+  under a rule; maxlength 40 → 140 (as the words field). `phCcAddWords(text, famId)`: `mainText` = her words, `main` = the tapped
+  family, else `phCcGuessIds(text)` limited to the box's matches, else its first match, else null + `autoOff` (no pain-map
+  guess over her words). `phCcAddFam` now goes through it, so a tapped plan type keeps her words too.
+- **Words with no plan type are a complaint:** `phCcOf`, `phCcRibItems` (main.id null), `phCcCardHtml` (`hasMain`),
+  `phCcTableHtml` (the row draws with an outlined "Plan type ▾" pill, `.ph-cc-plan.none`), `phCcSeedSymptoms` (k "main:words"),
+  `phCcFillAim` (her words when no family). Every `phCcRibItems` reader checked for `main.id` null (`phHxMainFam`, Compass items,
+  Fang Bing Ren For, Watch line, plan title, course for, course length): each already allowed it. "No plan type" in the pill menu
+  now keeps her words (before it removed the complaint; her 27 Oct export: 23 complaints, all with a plan type, so none returns).
+- **Door** (`phTpDoorStartHtml`): Start always shows; "Blank plan" when no course fits; a joined `Course ▾` (`.ph-tp-dstart`,
+  `.ph-tp-dcourse`) opens `.ph-tp-dmenu` in the page flow (nothing clips it): every course grouped by `PH_TP_CATEGORIES`, the
+  concern's own category first (a man's Fertility → Men's health), her own courses in theirs, Blank plan last. A pick sets
+  `phTpDoorPick` (session only, kept with the plan type it was picked under, so a new plan type goes back to its own course)
+  and writes the course's plan type when it belongs to another family; an outside tap closes the list.
+- **Bug found on the way:** the plan-type pill's menu was clipped to a sliver by the table's sideways scroll box
+  (`.ph-cc-tblwrap` overflow) on the door. It now floats (`phCcPlanMenuPlace`, fixed, under the pill or above it when there is
+  no room; a scroll closes it).
+- Tested in the pane through the real handlers (no account): Ringing in the ears / Hay fever sneezing / Trying to conceive / Sore
+  knee / Tired and bloated each keep her words with Plan type / Cold flu immune / Fertility / Pain / Weight; a tapped plan type
+  keeps the words; Course ▾ → Low back pain sets Pain, → Natural fertility sets Fertility; Start makes a blank plan titled with
+  her words, and a Natural fertility plan; Today's visit, Care Plan, Tongue and Patient details show the words, no console
+  errors; phone 375: no sideways page scroll, Start + Course fit. Pictures `shots/came-in-for-words-first-*-2026-11-02.png`.
+  **Not tested:** her real records, her phone (Key2), IVF / Pregnancy picked from Course ▾ (their questions come first).
