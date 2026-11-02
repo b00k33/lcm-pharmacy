@@ -1070,7 +1070,12 @@ read its section there in full. When a build changes a part, rewrite that part's
   `git apply --cached p`, then `git commit` with NO paths. Never `git add -A`
   and never `git commit -- <paths>` (it commits the whole working copy of
   those paths, sweeping in another session's unfinished edits). A `-U0`
-  patch can misplace insert-only hunks; use `-U3`.
+  patch can misplace insert-only hunks; use `-U3`. **The patch's base is the HEAD
+  of staging time** (2026-11-02: a build copy taken from an older HEAD, diffed
+  against the newer HEAD, carried away 206 lines six commits had added in
+  between, 4d59d067; 9df94e11 restored them): re-apply your fragments to a fresh
+  `git show HEAD:index.html` copy right before `git apply --cached`, never diff
+  an old build copy against the current HEAD.
 - **Grep to confirm every edit landed.** An Edit success is not proof with
   several sessions on one file; one Edit per file per message.
 - **Never rewrite source with PowerShell** `Get-Content` / `Set-Content`
