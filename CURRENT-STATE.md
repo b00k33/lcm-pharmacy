@@ -1142,7 +1142,7 @@ it), a snack · drink chip ("Tap to remove" under it), a row of the open meal, a
 Drinks · Menus · My dishes; not a patient's Diet sheet). Words that were a hover title (close match, her reactions, drag, remove) go
 under the box instead. Every amount is `phDietSum([[x]]).t`, the ring's own sum. Phone (no hover): one line under each food of the
 open meal ("16% kJ · 19% P · 92% C · 5% F", a red dot past 100%); no box. Code: "FOOD SHARE" (`phMacFsOf` / `phMacFsRows` /
-`phMacFsHtml` / `phMacFsLine`, `data-mac-bk="f|…"`, `m|`, `s|`, `x|`, `a|`). NOT live.
+`phMacFsHtml` / `phMacFsLine`, `data-mac-bk="f|…"`, `m|`, `s|`, `x|`, `a|`). LIVE build 20261102-193700.
 **Food reactions**: a meal she had (her card, under Had it) and a patient's noted day or usual meal (Diet sheet, "Usually after it")
 take an **After it**: Gut / Body / Felt good chips + her own words (+ Own, they stay), ONE How strong bar, Started, From (which
 thing), a Note. The mark (the first reaction's picture in a pale red circle, green for Felt good) shows on the grid block, the Me
