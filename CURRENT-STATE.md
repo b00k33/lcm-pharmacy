@@ -1131,16 +1131,31 @@ the days over the week like a table format"; her picks on the "Meals day numbers
 picks.** A computer's rings carry ‹ day › (the day; Today or its month) and a Today chip off today; a day's name in Table / Grid (it
 still opens the column) or a day or bar in Numbers moves them (`phMplRk`, this visit only; the toolbar's Today and the Eat step bring
 them back); that day's row is tinted with its accent (Grid: its head), today's day name teal. A phone's rings follow the day it
-shows, as before. Off today the fasting ring is **that day's fast** (`phMplDayFast`: the fast she logged that ended that day, the
+shows, as before. Off today the fasting dial is **that day's fast** (`phMplDayFast`: the fast she logged that ended that day, the
 longest, else the gap from the last thing she ate the day before to the first that day, `phMplEatAt`, kJ above 0 only; "Fasted",
 ✓ goal or n short; a day to come "Fast planned" or "No fast") and Stop / Start go (Your fasts › stays); a past day's numbers read
-"under", today's and a day to come's "to go"; the arcs sweep from the day before (`data-arc` in the motion helper, off under reduced
+"under", today's and a day to come's "to go"; the macro rings' arcs sweep from the day before (`data-arc` in the motion helper, off under reduced
 motion). **Numbers** (`lcm-mpl-view` "num", `phMplNumHtml`): a row a day, a ring each for Fasting · kJ · Protein · Carbs · Fat (its %
 inside, then the number and how far over or under, or ✓ goal), the **average a day** under them (fasts over the days with one,
 "n of m days ✓"; numbers over the days she had something), then **The week**: each number's seven bars under its column, the goal
 a dashed line, the picked day outlined; the Table's colours (under 60% amber, over deep, planned pale) and a fast reached green; a day
 to come pale, as planned. Phone: a **Numbers** chip (first of the chips) swaps the day's meals for a row a day of five small rings
 + Avg (`phMplNumPhHtml`); a row = that day (the rings and the day above follow). LIVE build 20261102-123700.
+**Fasting dial** (her 2026-11-02 "make this stand out more and give it interactive elements to show how many hours ive fasted and how
+many more to go"; mock `fasting-ring-mock-2026-11-02.html`, her picks: B Night dial · fasted big, a tap swaps · a gold pop when an hour
+fills · the phone the same): the first of the rings is a **24-hour clock face** twice the rings' size (150px; 12a on top, 6a · 12p · 6p,
+a tick an hour), the fast drawn from its start to its goal **one piece an hour**: done = `--ph-herb`, to go = the pale planned colour
+(`--ph-mac-pl`), every piece green once met; a **gold dot = now**, a ring where the goal lands. The middle: the hours fasted, big;
+**a tap on it swaps** to the hours to go (this device's, `lcm-mpl-fswap`); the line under the dial says the other ("8:36 to go"; past the
+goal "✓ goal +0:30"), then of Breakfast ▾ and → 7 am as before. **Point at an hour** = its box (Hour n of m, its clock times and day,
+done / now · n left / starts in n); **at the middle** = the fast's box (fasted, to go or ✓ goal, the %, Started, Breakfast or Goal, This
+week n planned · aim): the rings' one box (`phMacBkShow`, keys `q|now|i` and `q|now|f`; a phone: a tap). It moves on in place each minute
+(`phMplLive` → `phMplDialPaint`) and **the hour that just filled pops gold once** (off under reduced motion); the gold ring once at the
+goal stays (`phMplGoalRing`). Off today the dial draws the fast that ended that day (`phMplDayFast` carries its start, `s`): green to its
+goal, or the hours done with the rest pale and "n short" against that fast's own goal; a day to come or no fast = the face and "–". A
+goal over 24 h spreads its hours round a plain face (no clock words). **Phone**: the dial (136px) leads on its own row with its line,
+→ 7 am and Stop / Start (Continue last fast) beside it (`.fb`; `phMplRactsHtml(past, ph)` leaves them out there), the four rings under
+it, Your fasts › after. Code: "FASTING DIAL" (`phMplDial*`, `phFdArc`, `phFdPt`). NOT live.
 **Macros against her goal** (her picks: the Macros row AND today's rings) [Meals macros against goal]: energy, protein, carbs, fat.
 **Goals** (`phDietGoal`): kJ 8000 (her word 2026-10-28, "daily energy goal is 8000kj"), hers to change; water 2000 ml (C22's 8
 glasses; a target typed in glasses reads × 250); protein 50 g and carbs 50 g are hers (her word: "set carbs to 50g a day"); fat is hers,
@@ -1156,7 +1171,7 @@ goals are stored. Code: "MACROS" (`phMac*`). **What counts as eaten** in every n
 passed (an earlier day: all of it); Skipped and a fast night's Dinner never. Had it itself (the ✓, Today's meals, the meal habit) is
 unchanged. NOT live.
 **Hover breakdown** (her 2026-11-02 "when i hover, show breakdown of foods that contributed to hte macro", on her Meals rings): pointing
-at a ring (kJ, protein, carbs, fat; not Fasting), a Numbers cell, a Table kJ · P · C · F cell or a Grid Total number shows one box
+at a ring (kJ, protein, carbs, fat; the fasting dial has its own boxes, Fasting dial above), a Numbers cell, a Table kJ · P · C · F cell or a Grid Total number shows one box
 under it (above when there is no room): the number (+ what is still planned) of her goal, then a row a food, most first, had then
 planned (pale, as on the ring): the food with its amount, its meal (Breakfast · Lunch · Dinner · Snack · Drink), a bar of its share,
 the amount, the %; past 12 rows (and crumbs under 1) one "+ N more" row (a single one shows itself, "<1 g"); "Not counted · …"
