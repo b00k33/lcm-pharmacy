@@ -279,6 +279,17 @@ two phases when a course starts (`presTpInlineCreate`, `phTpCreate`) or is swapp
 years +1 / +1, longer +2 / +2, only to a phase with a count; cycle courses keep theirs. Start reads "Course · Low back pain · 3
 phases · 9 visits".
 
+**Words first, no case first (her 4 picks 2026-11-02, "i dont want to choose case first")**: Came in for's "What brought her
+in?" box keeps her own words. While she types, the top row is `+ "her words"` (Enter takes it), the plan types they match sit
+under it (`phCcMenuPaint`); either way her words are the complaint (`phCcAddWords`: `mainText` = her words, `main` = the plan
+type she tapped, else `phCcGuessIds` / the first family the box matches, else none with `autoOff`). Words with no plan type are a
+real main concern: the row shows them with an outlined "Plan type ▾" pill (`phCcOf` / `phCcRibItems` / `phCcTableHtml` accept
+`main: null` + words; `phCcRibItems().main.id` is then null). The door's Start always shows: "Start Care Plan · <her words>",
+"Blank plan" when no course fits, and **Course ▾** joined to it lists every course at once, grouped, the concern's own category
+first, Blank plan last (`phTpDoorStartHtml`, `.ph-tp-dstart` / `.ph-tp-dmenu`, in the page flow). A course picked there also sets
+the plan type it belongs to (session view state `phTpDoorPick`, kept with that plan type). The plan-type pill's menu now floats
+(fixed, `phCcPlanMenuPlace`; a scroll closes it): the table's sideways scroll box used to clip it.
+
 **Blood tests** (her 2026-10-29 picks, `bloods-attach-mock-2026-10-29.html` A; BUILD-NOTES "Blood tests: attach the result
 first"): the page opens on **Attach the result** (a photo or a PDF: `data-bld-attach` → `phRenCaptureStart(…, "bloods", {via:
 "bloods", gallery, accept: image + PDF})`, or a drop on the tile) beside **Paste the report** (`phBldPasteFill`: a paste, or typing
