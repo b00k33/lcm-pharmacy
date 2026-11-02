@@ -9547,3 +9547,15 @@ Home Visit (purple away block); the phone sheet holds the bar, RECENT and both c
 **Not tested:** her real patient list (hundreds of names: the search is a plain filter, no index), her devices, a Case-coloured dot
 on a real gynae / MSK patient (the sandbox has none), the Key2's 469px height.
 **LIVE** 2026-11-02 in build 20261102-182300 (the Foods session's push carried c184249d; a stamp-only 20261102-182400 followed on her "push live"); the mock moved to `mocks/`; her devices need the gold Update.
+
+## Bánh cuốn as a plate (2026-11-02)
+Her ask "add banh cuon to food list": `vn_banh_cuon` was already a row, but a copy of SG's "Char siew chee cheong fun" (the
+Cantonese dish, which keeps its own Chinese row `cn_cheung_fun_char_siu`), sized "1 roll" = 228 g. Rebuilt the way of her bánh xèo
+pick ("Parts, with the plate"): one plate, 463 g = steamed sheets (rice flour 50 g F003998, tapioca 10 g F009090, water), filling
+(pork mince fried 50 g F007055, dried wood ear 3 g = USDA 168581 cloud ears, shallot 10 g F008227, oil 5 g), chả lụa 40 g (pork mince
+raw 34 g F007057, potato starch 3 g F008831, fish sauce 3 g), fried shallots 5 g (F008226) + oil 3 g, bean sprouts 30 g, the list's
+cucumber 20 g, mint 5 g, nước chấm 40 g (fish sauce, sugar, lime, garlic, water). Choline from the pork row for the pork, the list's
+rows for cucumber and garlic. A plate: 2112 kJ, protein 26 g, carbs 54 g, fat 19 g, sodium 961 mg, choline 76 mg. Unit "plate",
+step ½. "cheung fun" now finds only the two Chinese rows; "cha lua" finds bánh cuốn. PH_FOOD stays 951.
+**Tested** (test copy): 17 numbers; "banh" lists Bánh cuốn · 1 plate under Vietnamese; the hover reads the parts; console clean.
+Picture `shots/banh-cuon.jpg`. **Not tested:** her real Meals page and devices.
