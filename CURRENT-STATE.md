@@ -673,7 +673,12 @@ height: "‹ Menu" on top (`data-flow-mini`: folds it to a 56px strip of icons a
 24px circle, done = the brass ✓) and the page rows: each its icon (`PRES_RAIL_ICN`, the same icon the page has on Today's visit),
 its name, its count / date / "n left" at the end. The open row is the light tint with a deep 3px bar; while a page row is open
 its step stays plain (`par`). Every captioned group (Body, Life, File, Fertility & cycle, Log / Clinic) folds on its ▾ head (`data-flow-fold`, `lcm-rail-fold`); the page she is on never hides. Both folds are this
-device's. The phone keeps its strip of steps. Patient details' cards have pale-blue heads and
+device's. **On a phone** (≤640px; her picks 2026-11-02, phone-rail mock A; BUILD-NOTES "Phone rail") the same rail is a drawer
+from the left (300px, the page dimmed behind it, This visit and Next up kept), opened from one 44px bar at the foot of the head
+in the rail's colour: the open page's icon, "group · page ▾" ("Today's visit · Tongue", "Body · Herbs"; `presRailBarHtml` /
+`presRailBarSync`), then ‹ › to the page before / after in the rail's order (`presRailStep`). A pick, ‹ Menu or the dimmed page
+closes it (`presRailDrw`); the old strip of steps and the boxed tab rows above a page are gone (the tab rows at every width); Next
+stays. Patient details' cards have pale-blue heads and
 striped field rows, and a right column (`phPdApptsHtml`, ≥1100px; below the cards narrower): Next appointment (2), Book
 another, Previous appointments (5) with All n; Open = the booking on the calendar with its card (`phApptDeepLink`). The
 Appointments page is one table (When · Type · Care Plan · Open); Supplements' table has the same head row and stripes.

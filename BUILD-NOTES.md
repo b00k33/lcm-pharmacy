@@ -9448,3 +9448,36 @@ off the shopping list (`phFoodMenu`, bought made) and the words Chinese / Vietna
 **Tested** (test copy): All foods open shows Chinese 31 and Vietnamese 28 with Phở gà and Bún bò Huế, closed hides them as before;
 Menus ▾ = McDonald's … Thisbowl; "bun bo hue" finds it, "vietnamese" finds 31; console clean. Picture `shots/kitchens-everyday.jpg`.
 **Not tested:** her real Meals page and devices; the 64 rows now painted with All foods open (fine against the 557 menu rows kept lazy).
+
+## Phone rail: one bar + the rail as a drawer (2026-11-02)
+**Her ask:** a phone screenshot of her record (the stage strip "✓ Profile · 2 Today's visit · 3 Fang Bing Ren …" cut off at both
+edges over the boxed tab row BODY | Cycle | Meals | Herbs | Fitness) + "change the rail for the mombile, i dont like it like this.
+show 2 mocks". Mock `mocks/phone-rail-mock-2026-11-02.html` (A one bar + menu, B labelled tabs + More), artifact
+BwVh7dnuviJPgXehHdDqiK. **Her 8 picks, all A / recommended:** one bar + menu; the menu from the left; every record (hers and a
+patient's); keep Next; keep ‹ ›; the bar reads group · page ("Today's visit · Tongue"); the head + bar stay in view; the menu keeps
+This visit + Next up, same as the computer.
+- **The bar** (`presRailBarHtml`, `#presRailBar.ph-rail-bar`, in `.ph-pres-band` on every record but the door): 44px, the rail's
+  colour (teal; the Case colour on Gynae / MSK), at the foot of the head under her ring row. One 32px pick: the open page's icon (a
+  step's number circle on a step page), "group ·" small, the page bold, ▾ (`data-rail-open`); then ‹ › 32px circles
+  (`data-rail-step`, `presRailStep`: clicks the page before / after in the rail's own order, `presRailPages`; off at the ends).
+  `presRailBarSync` writes it from the rail's lit row (`presRailLit`), called by `presBandPageSync`: group = the fold head's word, or
+  the step a visit page sits under; a step whose one page has its own name says it once ("Fang Bing Ren", not "Fang Bing Ren · Fang
+  Bing Ren"). `presRailLit` also fixes the computer's crumb on her record, which read "/ Profile" on her Body pages.
+- **The drawer** (≤640px): `#presFlowRail` itself is fixed at the left, `min(300px, 86vw)`, slid out (`translateX(-102%)`, hidden);
+  `.ph-rail-drw` on `.ph-pres-panel` slides it in with a shadow and shows the scrim (`.ph-rail-scrim`, `data-rail-close`). A page pick,
+  ‹ Menu (`data-flow-mini` on the phone) or the scrim closes it (`presRailDrw`); open scrolls the lit row to the middle. The class
+  lives on the panel, so a repaint of the rail alone keeps it open. `presRailMini()` is false on a phone (no 56px strip there).
+- **Gone:** the phone's stage strip (the old "from line 14258" strip rules in PHONE REDESIGN) and the boxed section tab rows
+  (`.ph-assess-tabs.ph-tp-main` / `.ph-pf-main` heads now hidden at every width; on a computer they already were); the page keeps a
+  12px gutter of its own on the phone. Next: stays. My earlier stray 640 / 480 media rules for the ring row went into PHONE REDESIGN.
+- **CSS:** the teal rail block is now every width except its 212px band and the panel padding (`@media (min-width: 641px)`); the
+  bar, drawer and scrim rules sit in PHONE REDESIGN (reduced motion: no slide).
+- **Tested** (headless phone 360 × 469 at 2×, made-up records: hers on Body · Herbs, a patient "Mai Tran" on Today's visit ·
+  Tongue): the bar on both, the drawer open on both (This visit, Next up, the lit row), ‹ › through Tongue → Pulse → Abdomen →
+  Musculoskeletal → Fertility & cycle · Cycle → IVF history → Fang Bing Ren → Treatment Care Plan → Treatment, ‹ off on the first
+  page, a pick closes the drawer, the scrim closes it, aria-expanded follows; search open on the phone (its results start under the
+  bar); widths 375, 500, 640 (bar, no sideways scroll) and 641 (no bar, the 212px band); the computer at 1220 unchanged on both
+  records; console clean. Pictures `shots/phone-rail-*-2026-11-02.png`. **Not tested:** her real records, her Key2, a Gynae / MSK
+  patient's bar colour by eye (it reads the same tokens as the band).
+- **Integration (★★★):** one rail, two looks; the bar and the crumb read the same lit row; ‹ › click the rail's own buttons, so
+  every page's opening code is the rail's.
