@@ -1350,7 +1350,8 @@ Fitness + Exercises), the rest in Life.
   inside `.ph-pres-band.ph-mine-head`, repainted by `phMeDrwPaint`): no words, each an icon in a ring that fills (`phMineRing`, green
   when done) with its count: the drop + CD n (no CD in the band's line then), fasts n/aim (fasting: tint, h:mm, the clock hand turns),
   herbs, meals, Steps (tap to type), Habits, her next habit, next patient today; a ring sweeps and a count rolls on change. Search is
-  a 32px circle that slides open over the row. Phone: the name line, the today line under it scrolling sideways.
+  a 32px circle that slides open over the row. Phone: the name line, the today line under it scrolling sideways. LIVE in build
+  20261102-145000.
 - **This week has Cycle (CD n), Meals (had of planned) and Herbs (taken of due) columns** (`phHubDay` `cy` / `mealsP` / `hb`), and
   Steps typed in it. Below 1500px the To-dos sit under the table (her 1220px window included); the phone keeps the sideways-scrolling
   table (836px).

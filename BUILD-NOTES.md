@@ -9229,6 +9229,8 @@ fills with its count beside it; fill + number roll on change only; the fast's cl
 1220, 900 and 375 (default, fasting 2:15, search open); a ticked dose sweeps the herb ring 0 → ½ and rolls 0/2 → 1/2; the Steps tap
 opens its box in the row with the cursor in it; another patient's head unchanged (full search box, Book appt.); no console errors.
 **Not tested:** her real record and devices; a due meal's gold in the row (same class as before, restyled).
+**LIVE** 2026-11-02 on her "push live": in build 20261102-145000 (a sibling's publish 77dafa82 carried code ddfe65d6). Checked on
+the live copy: the stamp, `phMineRing`, `ph-mine-head`, `PH_MINE_RC`. Her devices need the gold Update.
 
 ## How a herb is used (2026-11-02)
 Her ask: "i want an option to see how a herb is commonly used in certain formulas - do you know what i mean?" Her three popup
