@@ -9656,3 +9656,4 @@ the list's matcha 2 g + that milk row 260 ml + water 38 ml, unsweetened, 300 ml 
 PH_FOOD 961.
 **Tested** (test copy): 17 numbers each; "matcha latte" lists the seven in Drinks before McDonald's; "oat" finds the oat one; hovers
 read the parts; console clean. Picture `shots/matcha-milks.jpg`. **Not tested:** her real Meals page and devices.
+**LIVE** 2026-11-02 in build 20261102-185700 (publish 6901f8ea, her "Push live"). Her devices need the gold Update.
