@@ -1069,7 +1069,7 @@ name, else its typed ingredients matched) and Made of starts filled with that bo
 "not counted" where no source gives a number, never 0. **Fat · Protein · Choline lead** (her word 2026-10-28, "prioritise fat
 protein and choline"; `PH_NUT_TOP`): first in the bars, always shown on a phone, first in Targets; a meal's small numbers start
 with choline. On her Meals page fat and protein (with kJ and carbs) are the goals' own since MEALS GOALS (her 2026-11-03 "yes take
-them out of More"): a day's More has no numbers line and its bars lead with choline; Targets keeps the rest. LIVE build 20261028-215100. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
+them out of More"): a day's More has no numbers line and its bars lead with choline; Targets keeps the rest. LIVE build 20261103-105100. LIVE build 20261028-215100. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
 `phNut*`, `phTb*`).
 **MEAL REPEATS** (her 2026-11-01 "need an easier way to organise meals based on daily or one day", her 4th report on it; her
 picks [Meal repeats]): what repeats is a FOOD, not a whole meal (her meals change day to day). Each food of her day's meal (her
