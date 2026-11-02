@@ -9726,3 +9726,4 @@ spring onion 3 g, coriander 2 g, water 220 ml. A bowl: 446 kJ, protein 12 g, car
 Words: wombok, cabbage soup, napa / chinese cabbage soup, pork mince soup, canh cai thao (thit bam), bai cai tang. PH_FOOD 969.
 **Tested** (test copy): 17 numbers; "wombok", "napa" and "canh cai thao" find it under Everyday › Vietnamese; the hover reads the
 parts; console clean. Picture `shots/wombok-soup.jpg`. **Not tested:** her real Meals page and devices.
+**LIVE** 2026-11-02 in build 20261102-192700 (publish a3d44cd3, her "Push live"; Chai Ling Tang rode along). Her devices need the gold Update.
