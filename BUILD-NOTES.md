@@ -9205,3 +9205,27 @@ view; the Treatment tab's "How <name> is" card does not use the panel (not chang
 tags left); a score dragged on the panel's slider by hand (the slider itself is unchanged).
 **LIVE** 2026-11-02 on her "push live": build 20261102-142600 (publish f85740b4, code 5b77ba7e). Checked on the live copy: the stamp,
 `.ph-cx-pic`, `phCxRowChartSvg(s, plain)`, the ✎ toggle, the tinted note box, the Goal's flag. Her devices need the gold Update.
+
+## 2026-11-02 · Her record's head in one row (her "merge 2 rows, keep it simple and plain with animations relevant")
+Her screenshot of her own record (the name band over the today band) and three popup rounds on
+`mocks/me-header-one-row-mock-2026-11-02.html`: icons only, no words (the word in the hover title); **F**, each icon in a ring that
+fills with its count beside it; fill + number roll on change only; the fast's clock turns while she fasts, green when done; search a
+🔍 circle that slides open over the row; phone = the name line with the today line under it; the cycle = the drop and CD n (her
+"remove menses and keep the icon"), and CD n leaves the band's line.
+- `phMineBandHtml` renders inside `.ph-pres-band` (after the name, before the search); the band takes `ph-mine-head` on her record.
+  The separate row under the head is gone.
+- `phMineRing(icon, f, key, full)`: a 26px ring (r 9, the fast's mini ring size) with the icon inside; `data-arc="band-<key>"` sweeps
+  it on change (RINGS FOLLOW); `full` = green (`--ph-good`). Counts are `n/of` in `<em data-roll="band-<key>">` (MOTION rolls them).
+- Fasting: not fasting = this week's fasts / her aim (`0/3–5`), full at the aim's low end; fasting = a tinted chip with the running
+  h:mm (`data-fast-hm`), the ring filling toward the goal minute by minute (`data-fast-mini`) and the clock hand turning (`phSpin`;
+  off under reduced motion).
+- Steps and Habits (`phHabBandHtml`) use the same ring (Steps keeps its tap-to-type box); her next habit and her next patient stay
+  (the word "Next" dropped).
+- `presBandSubText`: on her record, while the drop shows (`phMeCycleAt(today)`), no CD n in the band's line (`meCd`).
+- CSS: the chips have no border (a soft box only under the pointer). From 641px the name keeps its width and the things scroll
+  sideways if the window is narrow (they fit at 900 and 1220); the search is a 32px circle that grows leftwards to 320px over the row
+  (margin-left −288px, so nothing moves). Up to 640px the things take their own line under the name (order 9, sideways scroll).
+**Tested** (sandbox; a made-up "Me" record with a Natural fertility plan, the cycle / herbs / meals / habits stubbed): pictures at
+1220, 900 and 375 (default, fasting 2:15, search open); a ticked dose sweeps the herb ring 0 → ½ and rolls 0/2 → 1/2; the Steps tap
+opens its box in the row with the cursor in it; another patient's head unchanged (full search box, Book appt.); no console errors.
+**Not tested:** her real record and devices; a due meal's gold in the row (same class as before, restyled).
