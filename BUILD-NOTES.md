@@ -9772,3 +9772,4 @@ close-match words under it; a snack chip "Snack" + "Tap to remove"; the ring box
 the line under each food ("9% kJ · 17% P · 28% C · 5% F", "16% kJ · 19% P · 92% C · 5% F"), no food-share attribute, no box on a tap,
 no sideways scroll. Prescriptions search: Jane narrows, Zzqx none, clear returns. Console clean. **Not tested:** her real Meals page
 and goals, a touch laptop, her devices.
+**LIVE** 2026-11-02 in build 20261102-193700 (publish 5edfa514, her "Push live"; mock moved to mocks/). Her devices need the gold Update.
