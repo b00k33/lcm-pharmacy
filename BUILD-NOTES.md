@@ -9394,3 +9394,14 @@ untouched copy that one record broke the Formula refill page outright (`renderPh
 reader above threw when called; on the patched copy Formula refill draws its four tabs, All recipes lists the bare record with
 "—", each reader returns (0 matches, an empty price line, the price pass runs), the Dispense herb picker shows its list for
 "zz", the Inventory status pop draws; console clean. **Not tested:** her real data, the phone.
+
+## Clear chicken soup (2026-11-02)
+Her ask: "add clear chicken soup to food list". `PH_FOOD.cn_chicken_soup_clear`, "Clear chicken soup", in the Chinese group beside
+egg drop and wonton soup (Chinese 33, PH_FOOD 948): USDA SR Legacy 172884 "Soup, stock, chicken, home-prepared" per 100 g (151 kJ,
+protein 2.5 g, carbs 3.5 g, fat 1.2 g, sugar 1.6 g, sodium 143 mg, choline 9.2 mg; no iodine given), a bowl = USDA's cup, 240 g.
+Why that source: SG FoodID's only clear chicken soup is herbal with dates, and FNDDS' "Soup, chicken" is 30% vegetables; AFCD has
+only instant mixes. Its hover reads "Close match: Soup, stock, chicken, home-prepared · USDA SR Legacy" (`PH_FOOD_SRC`). Search
+words: chicken soup, chicken broth / stock, ji tang, gai tong, canh ga, nuoc dung ga.
+**Tested** (test copy): the row has 17 numbers; "chicken soup", "canh gà", "broth" and "clear" find it; the Meals add list drawn with
+"chicken soup" typed shows it first ("Clear chicken soup · 1 bowl") above the shop soups; console clean. Picture `shots/soup-add.jpg`.
+**Not tested:** on her real Meals page and devices.
