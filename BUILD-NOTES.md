@@ -9613,3 +9613,27 @@ Her Chai Hu Gui Zhi Gan Jiang Tang table (19 symptoms /5 headed "REN", 5 finding
 - **Needs her word:** Chai Gui Tang in the dry palms line; the thick, dry coat reading a dry tongue body; "Tongue: very dry" as her dry tongue body
   (or a plain "Tongue: dry" row); the energy rows on Ask her; DRAFT words (the 7 row names, the 4 Ask her answers, the card line, picture labels),
   the Chai Hu filing, Patterns Qi stagnation.
+
+## Four bánh mì + a plain Matcha latte (2026-11-02)
+Her ask "add banh mi thit heo, banh mi heo quay, matcha latte, banh mi xiu mai, banh mi bi". Only "Bánh mì thịt" was there (SG's
+"Pork banh mi" close match; her words "thit heo" did not find it). Each roll is worked out from its parts, the bánh xèo way, with the
+same base: a white bread roll 75 g (AFCD F001353, choline from the list's white toast), đồ chua 30 g (the list's carrot + sugar, AFCD
+daikon + vinegar), the list's cucumber 20 g, coriander, chilli, spring onion. Pâté = SG FoodID F06110010 pork liverwurst (no choline
+counted); bơ = AFCD traditional mayonnaise.
+- `vn_banh_mi_thit` renamed **Bánh mì thịt heo** (208 g): bơ 8, pâté 15, chả lụa 20 (pork mince 17 g, potato starch, fish sauce),
+  thịt nguội 30 g (the list's ham), Maggi 3 g (the list's soy sauce). 1584 kJ, protein 19 g, carbs 41 g, fat 14 g, sodium 1127 mg.
+- `vn_banh_mi_heo_quay` **Bánh mì heo quay** (223 g): bơ 8, pâté 15, roast pork belly 55 g (F006860) + crackling 10 g (F006880),
+  soy 3 g. 2449 kJ, protein 26 g, carbs 38 g, fat 36 g, sodium 682 mg.
+- `vn_banh_mi_xiu_mai` **Bánh mì xíu mại** (264 g): meatballs (pork mince 60 g F007057, onion 8 g, potato starch, fish sauce,
+  sugar) in tomato sauce (tomato 35 g, tomato paste 5 g, oil, water). 1582 kJ, protein 21 g, carbs 46 g, fat 11 g, sodium 769 mg.
+- `vn_banh_mi_bi` **Bánh mì bì** (202 g): bơ 8, bì 45 g (the list's pork 38 g, toasted rice powder 5 g, garlic, fish sauce), mỡ
+  hành, nước mắm. 1549 kJ, protein 19 g, carbs 44 g, fat 12 g, sodium 655 mg.
+- `matcha_latte` **Matcha latte** (Drinks, ml, 300 a cup): the list's matcha 2 g + full cream milk 260 ml + water 38 ml, no sugar.
+  A cup: 743 kJ, protein 9 g, carbs 14 g, fat 9 g, calcium 292 mg.
+- **Drinks list order:** "All drinks" now lists a place's drinks (McDonald's, Chagee, Thisbowl…) after the everyday ones (a stable
+  sort on `phFoodPlace`), so a search for "matcha latte" shows the plain one first, not after McDonald's 15.
+PH_FOOD 955; Vietnamese 37.
+**Tested** (test copy): 17 numbers each; "banh mi thit heo", "heo quay", "banh mi xiu mai", "banh mi bi" each find their roll;
+"banh mi" lists all five rolls; "matcha latte" shows Drinks › Matcha latte · 300 ml first; All drinks: everyday drinks first, the
+first place drink 15th; hovers read the parts; console clean. Picture `shots/banh-mi-matcha.jpg`. **Not tested:** her real Meals
+page and devices.
