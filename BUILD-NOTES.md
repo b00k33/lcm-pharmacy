@@ -9717,6 +9717,15 @@ pattern?" Matrix `fbr-integrate33-chailing-2026-11-02.html` (root until live, th
 - **Not checked:** her real records; the Key2 phone; Prescriptions search.
 - **Needs her word:** see the matrix (fever with chills scored once; fluid in the belly or chest counting as fluid accumulation; the LDH range;
   DRAFT words: 6 row names, the Ask her answer, the card lines, the picture labels).
+- **Her answers (popup, same day; commit 314dfab5):** (1) "Both lines": fever with chills counts for her Fever AND her Aversion to cold lines
+  (8): the family's own `imp: { bing: { fever_chills: ["chills_now"] } }`, read by `phFbrImplied` in `phFbrRank` (her No to chills still wins;
+  other families and the board's ticks untouched). Fever with chills alone now puts Chai Ling Tang first (7%), above Ma Huang. (2) "Yes, both
+  count": ascites and pleural effusion keep counting for fluid accumulation (as built). (3) "Yes, name it": `phFbrComboHtml` names a Chai Hu
+  combination under Quick assess's bar ("Together · Chai Ling Tang · the wet Chai Hu ›", gold dashed, a tap filters to it) when both halves are
+  among the top 4 at 20% or more and the combination does not lead; ranking unchanged; the list sits inside the function (Chai Gui Tang and Chai Po
+  Tang join it with their tables). Tested: fever with chills 8, with feverish or chills still 8, with her No to chills 4; ceiling 56; all 40
+  families lead their own; Xiao Chai Hu + Wu Ling San pictures show the line, Chai Ling's own picture or Xiao Chai Hu's alone do not; the tap
+  filters to Chai Ling Tang; 375 px it wraps as "Together · Chai Ling Tang" / "the wet Chai Hu ›", no sideways scroll; console clean.
 
 ## Wombok soup with pork mince (2026-11-02)
 Her ask "include wombok cabbage soup wiht mince pork" (canh cải thảo thịt bằm; no row had it). `vn_canh_cai_thao`, Vietnamese, named

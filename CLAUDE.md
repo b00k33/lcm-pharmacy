@@ -1400,7 +1400,8 @@ origin/main:index.html`; don't trust this list's age.
   Fu Ling Yin, Chai Hu Gui Zhi Gan Jiang Tang and Chai Ling Tang are families now.
   Her Chai Hu kinds (2026-11-02) lead each one's card line (`PH_BTJ` arch): anxious
   (Chai Hu Gui Zhi Gan Jiang Tang), wet (Chai Ling Tang), blood stasis (Chai Gui
-  Tang), phlegm (Chai Po Tang).
+  Tang), phlegm (Chai Po Tang). A combination also joins `phFbrComboHtml`'s list
+  (Xiao Chai Hu + its partner), so Quick assess names it when both halves fit.
 
 **Paused or not built:**
 - Larger work, knowingly parked: a desktop build beyond the PWA; AI intake
