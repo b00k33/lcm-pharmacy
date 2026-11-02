@@ -639,9 +639,16 @@ round buttons. The phone keeps its chips and Scheduled line.
 ## Patient details & the patient file
 **Cliniko look on the patient pages (her synth22 picks 2026-11-01, stage 3):** the head (`.ph-pres-band`) is the light band of
 every page: "Name · age / Page" (`presBandPageSync` reads the rail's lit row), Book appt. (solid) · Text joined
-(`.ph-band-bar`; the phone keeps search + camera), a Gynae / MSK case as a 3px line under it. The rail keeps her visit order and
-her solid open row (her answer 2026-11-01); Supplements (taking), Blood tests and Appointments carry a cream count badge
-(white on the open row) that rolls in when the number changes. Patient details' cards have pale-blue heads and
+(`.ph-band-bar`; the phone keeps search + camera), a Gynae / MSK case as a 3px line under it. The rail keeps her visit order;
+Supplements (taking), Blood tests and Appointments carry a cream count badge that rolls in when the number changes.
+**The teal rail (her picks 2026-11-02, rail-mock2 "C · teal band"; BUILD-NOTES "Side rail, teal band"):** on a computer the rail
+(`presFlowRailHtml`) is a 212px band of the house teal (`--ph-house`, kept on a Gynae / MSK Case too) running the panel's full
+height: "‹ Menu" on top (`data-flow-mini`: folds it to a 56px strip of icons and circles, each name in its hover;
+`lcm-rail-mini`), then the name with its initials ("My profile" on hers), This visit and Next up, the six numbered steps (a
+24px circle, done = the brass ✓) and the page rows: each its icon (`PRES_RAIL_ICN`, the same icon the page has on Today's visit),
+its name, its count / date / "n left" at the end. The open row is the light tint with a deep 3px bar; while a page row is open
+its step stays plain (`par`). Every captioned group (Body, Life, File, Fertility & cycle, Log / Clinic) folds on its ▾ head (`data-flow-fold`, `lcm-rail-fold`); the page she is on never hides. Both folds are this
+device's. The phone keeps its strip of steps. Patient details' cards have pale-blue heads and
 striped field rows, and a right column (`phPdApptsHtml`, ≥1100px; below the cards narrower): Next appointment (2), Book
 another, Previous appointments (5) with All n; Open = the booking on the calendar with its card (`phApptDeepLink`). The
 Appointments page is one table (When · Type · Care Plan · Open); Supplements' table has the same head row and stripes.
