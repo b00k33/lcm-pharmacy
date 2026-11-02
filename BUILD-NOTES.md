@@ -9667,3 +9667,4 @@ full cream 742 kJ, creamy 833, light 508, skim 414, oat 633, soy 708, almond 196
 The sources line now reads "matcha, hojicha: Standard Tables of Food Composition in Japan 2020 (MEXT)". PH_FOOD 968.
 **Tested** (test copy): 17 numbers each; "hojicha" and "houjicha" list the seven in Drinks; hovers read the parts; console clean.
 Picture `shots/hojicha-milks.jpg`. **Not tested:** her real Meals page and devices.
+**LIVE** 2026-11-02 in build 20261102-190400 (publish 9224fefe, her "Push live"). Her devices need the gold Update.
