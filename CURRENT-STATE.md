@@ -1099,23 +1099,24 @@ Patterns (`diet_cool` / `diet_warm`, source Diet, DRAFT wording); Fang Bing Ren 
 **Meals planner** (her Diet page, her word "change diet to Meals", fasting merged in), laid out as the **MEALS TABLE** (her synth22
 2026-11-01, "a table format for meal planning and recording ... clean, like the appointments page"; her picks on
 meals-table-mock-2026-11-01.html, then "include interactive animations and workflow elements"). A computer: ONE card = the toolbar
-(‹ span › · Today · **Grid | Table | Numbers**, this device's `lcm-mpl-view`, Table first · the steps **Plan n/7 · Shop n to buy · Eat had/n ·
-Check n to answer**, the first not done filled, each a door: next week · Shopping in the column (made when there is none) · today's
-next meal · How did it sit for each meal she had 1½ h ago not yet answered · **More ▾** = Copy last week, Recipes, Shopping list,
-Targets), today's rings with **fasting the first ring** (the fast to its goal, the goal, → the time; it moves on each minute and rings
-gold at the goal; Stop / Start fast + Your fasts › beside the rings; the clock bar and the Fast row are gone), then the week with a
+(‹ span › · Today · **Grid | Table | Numbers**, this device's `lcm-mpl-view`, Table first · the steps **Plan n/7 · Shop n to buy · Eat <the next meal> ·
+Check n to answer** (Eat names today's next meal and its time, "Dinner 6:30 pm", ✓ once all had, a dinner the fast covers left out;
+MEALS GOALS, her pick 7), the first not done filled, each a door: next week · Shopping in the column (made when there is none) · today's
+next meal · How did it sit for each meal she had 1½ h ago not yet answered · **More ▾** = Copy last week, Recipes, Targets (the
+Shop step is the Shopping list's one door, MEALS GOALS), then **the goals** (Meals goals, below: the fasting dial, Reach, Stay under;
+Stop / Start fast + Your fasts › in their head; the clock bar and the Fast row are gone), then the week with a
 **column at the right** (Appointments' way): the meal's picker, Shopping, How did it sit, or a day (tap its name: water, numbers,
 bars, Copy this day). The week narrows and scrolls under it; the day and the four numbers stay in view. **Table**: a row a day,
-Breakfast · Lunch · Dinner · Snacks · drinks · Supps · herbs, then kJ · P · C · F against her goals (the goals in the head; under 60%
-amber, over deep, planned pale). **Grid**: days across, a block a meal (had = solid teal), Snacks, Supplements, Total. A meal
+Breakfast · Lunch · Dinner · Snacks · drinks · Supps · herbs (a day's kJ · P · C · F are the goals' ticks; the number columns went,
+MEALS GOALS). **Grid**: days across, a block a meal (had = solid teal), Snacks, Supplements (its Total row went the same way). A meal
 **dragged** onto another day's same meal is copied there (what she had, else its plan; Undo in the toast; a meal she had there
-stays). Phone: the rings (five across, the fast's goal on Your fasts ›), the steps (counts only), a day at a time. A cell = its meal's time (a day's own bold) + its things one per
+stays). Phone: the goals (the dial, then Reach and Stay under; the fast's goal on Your fasts ›), the steps (counts only; Eat its time), a day at a time. A cell = its meal's time (a day's own bold) + its things one per
 line (a small ↻ = it repeats, bold = that day only, ✓ + the time she had it); no ✎ Usual (MEAL REPEATS). A tap opens the picker in
 the column (phone: under the row), on the meal (empty = on adding): the meal's list (Eating out | Skipped, any day)
 + Done; on Dinner **Fast this night** (see Fasting). Esc closes the picker only. A day's name (phone: Copy day) = Copy a day (pick days, Copy to N days);
-**Copy last week**; **Shopping list** = the week's list from the plan (each food added up, a dish's foods; Thisbowl's and the menus' left out) into
+**Copy last week**; **Shopping list** (the Shop step) = the week's list from the plan (each food added up, a dish's foods; Thisbowl's and the menus' left out) into
 the Me drawer's Shopping (`src: "plan"`); Targets. **Recipes** (her 2026-10-28 "where can i edit my recipes?" → yes; before
-Shopping list on the computer and the phone's chips; `phRecipesHtml`, sheet kind "recipes"): every dish of hers in one list (a
+Targets in More ▾ and the phone's chips; `phRecipesHtml`, sheet kind "recipes"): every dish of hers in one list (a
 mark's own slot, name wraps, kJ a serve · n prep, ✎), Search recipes, a row = the dish editor, + New recipe; the editor's Save /
 Delete / ✕ come back to the list. LIVE build 20261028-233200. **Supplements · herbs** (her 2026-10-28 "add a row for supplements and herbs"; today and the days before): a chip a thing
 she took (a tap takes it out, with Undo), + opens a list: Today (✓), Taking (her Supplements page: the four switched on and her
@@ -1128,14 +1129,14 @@ TABLE" (`phMplToolbarHtml`, `phMplSteps`, `phMplFastRingHtml`, `phMplWtHtml`, `p
 `phMplCopyMeal`; `phMplPnl` = the column with no meal open). MEALS TABLE: LIVE build 20261102-095100.
 **Rings follow + Numbers** (her 2026-11-02 "does this show when i click on a day? mock ways i can view this day by day, or compare
 the days over the week like a table format"; her picks on the "Meals day numbers" mock, boards A + F): **the rings show the day she
-picks.** A computer's rings carry ‹ day › (the day; Today or its month) and a Today chip off today; a day's name in Table / Grid (it
-still opens the column) or a day or bar in Numbers moves them (`phMplRk`, this visit only; the toolbar's Today and the Eat step bring
-them back); that day's row is tinted with its accent (Grid: its head), today's day name teal. A phone's rings follow the day it
+picks.** A day's name in Table / Grid (it still opens the column) or a day or bar in Numbers moves them (`phMplRk`, this visit only;
+off today the goals' head names the day with a Today chip; the toolbar's Today and the Eat step bring them back too; their own
+‹ day › went, MEALS GOALS pick 4); that day's row is tinted with its accent (Grid: its head), today's day name teal. A phone's goals follow the day it
 shows, as before. Off today the fasting dial is **that day's fast** (`phMplDayFast`: the fast she logged that ended that day, the
 longest, else the gap from the last thing she ate the day before to the first that day, `phMplEatAt`, kJ above 0 only; "Fasted",
 ✓ goal or n short; a day to come "Fast planned" or "No fast") and Stop / Start go (Your fasts › stays); a past day's numbers read
-"under", today's and a day to come's "to go"; the macro rings' arcs sweep from the day before (`data-arc` in the motion helper, off under reduced
-motion). **Numbers** (`lcm-mpl-view` "num", `phMplNumHtml`): a row a day, a ring each for Fasting · kJ · Protein · Carbs · Fat (its %
+"under", today's and a day to come's "to go"; the goals' bars grow from the day before (`data-barw` in the motion helper, off under
+reduced motion). **Numbers** (`lcm-mpl-view` "num", `phMplNumHtml`): a row a day, a ring each for Fasting · kJ · Protein · Carbs · Fat (its %
 inside, then the number and how far over or under, or ✓ goal), the **average a day** under them (fasts over the days with one,
 "n of m days ✓"; numbers over the days she had something), then **The week**: each number's seven bars under its column, the goal
 a dashed line, the picked day outlined; the Table's colours (under 60% amber, over deep, planned pale) and a fast reached green; a day
@@ -1143,35 +1144,53 @@ to come pale, as planned. Phone: a **Numbers** chip (first of the chips) swaps t
 + Avg (`phMplNumPhHtml`); a row = that day (the rings and the day above follow). LIVE build 20261102-123700.
 **Fasting dial** (her 2026-11-02 "make this stand out more and give it interactive elements to show how many hours ive fasted and how
 many more to go"; mock `fasting-ring-mock-2026-11-02.html`, her picks: B Night dial · fasted big, a tap swaps · a gold pop when an hour
-fills · the phone the same): the first of the rings is a **24-hour clock face** twice the rings' size (150px; 12a on top, 6a · 12p · 6p,
+fills · the phone the same): the goals lead with a **24-hour clock face** (150px; 12a on top, 6a · 12p · 6p,
 a tick an hour), the fast drawn from its start to its goal **one piece an hour**: done = `--ph-herb`, to go = the pale planned colour
 (`--ph-mac-pl`), every piece green once met; a **gold dot = now**, a ring where the goal lands. The middle: the hours fasted, big;
 **a tap on it swaps** to the hours to go (this device's, `lcm-mpl-fswap`); the line under the dial says the other ("8:36 to go"; past the
 goal "✓ goal +0:30"), then of Breakfast ▾ and → 7 am as before. **Point at an hour** = its box (Hour n of m, its clock times and day,
 done / now · n left / starts in n); **at the middle** = the fast's box (fasted, to go or ✓ goal, the %, Started, Breakfast or Goal, This
-week n planned · aim): the rings' one box (`phMacBkShow`, keys `q|now|i` and `q|now|f`; a phone: a tap). It moves on in place each minute
+week n planned · aim): the page's one box (`phMacBkShow`, keys `q|now|i` and `q|now|f`; a phone: a tap). It moves on in place each minute
 (`phMplLive` → `phMplDialPaint`) and **the hour that just filled pops gold once** (off under reduced motion); the gold ring once at the
 goal stays (`phMplGoalRing`). Off today the dial draws the fast that ended that day (`phMplDayFast` carries its start, `s`): green to its
 goal, or the hours done with the rest pale and "n short" against that fast's own goal; a day to come or no fast = the face and "–". A
 goal over 24 h spreads its hours round a plain face (no clock words). **Phone**: the dial (136px) leads on its own row with its line,
-→ 7 am and Stop / Start (Continue last fast) beside it (`.fb`; `phMplRactsHtml(past, ph)` leaves them out there), the four rings under
-it, Your fasts › after. Code: "FASTING DIAL" (`phMplDial*`, `phFdArc`, `phFdPt`). NOT live.
+→ 7 am and Stop / Start (Continue last fast) beside it (`.fb`; `phMplRactsHtml(past, ph)` leaves them out there), its week of ticks,
+Reach and Stay under under it, Your fasts › after. Code: "FASTING DIAL" (`phMplDial*`, `phFdArc`, `phFdPt`). NOT live.
+**Meals goals** (her 2026-11-02 "audit this page and streamline any repeating elements that do the same thing. make it so it
+communicates like atomic habits- its easy for me to see my goals and limits"; mock `meals-goals-mock-2026-11-02.html`, her 8 picks,
+all A; memory project_lcm_meals_goals_2026_11_02): one panel for the goals' day (`phMplGoalsHtml`): a head (the day off today + Today ·
+today's score, "✓ n kept · n to go · n over / missed" · Stop / Start fast · Your fasts ›), the **fasting dial** with its ticks, then
+**Reach** (protein) and **Stay under** (kJ, carbs) side by side (`PH_MPL_GL`, `PH_MAC_REACH`). A goal = its name and **its goal as a
+field** (the one place the four are set; Targets keeps the rest, her pick 6), a **bar** (had solid, still planned pale, scaled to 125% of
+the goal so **the goal is a line at 80%**; over a limit red with a cut past 125%; protein deep once reached, amber under 60%; amber
+never on a limit), the **state big** at the end (protein "n g to go" / "✓ 58 g", a past day "short"; a limit "n left", a past day
+"✓ n under", over "n over" with a red dot; a day to come "planned"), and **the last 7 days as ticks** up to the goals' day (`phMplTick`:
+✓ green = kept, an empty circle = missed, a red ring = over a limit, a dashed circle = nothing logged, a pie = today on its way, gold
+ring = the goals' day; the fast's from `phMplDayFast`, today's the fast that ended today else the running one) + **"n in a row"** (the
+kept run up to that day, today on its way skipped, 30 at most, `phMplRun`; a fact, no "never miss twice" nudge, her pick 3). **Fat**
+(her pick 2) is one quiet line under Stay under: "Fat 42 g · the rest of [179] g" (her own fat goal reads "of"), no ticks, never red.
+Point at a bar, a tick or the fat number = that day's foods (the hover breakdown box); a fast tick = the fast's box. The bars grow
+from the day before (`data-barw`). **One place for each number** (her picks 4, 5): the rings' own ‹ day ›, the Table's kJ · P · C · F
+columns and the Grid's Total row went; the bottom key keeps the table's marks (had it · repeats · bold · Fast · add a photo).
+**Today's camera** (her pick 8): today's Breakfast · Lunch · Dinner and Snacks · drinks carry a 32px camera (a computer: on the meal
+she points at; a phone: at the end of each of today's rows, not a dinner the fast covers): a tap = pick photos for that meal
+(`data-mph-add`, the + Photo's own door). Code: "MEALS GOALS" (`phMplGoals*`, `phMplGl*`, `phMplTick*`, `phMplRun`, `phMplFatHtml`). NOT live.
 **Macros against her goal** (her picks: the Macros row AND today's rings) [Meals macros against goal]: energy, protein, carbs, fat.
 **Goals** (`phDietGoal`): kJ 8000 (her word 2026-10-28, "daily energy goal is 8000kj"), hers to change; water 2000 ml (C22's 8
 glasses; a target typed in glasses reads × 250); protein 50 g and carbs 50 g are hers (her word: "set carbs to 50g a day"); fat is hers,
 else the rest of her kJ goal after protein and carbs (FSANZ: 17 kJ a gram of protein or carbs, 37 of fat; her grams win over a
-split); Targets tags it "from kJ". **Today's rings** (`phMacRingsHtml`, after the toolbar, the fasting ring first; the day picked: Rings follow, above): a ring each,
-solid = had, pale = still planned, the % in it, the amount, "of" + the goal as a field (`data-diet-goal`, `phDietGoalSet`; clearing fat
-returns it to the rest), "n to go" / "n over" / "✓ goal". **A day's numbers** (MEALS TABLE: the Table's kJ · P · C · F columns and
-the Grid's Total row, `phMplDayNums`; the Macros row's bars went): a day to come as planned, pale (a plan over its goal = a deep number). Over the goal = **red for kJ and carbs** (her 2026-11-02 "for kj and carbs,
-show red when over": the rings, Table, Grid, Numbers and its bars, the keys "kJ · carbs over"; `PH_MAC_RD`, `phMacOv`; LIVE build 20261102-131600), deep for protein and fat; under
-60% = amber (today: only when the plan also falls short). Worked out on read (`phMacDay` = `phDietMyDay` + `phMplPlanSum`); only the
+split); the fat line reads "the rest of". **The goals** (Meals goals, above; they replaced today's rings, `phMacRingsHtml`): each goal a field
+(`data-diet-goal`, `phDietGoalSet`; clearing fat returns it to the rest). **A day's numbers** (the Numbers view, `phMplDayNums`): a day
+to come as planned, pale (a plan over its goal = a deep number). Over the goal = **red for kJ and carbs** (her 2026-11-02 "for kj and carbs,
+show red when over": the goals' bars, Numbers and its bars, its key "kJ · carbs over"; `PH_MAC_RD`, `phMacOv`; LIVE build 20261102-131600), deep for protein and fat; under
+60% = amber on protein only (a goal to reach; low is the aim under a limit, MEALS GOALS; today: only when the plan also falls short). Worked out on read (`phMacDay` = `phDietMyDay` + `phMplPlanSum`); only the
 goals are stored. Code: "MACROS" (`phMac*`). **What counts as eaten** in every number of hers (kJ, macros, water, warm · cool;
 `phMealEaten`, her "these kj dont look right" 2026-10-28): a meal with Had it at once; any other meal once its time on her calendar has
 passed (an earlier day: all of it); Skipped and a fast night's Dinner never. Had it itself (the ✓, Today's meals, the meal habit) is
 unchanged. NOT live.
 **Hover breakdown** (her 2026-11-02 "when i hover, show breakdown of foods that contributed to hte macro", on her Meals rings): pointing
-at a ring (kJ, protein, carbs, fat; the fasting dial has its own boxes, Fasting dial above), a Numbers cell, a Table kJ · P · C · F cell or a Grid Total number shows one box
+at a goal's bar or tick, the fat number (the fasting dial and its ticks have their own boxes, Fasting dial above) or a Numbers cell shows one box
 under it (above when there is no room): the number (+ what is still planned) of her goal, then a row a food, most first, had then
 planned (pale, as on the ring): the food with its amount, its meal (Breakfast · Lunch · Dinner · Snack · Drink), a bar of its share,
 the amount, the %; past 12 rows (and crumbs under 1) one "+ N more" row (a single one shows itself, "<1 g"); "Not counted · …"
@@ -1196,7 +1215,8 @@ open meal ("16% kJ · 19% P · 92% C · 5% F", a red dot past 100%); no box. Cod
 several each. **Table:** the first photo small beside the foods, "+N" for the rest (under the foods when the table is narrow: a meal
 or a day open beside it, the Grid); a meal with a photo and no foods yet reads "Add foods" with a gold dot. **Open meal** (the
 planner's, her meal card): the photos on top, then a dashed **+ Photo** tile (a computer: several at once, or drop them on it); a
-phone: **Camera · Photos** (Photos picks several). **Had it:** a photo on a meal not yet ticked ticks it at the photo's time (an
+phone: **Camera · Photos** (Photos picks several). **Today's camera** (MEALS GOALS, her pick 8): a camera on today's meals goes straight
+to picking photos (Meals goals, above). **Had it:** a photo on a meal not yet ticked ticks it at the photo's time (an
 older picture added later: the meal's own time that day); a meal with no foods yet waits, and adding its foods ticks it then; a
 day to come never. **Big view:** a tap on any photo; ‹ › and ← → walk the day's meal photos, the meal's foods + kJ under it, Share
 (a phone's share sheet) or Save (a computer), Delete (asks, then Undo: the one photo undo). **Photos view:** a 4th view beside Grid ·
