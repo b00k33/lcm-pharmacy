@@ -99,7 +99,7 @@ reads it; do not render it again.
 4. **Field = a value you edit.** Faint tint (`--ph-herb-tint`), 6px corners, no outline. A number, supplier or note you tap to edit is a field, never bare text (Inventory stock, low-at, notes).
 5. **Row = open something.** The whole row is the target, on a faint surface. A herb name or code in a list stays plain text inside its row (Dashboard, Inventory, Refill, To order).
 
-**Menus** (sidebar, patient rail, tabs): each item a full-width row on a faint surface with its icon or number; the open item is filled. **The patient rail is the teal band** (her picks 2026-11-02, rail-mock2 "C"; CURRENT-STATE "The teal rail"): an icon on every page row, the open row = the light tint + a deep bar (one lit row: its step stays plain), number circles on the steps, groups fold on a ▾ head, "‹ Menu" folds it to 56px icons; desktop only.
+**Menus** (sidebar, patient rail, tabs): each item a full-width row on a faint surface with its icon or number; the open item is filled. **The patient rail is the teal band** (her picks 2026-11-02, rail-mock2 "C"; CURRENT-STATE "The teal rail"; crimson / navy on a Gynae / MSK Case, her same-day word): an icon on every page row, the open row = the light tint + a deep bar (one lit row: its step stays plain), number circles on the steps, groups fold on a ▾ head, "‹ Menu" folds it to 56px icons; desktop only.
 **0–10 scores:** one joined bar of 11 cells, one tap. Never 11 separate chips.
 **Chip rows for one category join into a bar** (her 2026-10-15 pick, the Tongue photo viewer chip audit; **confirmed as the standard 2026-10-16** — screenshot of the Abdomen exam's live Tension row, her words "i like this chip design. make this the standard for grouping chips"): chips from ONE category — whether she picks one or ticks several — sit edge to edge in a single pill-shaped segmented bar, no gaps, a 1px `--ph-line` divider between segments, the bar rounded only at its two ends (not each chip). Picked segment(s) fill solid `--ph-herb` (or the page's case colour, where one applies — Tension's screenshot was a gynae-case crimson page), white text, same as a lone chip. Where an option has its own meaningful colour (a `[key, label, hex]` triple — Tension's soft/medium/hard, Colour, Coat colour), draw it as a small round dot (`<i style="background:hex">`) inside the segment, same position picked or not — keep the dot, don't simplify it away. A gap only separates two DIFFERENT categories sharing one row (e.g. Coat's Thickness group vs its Colour group) — it never splits one category into loose chips with air between them. Applies wherever a chip row is really one pick/tick set (the Tongue analysis rows: Colour, Shape, Coat, Under, Marks; the "Which shot" row; the Abdomen Tension row) — not to a row of unrelated actions (footer buttons, Same as / Clear).
 **NEVER:** underlined, dotted, arrowed OR PLAIN COLOURED text that taps; a tap target the same colour as the words beside it; a new chip size, corner or font size; a sentence under a control that explains it. A trailing › / → stays only where audit step 5 kept it (flow-wide "Next: ..." buttons, earlier / later pair, arrow-only buttons, data arrows).
@@ -320,9 +320,6 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   #EDF5F8`, `--ph-herb-card: #4599B5`, `--ph-herb-solid: #0C3B4B` — these are
   the ONLY source-of-truth definitions; `--ph-green`/`--ph-green-deep`/etc
   alias them. Never reintroduce a raw green hex anywhere in this app.
-  Since 2026-11-02 the first three hexes live in `--ph-house` / `--ph-house-deep` /
-  `--ph-house-tint` (never reassigned) and `--ph-herb*` read them: a Case recolours
-  `--ph-herb*`, and the teal rail band puts the house teal back for itself.
 - **Deliberately NOT part of the teal family** — don't sweep these into teal:
   `--ph-metab` (`#1F7A82`, Weight/Metabolic category colour) and
   `--ph-prep-deep` (`#0A5D65`, "Being prepared" status colour) are their own
@@ -335,7 +332,8 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   background, deep teal as the primary colour, gold/brass accent unchanged.
   Do NOT convert this app to dark mode (a dark-teal accent band for headers/
   stats is fine — that's an accent, not dark mode; so is the patient rail's
-  teal band, her pick 2026-11-02, which stays the house teal on every Case).
+  teal band, her pick 2026-11-02, which takes a Gynae / MSK Case's colour like
+  the rest of the panel).
 - Every teal/accent colour is a CSS variable, one source of truth — no
   one-off shades, colours never drift from screen to screen.
 - **One disclosed, deliberate exception to teal-everywhere**: the Dispense
