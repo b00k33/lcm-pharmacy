@@ -8876,6 +8876,14 @@ not changed. **Not tested:** her real photos, the Key2, a real native date picke
 with photos on one date only (no bar, one column, as before by code).
 Pictures: `shots/ph-before-*.png` and `shots/ph-after-*.png` (table, pair, pair-swap, 375, bytype, records-bytype).
 
+**LIVE** 2026-11-02, her "push live": build 20261102-113100 (publish ea773268) carries 4d59d067 and 9df94e11. Checked on the live copy:
+the stamp, `phRenGalPairOf`, `data-gal-pairsel`, `phRenDateMove`, the Records By type split, and the peers' Dashboard second pass and
+Hungry Jack's rows. **A staging trap met here:** 4d59d067 was staged as the diff between a build copy taken from an older HEAD and the
+HEAD of staging time, so it carried away 206 lines six commits had added in between (the Dashboard second pass, the Hungry Jack's menu,
+two stamps); 9df94e11 put them back before this publish, and no live build ever lacked them. The rule now sits under Deploy & git:
+re-apply the fragments to a copy of the HEAD of staging time; never diff an older-HEAD build copy against the current HEAD. Her devices
+need the gold Update.
+
 ## 2026-11-02 — To order, Cliniko Products layout: one table under four tabs (her 8 picks)
 Her "use this page design to organise the to order page - show mock" (a screenshot of Cliniko's Products page), then "Try again".
 Mock: `mocks/to-order-cliniko-mock-2026-11-02.html` (layouts A / B / C + phone, published as an artifact). Her 8 picks, each the
