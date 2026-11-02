@@ -1346,7 +1346,7 @@ not repeated here.
   A diagnosis may keep words that describe the condition itself (cold-type, watery discharge).
   The same holds for any sign (her "yes, split them", same day): swelling or scant urine riding on
   a headache are their own rows; words about the same subject stay together ("Urine: yellow, scanty").
-  "Tongue" (body) and "Tongue coat" are two subjects. Her Bing pass: "with" = + (two subjects
+  "Tongue" (body) and "Tongue coat" are two subjects (the tongue chart's chips too, her 2026-11-02 pick: a coat row reads the coat's own Dry chip, the dry tongue row the body's). Her Bing pass: "with" = + (two subjects
   joined by "with" are split); a row that lists its parts with commas or "or" stays as it is.
   A classical one-name sign stays one row with its pinyin name in brackets, "Fever: with chills
   (fa re wu han)" (her "include in ()"); the lower back and belly row and Huang Qin Tang's
