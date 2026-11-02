@@ -9773,3 +9773,63 @@ the line under each food ("9% kJ · 17% P · 28% C · 5% F", "16% kJ · 19% P ·
 no sideways scroll. Prescriptions search: Jane narrows, Zzqx none, clear returns. Console clean. **Not tested:** her real Meals page
 and goals, a touch laptop, her devices.
 **LIVE** 2026-11-02 in build 20261102-193700 (publish 5edfa514, her "Push live"; mock moved to mocks/). Her devices need the gold Update.
+
+## Compare formulas (2026-11-02)
+Her ask (evening, the Guide page open on the Gui Zhi card): "allow for a master comparison table format for comparing formulas from
+same family or just formula comparison - hep design this thoroughly. show mock", then mid-turn: "also include formula ingredients and
+dosages integrated with the inventory formulas - i want to see this so its correct and i want to see whats missing from my inventory".
+**Measured first:** the Gui Zhi family's seven Ren tables make 99 rows (76 in one formula only, 20 with a Key); the card's "Compare
+with…" put a badge on ONE card's rows, two formulas at a time, no ingredients. Her inventory (27 Oct copy): 302 jars, 81 of them formula
+jars; 64 formula recipes among her prescriptions; the classical recipes = `PH_HU_SRC` (DRAFT). **Mocks** (root until live, then
+`mocks/`): `formula-compare-mock-2026-11-02.html` (Today | A one table of dots, a Compare tab | B heat cells | C Ren and Bing side by
+side | phone), then on her word "can you try putting the symptom in the cell e.g. skin row fair in gui zhi cell" `formula-compare-mock-D-
+2026-11-02.html` (D1 words with dots | D2 words only), then on her "put the same signs on the same line e.g. complexion pale for all
+columns is the same ... list the signs in alphabetical order. show mock before building" `formula-compare-mock-D3-2026-11-02.html`
+(D3 | D3b). **Her 16 picks (four popups, memory project_lcm_formula_compare_2026_11_02):** 1 D3b: inside a category one line per sign,
+A to Z, the sign named once on the left and its words + dots in every column that weighs it; 2 a Compare tab in the Guide, a Compare
+chip on each family head and the card's Compare with… open it pre-loaded; 3 a herb cell = the classic's dose over her recipe's grams;
+4 a dose is judged by its share of the formula (amber past a quarter off); 5 dots, the Guide's notation; 6 Tells open first; 7 one
+Ren | Bing | Both bar; 8 missing = marks in the table + a count line with Missing only and Can make now; 9 a built-in stand-in list,
+DRAFT; 10 a body type's herbs column = its base formula's recipe; 11–12 (asked with 1–2) the same shape and tab; 13 a Tell = a 4 or 5
+in one formula and a blank in another; 14 several recipes for one formula = Recipe ▾ in the column head; 15 Can make now = every herb
+stocked, none out or stopped (low and phasing out still count); 16 Copy as text.
+**Built** (one hand block "Guide · Compare" after the `.gf-cmpb` rules, the module "方病人 Guide -- Compare" right before
+`renderPhGuidePage`, the phone rules at the top of the big 640px block):
+- The Guide's tabs are Families · **Compare** · Tongue map · Pulse · Herbs · Blood tests (`renderPhGuidePage`); `phGdBodyHtml` draws
+  `phCmpHtml()`; the one search box filters both tables ("Search a sign or herb"). The delegated click / input / keydown / change handlers
+  call `phCmpClick` / `phCmpInput` / `phCmpKey` / `phCmpChange` right after the Families tab's.
+- **Picker** (`.ph-cmp-pick`): Family ▾ (`PH_REN_FAM_GROUPS`, loads the herb + its formulas + `also`), one chip per formula in its shade
+  (a tap takes it out), "Add a formula" (a list of matches while she types, Enter adds the first, Esc clears), Clear. **Entry points:**
+  a Compare chip on each family head of the Families mosaic (`cardOf`, `data-cmp-fam`, families with more than one formula) and the
+  card's Compare with… select (`phGdfChange` → `phCmpOpen([card, picked])`; its row badges no longer paint).
+- **Signs** (`phCmpSignRows`, `phCmpSignsTableHtml`): one row per sign key across the picked formulas from `phGdfRows` (so her Guide
+  edits count), grouped by the category of `phSignLabel` in the sign pool's own order (`phCmpCatOrder`), A to Z inside; the sticky
+  first column names the category once and each line's sign faintly; a cell = the Guide's dots in the formula's deep shade + the words,
+  bold at 5, red dots when against; filter chips All · Key · Shared · Tells · Unique with counts (`phCmpSignFilter`; a Tell =
+  `phCmpIsTell`); Ren | Bing | Both (Both = the Ren table then the Bing table); "Shared by all n" above the table on Tells.
+- **Herbs** (`phCmpCol`, `phCmpHerbRows`, `phCmpHerbsTableHtml`): a column = the formula's classical recipe (`phHuFormulas()` by
+  name; a body type's = `PH_CMP_BASE`), her recipes (`PRESC.items` + `presIsFormula`, matched on the name before any bracket; Recipe ▾
+  when several; `phCmp.pick`), her formula jar (`PHARMACY.herbs` + `phIsFormula`, the live one first); rows = the union of the classics'
+  herbs by the Herb use key (`phHuKeys`, so Shao Yao finds Bai Shao and Zhi Gan Cao joins Gan Cao), her recipe's grams on the row
+  (a stand-in from `PH_CMP_STANDIN` lands on the classic's line with a blue dot; the rest = "In your recipe only"); a row's jar = the
+  live jar first (`phCmpJarRank`: stocked or low, phasing out, untracked, empty, stopped), the one her recipe names among equals, then
+  the fullest; the share check (`phCmpZhu`: liang 24 zhu, jin 384; pieces, sheng, ge not weighed) marks her grams amber when the share
+  is off the classic's by more than a quarter, red "—" where the classic has a herb her recipe lacks; the head says Your recipe · total
+  g and the jar's state; the count line names what is missing (not in inventory · out · low · stopped · no recipe · no jar); Missing
+  only keeps the marked rows; Can make now keeps the columns whose every classic herb is stocked, low, untracked or phasing out.
+- **Copy** = both tables tab-separated through `presCopyTextToClipboard`, "Copied" in the one toast. View state (`phCmp`) is never saved.
+**Tested** (sandbox copy on port 8998 seeded with her 27 Oct jars and formula recipes, no patients; the sign-in overlay removed; 1280 and
+375): the tab shows "No formulas" + the picker; Family ▾ Gui Zhi → 7 columns, 59 Tells (All 99 · Key 20 · Shared 23 · Unique 76),
+"Shared by all 7: Work & hobbies"; a chip's ✕ → 6 columns, "xiao jian" → the one match → 7 again; every filter chip; Both = two tables
+(Ren, Bing), Bing alone 90 rows; the Herbs table 23 rows: Gan Cao 5 g amber in Gui Zhi Tang, Dang Shen 15 g with the blue dot on Wen Jing
+Tang's Ren Shen line, Wu Zhu Yu 5 g amber, Yi Tang "Not in inventory", Chuan Xiong "Out · 0g", Rou Gui under In your recipe only; the
+count line "1 not in your inventory · 1 out · 4 low · 4 with no recipe · 4 with no jar"; Missing only → 9 rows; Can make now 5 (Gui Zhi
+Tang, Wu Ling San, Zhi Gan Cao Tang, Gui Zhi Jia Long Gu Mu Li Tang, Ling Gui Zhu Gan Tang); search "tongue" → 10 sign rows, no herb
+rows, clear restores; the family head's Compare chip (9 heads) → the tab with 7; the card's Compare with… Wu Ling San → the tab with
+Gui Zhi + Wu Ling San; Copy → "Copied" through the helper (the async clipboard alone was refused in the pane); 375: no page sideways
+scroll, the six tabs scroll in their bar, both tables scroll in the card with the first column held, chips 32px. Prescriptions search:
+Zz narrows, Qq none, clear returns. Console: the sandbox's own service-worker fetch lines only. **Not tested:** her live data (the
+Chai Hu family's two Xiao Chai Hu recipes and the Recipe ▾), her devices, a formula whose classic is missing from `PH_HU_SRC` beyond
+the "No classical recipe" words, the Key2's height. **Trap met:** a sandbox on a reused port serves a STALE copy through the old
+service worker until it is unregistered and its caches deleted; the first run picked a row's jar by her recipe's name first, which
+chose the phase-out "Gan Cao (Zhi)" and blocked every column's Can make now (now the live jar wins).

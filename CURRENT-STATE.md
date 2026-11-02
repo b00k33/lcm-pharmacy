@@ -866,7 +866,7 @@ signs; the Care Plan Diagnosis = its pictures; the Patterns page = every pattern
 (`--px-h`), so nothing moves; a sign's name is said once, in the header with its Ren / Bing marks and weight dots.
 
 ## Guide — Families (study + edit)
-The Guide is **[Families] [Tongue map] [Pulse] [Herbs] [Blood tests]**: a herb card is the body type with its formulas under it, notes-only formulas are
+The Guide is **[Families] [Compare] [Tongue map] [Pulse] [Herbs] [Blood tests]**: a herb card is the body type with its formulas under it, notes-only formulas are
 dashed tiles, a study card sits on the right (in Study, the concept picture of the pattern(s) the family counts for, under the
 pearl). **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): her edits live in `PHARMACY.fbrEdits[id]` (+
 `fbrEditsAt`), and `phFbrEditsApply()` rebuilds `.ren/.bing/.or/.core` in place from `phFbrPristine`; `phFbrEditsSync()` (top of
@@ -876,6 +876,24 @@ written as 0, and lists filter `w !== 0`. Cloud: `mergeFbrEdits` beside `mergeTe
 A notes-only formula that has become a scoring family (Wen Jing Tang, 2026-10-28) leaves Notes only; its memory aid, distinction,
 conditions and source show on the family's card (`phGdfNoteIsFam`, `phGdfFamNoteId`).
 Details and tests: [Guide Families].
+
+## Guide — Compare (formulas side by side)
+The Compare tab (her 2026-11-02 picks, BUILD-NOTES "Compare formulas") holds **one picked set of formulas** (`phCmp.ids`, view state,
+never saved): Family ▾ loads a herb's whole family (`PH_REN_FAM_GROUPS`), "Add a formula" adds any `PH_FORMULAS` entry, a chip's ✕ takes
+one out; a family head's Compare chip on Families and the study card's Compare with… select open the tab pre-loaded (the select no longer
+paints row badges). **Signs:** inside each sign category (the sign pool's order) one line per sign, A to Z; the sticky first column names
+the category once and each line's sign faintly; every column that weighs the sign shows its words with the Guide's dots in the formula's
+shade (bold = Key, red = against); All · Key · Shared · Tells · Unique with counts (a Tell = a 4 or 5 in one formula and a blank in
+another; Tells opens first), Ren | Bing | Both, "Shared by all n" above the table, the one search box filters the rows. **Herbs:** a
+column = the formula's classical recipe (`phHuFormulas()`, DRAFT; a body type's = its base formula, `PH_CMP_BASE`) over her own recipe
+(her formula prescriptions by name; Recipe ▾ when she has several) with her formula jar's state in the head; a row = a classic herb by the
+Herb use key with its jar's stock chip (the live jar first; "Not in inventory" when none), the classic's dose in grey over her grams in
+bold, an amber dot when her share of the formula is more than a quarter off the classic's (liang / zhu / jin weighed, pieces and sheng
+shown only), a red "—" where the classic has a herb her recipe lacks, a blue dot on a stand-in (`PH_CMP_STANDIN`, DRAFT: Dang Shen for
+Ren Shen …), "In your recipe only" for the rest; a count line (not in inventory · out · low · stopped · no recipe · no jar), Missing only
+(the marked rows), Can make now (the columns whose every classic herb is stocked, low, untracked or phasing out). Copy = both tables as
+tab-separated text through the one clipboard helper. The phone scrolls each table inside the card with the first column held; the six
+tabs scroll in their bar. Code: `phCmp*` before `renderPhGuidePage`; CSS block "Guide · Compare" after the `.gf-cmpb` rules.
 **Key sign pictures (her picks):** every sign a family weighs 4 or 5 has ONE picture (`phKsDesc` / `phKsSvgHtml`; a Bing sign and
 its Ren twin share it): hand-drawn for Gui Zhi's Key signs (`PH_KS_SC`), else her Tongue / Abdomen chart, the wrist with her pulse
 lines, its body place's close-up (`PH_FBBP`) or the body figure, moving by its words (`phKsVerb`). The Guide card shows the
