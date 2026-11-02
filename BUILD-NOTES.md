@@ -9410,3 +9410,6 @@ words: chicken soup, chicken broth / stock, ji tang, gai tong, canh ga, nuoc dun
 "chicken soup" typed shows it first ("Clear chicken soup · 1 bowl") above the shop soups; console clean. Picture `shots/soup-add.jpg`.
 **Not tested:** on her real Meals page and devices.
 **LIVE** 2026-11-02 in build 20261102-174100 (publish edd8bd1e; her "clear the lock and push live": another session's 14:27 lock had sat 14 min). Her devices need the gold Update.
+**LIVE** 2026-11-02 (Body pages, one look): f7af8edf went to main in this session's publish 172700 (8a2dc2b5, on her "push live";
+its Pages deploy did not finish) and is served since 174100 (edd8bd1e) / the re-stamp 174300 (9d1f405d); checked on the live page:
+its rules are there (the deploy drops CSS comments). Her devices need the gold Update.
