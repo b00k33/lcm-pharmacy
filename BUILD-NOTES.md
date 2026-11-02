@@ -8921,7 +8921,8 @@ through `phOnOrderList`.
 THINGS); Add to order sits first in the head's bar (the app's rule: the first verb is the solid one), where the mock had it second.
 **Code:** the state beside `phOsbSide` (`phOsFilter`, `phOstLitTab`, `phOstBodyOnly`, `phOstNeed`); the render in `renderPhRestock`;
 the listeners and `phRestockBottleWrite` after `phOsbTabPing`; the CSS block "To order in Cliniko's Products layout" just before
-"To order page audit, second pass". Commit 4252a750.
+"To order page audit, second pass". Commit 4252a750. **LIVE in build 20261102-113100** (publish ea773268, a peer's push that
+carried it; her "push live" and "Push both" with Photos increment 2, 2026-11-02); her devices need Update.
 **Tested** (sandbox, 302 herbs; a seeded list of 6 over Evergreen / GMP / Koda with 1 ordered, 5 running low, 3 arrived, 2
 snoozed): tabs, counts and the Total ($153.40, by hand); Arrived (the flight, the lit tab, Undo in the one toast); Add to order (the
 flight); the size chip; the filter (focus kept, No match, ✕, Esc); the ⋮ (supplier select, fixed position); the Cost field (2 ×

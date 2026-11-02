@@ -576,7 +576,7 @@ In that sheet Grams and Name are fields and Type a dropdown, ⋯ is an icon circ
 and Edit as a plain list are chips, the code column is 80px (the phone folds it away, as Dispense does), and the match line says
 "✓ all N ingredients matched" only [Formula refill page audit].
 
-**To Order: Cliniko's Products layout (her 8 picks 2026-11-02; built 4252a750, not live yet)** [To order, Cliniko Products
+**To Order: Cliniko's Products layout (her 8 picks 2026-11-02; LIVE in build 20261102-113100)** [To order, Cliniko Products
 layout]; still two steps, To order → Arrived [Inventory: stock truth, To order in two steps, lean Inventory, Price review in
 Suppliers]. A full-width filter (code, pinyin, name, supplier), then ONE table at a time under four joined tabs with their counts:
 **To order** · **Running low** · **Arrived** (last 14 days, + N older, Clear) · **Snoozed** (only while one is). To order = a row per
