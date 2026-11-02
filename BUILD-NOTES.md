@@ -9657,3 +9657,13 @@ PH_FOOD 961.
 **Tested** (test copy): 17 numbers each; "matcha latte" lists the seven in Drinks before McDonald's; "oat" finds the oat one; hovers
 read the parts; console clean. Picture `shots/matcha-milks.jpg`. **Not tested:** her real Meals page and devices.
 **LIVE** 2026-11-02 in build 20261102-185700 (publish 6901f8ea, her "Push live"). Her devices need the gold Update.
+
+## A Hojicha latte for each milk (2026-11-02)
+Her ask "add hojicha latte with milk", built the way of her matcha picks the same evening (the milk in the name, one per milk row):
+`hojicha_latte` ("Hojicha latte · full cream milk") + `_creamy`, `_lite`, `_skim`, `_oat`, `_soy`, `_almond`; each hojicha powder 2 g
++ that milk 260 ml + water 38 ml, unsweetened, 300 ml a cup (Drinks). Hojicha powder = MEXT 2020 16036 green tea leaves (せん茶 茶)
+with vitamin C 0: MEXT has no hojicha leaf, and its hojicha tea (16040) shows only a trace of C where sencha tea shows 6 mg. A cup:
+full cream 742 kJ, creamy 833, light 508, skim 414, oat 633, soy 708, almond 196. Words: hojicha, houjicha, roasted green tea latte.
+The sources line now reads "matcha, hojicha: Standard Tables of Food Composition in Japan 2020 (MEXT)". PH_FOOD 968.
+**Tested** (test copy): 17 numbers each; "hojicha" and "houjicha" list the seven in Drinks; hovers read the parts; console clean.
+Picture `shots/hojicha-milks.jpg`. **Not tested:** her real Meals page and devices.
