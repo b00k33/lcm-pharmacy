@@ -9437,3 +9437,14 @@ kJ · P · C · F cell or a Grid Total number opens one box under it (above when
   `shots/meals-ring-breakdown-phone-2026-11-02.jpg`. **Not tested:** her real meals, her devices.
 - **Integration (★★):** the rings, Numbers, Table and Grid numbers share one box and one read (`phDietSum` rows); the Diet / More
   lines and Targets bars are untouched.
+
+## Chinese and Vietnamese with the everyday foods (2026-11-02)
+She asked to add Phở gà, then Bún bò Huế: both were already in the list (since 11/1), but Chinese and Vietnamese sat behind Menus ▾
+with the restaurants, so they never showed while she scrolled. Her pick (popup): **"With everyday foods"**. `PH_FOOD_MENUS` marks
+cn and vn as kitchens (a third item, 1); `phFoodPlace(g)` = a place behind Menus ▾ (a menu that is not a kitchen). The add list
+(`phMealAddHtml`) lists them under All foods after Takeaway like Grains or Protein (drinks under Drinks), no lazy pane, not in the
+Menus ▾ list (`phMealTabsHtml`); the food chips (`phFoodPickHtml`) show them under All foods, not on a search only. Kept: they stay
+off the shopping list (`phFoodMenu`, bought made) and the words Chinese / Vietnamese still find them (`phFoodWordsN`).
+**Tested** (test copy): All foods open shows Chinese 31 and Vietnamese 28 with Phở gà and Bún bò Huế, closed hides them as before;
+Menus ▾ = McDonald's … Thisbowl; "bun bo hue" finds it, "vietnamese" finds 31; console clean. Picture `shots/kitchens-everyday.jpg`.
+**Not tested:** her real Meals page and devices; the 64 rows now painted with All foods open (fine against the 557 menu rows kept lazy).
