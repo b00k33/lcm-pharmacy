@@ -9316,5 +9316,5 @@ build); the diff is 1,581 hunks, every one inside the main `<style>` (checked by
 `shots/colour-{dashboard,inventory,toorder,patient,comms}.jpg`; before = the mock's Today column.
 **Not tested:** her real records (the Me pages need her sign-in: `.ph-fit` was checked by injecting its classes and reading the
 computed colours), her devices, the Key2's 469px height, print.
-**Next:** her "push live"; then the mock moves to `mocks/`. The sweep script is the record of what moved; a new rule follows the law
+**LIVE** 2026-11-02 in build 20261102-150700 (publish d8e23e7f, her "push live"); the mock moved to `mocks/`; her devices need the gold Update. The sweep script is the record of what moved; a new rule follows the law
 by hand (a state word = ink + the 6px `::before` dot, `--ph-dot` for its colour).
