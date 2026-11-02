@@ -9348,3 +9348,37 @@ same door). **Seen, not changed:** Formula refill's lists read `r.ingredients.le
 (`presIsFormula(r) && r.ingredients.length`, several places); a bare formula record would still throw there.
 **Integration:** the fact is the record's own list, read by every page through the open door; walked in the sandbox on the
 bare record: the Patient profile list, Today's visit, Dispense. Not pushed; live only on her "push live".
+
+## Body pages, one look (2026-11-02)
+**Her words:** five screenshots of her own record's Cycle, Meals, Herbs, Fitness and Habits + "find a way to make these pages
+have a consistency where they look like the come from the same app isntead of different apps. show me mock first".
+**Measured first** (a test copy of her record, case "pain" = navy like hers, 1220px): Start fast / + Formula / + Habit / Dispense
+wore the STATUS green (`.ph-fast-btn`); Fitness is C22's port with its own tokens (`--c-green`, `--c-line`…): 16px pill bars
+(`.cseg`), a black Workout Mode (`.wm`), a dashed `.cadd`, 20px headings with a rule (`.sh h3`), round chips (`.ctypes .ty`,
+`.cpain button`), 8px / 999px selects; Pregnant? gold; the Cycle months' arrows tinted circles; Meals' today row a navy tint + 3px
+bar (`tr.td`); Habits' head "∞ Habits 0 of 2 today"; Meals in a lined card, Fitness' cards, the Cycle day card.
+**Mock:** me-pages-one-look-mock-2026-11-02.html (artifact UNmdrY5B768Zvd4LLBCh4k): 8 parts + each page Now · A no frames · B
+cards, real pictures from a prototype CSS injected into the harness. **Her 8 picks, all the recommended:** A no frames; one colour
+= her record's (`--ph-herb`); today = the gold tint (Meals too, no left line); Fitness' kinds + body areas join into bars; Habits'
+head = the count label + a solid + Habit; Workout Mode = the navy Button; Pregnant? = the navy outline; build it, show her first.
+**Code:** the hand block "Body pages, one look" after the colour audit block (before `</style>`): `.ph-fast-btn` line/solid in
+`--ph-herb`; `.ph-mpl-racts .q` outlined; Fitness `.wm` 6px solid, `.cadd` a white Button with the line (`.on` solid), the dashed
+note Buttons solid-lined; Pregnant? (`.ph-cp .ph-preg-btn:not(.pos)`) the outlined 32px Button; ‹ › (`.ph-fit .fwnav button`,
+`.ph-cp .ff .mhd button`, `.ph-cyc-ib`) the 32px circle on the line; `.fwpill` plain words; a line between segments
+(`.ph-fit .cseg`, `.ph-meal-bar`); 6px chips and selects (the selects white with their line); the capitals label (`.ph-fit .sh h3`,
+`.ph-hbt-hd .t`, `.ph-hab-h`); `tr.td` gold (`.ph-mpl-wt`, `.ph-mpl-nt`); frames off (`.ph-mpl-card`, `.ph-hbt-card`, `.ctoday`,
+`.ph-fast-card` in Fitness, `.ph-fit-fold` / `.ctip` a paper tint, `.ph-cp .cp-card`, its FBR trail's margin); from 641px the
+Fitness sizes (32px bars, 13px words, padding 0) and the joined kinds / body areas (`margin-left: -1px`, end corners by `:has`).
+`.ph-hab-h` rule rewritten in place (5652). JS: Fitness' head drops the "Fitness" word (`phHubFitHtml`); Habits' head is
+`<h3 class="ph-hab-h">n of m today</h3>` + `ph-fast-btn solid` + Habit. PHONE REDESIGN block: `.ph-mpl-card` padding line keeps
+only `.ph-mpl-help`; the label 11px (`.ph-fit .sh h3`, `.ph-hab-h`, `.ph-hbt-hd .t`); Meals' rings without their box
+(`.ph-mpl > .ph-mac-rings`, the phone puts them outside the card); Fitness' `.cseg` 6px; Cycle's `.cp-seg` the joined 6px bar
+(the wide window had it already, 25670). Words stay ink (the colour law, ddad8059).
+**Tested (the harness on her test record + a seeded patient, real taps):** 1220 and 375 pictures of all five pages against mock A
+(one colour, joined bars, circles, labels, today gold, no frames; the phone fits 375 with no sideways spill); + Habit opens its
+row (+ Routine chip, Cancel); Fitness Week · Exercises · Health · Progress taps (the picked one navy, the bar 6px), Gym picks
+(navy, white words); a patient's Cycle page (Natural fertility, gyn crimson): Pregnant?, ‹ ›, the day card follow her colour;
+the Prescriptions search narrows on "Jane", shows none on "Zzqx", returns on clear; console clean. **Not tested:** her real
+record and devices (her devices need Update after a publish); the Key2 360 × 469 phone; Workout Mode itself (no exercises in
+the test copy). **Integration:** CSS + two head strings; `.ph-cp` is shared, so every patient's Cycle page wears the same shapes
+in that patient's colour. Not pushed; live only on her "push live".
