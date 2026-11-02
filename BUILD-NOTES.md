@@ -9512,6 +9512,7 @@ list's rows and the pork row (none for crab and squid); parts in each hover (`PH
 PH_FOOD 951; Vietnamese 34.
 **Tested** (test copy): 17 numbers each; "bun" lists Bún riêu and Bún mắm under Everyday › Vietnamese; "banh xeo" finds the new
 plate; the hovers read the parts; console clean. Picture `shots/bun-dishes.jpg`. **Not tested:** her real Meals page and devices.
+**LIVE** 2026-11-02 in build 20261102-182300 (publish 39fe4f60, her "Push live"; the calendar click card rode along). Her devices need the gold Update.
 
 ## Calendar click: my event OR a patient (2026-11-02)
 Her ask, with a picture of the click card ("David Dinh" typed, the Lease invoice preset, New "David Dinh"): "how do i know if i
