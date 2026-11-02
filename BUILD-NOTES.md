@@ -9961,6 +9961,8 @@ Prescriptions search: Zz → the one made-up patient, Qq → "0 match", clear �
 **Not tested:** her real devices; the slide in a visible tab at her speed (the pane was hidden: the classes and counts were checked, not
 the frames); reduced motion on a real device.
 
+**LIVE** in build 20261102-212000 (publish a9f9bea0: it rode along with the calm-week push on her "Push live"); the mock moved to `mocks/`; her devices need the gold Update.
+
 ## Calm week (2026-11-02)
 **Her words** (a screenshot of her 2–7 Nov week in Nanjing, 6 days, 1182px): "too many colours textures shapes features. too busy
 and overwhleming. - show mock before fix". **Mock:** `calm-week-mock-2026-11-02.html` (artifact 3So175L3LMc544CTtKUgWe; her real
@@ -9989,3 +9991,36 @@ due glow, 1 taken), lectures full width, the line "Study Tour · day 4 of 17 · 
 day label, 2 grey planes, Add appointments alone; console clean. Picture `shots/calm-week-build-2026-11-02.jpg`. **Not tested:**
 her real doses and cycle record (stubbed), a tick on a dose, the phone.
 **LIVE** in build 20261102-212000 (publish a9f9bea0, her "Push live"; the Compare motion 5e1b6b84 rode along); her devices need the gold Update.
+
+## Compare: sign pictures on hover (2026-11-02)
+Her ask (late evening, right after the motion build): "when i hoever over symptom, alow connection with relevant animation" → "hover*".
+A first mock read it as threads between twin rows; her answer "no, im talking about symptom animations" and a screenshot "like this" of
+the Guide's key-sign sheet (Cold & heat: dislikes wind, ‹ ›) set it right: pointing at a sign = that sign's moving picture. **Measured:**
+the engine exists and is reused, never a second drawer (`phKsSvgHtml` / `phKsHas`; the Compass popover `data-ks-pop` → `phKsPopShow`,
+`#phKsPop`; the Guide card's panel; the big sheet `phPxOpen` / `phPxPaint`); 46 of the pair's 49 Ren rows and 54 of its 60 Bing rows
+have a picture (not water blisters, floaters, shortness of breath). **Mock** `formula-compare-pictures-mock-2026-11-02.html` (root until
+live, then `mocks/`; artifact 2FyhovJpdnDzDYUwssvgmg; its pictures are the sandbox build itself, `shots/cmp-pics-a/b/c.png`): A beside
+the row (the Compass way) · B a 36 × 22 still before each sign · C the Guide card's panel above the table. **Her 4 picks (memory
+project_lcm_compare_pictures_2026_11_02), every one the recommended option:** 1 A, beside the row; 2 a tap opens the big picture, ‹ ›
+through the compared signs that have one; 3 the phone: a tap opens it; 4 every sign with a picture (a sign without one shows nothing).
+**Built** (seven fragments in the `phCmp*` module and the `phPx*` sheet):
+- `phCmpSignsTableHtml`: a sign's `td.s` carries `data-ks-pop="<key>"` and `data-w="<its strongest side>"` when `phKsHas(r.k)`; the
+  existing document mouseover / mouseout / focusin / scroll handlers do the rest (the one popover, 260px, after 220 ms, beside the cell,
+  hidden on scroll). CSS `td.s[data-ks-pop] { cursor: pointer }` in the "Guide · Compare" block. Nothing else on the row: no thumbnail,
+  no panel (her pick A).
+- `phCmpPicOpen(td)` (before `phCmpClick`, which routes `.ph-cmp-tbl td.s[data-ks-pop]` to it): the sheet's list is that table's cells
+  with a picture, in table order, items `{k:"kg", g:{keys:[key], sd:Set(side), w}}`; it hides the popover and calls `phPxPaint(0, "")`.
+  `phPxKsGroup(it)` (after `var phPxList`) hands a carried group to `phPxItem` and `phPxTileHtml`, so the header (name · Ren / Bing
+  mark · dots), the strip, ‹ ›, the arrow keys and the phone swipe work unchanged. A Bing table opens its own list with the Bing mark. The
+  Herbs table has no pictures and no hover. The `data-ks-pop` click path on the phone has no pointer, so the tap is the whole feature there.
+**Tested** (sandbox on port 8998, her 27 Oct jars + recipes + one made-up patient; Wu Ling San · Zhen Wu Tang; 1024 and 375): Ren, All →
+49 rows, 46 `data-ks-pop` cells (weights 2–5), 0 on the Herbs table, no thumbnails, cursor pointer; pointing at "dizziness or vertigo" →
+the popover beside the name cell (260 × 186, "Head: dizziness or vertigo", 15 drawn elements); a tap → the sheet "Head: dizziness or
+vertigo ●●●●●" with the Ren mark, 46 tiles with the pointed one ringed (27th), › → "frequent headaches", ArrowRight → "Urine: difficult to
+pass", ✕ closes; Both → 46 Ren + 54 Bing cells, a Bing tap → "Pulse: weak" with the Bing mark and 54 tiles; 375 → the page no wider than
+the screen, a tap opens the sheet 343px wide with ‹ › and the strip, no popover. Prescriptions search: Zz → the one made-up patient, Qq →
+"0 match", clear → the list. Console: the sandbox's own service-worker line only. Pictures `shots/cmp-pics-build-sheet-2026-11-02.jpg`
+and `shots/cmp-pics-build-phone-2026-11-02.jpg`. **Not tested:** her real devices; a real finger (the tap path was `.click()`); reduced
+motion on a device; the picture's motion in a visible tab (the pane was hidden: the drawn elements were counted, not watched).
+**Trap met:** in a hidden tab `scrollIntoView`'s scroll event fires late and hides the popover after the mouseover showed it; point without
+scrolling when testing.

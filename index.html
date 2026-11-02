@@ -14986,6 +14986,7 @@
      one mark per sign on the category line; the overlap bar (two formulas) and each head's shared-share bar; motion on a real change only
      (.in / .out / .mv are transient classes phCmpPaint adds for that one change; everything off under reduced motion) ==== */
   #pharmacyPage .ph-cmp-tbl td.s .nmr { display: flex; align-items: flex-start; gap: 7px; }
+  #pharmacyPage .ph-cmp-tbl td.s[data-ks-pop] { cursor: pointer; }
   #pharmacyPage .ph-cmp-tbl .mk { flex: none; width: 6px; height: 6px; border-radius: 50%; margin-top: 8px; }
   #pharmacyPage .ph-cmp-tbl.herbs .mk { margin-top: 6px; }
   #pharmacyPage .ph-cmp-tbl .mk.sh, #pharmacyPage .ph-cmp-tbl tr.g .comp i.sh, #pharmacyPage .ph-cmp-ovl .lb i.sh { box-shadow: inset 0 0 0 1.5px var(--ph-herb); background: none; }
@@ -85836,7 +85837,7 @@ or changing anything in Cliniko.
         + rs.map(r => {
           const has = hasOf(r.w), shared = has.length >= 2, top = Math.max(...r.w.map(Math.abs)), low = shared ? Math.min(...has.map(i => Math.abs(r.w[i]))) : 0;
           const dim = phCmp.focus != null && has.indexOf(phCmp.focus) < 0;
-          return `<tr data-k="${esc(r.k)}" data-has="${has.join(",")}" class="${shared ? "sh" : "un"}${dim ? " dim" : ""}" style="--r:${Math.min(ri++, 25)}"><td class="s"><div class="nmr">${phCmpMark(has, cols, "mk")}<div class="nm">${esc(r.sg)}</div></div></td>${cols.map((col, i) => { const w = r.w[i]; return `<td style="${col.style}">${w ? `<div class="sg${w >= 5 ? " k" : ""}${w < 0 ? " neg" : ""}" title="${phCmpLevel(w)} · ${esc(col.name)}">${phCmpDots(w, shared && Math.abs(w) > low ? low : null)}<span>${esc(r.sg)}</span></div>` : `<div class="sg gh" title="Not in ${esc(col.name)}">${phCmpGhost(top)}</div>`}</td>`; }).join("")}</tr>`;
+          return `<tr data-k="${esc(r.k)}" data-has="${has.join(",")}" class="${shared ? "sh" : "un"}${dim ? " dim" : ""}" style="--r:${Math.min(ri++, 25)}"><td class="s"${phKsHas(r.k) ? ` data-ks-pop="${esc(r.k)}" data-w="${top}"` : ""}><div class="nmr">${phCmpMark(has, cols, "mk")}<div class="nm">${esc(r.sg)}</div></div></td>${cols.map((col, i) => { const w = r.w[i]; return `<td style="${col.style}">${w ? `<div class="sg${w >= 5 ? " k" : ""}${w < 0 ? " neg" : ""}" title="${phCmpLevel(w)} · ${esc(col.name)}">${phCmpDots(w, shared && Math.abs(w) > low ? low : null)}<span>${esc(r.sg)}</span></div>` : `<div class="sg gh" title="Not in ${esc(col.name)}">${phCmpGhost(top)}</div>`}</td>`; }).join("")}</tr>`;
         }).join("");
     }).join("");
     const share = i => { const own = all.filter(r => r.w[i]); return own.length ? Math.round(own.filter(r => r.w.filter(x => x).length >= 2).length / own.length * 100) : 0; };   // each head's bar: how much of this formula the others share (her pick 10)
@@ -85972,11 +85973,21 @@ or changing anything in Cliniko.
     phCmpHerbRows(cols).forEach(r => lines.push([r.names.join(" · ") + (r.jar ? ` (${r.jar.name}${r.jar.qty != null ? " " + phFmtG(r.jar.qty) + "g" : ""})` : " (not in inventory)")].concat(r.cells.map(c => c ? [c.dose || "", c.g > 0 ? `${c.sub ? c.sub + " " : ""}${c.g} g` : (c.dose ? "—" : "")].filter(Boolean).join(" | ") : "")).join("\t")));
     return lines.join("\n");
   }
+  // a sign with a picture (her 2026-11-02 picks, BUILD-NOTES "Compare: sign pictures on hover"): pointing at its name shows the picture
+  // beside the row (data-ks-pop, the Compass popover); a tap, the only way on a phone, opens the big sheet stepping through the signs of
+  // this table that have one, in table order
+  function phCmpPicOpen(td) {
+    const key = td.dataset.ksPop, tbl = td.closest("table"), sd = tbl && tbl.dataset.side === "b" ? "b" : "r", L = [], seen = new Set();
+    (tbl || td).querySelectorAll("td.s[data-ks-pop]").forEach(c => { const k = c.dataset.ksPop; if (seen.has(k)) return; seen.add(k); L.push({ k: "kg", g: { keys: [k], sd: new Set([sd]), w: +c.dataset.w || 0 } }); });
+    const at = L.findIndex(x => x.g.keys[0] === key); if (at < 0) return;
+    phKsPopHide(); phPxList = L; phPxAt = at; phPxPaint(0, "");
+  }
   function phCmpClick(e) {
     const T = e.target; let el;
     if (!T.closest) return false;
     if ((el = T.closest("[data-cmp-fam]"))) { phCmpOpen(el.dataset.cmpFam.split(",")); return true; }
     if (!T.closest(".ph-cmp")) return false;
+    if ((el = T.closest(".ph-cmp-tbl td.s[data-ks-pop]"))) { phCmpPicOpen(el); return true; }
     if ((el = T.closest("[data-cmp-rm]"))) { phCmp.ids = phCmp.ids.filter(id => id !== el.dataset.cmpRm); phCmp.focus = null; phCmpPaint("new"); return true; }
     if ((el = T.closest("[data-cmp-add]"))) { phCmp.ids.push(el.dataset.cmpAdd); phCmp.q = ""; phCmp.focus = null; phCmpPaint("new"); const i = document.getElementById("phCmpAdd"); if (i) i.focus(); return true; }
     if (T.closest("[data-cmp-clear]")) { phCmp.ids = []; phCmp.q = ""; phCmp.focus = null; phCmpPaint(); return true; }
@@ -98195,6 +98206,7 @@ or changing anything in Cliniko.
   // Care Plan) = it, then its signs; the Care Plan Diagnosis = its pictures; the Patterns page = every pattern on it with a picture. A sign's
   // name is said once, in the header with its Ren / Bing marks and weight. View state only ----
   var phPxList = [], phPxAt = 0, phPxX = null;
+  const phPxKsGroup = it => it.k === "kg" ? it.g : phKsFamGroups(it.fam)[it.i];   // a Compare sign carries its own group (phCmpPicOpen)
   function phPxOpen(el) {
     const one = el.dataset.fpBig ? { k: "fp", id: el.dataset.fpBig } : el.dataset.ppBig ? { k: "pp", id: el.dataset.ppBig, name: el.dataset.ppName || "" } : null;
     const host = el.closest(".gf-pp, .ph-pp-dx, .ph-pat-cards"), L = [];
@@ -98223,7 +98235,7 @@ or changing anything in Cliniko.
       let why = ""; try { const p = it.name ? phPatCompute(it.name).pats.find(q => q.def.id === pid) : null; why = p ? [...new Set(p.matched.map(c => c.text))].join(" · ") : ""; } catch (e) { why = ""; }
       return { t: d.name, h: phPpHtml(it.id, { key: "big:" + it.id, why, name: it.name, big: true }) };
     }
-    const g = phKsFamGroups(it.fam)[it.i]; if (!g) return null;
+    const g = phPxKsGroup(it); if (!g) return null;
     return { t: phKsGrpLabs(g).join(" · "), sd: phKsSdHtml(g), w: `<span class="gf-dots" title="${g.w >= 5 ? "Key" : "Strong"}">${[0, 1, 2, 3, 4].map(i => `<i${i < g.w ? ' class="f"' : ""}></i>`).join("")}</span>`,
       h: `<div class="ph-ks-card"><div class="ph-ks-bigwrap">${phKsSvgHtml(g.keys[0], false).replace("xMidYMid slice", "xMidYMid meet")}</div></div>` };
   }
@@ -98233,7 +98245,7 @@ or changing anything in Cliniko.
     let art = "", lab = "", sd = "";
     if (it.k === "fp") { art = still(phFpSvg(it.id, "pxt:fp:" + it.id)); lab = phFpName(it.id); }
     else if (it.k === "pp") { art = still(phPpSvg(it.id, "pxt:" + it.id)); lab = (phPpDef(it.id) || { name: it.id }).name; }
-    else { const g = phKsFamGroups(it.fam)[it.i]; if (!g) return ""; art = phKsSvgHtml(g.keys[0], true); lab = phKsGrpLabs(g).join(" · "); sd = phKsSdHtml(g); }
+    else { const g = phPxKsGroup(it); if (!g) return ""; art = phKsSvgHtml(g.keys[0], true); lab = phKsGrpLabs(g).join(" · "); sd = phKsSdHtml(g); }
     return `<button type="button" class="ph-px-t${on ? " on" : ""}" data-px-i="${i}" title="${esc(lab)}" aria-label="${esc(lab)}" aria-pressed="${on}">${art}${sd}</button>`;
   }
   // drawn once on open, then only its name, the picture and the strip's ring change
