@@ -454,7 +454,8 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   Give a data table `table-layout: fixed` and a `<colgroup>` (or declared
   widths), so the first column read cannot take the space a later select or
   action cell needs. Rows alternate a faint tint; the row she is on gets a
-  tint AND a left accent bar, never one without the other.
+  tint AND a left accent bar, never one without the other. One exception, her
+  2026-11-02 pick "Tint only": the Compass's asked row is the gold tint alone.
 - **Her work phone is a BlackBerry Key2** — design phone screens against
   360 × 469 (not 360 × 780) when a feature is specifically phone-targeted;
   Android 8.1 / Chrome 138 is a speed constraint, not a capability one (the
