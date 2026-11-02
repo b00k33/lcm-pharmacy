@@ -9873,7 +9873,7 @@ the next photo, "Photo deleted · Undo" put it back; Esc closed; Photos view of 
 Photos chips, the photos beside each meal, no sideways scroll; relay name `cap_meal_<day>_…_ml.jpg` parses back to meal "l";
 her record's Photos cache and Records → Photos hold 0 meal photos; Prescriptions search: Jane narrows, Zzqx none, clear returns.
 **Not tested:** a real camera or gallery on her phone, the phone → laptop relay end to end (needs her login), Share on a phone,
-her real Meals.
+her real Meals. **LIVE** build 20261102-204600 (publish d16caf39); mock in mocks/.
 
 ## A–Z lists (2026-11-02)
 **Her words:** "do an app rule and audit that things need to be listed in alphabeitcal order e.g. symptoms herbs formulas etc. -
