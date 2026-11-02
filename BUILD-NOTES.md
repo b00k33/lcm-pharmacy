@@ -8875,3 +8875,61 @@ shot / kind / date tools, the Tongue page's pairs and the BBT strip read `phRenD
 not changed. **Not tested:** her real photos, the Key2, a real native date picker (the hidden input was set by script), a patient
 with photos on one date only (no bar, one column, as before by code).
 Pictures: `shots/ph-before-*.png` and `shots/ph-after-*.png` (table, pair, pair-swap, 375, bytype, records-bytype).
+
+## 2026-11-02 — To order, Cliniko Products layout: one table under four tabs (her 8 picks)
+Her "use this page design to organise the to order page - show mock" (a screenshot of Cliniko's Products page), then "Try again".
+Mock: `mocks/to-order-cliniko-mock-2026-11-02.html` (layouts A / B / C + phone, published as an artifact). Her 8 picks, each the
+recommended option: (1) **B + supplier rows**: one table at a time under To order · Running low · Arrived · Snoozed, To order keeps
+a row per supplier; (2) the head is one joined bar, **Add to order** (solid) + **Mark all arrived**; (3) the Koda / GMP **jars stay**;
+(4) columns **Herb · Stock (bar + grams) · Low at · Order (− n + × size) · Cost · Status**; (5) an **ordered row stays in place**,
+Status "✓ Ordered 30 Oct", its stepper becomes "2 × 100g"; (6) **one Total row** at the table's foot; (7) the phone: **two lines per
+herb**; (8) the row-details pop goes: the size is the chip (tap: 100 g ⇄ 200 g), Bottle $ a field in the Cost cell, Supplier in the ⋮.
+- **Head:** `phShellHead("To Order", "N on the list")`; the restock actions start with Add to order (`phOsAddOpen`, the type-to-search
+  row under the filter) then Mark all arrived, so `phTitlebarMerge` makes Add the solid one (the phone: the + disc, the rest in ⋯).
+- **Filter** (`.ph-ost-filter`, `phOsFilter`): code, pinyin, name, supplier; a keystroke repaints `.ph-ost-body` alone
+  (`phOstBodyOnly`), so the box keeps its focus and a phone its keyboard; ✕ and Esc clear it; "No match".
+- **Tabs** (`.ph-ost-tabs`, `phOsbSide` = toorder / low / arrived / snoozed; Snoozed only while one is): counts roll (`phOsbRolls`);
+  the page opens on To order, on Running low when the list is empty. Beside them one fact: "n ordered" / the gold bar "x of y on
+  the list" / "last 14 days" + Clear.
+- **To order:** a supplier row (`tr.ph-ost-sup`: the Koda / GMP chip or the name · n items · $sum · n ordered · Copy for email · All
+  arrived, solid, from 2 herbs), then its herbs (`osTr`): jar + code + name (opens the edit form), stock bar + grams (the % in the
+  hover), Low at, Order (`.ph-os-step` − n + × the size chip `data-ph-ost-pack`; ordered = "n × size g"), Cost (the bottle field,
+  faint while it is the last price unconfirmed, with the line's total beside it from 2 bottles), Status (To order / ✓ Ordered
+  <date> / Empty), Arrived + ⋮; the Total in `tfoot`. Copy for email still marks ordered only once the copy landed.
+- **Running low:** Herb · Supplier · Stock · Low at · Status (Low / Empty / Refill Wk N) · Add to order (red Order now when empty).
+  **Arrived** (last 14 days, "+ N older", Clear): Herb · Supplier · Arrived · Added · Now · ⋮ (the fix box). **Snoozed:** Herb ·
+  Supplier · Stock · Back <date> · Unsnooze. Dates by `osDay`: "30 Oct", the year only when it is not this one.
+- **⋮** (`osCardDots`), by stage: Supplier (a select, `data-ph-order-sup`), Other bottle size… (`phAsk`), Mark ordered, Snooze 1
+  week, Open in the edit form, Take off the order list; an ordered row: Supplier, Back to To order, edit, Take off; arrived: Fix /
+  edit.
+- **Motion:** `phOsbMove` flies a herb that changes tab into its tab (`.ph-ost-fly`), whose count lights gold and pings
+  (`phOstLitTab`, `phOsbTabPing`); a change inside the tab glows the row; all of it off under reduced motion.
+- **Phone (≤640px):** the same tabs as two-line rows (`osLi`): name + Arrived + ⋮, then the stock bar, the stepper × size and
+  the line's cost as text (`osCostTxt`, faint while unconfirmed), as the mock drew it; the bottle price is set in ⋮ › Bottle price…
+  (phone only, `data-ph-ost-priceask`). A supplier's row wraps All arrived under its name; the Total at the foot.
+- **Width, measured:** the table draws when its card has `phOstNeed` px (896: the To order tab's seven columns need 895 with 8px
+  inside the cells, 12px at the card's edges); her 1220px window gives 909 under the page's scrollbar, 924 without. A narrower
+  card (a window of about 901–1200px) gets the two-line rows; a table that still draws wider than its card (a longer total)
+  raises `phOstNeed` and redraws as lines; a resize redraws when the answer changes; opening the page resets it to 896.
+- **One write for the bottle price:** `phRestockBottleWrite(h, v)`, called by the Cost field's save and the phone's ⋮ (the price
+  also goes on that supplier's row, as before).
+**Removed:** the two-column board (`phOsbFit`, `phOsbFillIn`, drag and drop, its side and Snoozed listeners), the row-details pop,
+the phone's tile strip (`osAddHtml`, `osLive`, `orderTotalNum`), `arrMonth`, `osCardToggle` / `osRefillOpt`. **Kept:** the data sets
+(`stillToOrder`, `onTheWay`, `unflagged`, `phSnoozedHerbs`, `recentlyArrived`), `osCalc`, `phOsbWrite`, the jars, every count
+through `phOnOrderList`.
+**Two calls of mine, to tell her:** the mock's column sorting is left out (a tappable column title is plain text that taps, TAPPABLE
+THINGS); Add to order sits first in the head's bar (the app's rule: the first verb is the solid one), where the mock had it second.
+**Code:** the state beside `phOsbSide` (`phOsFilter`, `phOstLitTab`, `phOstBodyOnly`, `phOstNeed`); the render in `renderPhRestock`;
+the listeners and `phRestockBottleWrite` after `phOsbTabPing`; the CSS block "To order in Cliniko's Products layout" just before
+"To order page audit, second pass". Commit 4252a750.
+**Tested** (sandbox, 302 herbs; a seeded list of 6 over Evergreen / GMP / Koda with 1 ordered, 5 running low, 3 arrived, 2
+snoozed): tabs, counts and the Total ($153.40, by hand); Arrived (the flight, the lit tab, Undo in the one toast); Add to order (the
+flight); the size chip; the filter (focus kept, No match, ✕, Esc); the ⋮ (supplier select, fixed position); the Cost field (2 ×
+$13.10 = $26.20, the Total $153.40 → $152.60, the supplier's price follows); Copy for email (clipboard stubbed: "Ordered 2 Nov",
+the glow, "2 ordered"); All arrived (4 flights); the Arrived tab (fix box, + 1 older, Clear); Unsnooze; widths 1100 (lines), 1195
+with a 12 × $127.45 row (the table tried, 913 > 899, drew lines), 1220 (table 922 in 922, nothing cut, the Total under Cost), 1300;
+a dispatched resize swaps lines → table at 1220; the phone at 375 and 360: every row two lines, no sideways scroll, ⋮ › Bottle
+price… 12.75 → $25.50. Integration: the side menu's count, the head's "6 on the list", the tab and the Dashboard's Order these
+("Planned" on the same herbs) agree. Prescriptions search 2 → 1 → 0 → 2. Console clean but the sandbox's offline-script fetch.
+Pictures: `shots/to-order-cliniko-built-{1220,low-1220,1100,phone}-2026-11-02.png`. **Not tested:** her real records, her Key2 and
+her computer, a real clipboard, a real window resize (the hidden pane sends none; the event was dispatched), Stock statistics.

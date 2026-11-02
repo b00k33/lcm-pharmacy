@@ -56,7 +56,7 @@ Call · Text · Email circles (`.un-row3`, `.un-icons.circ`).
 **One height, app-wide:** this 32px box look departs from TAPPABLE THINGS' pill chips on her word, and every page follows it: the
 Next button, patient rail, search boxes, small pills; Fang Bing Ren + Ren (each sign a white 32px box, the ✕ its own end); the
 exam pages (Today's visit, Ask her, Tongue, Pulse, Abdomen, Medical history); Treatment, the Care Plan and its pain map, Timeline,
-Messages (a message group over 6, or one that would wrap, is a dropdown), Musculoskeletal, the Guide, the To Order board,
+Messages (a message group over 6, or one that would wrap, is a dropdown), Musculoskeletal, the Guide, the To Order table,
 Inventory's in-row cells, Cycle, visit filters, Diagnosis colours, Dashboard, the Up next fold, every other page [Every other
 page, one height]. The new prescription form (Name, Ingredients, Notes, Save; shared by New formula recipe, New patient and the
 open recipe's add row): tinted 32px fields, + Add a Button so Save is the one solid one, the band's plain title not a field, the
@@ -576,14 +576,22 @@ In that sheet Grams and Name are fields and Type a dropdown, ⋯ is an icon circ
 and Edit as a plain list are chips, the code column is 80px (the phone folds it away, as Dispense does), and the match line says
 "✓ all N ingredients matched" only [Formula refill page audit].
 
-**To Order: two steps (her pick; LIVE, 81514da3 is on main)** [Inventory: stock truth, To order in two steps, lean Inventory, Price
-review in Suppliers]. Desktop (>900px) = a 2-column board that fills the window: **To order** (a To order | Running low switch;
-per supplier, A to Z in fixed spots, the herbs still to order AND the ordered ones, which read "ordered <date>" with an
-**Arrived** button; Snoozed N ▾) and **Arrived** (last 14 days). **Copy for email is the order**: the supplier's still-to-order
-herbs turn ordered once the copy landed (one toast, Undo; a blocked copy marks nothing). The supplier's bulk button is **All
-arrived** (its whole list, snoozed excepted). No On the way column, no Mark ordered. Nothing scrolls a column on any board move;
-details pop out beside the row; a formula card has "Refill ▾". The phone: bands To order (both stages) · Running low · Arrived ·
-Snoozed, sprite icons, a row's top opens the edit drawer. **Its look (her 2026-11-01 audit and second pass):** every act on the board and the list is the Button, 1.5px herb line (her second-pass pick "Herb line", over her 10/23 mock's grey line; Order now and Undo arrival red; Refill ▾, Clear, Snoozed and Show stay chips; no solid button on a row; 32px, the phone 28px), "+ Add to order" under the phone / tablet stat strip the Button within the head's edge, a band's count beside its name with Clear at its right end, rows under a supplier line without that supplier's tag, icon-only taps are circles, the add-a-herb box is the 32px search box with the magnifier, the row details and the arrival fix use fields, one label look, and no lines under heads, bands or supplier lines. **Every count of the list** (top bar, side badge, Dashboard, Stock statistics, Mark all arrived) reads `phOnOrderList`, so a snoozed item not yet ordered is left out everywhere, as on the page [To order page audit]. Dashboard's Order/Refill cards are TWO PLAIN LISTS,
+**To Order: Cliniko's Products layout (her 8 picks 2026-11-02; built 4252a750, not live yet)** [To order, Cliniko Products
+layout]; still two steps, To order → Arrived [Inventory: stock truth, To order in two steps, lean Inventory, Price review in
+Suppliers]. A full-width filter (code, pinyin, name, supplier), then ONE table at a time under four joined tabs with their counts:
+**To order** · **Running low** · **Arrived** (last 14 days, + N older, Clear) · **Snoozed** (only while one is). To order = a row per
+supplier (its chip or name · n items · $sum · n ordered · Copy for email · All arrived) over its herbs: jar + code + name (opens the
+edit form) · Stock (bar + grams) · Low at · Order (− n + × the size chip, 100 g ⇄ 200 g) · Cost (the bottle price a field, the line's
+total beside it from 2 bottles) · Status (To order / ✓ Ordered <date> / Empty) · Arrived + ⋮, and one Total row at the foot. An
+ordered herb stays in its place ("2 × 100g", ✓ Ordered 30 Oct). **Copy for email is the order**: the supplier's still-to-order herbs
+turn ordered once the copy landed (one toast, Undo; a blocked copy marks nothing); Mark ordered sits only in a row's ⋮ (an order
+placed by phone). **All arrived** takes the supplier's whole list (snoozed excepted). The ⋮ also holds Supplier, Other bottle size…,
+Snooze 1 week, the edit form and Take off. The head = **Add to order** (solid; the type-to-search row) + Mark all arrived. A herb that
+changes tab flies into it and that tab's count lights gold. The table draws when its card has 896px (her 1220px window has it,
+`phOstNeed`); a narrower card and the phone draw two lines per herb (the phone: the line's cost as text, Bottle price… in the ⋮). No
+column sorting (TAPPABLE THINGS). **Its look:** every act is the Button (32px, 1.5px herb line; Order now red; a supplier's All
+arrived solid), the size a chip, the bottle price a tinted field, status tags that never tap, a pale-blue head row, striped rows,
+numbers right, 28px on a phone. **Every count of the list** (top bar, side badge, Dashboard, Stock statistics, Mark all arrived) reads `phOnOrderList`, so a snoozed item not yet ordered is left out everywhere, as on the page [To order page audit]. Dashboard's Order/Refill cards are TWO PLAIN LISTS,
 empty first then fewest days of cover; a Refill row also shows the formula's next booking (her pick); a long name wraps on both.
 Under Order these, See all and To order share one line; from 641 to 900px both cards keep the computer's 14px inner edge, so the
 caption band's words line up with the rows [Dashboard page audit, second pass].

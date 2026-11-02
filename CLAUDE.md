@@ -544,7 +544,9 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 - Show the stock-level bar in its OWN column with a % label, never squashed
   under the stock number. % = stock vs the "low at" reorder line, capped at
   100%; green at/above the line, amber below, red near empty. Same treatment
-  on both the To Order list and the main Herbal Inventory table.
+  on the main Herbal Inventory table. **To Order** (her Cliniko Products pick
+  4, 2026-11-02): the bar sits before the grams on one line in its Stock
+  column, the % in the hover; never under the number.
 
 ## NEVER break these (protected behaviours — re-test after EVERY change)
 - **ONE location's data must never reach ANOTHER location's cloud row** (the
