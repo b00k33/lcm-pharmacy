@@ -140,7 +140,7 @@ time (or a drag down a free column for a longer time) opens a card beside it (a 
 card): Search events, then her event presets grouped under her colours; one tap adds the event at that time with the preset's
 length, colour and repeat, Undo in the one toast. A repeating preset whose routine already runs adds that day only; otherwise it
 starts the routine and the toast offers Only this day. "New “x”" saves a new preset with the event. A preset = name · colour ·
-length · usual time · repeat, kept in the Me row's `pre` map (merged like items); edited in Settings › Calendar › Event presets
+length · usual time · repeat, kept in the Me row's `pre` map (merged like items); edited in Settings › Calendar › Event presets (her 43 tidied presets entered 2026-11-02)
 (one table, ✎ per row, + Preset) or from the card's Edit list ›. The Me form's Event title lists the names and a picked one fills
 the rest. Her own names are data in her Me row, never in this file. Patients stay in Cliniko. Code: "QUICK ADD · A CLICK ON A
 FREE TIME" (`phQk*`; `phQa*` is Quick assess).

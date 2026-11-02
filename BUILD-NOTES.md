@@ -8147,7 +8147,7 @@ the right edge the card flips left; Settings: the Calendar group, the table, ✎
 + Preset, Delete + Undo; the Me form: typing "Pilates" fills 07:30–08:00, Fitness, Once. 375px: the bottom sheet, full width,
 the scrim, no sideways scroll. Prescriptions search 3 → 1 ("zz f") → 0 → 3 (the load-time banner in the sandbox is its own false
 alarm: all three made-up patients start "Zz"). No console errors.
-**Not tested:** her real data and her 43 presets (not entered yet); a real finger on the phone (the pane reports a coarse pointer,
+**Not tested:** her real data; her 43 presets were entered 2026-11-02 (the end of this note); a real finger on the phone (the pane reports a coarse pointer,
 so the search box is not focused on open there, as on a phone); the Key2.
 **Pages checked for the fact:** Appointments grid (week, day, phone), the Me form (Event), Settings › Calendar; the toast and its
 Undo; the booking card still opens on a booking.
@@ -8160,6 +8160,11 @@ table scrolls inside its card (checked at 375 for both; 1220 unchanged).
 **LIVE** 2026-11-01, build 20261101-192000 (publish c2e456da, made by the Appointments-audit session on her "push live"; it
 carried cc8f4a17 + 58d15c5f). Checked on the live page: the build stamp, `phQkOpen`, the `.ph-qk[hidden]` rule and the Settings
 column's max-width. The mock moved to `mocks/`. Her presets go into her Me row after she taps Update on the computer and the phone.
+**Entered 2026-11-02** (her pick "A · all 43 as listed", both devices on build 20261102-123700): one `phMeSave` through the app on her
+live tab wrote the 43 into `pre` (rev 162 → 163, synced); Work 10 · Fitness 3 · Meal 7 · Medical 2 · Personal 7 · Upkeep 6 ·
+Cleaning 1 · Travel 3 · Study 1 · Code 1 · Night 1 · Sleep 1, 26 with `from` (the titles they were tidied from). The list stays in
+the session's scratchpad (`qk-presets-seed.json`, ids in `qk-presets-seeded-ids.txt`): names, never in this public file. Settings ›
+Calendar › Event presets shows the 43 rows (checked on her live tab).
 
 ## Appointments page audit (2026-11-01)
 Her words: "audit the appointments page for consistency too". Audit = apply: measured at 1220, 800 and 360 against TAPPABLE
