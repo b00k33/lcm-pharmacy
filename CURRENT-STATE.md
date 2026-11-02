@@ -1175,7 +1175,7 @@ Table · Numbers (a computer): the week with each meal as its photo and its firs
 device like every photo, never in the cloud row; a phone sends them to her computer (the photo relay, `_m<slot>` on the file,
 `phCapAutoImport` files them as meal photos); backups carry `meal` + `takenAt`. Her Photos pages leave them out
 (`phRenLoadPhotosFor`, `phRecPhotosLoad`). Code: "MEAL PHOTOS" (`phMealPhs` · `phMealPhLoad` · `phMealPhSave` · `phMealPhHad` ·
-`phMealPhRowHtml` · `phMealPhRender`, `data-mph-*`, `#phMealPhView`). NOT live.
+`phMealPhRowHtml` · `phMealPhRender`, `data-mph-*`, `#phMealPhView`). LIVE build 20261102-204600.
 **Food reactions**: a meal she had (her card, under Had it) and a patient's noted day or usual meal (Diet sheet, "Usually after it")
 take an **After it**: Gut / Body / Felt good chips + her own words (+ Own, they stay), ONE How strong bar, Started, From (which
 thing), a Note. The mark (the first reaction's picture in a pale red circle, green for Felt good) shows on the grid block, the Me
