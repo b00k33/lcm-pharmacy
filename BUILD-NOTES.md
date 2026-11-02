@@ -10111,3 +10111,55 @@ grey dot was seen; the other colours by CSS), + Add jar on a column with her rec
 checked: the Herbs table was the only place these chips were drawn; the Families and Herbs tabs' stock chips (`.ph-gd-stock`) are untouched.
 Picture `shots/compare-one-line-2026-11-02.jpg`.
 **LIVE** in build 20261102-223500 (publish 485b7893, her "push live"; the + Add jar head button with it); her devices need the gold Update.
+
+## Fasting dial (2026-11-02)
+Her ask (late evening, a screenshot of the Meals rings' fasting ring "7:18 · Fasting · of Breakfast ▾ · → 7 am"): "make this stand out
+more and give it interactive elements to show how many hours ive fasted adn how many more to go - show mock". **Measured:** the ring was
+`phMplFastRingHtml` / `phMplDayFastRingHtml`, 64px like kJ · P · C · F (so it did not stand out), moved each minute by `phMplLive`
+(`data-mpl-fring`) and `phFastTick` (`data-fast-hm`); on a phone 44px with the goal hidden. **Mock** `fasting-ring-mock-2026-11-02.html`
+(app root until live, then `mocks/`; artifact V4iAacsGHcTKCLrU7QQpYp): Now · A Hour ring · B Night dial · C Hour bar, each on a computer
+and a phone, with a mock clock (7:19 in · 12 h · 7 am · past 7 am, Next hour). **Her 4 picks (memory project_lcm_fasting_dial_2026_11_02):**
+1 **B · Night dial** (the recommended was A); 2 the hours fasted big, **a tap swaps** to the hours to go; 3 **a gold pop once** when an hour
+fills; 4 the **phone the same** as the computer.
+**Built** (the "FASTING DIAL" block before `phMplFastRingHtml`, ten fragments):
+- `phMplDialOf(k, f)`: the fast a dial draws, "now" = the running one (`phFastActive`, `phFastGoal`), a day = the fast that ended that day
+  (`phMplDayFast`, which now also returns its start `s`: the logged fast's, or the last thing she ate the day before); s, g, h, run, met, lg.
+- `phMplDialInner(m, k)` draws a 150 × 150 face: the track, 24 hour ticks (every 6th longer) and 12a / 6a / 12p / 6p, the fast one piece an
+  hour from its start's clock angle (`phFdPt`, `phFdArc`; 0.9° gaps): done `--ph-herb`, to go `--ph-mac-pl`, met all `--ph-good`; the running
+  hour part-filled; a gold dot = now (running only); a white ring where the goal lands (until met); a transparent hit arc an hour
+  (`data-mac-bk="q|<day>|<i>"`, a faint band on hover) and the middle (`q|<day>|f`, `data-mpl-fswap` while it runs to its goal); the middle's
+  big number = fasted, or to go after her tap (`phMplFswap`, localStorage `lcm-mpl-fswap`, this device). A goal over 24 h: the hours round
+  a plain face (no ticks or clock words).
+- `phMplDialV(m)`: the line under the dial, the number the middle is not showing ("8:36 to go" / "7:19 fasted"; past the goal "✓ goal +0:30").
+- `phMplDialPaint(el, live)`: repaints one dial in place (the svg's inside and its line); on the minute's tick (`phMplLive`, which now
+  repaints `svg[data-mpl-dial='now']`) an hour that just filled gets `.pop` (gold, wider, 0.8 s, `phTpReduceMotion` skips it); a box open
+  on the dial is shown again from the new piece.
+- `phMplDialBk(at)`: the box, in the rings' one box (`phMacBkShow` gains `fq` beside `fs`; `.ph-mac-bk.fq` 280px): an hour (Hour n of m,
+  its clock times and day, a dot + done / now · n left / starts in n, or for a past fast ended h / not reached), or the fast (fasted, to go
+  or ✓ goal, %, Started, Breakfast or Goal, This week n planned · aim; a past one: logged or from your meals, Started, Ended, Breakfast).
+- `phMplFastRingHtml(days, ph)` and `phMplDayFastRingHtml(k, tk)` draw the dial (`phMplDialSvg`); a phone's Stop / Start / Continue
+  last fast go beside it (`.fb`) and `phMplRactsHtml(past, ph)` leaves them out; the call in `phMplHtml` passes `phone`.
+- The swap: one document click listener before the goal's change listener (`[data-mpl-fswap]`), repaints every dial in place, the big
+  number fades in (`.mo-sw`).
+- CSS: the block "FASTING DIAL" after `.ph-mac-rg.fa.mo-gold` (170px column, the face's parts, `.pop`, `.mo-sw`, `.fq`, the box's state
+  dot `.st` with `--ph-dot`, both animations off under reduced motion); the phone in the PHONE REDESIGN block after `.ph-mpl-racts`: the
+  dial on its own row (136px), its line, → 7 am and the buttons in a column beside it, the four rings under it.
+**Disclosed calls:** a day not today draws a dial too (paging days keeps one shape); a past fast's "n short" now measures against that
+fast's own goal (its breakfast when that is the goal; before, "short" read the hours while ✓ read the breakfast); the fast ring's day-change
+sweep (`data-arc` "macfa") went with the ring, the macro rings keep theirs; while a fast runs the dial's hover title (aim · planned) moved
+into the fast's box (no native tooltip over the boxes); the Fasting page's own 240px clock (Your fasts ›) is untouched, not part of her
+ask; the goal field stays hidden on a phone (on Your fasts ›, as before).
+**Tested** (test copy on port 8998, a made-up "me" record with a running fast to a 7 am breakfast, Browser pane + headless Edge at 1220
+and 375): 16 hour pieces + the part-filled one, 16 hit arcs, 4 clock words, the line "8:15 to go" and → 7 am; pointing (the page's own
+mouseover handler) at hour 6 → "Hour 6 of 16 · 8:05 pm – 9:05 pm Mon · done", at the middle → "Fasting 48% · 7:40 fasted 8:14 to go ·
+Started Mon 3:05 pm · Breakfast Tue 7 am · This week 3 planned · aim 3–5"; a tap on the middle → 8:14 "to go", the line "7:40 fasted",
+`lcm-mpl-fswap` = 1, the box still open; a second tap → back, the key gone; a fast moved to 7:59:54 → on the minute the same svg repainted
+to 8:00 with `.pop` on hour 8 (data-hrs 7 → 8); a 16 h goal at 16:30 → all 16 pieces green, no goal ring, "✓ goal +0:30", no swap; a
+breakfast goal of 25.2 h → 27 pieces round a plain face, no ticks or words; past days: Sat 31 Oct (a logged 3 pm → 7:30 am fast) → green,
+16:30 fasted, ✓ goal, its box "Fasted · logged · ✓ goal · +0:30 · Started Fri 3 pm · Ended Sat 7:30 am · Breakfast Sat 7 am"; Thu 29 Oct →
+12:50, ✓ goal +1:00; a day with none → the face, "–", "No fast"; phone 375: the dial row (136px) with "8:06 to go", → 7 am, Stop fast,
+the four rings under it, Your fasts › after, no sideways scroll; the header clock chip read the same time. Prescriptions search: Zz → 2,
+Qqx → "0 match", clear → all. Console: no app error. Pictures `shots/fasting-dial-build-*.png` (computer, hour, fast, swap, past day,
+phone, phone-hour; the box held open for the picture). **Not tested:** her real fasts and devices; a real finger (taps were the page's
+own handlers); a fast crossing midnight into a new boot day on a long-open tab; reduced motion on a device (the CSS and the JS check are
+in place).
