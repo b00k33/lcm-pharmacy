@@ -10220,3 +10220,16 @@ motion map. Prescriptions search: Zz → 2, Qqx → "0 match", clear → all. Co
 (computer, tick, past day, phone). **Not tested:** her real meals and fasts; a real finger and a real photo picked; the bar's growth
 seen by eye; reduced motion on a device (CSS + `phTpReduceMotion` in place); a goal she clears to empty.
 **LIVE** in build 20261103-102500 (publish fe659223, her "push live"; the Fasting dial and the Meals goals went together); her devices need the gold Update.
+
+## Meals: protein and fat out of a day's More (2026-11-03)
+Her answer to the question left open by Meals goals ("should protein and fat come out of a day's More panel, now that the goals show
+them?"): "yes take them out of More". **Built:** `phDietBarsHtml` (only `phMplMoreHtml` calls it: the phone's More row and the computer's
+day column) leaves out the four goals (`PH_MAC`: kJ, protein, carbs, fat; the bars carried fat and protein) and leads with choline
+(`PH_NUT_TOP` less the goals); a phone's few = choline + the first three still under + "+ n more". `phMplMoreHtml` drops its
+kJ · P · C · F line too (all four are the goals'; its hover listed every nutrient, which the bars show); "Nothing counted" stays. Her
+2026-10-28 "prioritise fat protein and choline" holds wherever fat and protein are not the goals (Targets' order, a meal's small
+numbers, a patient's Diet page has no goals and is untouched: `phDietBarsHtml` is Meals only). **Disclosed call:** the numbers line
+went with them (she said protein and fat; kJ and carbs on the same line are the same repeat). **Tested** (test copy, `mg-shot.html`,
+made-up meals): computer, Mon 2's column = water, +250 ml, 13 bars from Choline to Sodium, no line, no Fat / Protein; phone 375, today's
+More = Choline · Iron · Vitamin C · Folate + 9 more (13 after the tap), no sideways scroll; Prescriptions search (phone list) Zz → 1,
+Qqx → 0, clear → back; console: no app error. **Not tested:** her real days.
