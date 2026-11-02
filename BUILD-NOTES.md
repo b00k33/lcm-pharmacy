@@ -9269,3 +9269,52 @@ The Overstock list's "Formulas that use this herb" (her recipes only) is unchang
 **Not tested:** her real prescriptions (the own-use numbers), her devices, the Key2's 469px height; the classical rows' accuracy is
 hers to check (Draft).
 **LIVE** 2026-11-02 in build 20261102-145000 (publish 77dafa82, her "Push live"); her devices need the gold Update.
+
+## Colour audit (2026-11-02): black for text, 2-3 colours for the UI, the rest as accents
+Her ask: "audit all app pages and keep design to - black for text, 2-3 colours for ui, and other colors kept as accents".
+**Measured** on her live computer (build 20261102-133700, read-only `getComputedStyle` of every visible element): 19 sidebar
+pages, 16 patient surfaces, 11 Me pages. Words carried colour all over the app: teal-deep headings and chip words (Inventory 128,
+Photos 509, Patient directory 165 `.ph-load-btn`), the active sidebar label, red cycle chips and condition badges on every list row,
+gold flags and priority notes (Medical history 24 + 25), blue plan bands and restock pills, the Case colour on every ‹ and tab line,
+a second black (`#000`, the 43 Medical history question labels), C22's own greys on Fitness. Report:
+`colour-audit-2026-11-02.md` (scratchpad); mock `colour-audit-mock-2026-11-02.html` (Today | A for six questions, plus the
+no-question strip). **Her 8 picks (popups):** 1 KEEP the Case-coloured patient rail; 2 KEEP the solid calendar blocks; 3 state words
+in black + a dot (not coloured words); 4 KEEP the dark heads and cards (Suppliers, Dispense history, Dosage & price, the herbs head,
+the dark bands); 5 Fang Bing Ren trait bars one teal, the leader in gold; 6 KEEP All templates' coloured groups; 7 LEAVE the Guide;
+8 gold = counts + the one gold card.
+**The law (CLAUDE.md Theme):** words are ink (`--ph-ink` / `-soft` / `-faint`), white only on a surface she kept dark; the UI is
+teal + white + gold (teal for lines, fills and the picked state; gold for counts and the one primary disc); every other colour is a
+mark, never a word: a 6px dot before a state word, a 3px stripe on a band, a stroke on a chart. Nothing suggests, nothing shouts.
+**Built, two layers, all inside the main `<style>`:** (1) a sweep (`ca-ink.pl`, scratchpad, deterministic): every `color:` that named
+a teal, status or Case token (39 tokens; herb-deep 551, green-deep 405, herb 200, zero-deep 138, gold-deep 135, low-press 106 …)
+now reads `--ph-ink`, EXCEPT a glyph pseudo-element, a rule whose own background is a solid dark or status colour (687 left alone)
+and a selector in a container she kept dark (495: the dispense band, the treatment hero, `ph-struct`, journey tiles, nav, pres band,
+topbar, cockpit, calendar blocks, event rows …); every STATE selector that lost a status colour (110, class names such as
+`.low .zero .late .due .stale .draft .stopped .over .todo .better`) gets the same 6px dot before its word, dot colour = the old token's
+family. (2) one hand block "COLOUR AUDIT 2026-11-02" before `</style>`: the `.ph-fit` C22 tokens remapped to LCM's (and the 22
+Fitness rules that gave WORDS the C22 green → ink; the ring, the plate button and the ± marks keep it); `.ph-hx-qlabel` ink; tinted
+state pills and chips (`.ph-pill.low/.draft/.stale/.make/.restock`, `.ph-cycle-chip`, `.ph-cond-badge`, `.ph-reloc-chip`,
+`.ph-load-btn.warn`, To order's `.ph-ost-bdg.amber/.red`, the Dashboard's `.pill.empty/.low` — EMPTY was white on solid red) →
+white + hairline + ink + dot; `.ph-ds-band.*` → paper + a 3px state stripe; `.ph-shell-qa-badge` gold with ink, `.ph-pill.count`
+gold-tint; words on kept dark surfaces stay `--ph-struct-lbl` / white (`.ph-tp-hero .gold`, `.ph-dsp-band .add`); the Dashboard's
+urgent task button solid teal (was solid red); FBR bars `--ph-herb` with an nth-of-type fade, `.lead` gold, `.ph-fbr-t-lab.hi` white;
+the patient flow rail's done-step tick ink on its gold circle (white on gold measured 2.1:1); `.srctag` (made-in-house tag, cream wash
+KEPT by her word) ink letters; `.ph-count-btn` ink (had the browser's black); a picked cell in a light shell top block ink; To
+order's lit count badge ink on gold. Outlined buttons' words go ink with the sweep (teal stays on their lines); an icon drawn in
+`currentColor` follows its words.
+**Kept on purpose** (her picks or the law's accents): the Case colour on the patient rail, ‹ and tab lines; solid calendar blocks;
+the dark heads, cards and bands with their light words; All templates' category tints and heads; the Guide's bars and dots; cycle
+phase dots, Me mode dots, stock bars; `#2F5D3F` Dispense head; jar art; `#15803D` her herb-row green; Cliniko and Acupreg colours.
+**Tested** (sandbox copy on port 8997, fresh storage, three made-up "Zz" patients; 1280×900 and 375×812): a scan of every visible
+element on all 19 sidebar pages, the 16 patient surfaces (profile tabs, Today's visit, Fang Bing Ren, Care Plan, Treatment,
+Dispense) and the Me drawer: no coloured word left and no text under 3:1 except translucent-white labels on the teal flow rail
+(scanner artefact; they are white at .14 alpha) and the ‹ back control (teal, a control, her pick 1); no sideways scroll at 375;
+the Prescriptions search Alpha → 1, Beta → 1, cleared → 1 (the app's own self-check warns in this sandbox because all three names
+start with "Zz", so "zz " matches 3 of 3 — a data artefact, not the filter); console: one pre-existing `presIngredientsEditorHtml`
+error for a prescription with no herb list, reproduced unchanged on the untouched HEAD copy (flagged as its own task, not this
+build); the diff is 1,581 hunks, every one inside the main `<style>` (checked by line range). Pictures (after):
+`shots/colour-{dashboard,inventory,toorder,patient,comms}.jpg`; before = the mock's Today column.
+**Not tested:** her real records (the Me pages need her sign-in: `.ph-fit` was checked by injecting its classes and reading the
+computed colours), her devices, the Key2's 469px height, print.
+**Next:** her "push live"; then the mock moves to `mocks/`. The sweep script is the record of what moved; a new rule follows the law
+by hand (a state word = ink + the 6px `::before` dot, `--ph-dot` for its colour).

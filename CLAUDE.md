@@ -366,15 +366,29 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   Men's health `--ph-mens*` (indigo). Only gynae and MSK recolour the patient
   panel (`.case-gyn` / `.case-msk`, both the `--ph-green*` and `--ph-herb*`
   token families).
+- **The colour law (her word 2026-11-02: "black for text, 2-3 colours for ui, and other colors kept as accents"):**
+  WORDS ARE INK: `--ph-ink` / `--ph-soft` / `--ph-faint`, white (or `--ph-struct-lbl`) only on a surface she kept dark.
+  Never a teal, status, gold or Case token on a `color:` of text — not a heading, a chip's word, a pill, a date, a count,
+  a nav label, a flag. THE UI IS THREE COLOURS: teal (lines, fills, the picked state), white (surfaces, chips, pills, cards)
+  and gold (counts, the one primary disc, the one gold card). EVERYTHING ELSE IS A MARK, never a word: a state word gets a
+  6px `::before` dot (`--ph-dot` carries its colour: `--ph-zero` empty / overdue, `--ph-low` low / due / draft, `--ph-blue`
+  plan / restock, `--ph-good` better, `--ph-phaseout`, `--ph-stopped`); a band gets a 3px left stripe; a chart its stroke.
+  A tinted state pill or chip is the standard chip (white + hairline + dot); a solid dark one keeps white words only where she
+  kept the surface dark. Kept by her picks: the Case colour on the patient rail, ‹ and tab lines; solid calendar blocks; the
+  dark heads, cards and bands; All templates' coloured groups; the Guide; the Dispense head, jar art and her herb-row green.
+  The sweep that applied it and the hand block "COLOUR AUDIT 2026-11-02" (before `</style>`) are in BUILD-NOTES "Colour
+  audit (2026-11-02)". A new rule follows the law by hand; outlined buttons' words are ink (teal stays on the line).
 - **Contrast:** text on a tinted card uses the family's `-press` step when
   `-deep` fails 4.5:1. Hover lifts (brighter), never deepens. Never mix toward
   a pale tint to make a "stronger" fill (tints have almost no chroma).
-  Amber TEXT reads `--ph-low-press` (`--ph-low-deep` stays for fills and
-  lines). Every text colour is solid, never a token at reduced opacity on a
+  Amber, red, blue and teal are never TEXT colours (the law above); `--ph-low-press`
+  and the other `-press` steps stay for marks and lines. Every text colour is solid, never a token at reduced opacity on a
   label; a count badge on a solid chip darkens it (`rgba(0,0,0,.2)`), never a
-  white wash. Fang Bing Ren colours pick white or ink by luminance (0.207) and
+  white wash; a count badge on a light surface is gold with ink digits. Fang Bing Ren trait bars are one teal (an nth-of-type
+  fade), the leader gold, labels ink or white by the bar (her pick 5, 2026-11-02); their colours pick white or ink by luminance (0.207) and
   a formula shade in the dead band is nudged out (`phFbrShadeFormulas`).
-  Measured app-wide 2026-10-25: every text 4.5:1 (BUILD-NOTES "Readable text").
+  Measured app-wide 2026-10-25: every text 4.5:1 (BUILD-NOTES "Readable text"); re-measured 2026-11-02 after the law (no
+  coloured word, nothing under 3:1).
 - **Type:** sizes come from the `--fs-*` tokens, never a one-off px. **One font on screen: Inter** (her 2026-10-27
   "i dont like this font" about Barlow Semi Condensed on the Care Plan title; her pick "Inter on screen"): words
   AND numbers, `--font-body`; `--font-disp` stays only as an alias of it. Every control inherits it (no browser
