@@ -9913,3 +9913,4 @@ Dispense herb search "bai" starts-with first then A–Z; the meal add list's 13 
 milks together, Big Mac · Double Big Mac); Care Plan picker + Settings rail A–Z in all 8 categories; message templates A–Z in 4
 groups, Cycle & IVF in its phase order; letter chips A–Z with the emoji skipped. **Not tested:** her real event presets (43, on her
 data only), her phone.
+**LIVE** in build 20261102-204600 (publish d16caf39, pushed by another session on her word; it carried 414b2d95 + 77a5144a; her "Push live" to this one came right after); her devices need the gold Update.
