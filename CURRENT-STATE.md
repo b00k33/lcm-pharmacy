@@ -1432,7 +1432,7 @@ card 900 px or wider (`phCxCardBHtml`; narrower and the phone keep the layout ab
 folded until tapped) over a 3-column table **Complaint · Today · Change** (Change = baseline → today, a small line + the +/− pill,
 `phCxChgHtml`; no Baseline / Trend / From baseline / Note columns); Energy is the last row ("am · pm · ev", its 1–10 bars in the
 panel); the pain tools are one joined bar under it (＋ Pick areas · Close-ups · Surgeries · Pain intake). Beside it the **panel**
-(`phCxPnlHtml`; plain on the card since her 2026-11-02 "E Plainer": no box, no side line, no boxes inside) holds the asked row
+(`phCxPnlHtml`; plain on the card since her 2026-11-02 "E Plainer", LIVE 20261102-142600: no box, no side line, no boxes inside) holds the asked row
 large: its name (it wraps, never cut) with ✎ Note · ⋯ Details · › Next as three 32px circles on the same line (each name in its
 hover; › solid, an open one solid, a second tap closes it), the Goal (one tinted field with a flag; the Goal lives only here), Today
 (the slider and its plain number), the body drawing; on a return visit its chart (`phCxRowChartSvg(s, true)`: the line, its dots

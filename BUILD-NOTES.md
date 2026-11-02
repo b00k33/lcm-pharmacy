@@ -9203,3 +9203,5 @@ labels read 7 · 6 · 5; no console errors. Integration: the Goal, chart and not
 view; the Treatment tab's "How <name> is" card does not use the panel (not changed).
 **Not tested:** her real records and devices; a sign row and a typed complaint in the panel (same code path as before, only the
 tags left); a score dragged on the panel's slider by hand (the slider itself is unchanged).
+**LIVE** 2026-11-02 on her "push live": build 20261102-142600 (publish f85740b4, code 5b77ba7e). Checked on the live copy: the stamp,
+`.ph-cx-pic`, `phCxRowChartSvg(s, plain)`, the ✎ toggle, the tinted note box, the Goal's flag. Her devices need the gold Update.
