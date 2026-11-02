@@ -1188,6 +1188,17 @@ device like every photo, never in the cloud row; a phone sends them to her compu
 `phCapAutoImport` files them as meal photos); backups carry `meal` + `takenAt`. Her Photos pages leave them out
 (`phRenLoadPhotosFor`, `phRecPhotosLoad`). Code: "MEAL PHOTOS" (`phMealPhs` · `phMealPhLoad` · `phMealPhSave` · `phMealPhHad` ·
 `phMealPhRowHtml` · `phMealPhRender`, `data-mph-*`, `#phMealPhView`). LIVE build 20261102-204600.
+**Food on the photo** (her 2026-11-02 "allow option to add food eaten linked to food in photo"; mock
+`food-on-photo-mock-2026-11-02.html`, her 9 picks): in a meal photo's big view a **tap on a food in the photo** opens the meal's own
+search there (the Add list; Snacks · drinks: its picker), the meal's foods with no dot here yet listed under it; the food picked goes in
+at its usual amount and a **numbered dot** stays on the spot (it drops in). Under the photo, **the meal's food table**, each row numbered
+like its dot (− +, kJ, ✕); a food with no dot on this photo: a dashed circle and **Place** (then a tap on the photo). A dot: **hover = its
+Food share** (its row lights), **tap = − + and Remove** (off the meal, Undo). Dots show in the big view only. A phone: the same, the
+search rises from the foot over the keyboard. **Kept** on the meal's entry, `pins = {<photo>: {<food>: [x, y]}}` (0–1 of the photo),
+so they sync; <photo> = the photo's first id (`srcId` on a relayed copy: the relay name carries `_r<id>` before `_m<slot>`), <food> = its
+base (a snack: "@" + its time). A food and its dot are one save (`phMealPhPend`, read by `phMealSave`): one Undo takes both. Adding a
+food on the photo ticks Had it at the photo's time (meal photos pick 5). Code: "FOOD ON THE PHOTO" (`phMealPhTap` · `phMealPhPinIn` ·
+`phMealPhPinPut` · `phMealPhFoods` · `phMealPhPlaceEl`, `data-mph-pw|pin|place|here|pc`, `phMealRowHtml(…, ph)`). NOT live.
 **Food reactions**: a meal she had (her card, under Had it) and a patient's noted day or usual meal (Diet sheet, "Usually after it")
 take an **After it**: Gut / Body / Felt good chips + her own words (+ Own, they stay), ONE How strong bar, Started, From (which
 thing), a Note. The mark (the first reaction's picture in a pale red circle, green for Felt good) shows on the grid block, the Me

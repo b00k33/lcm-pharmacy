@@ -10039,3 +10039,45 @@ already ignores clicks inside a button. A jar record is the first step; Formula 
 made-up element with an empty recipe id and `data-ph-jar-name="Zz Named Test"` opens it with that name and kind Formula; console clean.
 **Not tested:** the head button itself (not yet built), her devices.
 **LIVE** in build 20261102-214100 (publish a11776ae, her "push live"); the head button follows with the herbs-table rework; her devices need the gold Update.
+
+## Food on the photo (2026-11-02)
+Her ask (right after meal photos went live): "allow option to add food eaten linked to food in photo". Mock
+`food-on-photo-mock-2026-11-02.html` (artifact Vkm8efs7qB8qpSQhyddQFG; a live big view with a drawn salmon / rice / broccoli plate + 9
+questions). Her picks, all A: 1 **tap the food** on the photo, the search opens there, a dot stays; 2 a **numbered dot**, name on hover;
+3 under the photo **the meal's food table**, rows numbered like the dots; 4 a food typed before the photo: **Place**, then a tap; 5 its
+**usual amount**, − + on its row; 6 tap a dot = − + and **Remove** (off the meal, Undo); 7 hover a dot = **its Food share**; 8 the
+**phone the same**, the search from the foot; 9 dots **only in the big view**; "Yes, build it".
+- **Kept:** on the meal's own entry (her Me row, so it syncs): `d.meals["<day>|<slot>"].pins = {<photo>: {<food>: [x, y]}}`, x · y = 0–1
+  of the photo. <photo> = `phMealPhPid(r)` = `r.srcId || r.id`: a phone's photo keeps its id on her computer because the relay name now
+  carries it (`phCapRelayPath(…, meal, rid)` → `…_<rand>_r<id>_m<slot>.jpg`; push, retry and backfill pass it; `phCapAutoImport` reads
+  `/_d[^_]+_[a-z0-9]+_r([a-z0-9]+)_m[blds]\.jpg$/` into `srcId`, strict so a random part starting with r is never read as an id; the
+  old build's `/_m([blds])\.jpg$/` still matches). `PH_REN_BACKUP_FIELDS` + `srcId`. <food> = `phMealBase(x)`; a snack: "@" + its `at`.
+  A dot whose food left the meal is kept and not drawn (Undo brings it back with the food).
+- **One save, one Undo:** a tap on the photo sets `phMealPhPend` {key, photo, x, y, the meal's foods now}; `phMealSave` calls
+  `phMealPhPinIn(d, now)` after its change: the food the meal did not have before (a snack: the item saved at `now`) gets its dot in that
+  same save, so the toast's Undo (its snapshot is taken before) takes the food and the dot back together. Then `phMealPhPopEnd` puts
+  back the `phMealPk` the planner's picker had (the search borrows `phMealPk`, so the Add list's own row taps, Enter for her own words,
+  Thisbowl and dishes all work unchanged). A save that adds nothing (− +, another meal) leaves the dot waiting.
+- **The big view (`phMealPhRender`):** the photo in `.ph-mph-pw` (the dots' frame, `data-mph-pw`; img max 60vh / 55vh on a phone, the
+  food table scrolls under it), dots `.ph-mph-pin` (32px white, ink number, gold ring when lit or open; `fresh` drops in), the table =
+  `phMealTblHtml(lid, vs, true, ph)` → `phMealRowHtml(lid, x, kj, ph)` (new 4th arg: the number circle `.ph-mph-nb`, Place `.ph-mph-plc`
+  in place of − + when no dot, no ✕ in a card); snacks `phMealPhSnRowHtml`. The search `.ph-mph-pop` = `phMealAddHtml(phMealPk, vs)` (a
+  snack: `phMealPickHtml`), search field first, its rows once she types (`.q`), then the meal's foods with no dot here (`data-mph-here`,
+  one tap = a dot on the spot); no Done / + New in it. It grows from the spot (down from the top half, up from the lower half:
+  `phMealPhPlaceEl`), so typing never runs it off the card. A dot's card `.ph-mph-pc`: its row (− +, kJ) + Remove (`data-meal-rm`, so
+  MEAL REPEATS asks as in the table) + ✕. Hover: a dot carries the row's `data-mac-bk` (`x|day|slot|food`, a snack `s|day|i`), so the
+  one Food share box shows; a row lights its dot and a dot its row. Esc closes the search / card / Place first, then the view; ← → never
+  step while she types. Phone (PHONE REDESIGN block): the search is a sheet from the foot, lifted over the keyboard (`phMealPhKb`,
+  visualViewport → `--ph-mph-kb`).
+- **Fixed on the way:** the planner's tap-away closed its picker (and `phMealPk`) for a tap inside the big view: `#phMealPhView` joins its
+  exceptions. `phMealRepaint` and `phMealCardRepaint` repaint the big view; `phMealPhPaint` waits while she types in it. The MEAL PHOTOS
+  state is `var` now (read by `phMealSave` from anywhere).
+**Tested** (test copy, Browser pane at 1220 by DOM, headless Edge pictures at 1220 and 375): Place on Eggs then a tap = dot 1 saved on
+the meal (`pins[photo]["food:egg"]`); a tap at a spot opened the search beside it, "toast" listed the toasts, Wholemeal toast went in at 2
+slices with dot 3 in one save, the search closed, `phMealPk` back to null and the planner's open Lunch picker still open; Undo took
+banana and its dot back together; a dot's card: + made 3 slices, Remove took it off with Undo, Undo put both back; hover a dot = the Food
+share box (z above the view) and its row lit, hover a row lit its dot; Esc closed the card, then the search, then the view; ← in the
+search did not step; a snack photo: "banana" picked = a snack + dot "@<time>"; Breakfast (photo 7:40, no foods): banana on the photo
+ticked Had it at 7:40; Broccoli (in the meal, no dot) listed under the search, one tap = dot 3; phone 375: the sheet at the foot, no
+sideways scroll, rows fit; relay names parse (with id, without id, a random part starting with r); Prescriptions search: Jane narrows,
+Zzqx none, clear returns. **Not tested:** a real phone (touch, keyboard lift), the relay end to end with ids, her real Meals.
