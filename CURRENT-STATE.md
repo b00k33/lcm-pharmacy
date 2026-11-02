@@ -1161,6 +1161,21 @@ Drinks · Menus · My dishes; not a patient's Diet sheet). Words that were a hov
 under the box instead. Every amount is `phDietSum([[x]]).t`, the ring's own sum. Phone (no hover): one line under each food of the
 open meal ("16% kJ · 19% P · 92% C · 5% F", a red dot past 100%); no box. Code: "FOOD SHARE" (`phMacFsOf` / `phMacFsRows` /
 `phMacFsHtml` / `phMacFsLine`, `data-mac-bk="f|…"`, `m|`, `s|`, `x|`, `a|`). LIVE build 20261102-193700.
+**Meal photos** (her 2026-11-02 "add a function where i can attach photos to my meals" + "allow for multiple photos of meal"; mock
+`meal-photos-mock-2026-11-02.html`, her 10 picks): a meal (Breakfast · Lunch · Dinner) or the day's Snacks · drinks takes photos,
+several each. **Table:** the first photo small beside the foods, "+N" for the rest (under the foods when the table is narrow: a meal
+or a day open beside it, the Grid); a meal with a photo and no foods yet reads "Add foods" with a gold dot. **Open meal** (the
+planner's, her meal card): the photos on top, then a dashed **+ Photo** tile (a computer: several at once, or drop them on it); a
+phone: **Camera · Photos** (Photos picks several). **Had it:** a photo on a meal not yet ticked ticks it at the photo's time (an
+older picture added later: the meal's own time that day); a meal with no foods yet waits, and adding its foods ticks it then; a
+day to come never. **Big view:** a tap on any photo; ‹ › and ← → walk the day's meal photos, the meal's foods + kJ under it, Share
+(a phone's share sheet) or Save (a computer), Delete (asks, then Undo: the one photo undo). **Photos view:** a 4th view beside Grid ·
+Table · Numbers (a computer): the week with each meal as its photo and its first food, a dashed camera where a meal has none.
+**Kept:** her own record's photo store (`lcm-ren-photos`, kind "meal", `meal` = b · l · d · s, `dateKey`, `takenAt`), on each
+device like every photo, never in the cloud row; a phone sends them to her computer (the photo relay, `_m<slot>` on the file,
+`phCapAutoImport` files them as meal photos); backups carry `meal` + `takenAt`. Her Photos pages leave them out
+(`phRenLoadPhotosFor`, `phRecPhotosLoad`). Code: "MEAL PHOTOS" (`phMealPhs` · `phMealPhLoad` · `phMealPhSave` · `phMealPhHad` ·
+`phMealPhRowHtml` · `phMealPhRender`, `data-mph-*`, `#phMealPhView`). NOT live.
 **Food reactions**: a meal she had (her card, under Had it) and a patient's noted day or usual meal (Diet sheet, "Usually after it")
 take an **After it**: Gut / Body / Felt good chips + her own words (+ Own, they stay), ONE How strong bar, Started, From (which
 thing), a Note. The mark (the first reaction's picture in a pale red circle, green for Felt good) shows on the grid block, the Me
