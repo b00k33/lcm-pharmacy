@@ -9988,3 +9988,4 @@ birthdays, two bookings on trip days; her doses and cycle day stubbed): 12 leaf 
 due glow, 1 taken), lectures full width, the line "Study Tour · day 4 of 17 · Nanjing time", CD 3–8 in grey words, no ⏸ chip, no
 day label, 2 grey planes, Add appointments alone; console clean. Picture `shots/calm-week-build-2026-11-02.jpg`. **Not tested:**
 her real doses and cycle record (stubbed), a tick on a dose, the phone.
+**LIVE** in build 20261102-212000 (publish a9f9bea0, her "Push live"; the Compare motion 5e1b6b84 rode along); her devices need the gold Update.
