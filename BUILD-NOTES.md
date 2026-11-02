@@ -8982,3 +8982,52 @@ the rings' arc `--ph-zero` and its "n over" line `--ph-zero-deep`; the Table's n
 and bars; both keys gain "kJ · carbs over" (red) before "over goal" (deep). Protein and fat over stay deep. **Tested** (her mock
 week, Wed 28): kJ and carbs rings, cells and bars red (rgb 198 40 40 / text 166 27 27), protein deep, fat teal; Table, Grid and
 Numbers pictures `shots/meals-red-over-{numbers,grid}-2026-11-02.png`. **Not tested:** her real records, her devices, the phone.
+
+## 2026-11-02 — Side rail, teal band
+Her words, with screenshots of the LCM rail on her own profile, Zanda's side menu and Cliniko's teal one: "for kj and carbs,
+show red when over. redesign the side toolbar using zanda and cliniko as inspo - show 2 mocks". The red is its own note above.
+Mocks (scratchpad, not in the repo): A Zanda (white, an icon a row) vs B Cliniko (teal band, white words), then A white vs C
+"teal band" (A's rows on B's band). **Her picks (three popup rounds):** the open row = Tint + teal bar; the steps = Number circles;
+the groups = Fold with ▾ (this device remembers); the look = **C teal band**; keep "‹ Menu" (it folds the rail to a 56px strip of
+icons; this device remembers); the name on top = Yes; where = every patient's rail (and hers); "Yes, build it", then show her
+before anything goes live; the kJ / carbs red goes live with the rail.
+
+**What it is (desktop, ≥641px):** the rail is a 212px band of the house teal running the panel's full height (the flow lost its
+16px top/left inset; the page body keeps 16px on top). Top to bottom: "‹ Menu", the name with its initials ("My profile" on hers),
+This visit and Next up (restyled for the band), the six steps (a 24px circle with its number, done = the brass circle with ✓, the
+name and its line) and the page rows (32px: the icon, the name, its count / date / "n left" / badge / flag at the end). The open
+row is the light tint with a deep 3px bar; while a page row is open its step stays plain (one lit row, as in the mock). ⋯ More is
+two lines (the word, then what it holds). Each captioned group (Body, Life, File, Fertility & cycle, Log / Clinic) folds on its ▾
+head; the page she is on stays in view in a folded group. Menu folded: 56px, icons and circles only, each name in its hover,
+folded groups shown. The phone keeps its strip of steps (no change there).
+
+**Code:** `PRES_RAIL_ICN` + `presRailIcn` (the icons), `presRailFolds` / `presRailFoldFlip` (`lcm-rail-fold`, a list of groups),
+`presRailMini` / `presRailMiniFlip` (`lcm-rail-mini`), all just above `presFlowRailHtml`, which now draws the menu button, the name
+(`.ph-rail-who`), `capBtn` group heads (`data-flow-fold`), a `fold` class on folded groups and their More rows, an icon in every
+page button (the label stays the button's own text, which `phPsPages` reads), `.t` around a step's name and line, `par` on a lit
+step whose page row is open, hover titles when folded, and one `.ph-rail-in` wrapper inside `#presFlowRail` (sticky on a computer,
+`display: contents` on the phone). Handlers beside `data-flow-more`: `data-flow-fold` flips the group and repaints the rail;
+`data-flow-mini` flips the menu, repaints the rail and, on a plan page, the page in place (`presTpMainTabRefresh`, for its new
+width). `presBandPageSync` reads a step's name at `:scope > .t > b` too; `phCxCardHtml`'s first-paint width takes the rail as 228
+or 72 (it was 204). CSS: one block at the end of the main stylesheet ("The teal rail"), every rule under `#presFlowRail` inside
+`min-width: 641px` (the ids outrank the older rail rules, which stay for the phone strip). Tokens: `--ph-house` / `-deep` /
+`-tint` hold the teal hexes and are never reassigned (`--ph-herb*` now read them; CLAUDE.md Theme says so), and the band's own
+`--ph-band-soft` / `-faint` / `-icon` / `-line` / `-hover`.
+
+**Disclosed calls:** the band stays the house teal on a Gynae / MSK patient (the rail sets `--ph-herb*` back to `--ph-house*` for
+itself; the Case still shows in the head's 3px line and on the page): a crimson band on most of her fertility patients would undo
+her teal pick, and the case colours' pale words fail 4.5:1 on crimson. Icons reuse the ones the pages have on Today's visit (Ask
+her i-msg, Tongue i-pt-tongue, Pulse i-pt-pulse, Abdomen i-pt-bowl, Musculoskeletal i-dumbbell, Cycle i-pt-drop; the mock drew
+Cycle as i-drop); Messages i-mail, Timeline i-flag, Patterns · Diagnosis i-chart, Notes i-edit, Code i-doc. A patient's name has
+no second line (age and sex are already in the head). The line joining the steps is gone (the mock has none); the ✓ pop and the
+pulse on the next step stay. The ▾ turn is the only new motion and is off under reduced motion.
+
+**Tested** (`_rail-shot.html`, a made-up patient on a Natural fertility plan and her own record; headless Edge pictures and the
+Browser pane): Today's visit at 1440, her Meals at 1440, Medical history open at 1220, Menu folded at 1220 (56px, the page moves
+to 72px, hover names), File + Log folded at 1220 with the Fang Bing Ren page row open (its step plain), Dispense at 1440 (the fit
+layout: the band fills the window and scrolls inside itself), 800px, the phone at 360 (strip unchanged). By clicks: fold and
+unfold (`lcm-rail-fold` written, `aria-expanded` flips), Menu and back (`lcm-rail-mini`), page rows and steps open their pages and
+the head's "/ Page" follows (Tongue, Medical history, Today's visit), the profile search's counts land on the rows (white with deep
+words on the open row). Pages looked at: Today's visit, Tongue, Fang Bing Ren, Medical history, Dispense, her Meals.
+**Not tested:** her real records and devices; a search with real matches (the made-up patient has none); a rail taller than the
+window beside a long page (its lower rows scroll with the page, as before). Pictures: `shots/rail-teal-*-2026-11-02.png`.
