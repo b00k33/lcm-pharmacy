@@ -9613,6 +9613,13 @@ Her Chai Hu Gui Zhi Gan Jiang Tang table (19 symptoms /5 headed "REN", 5 finding
 - **Needs her word:** Chai Gui Tang in the dry palms line; the thick, dry coat reading a dry tongue body; "Tongue: very dry" as her dry tongue body
   (or a plain "Tongue: dry" row); the energy rows on Ask her; DRAFT words (the 7 row names, the 4 Ask her answers, the card line, picture labels),
   the Chai Hu filing, Patterns Qi stagnation.
+- **Her answers (2026-11-02, popups):** (1) dry palms and soles do NOT count for this formula (her "no", after a first "yes" was built and taken
+  out); run 20's "Chai Gui Tang" line keeps waiting. (2) "Coat's own Dry only": the chart's chips follow her two-subjects rule (`phTngSignChips`):
+  `coat_thick_dry`, `coat_dry_yellow`, `coat_dry_yellow_tend` read only the coat's Dry (`coatQual:dry`), the dry tongue row only the body's
+  (`moist:dry`); a dry body + thick coat no longer ticks "Tongue coat: thick, dry" (Da Huang's families lose that from a dry body alone).
+  (3) "Tongue: very dry" is now "Tongue: dry" (the key stays; the link "Tongue: dry vs wet"). (4) the two energy rows stay taps. Tested: coat Dry +
+  Thick ticks thick, dry; body Dry + Thick ticks only the dry tongue and the thick coat; coat Dry alone does not tick the dry tongue; scores as above
+  (100 / 48 / 24), all 39 families lead their own full picture, no console errors. DRAFT words still hers.
 
 ## Four bánh mì + a plain Matcha latte (2026-11-02)
 Her ask "add banh mi thit heo, banh mi heo quay, matcha latte, banh mi xiu mai, banh mi bi". Only "Bánh mì thịt" was there (SG's
