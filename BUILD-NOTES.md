@@ -9621,7 +9621,7 @@ Her Chai Hu Gui Zhi Gan Jiang Tang table (19 symptoms /5 headed "REN", 5 finding
   Thick ticks thick, dry; body Dry + Thick ticks only the dry tongue and the thick coat; coat Dry alone does not tick the dry tongue; scores as above
   (100 / 48 / 24), all 39 families lead their own full picture, no console errors. DRAFT words still hers.
 - **LIVE:** the run (54f35a99) in build 20261102-184800 (publish bd320e0a, another session's push for the food list carried it); her answers
-  (2928cd05) wait for her "push live".
+  (2928cd05) in build 20261102-185400 (publish 47bf593d, on her "push live").
 
 ## Four bánh mì + a plain Matcha latte (2026-11-02)
 Her ask "add banh mi thit heo, banh mi heo quay, matcha latte, banh mi xiu mai, banh mi bi". Only "Bánh mì thịt" was there (SG's
