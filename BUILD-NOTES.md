@@ -9394,6 +9394,10 @@ untouched copy that one record broke the Formula refill page outright (`renderPh
 reader above threw when called; on the patched copy Formula refill draws its four tabs, All recipes lists the bare record with
 "—", each reader returns (0 matches, an empty price line, the price pass runs), the Dispense herb picker shows its list for
 "zz", the Inventory status pop draws; console clean. **Not tested:** her real data, the phone.
+**LIVE** 2026-11-02: the open-script fix (e65c1d9a) went to main in another session's publish 172700 (its Pages deploy failed) and
+is served since the LCM bugs session's 174100 (edd8bd1e, her "clear the lock and push live" there), which also carries the list
+guards (4a5f67e2); her "push" to this session then made the stamp-only re-publish 174300 (9d1f405d, no code change). Her devices
+need the gold Update.
 
 ## Clear chicken soup (2026-11-02)
 Her ask: "add clear chicken soup to food list". `PH_FOOD.cn_chicken_soup_clear`, "Clear chicken soup", in the Chinese group beside
