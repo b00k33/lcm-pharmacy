@@ -9483,3 +9483,14 @@ This visit + Next up, same as the computer.
   patient's bar colour by eye (it reads the same tokens as the band).
 - **Integration (★★★):** one rail, two looks; the bar and the crumb read the same lit row; ‹ › click the rail's own buttons, so
   every page's opening code is the rail's.
+
+## Cơm tấm sườn bì chả (2026-11-02)
+Her ask "add com tam to food list": Cơm tấm sườn was already a row (since 11/1, SG "Char siew rice" close match). Her popup pick:
+**"Sườn bì chả too"** (the full plate, worked out from its parts). `PH_FOOD.vn_com_tam_suon_bi_cha`, Vietnamese, 1 plate = 499 g:
+the list's own rows (white rice 200 g, pork 25 g for bì, egg 30 g for chả, carrot 10, cucumber 25, tomato 15, sugar 14) + AFCD
+pork loin chop untrimmed BBQ'd 100 g (F006991), pork mince fried 30 g (F007055), fish sauce 11 g (F008004), vegetable oil 6 g,
+rice flour 3 g, white radish 10 g, vinegar 3 g, spring onion 2 g, water 15 g. Choline = the pork row's (USDA) for the AFCD pork,
+none for the small parts. A plate: 3378 kJ, protein 54 g, carbs 88 g, fat 25 g, sodium 1248 mg, choline 234 mg. Its hover lists the
+parts (`PH_FOOD_SRC`, "Close match: a recipe: …", the toum precedent). PH_FOOD 949.
+**Tested** (test copy): 17 numbers; "com tam" shows both plates under Everyday › Vietnamese; the hover reads the parts; console
+clean. Picture `shots/com-tam.jpg`. **Not tested:** her real Meals page and devices.
