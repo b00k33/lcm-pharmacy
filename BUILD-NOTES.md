@@ -10219,3 +10219,4 @@ no sideways scroll, the cameras on Breakfast / Lunch / Snacks (not the Fast dinn
 motion map. Prescriptions search: Zz → 2, Qqx → "0 match", clear → all. Console: no app error. Pictures `shots/meals-goals-build-*.png`
 (computer, tick, past day, phone). **Not tested:** her real meals and fasts; a real finger and a real photo picked; the bar's growth
 seen by eye; reduced motion on a device (CSS + `phTpReduceMotion` in place); a goal she clears to empty.
+**LIVE** in build 20261103-102500 (publish fe659223, her "push live"; the Fasting dial and the Meals goals went together); her devices need the gold Update.

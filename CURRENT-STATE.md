@@ -1156,7 +1156,7 @@ goal stays (`phMplGoalRing`). Off today the dial draws the fast that ended that 
 goal, or the hours done with the rest pale and "n short" against that fast's own goal; a day to come or no fast = the face and "–". A
 goal over 24 h spreads its hours round a plain face (no clock words). **Phone**: the dial (136px) leads on its own row with its line,
 → 7 am and Stop / Start (Continue last fast) beside it (`.fb`; `phMplRactsHtml(past, ph)` leaves them out there), its week of ticks,
-Reach and Stay under under it, Your fasts › after. Code: "FASTING DIAL" (`phMplDial*`, `phFdArc`, `phFdPt`). NOT live.
+Reach and Stay under under it, Your fasts › after. Code: "FASTING DIAL" (`phMplDial*`, `phFdArc`, `phFdPt`). LIVE build 20261103-102500.
 **Meals goals** (her 2026-11-02 "audit this page and streamline any repeating elements that do the same thing. make it so it
 communicates like atomic habits- its easy for me to see my goals and limits"; mock `meals-goals-mock-2026-11-02.html`, her 8 picks,
 all A; memory project_lcm_meals_goals_2026_11_02): one panel for the goals' day (`phMplGoalsHtml`): a head (the day off today + Today ·
@@ -1175,7 +1175,7 @@ from the day before (`data-barw`). **One place for each number** (her picks 4, 5
 columns and the Grid's Total row went; the bottom key keeps the table's marks (had it · repeats · bold · Fast · add a photo).
 **Today's camera** (her pick 8): today's Breakfast · Lunch · Dinner and Snacks · drinks carry a 32px camera (a computer: on the meal
 she points at; a phone: at the end of each of today's rows, not a dinner the fast covers): a tap = pick photos for that meal
-(`data-mph-add`, the + Photo's own door). Code: "MEALS GOALS" (`phMplGoals*`, `phMplGl*`, `phMplTick*`, `phMplRun`, `phMplFatHtml`). NOT live.
+(`data-mph-add`, the + Photo's own door). Code: "MEALS GOALS" (`phMplGoals*`, `phMplGl*`, `phMplTick*`, `phMplRun`, `phMplFatHtml`). LIVE build 20261103-102500.
 **Macros against her goal** (her picks: the Macros row AND today's rings) [Meals macros against goal]: energy, protein, carbs, fat.
 **Goals** (`phDietGoal`): kJ 8000 (her word 2026-10-28, "daily energy goal is 8000kj"), hers to change; water 2000 ml (C22's 8
 glasses; a target typed in glasses reads × 250); protein 50 g and carbs 50 g are hers (her word: "set carbs to 50g a day"); fat is hers,
