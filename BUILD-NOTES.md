@@ -9405,3 +9405,4 @@ words: chicken soup, chicken broth / stock, ji tang, gai tong, canh ga, nuoc dun
 **Tested** (test copy): the row has 17 numbers; "chicken soup", "canh gà", "broth" and "clear" find it; the Meals add list drawn with
 "chicken soup" typed shows it first ("Clear chicken soup · 1 bowl") above the shop soups; console clean. Picture `shots/soup-add.jpg`.
 **Not tested:** on her real Meals page and devices.
+**LIVE** 2026-11-02 in build 20261102-174100 (publish edd8bd1e; her "clear the lock and push live": another session's 14:27 lock had sat 14 min). Her devices need the gold Update.
