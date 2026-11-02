@@ -9647,3 +9647,12 @@ PH_FOOD 955; Vietnamese 37.
 first place drink 15th; hovers read the parts; console clean. Picture `shots/banh-mi-matcha.jpg`. **Not tested:** her real Meals
 page and devices.
 **LIVE** 2026-11-02 in build 20261102-184800 (publish bd320e0a, her "Push live"; Fang Bing Ren run 21 rode along). Her devices need the gold Update.
+
+## A Matcha latte for each milk (2026-11-02)
+Her ask "add matcha latte with milk"; her popup picks **"Name its milk"** + **"Add the other milks"**. `matcha_latte` is now
+"Matcha latte · full cream milk" (numbers unchanged); new `matcha_latte_creamy`, `_lite`, `_skim`, `_oat`, `_soy`, `_almond`, each
+the list's matcha 2 g + that milk row 260 ml + water 38 ml, unsweetened, 300 ml a cup (Drinks, 50 ml steps). A cup: full cream
+742 kJ, creamy 833, light 508, skim 415, oat 633, soy 709, almond 196. Oat's choline stays not counted (the oat milk row has none).
+PH_FOOD 961.
+**Tested** (test copy): 17 numbers each; "matcha latte" lists the seven in Drinks before McDonald's; "oat" finds the oat one; hovers
+read the parts; console clean. Picture `shots/matcha-milks.jpg`. **Not tested:** her real Meals page and devices.
