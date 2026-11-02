@@ -10233,3 +10233,4 @@ went with them (she said protein and fat; kJ and carbs on the same line are the 
 made-up meals): computer, Mon 2's column = water, +250 ml, 13 bars from Choline to Sodium, no line, no Fat / Protein; phone 375, today's
 More = Choline · Iron · Vitamin C · Folate + 9 more (13 after the tap), no sideways scroll; Prescriptions search (phone list) Zz → 1,
 Qqx → 0, clear → back; console: no app error. **Not tested:** her real days.
+**LIVE** in build 20261103-105100 (publish 15554e6c, her "push live"); her devices need the gold Update.
