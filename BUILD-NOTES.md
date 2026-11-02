@@ -9268,3 +9268,4 @@ no sideways scroll; the Prescriptions search 6 → 1 → 6; console clean. Fixed
 The Overstock list's "Formulas that use this herb" (her recipes only) is unchanged.
 **Not tested:** her real prescriptions (the own-use numbers), her devices, the Key2's 469px height; the classical rows' accuracy is
 hers to check (Draft).
+**LIVE** 2026-11-02 in build 20261102-145000 (publish 77dafa82, her "Push live"); her devices need the gold Update.
