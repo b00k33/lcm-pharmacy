@@ -9096,3 +9096,4 @@ pictures; no Stock statistics table scrolls (0px) and no page scrolls sideways a
 reload. Pictures: shots/wk-audit-*.jpg (disp, moves, stats, stats2, supp, photos, dir, intake at 1220; tab at 800; phone at 360;
 -before / -after). **Not tested:** her real records, her phone (Key2), Photos with photos in it, Intake with forms waiting,
 Relocation on the phone.
+**LIVE** 2026-11-02 on her "Push live": build 20261102-133700 (publish 28d249ad). Checked on the live copy: the last-column grip, the hidden chip, the Suppliers Button, the hover titles and the empty-state words are in it. Her devices need the gold Update.
