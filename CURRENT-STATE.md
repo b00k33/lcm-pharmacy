@@ -1198,7 +1198,7 @@ search rises from the foot over the keyboard. **Kept** on the meal's entry, `pin
 so they sync; <photo> = the photo's first id (`srcId` on a relayed copy: the relay name carries `_r<id>` before `_m<slot>`), <food> = its
 base (a snack: "@" + its time). A food and its dot are one save (`phMealPhPend`, read by `phMealSave`): one Undo takes both. Adding a
 food on the photo ticks Had it at the photo's time (meal photos pick 5). Code: "FOOD ON THE PHOTO" (`phMealPhTap` · `phMealPhPinIn` ·
-`phMealPhPinPut` · `phMealPhFoods` · `phMealPhPlaceEl`, `data-mph-pw|pin|place|here|pc`, `phMealRowHtml(…, ph)`). NOT live.
+`phMealPhPinPut` · `phMealPhFoods` · `phMealPhPlaceEl`, `data-mph-pw|pin|place|here|pc`, `phMealRowHtml(…, ph)`). LIVE build 20261102-214600.
 **Food reactions**: a meal she had (her card, under Had it) and a patient's noted day or usual meal (Diet sheet, "Usually after it")
 take an **After it**: Gut / Body / Felt good chips + her own words (+ Own, they stay), ONE How strong bar, Started, From (which
 thing), a Note. The mark (the first reaction's picture in a pale red circle, green for Felt good) shows on the grid block, the Me

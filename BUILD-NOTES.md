@@ -10080,4 +10080,4 @@ share box (z above the view) and its row lit, hover a row lit its dot; Esc close
 search did not step; a snack photo: "banana" picked = a snack + dot "@<time>"; Breakfast (photo 7:40, no foods): banana on the photo
 ticked Had it at 7:40; Broccoli (in the meal, no dot) listed under the search, one tap = dot 3; phone 375: the sheet at the foot, no
 sideways scroll, rows fit; relay names parse (with id, without id, a random part starting with r); Prescriptions search: Jane narrows,
-Zzqx none, clear returns. **Not tested:** a real phone (touch, keyboard lift), the relay end to end with ids, her real Meals.
+Zzqx none, clear returns. **Not tested:** a real phone (touch, keyboard lift), the relay end to end with ids, her real Meals. **LIVE** build 20261102-214600 (publish df157b5b); mock in mocks/.
