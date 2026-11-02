@@ -9318,3 +9318,33 @@ build); the diff is 1,581 hunks, every one inside the main `<style>` (checked by
 computed colours), her devices, the Key2's 469px height, print.
 **LIVE** 2026-11-02 in build 20261102-150700 (publish d8e23e7f, her "push live"); the mock moved to `mocks/`; her devices need the gold Update. The sweep script is the record of what moved; a new rule follows the law
 by hand (a state word = ink + the 6px `::before` dot, `--ph-dot` for its colour).
+
+## A prescription record with no herb list no longer crashes the open script (2026-11-02)
+Seen 2026-11-02 in a localhost sandbox copy of HEAD (build 20261102-150700), not on her data: a patient whose prescription record
+had no `ingredients` array (a test patient made with `phPatientRec` plus a hand-made record saved through `savePresc()`), opened
+from the Patient profile list, past the no-plan gate's Skip for now, then the Dispense stage: `Uncaught TypeError: Cannot read
+properties of undefined (reading 'map')` in `presIngredientsEditorHtml` ← `renderPresPanelCore` ← `renderPresPanel` ← the
+`[data-pres-stage]` click, and the panel stayed half drawn.
+- **The array:** `t.ingredients` on the record in `PRESC.items`, the herb lines that the Dispense editor's plain-list textarea,
+  its "N herbs · Ng" summary and `presEditMatchStatic` map, count and filter. That record was never given one.
+- **The app's own doors all write it:** `presNewDraft()` (`ingredients: []`) behind + New (`presStartNew`), Create patient
+  (`presCreateNewPatient`), the appointment import's new-account draft, the intake apply (`phIntakeReviewApply`) and a phase's
+  script (`phTpEnsurePhaseScript`); the prescription form's Save and the scheduled dispense's Build new write the literal. Nothing
+  to change there: a record without the list can only come from outside (a hand-made test record, an older or foreign backup).
+  The same gap bit Formula refill on 2026-10-23 (`refSuggestRecipe`, guarded then).
+- **Where the default belongs: on the record, set at the one door every way into the panel uses.** `presOpenScript` (the list
+  row, `data-pres-open`, `presGoToScript` all end there) now gives a record with no list an empty one
+  (`if (t && !Array.isArray(t.ingredients)) t.ingredients = []`, saved with the record's next save), so the editor, the autosave
+  (`presCommitTemplateFields` reads `t.ingredients.length` on the first keystroke), Save & log (`presSavePrescription`) and the
+  letters (`phLtrCtx`) all read a list. The editor itself also reads through a local `ings = t.ingredients || []`
+  (`presIngredientsEditorHtml`, `presEditMatchStatic`): a renderer never throws on a record's shape. Three functions, nothing else.
+**Tested (a sandbox copy on port 8997, fresh storage, 1220 × 900, one made-up "Zz" patient, no sign-in, real clicks):** the
+untouched HEAD copy throws exactly the reported error on the Dispense stage (here the flow buttons, Today's visit and the others,
+drew without it); the patched copy, with the same bare record read back from storage: list row → Skip for now → Today's visit →
+Dispense, no error, the Ingredients editor with "No ingredients yet."; then two lines typed in the plain list → the autosave kept
+both (`t.ingredients` 2, 15 g, the herb table's rows, "2 of 2 not in the inventory" since the sandbox has no herbs); console
+clean. **Not tested:** her real records (no bare record is known there), the phone, the Refill side sheet (`#refPresPanel`, the
+same door). **Seen, not changed:** Formula refill's lists read `r.ingredients.length` on a FORMULA record before any open
+(`presIsFormula(r) && r.ingredients.length`, several places); a bare formula record would still throw there.
+**Integration:** the fact is the record's own list, read by every page through the open door; walked in the sandbox on the
+bare record: the Patient profile list, Today's visit, Dispense. Not pushed; live only on her "push live".
