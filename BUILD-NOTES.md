@@ -10163,3 +10163,59 @@ Qqx → "0 match", clear → all. Console: no app error. Pictures `shots/fasting
 phone, phone-hour; the box held open for the picture). **Not tested:** her real fasts and devices; a real finger (taps were the page's
 own handlers); a fast crossing midnight into a new boot day on a long-open tab; reduced motion on a device (the CSS and the JS check are
 in place).
+
+## Meals goals: the page audit + Reach · Stay under (2026-11-02 / 03)
+Her ask (late evening, two screenshots of her live Meals page): "audit this page and streamline any repeating elements that do the
+same thing. make it so it communicates like atomic habits- its easy for me to see my goals and limits" (+ "where can i upload food
+photos?", answered: open a meal → + Photo; phone Camera · Photos; the Photos view). **Measured, 8 repeats:** two day pickers (the week
+‹ › and the rings' ‹ Mon 2 ›, while a day tap in the table already set `phMplRk`); two keys (had / planned under the rings, planned again
+in the bottom key, + 4 colour words); her goals in three places (the ring's field, the Table head, More ▾ Targets); today's four numbers
+twice (the rings and the day's row); each ring's state four ways (%, colour, of [goal], n over / to go; kJ at 77% amber "under 60%" on a
+limit, where low is the aim); Eat 2/2 = the meals' ✓; More ▾ Shopping list = the Shop step (the phone's Shopping chip too); no photo door
+until a meal is open. **Mock** `meals-goals-mock-2026-11-02.html` (app root until live, then `mocks/`; artifact QwuH37RSAMw85CbhmY8iiu):
+Now with the 8 marked · A bars with the line (computer + phone) · B rings grouped · C big numbers · fat, a missed day, Eat, photos.
+**Her 8 picks (all A; memory project_lcm_meals_goals_2026_11_02):** 1 bars with the line · 2 fat fills the rest · 3 marks + n in a row
+(no "never miss twice" line: a nudge, against the no-suggestions rule) · 4 one day picker · 5 the week's numbers in the ticks only ·
+6 goals set on the goal itself · 7 Eat = the next meal · 8 a camera on today's meals.
+**Built** ("MEALS GOALS", replacing `phMacRingsHtml`):
+- `phMplGoalsHtml(k, tk, goal, dial, acts, phone)`: a head (off today the day + a Today chip, `data-mpl-rd="0"`; today's score "✓ n kept ·
+  n to go · n over / missed" from the day's ticks; Stop / Start · Your fasts › = `phMplRactsHtml`, a phone's at the panel's end and no day
+  name, its day card has it), the dial (`phMplFastRingHtml` / `phMplDayFastRingHtml`, unchanged) with its ticks, then Reach and Stay under
+  (`PH_MPL_GL`: p reach, kJ + carbs under), fat under Stay under (`phMplFatHtml`). A paint's memo `M` holds each day's `phMacDay` and
+  `phMplDayFast` (the run walks back up to 40 days).
+- `phMplGlHtml`: the name + the goal's field (`data-diet-goal`, the old ring's field; the change listener's focus keeper now reads
+  `.ph-mpl-gls`), the bar (had `data-barw="mgb<x>"`, still planned pale, scale 125% so the goal's line sits at 80%; a limit over = red +
+  a white cut past 125%; protein deep once reached, amber under 60%), the state big (`data-roll="macr<x>"`), the ticks.
+- `phMplTick(k, x, tk, goal, M)`: fu (to come) · nd (nothing logged) · k · m · "m r" (over a limit) · go (today on its way, a pie at
+  `--p`); the fast's from `phMplDayFast` (today: the fast that ended today, else the running one, as Numbers reads it); each tick's
+  `data-mac-bk` = the hover breakdown (`k|x`) or the fast's box (`q|k|f`; `phMplDialOf` now reads a day ≤ today so today's ended fast
+  has its box). `phMplRun` = the kept run up to that day (leading days to come / today on its way skipped; 30 at most, "30+").
+- `PH_MAC_REACH = ["p"]`: `phMacOne` and `phMplNumAvg` give amber "lo" to protein only.
+- The motion helper learned `data-barw` (a bar's width grows from what it showed; off under reduced motion; its key leaves with the page).
+- Table: the kJ · P · C · F head cells, cells and their 4 cols went; Grid: `tot` and the Total row went. Numbers keeps its own rings.
+- Steps: Eat = the first planned meal today not had (a dinner the fast covers left out, `phFastNightOf`), its time in the count, its word in
+  `.w` (a phone hides it: "Eat 6:30 pm"), ✓ once all had; no roll on Eat. More ▾ lost Shopping list; the phone chips lost Shopping.
+- Targets: `PH_DIET_TG` less the four (`PH_MAC`) at draw time; the bottom key lost its 4 colour words and gained the camera.
+- Camera: `phMplCellHtml` adds a `.ph-mph-cam` span (`data-mph-add`, so the photo listener takes it before the cell's) to today's
+  meals in Table / Grid (not the Photos view, not a Fast cell), shown on hover; `phMplSnackHtml` a button for today's snacks (a computer);
+  the phone's `prw` gains a 4th cell (`.cm`, 32px) on today's rows, not a dinner the fast covers. A tap = `phMealPhPick` (the file picker;
+  on Android it offers the camera too).
+- CSS: "MEALS GOALS" after the dial's block (the grid 170px + 2 columns, rows, bars, ticks `.ph-mpl-tk > i` / `.ph-mpl-ti`, the run's gold
+  dot, the fat line, the camera); the phone block after the dial's (one column; a goal = name + field and state, the bar, the ticks).
+  Sprite: `i-up`, `i-under` (the group heads).
+**Disclosed calls:** the mock's coloured state words became ink with a red dot (the colour law); the mock's goal label above the bar's
+line went (the field beside the name already says it); the rows have no frames (Body pages, one look); "to go" in the score (the
+mock's "on track" judged a half-filled protein as fine); a fast tick for today reads the fast that ended today (the dial shows the running
+one); the Numbers view kept its rings and its key; the day's More panel (water, numbers line, 17 bars, fat and protein first by her
+2026-10-28 rule) still shows protein and fat against goal when opened: left for her word (it would undo that rule).
+**Tested** (test copy on port 8998, `sandbox/mg-shot.html`: a made-up "me" record with 8 days of made-up meals, kJ 8000 · carbs 30,
+a running fast; Browser pane + headless Edge at 1220 and 375): the panel (Today · Tue 3, "1 kept · 1 to go · 2 missed"), Protein
+"✓ 58 g" 3 in a row, kJ "4,433 left" 4 in a row, Carbs "26 g over" red with the cut, Fat "42 g · the rest of 179 g"; the ticks' states
+match the made-up days; pointing at Sat 31's protein tick → "Protein 12 g of 50 g" + its 3 foods; today's fast tick → its box; carbs
+goal 30 → 60 → "4 g left", 7 in a row, the field kept focus, → 30 back; a Mon 2 tap → the head "Mon 2 Nov · Today", the column open,
+Today → back; Grid: no Total row; Photos view: no camera; Numbers: 7 rows; the camera on today's Lunch → `phMealPhFor` {today, l}
+and the file picker asked, the meal not opened; Eat "Dinner 6:30 pm" while dinner was a plan, "✓" once the fast covered it; phone 375:
+no sideways scroll, the cameras on Breakfast / Lunch / Snacks (not the Fast dinner), chips without Shopping; the bars' `w:` keys in the
+motion map. Prescriptions search: Zz → 2, Qqx → "0 match", clear → all. Console: no app error. Pictures `shots/meals-goals-build-*.png`
+(computer, tick, past day, phone). **Not tested:** her real meals and fasts; a real finger and a real photo picked; the bar's growth
+seen by eye; reduced motion on a device (CSS + `phTpReduceMotion` in place); a goal she clears to empty.
