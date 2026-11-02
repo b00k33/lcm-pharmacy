@@ -1067,8 +1067,9 @@ words with − / + (each food its own step; a dish `dish:<id>*<q>` steps in serv
 name, else its typed ingredients matched) and Made of starts filled with that bowl. Nutrients add every item. The time is a small
 ✎ field. A day's numbers line (kJ · P · C · F) opens 15 bars against **Targets** (C22's four + NHMRC women 31–50 + carbs 50 g, each hers);
 "not counted" where no source gives a number, never 0. **Fat · Protein · Choline lead** (her word 2026-10-28, "prioritise fat
-protein and choline"; `PH_NUT_TOP`): first in the bars (Fat a bar of its own against the fat goal), always shown on a phone,
-first in Targets; a meal's small numbers start with choline. LIVE build 20261028-215100. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
+protein and choline"; `PH_NUT_TOP`): first in the bars, always shown on a phone, first in Targets; a meal's small numbers start
+with choline. On her Meals page fat and protein (with kJ and carbs) are the goals' own since MEALS GOALS (her 2026-11-03 "yes take
+them out of More"): a day's More has no numbers line and its bars lead with choline; Targets keeps the rest. LIVE build 20261028-215100. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
 `phNut*`, `phTb*`).
 **MEAL REPEATS** (her 2026-11-01 "need an easier way to organise meals based on daily or one day", her 4th report on it; her
 picks [Meal repeats]): what repeats is a FOOD, not a whole meal (her meals change day to day). Each food of her day's meal (her
@@ -1123,8 +1124,8 @@ she took (a tap takes it out, with Undo), + opens a list: Today (✓), Taking (h
 own), Before (her earlier days); as she types, the supplements list and her LCM formulas and jars (`phAcuFPickStock`), and Add
 "<typed>" (Enter too). Stored `"<day>|h"` {list [{n, at, src?}]}; not counted in her numbers. Code: `phMplSupp*`, `phMealSupp*`.
 **More** a day = water in ml (a glass 250 ml; the button shows the day's ml: the glasses she tapped + plain water logged in a meal
-she had or as a drink, `phMealWaterMl`), +250 ml, the numbers line, warm ·
-cool, the 17 bars (today's open by itself). Phone: a day at a time (‹ ›), the picker inline. Code: "MEALS PLANNER" (`phMpl*`), "MEALS
+she had or as a drink, `phMealWaterMl`), +250 ml (no kJ · P · C · F line: the goals carry them), warm ·
+cool, the 13 bars, choline first (today's open by itself; a phone: choline + the first three still under, + n more). Phone: a day at a time (‹ ›), the picker inline. Code: "MEALS PLANNER" (`phMpl*`), "MEALS
 TABLE" (`phMplToolbarHtml`, `phMplSteps`, `phMplFastRingHtml`, `phMplWtHtml`, `phMplGridHtml`, `phMplColHtml`, `phMplStepGo`,
 `phMplCopyMeal`; `phMplPnl` = the column with no meal open). MEALS TABLE: LIVE build 20261102-095100.
 **Rings follow + Numbers** (her 2026-11-02 "does this show when i click on a day? mock ways i can view this day by day, or compare
