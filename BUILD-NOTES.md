@@ -9546,4 +9546,4 @@ Home Visit (purple away block); the phone sheet holds the bar, RECENT and both c
 (the sandbox's own service-worker fetch line only). Pictures: `shots/calendar-click-{event-side,patient-side,phone}.jpg`.
 **Not tested:** her real patient list (hundreds of names: the search is a plain filter, no index), her devices, a Case-coloured dot
 on a real gynae / MSK patient (the sandbox has none), the Key2's 469px height.
-**Next:** her "push live"; then the mock moves to `mocks/`.
+**LIVE** 2026-11-02 in build 20261102-182300 (the Foods session's push carried c184249d; a stamp-only 20261102-182400 followed on her "push live"); the mock moved to `mocks/`; her devices need the gold Update.
