@@ -9382,3 +9382,15 @@ the Prescriptions search narrows on "Jane", shows none on "Zzqx", returns on cle
 record and devices (her devices need Update after a publish); the Key2 360 × 469 phone; Workout Mode itself (no exercises in
 the test copy). **Integration:** CSS + two head strings; `.ph-cp` is shared, so every patient's Cycle page wears the same shapes
 in that patient's colour. Not pushed; live only on her "push live".
+**Guarded the same day (her "Yes, guard them"):** every list-level reader that runs over every record before any open now reads
+the list through `(r.ingredients || [])`, the 2026-10-23 way: Formula refill's `renderRefill` (the recipe datalist),
+`refResolveRecipe` / `refResolveRecipeCandidates`, `renderRefRecipeList` (All recipes shows "—" for no list), `refRecipeCostPerG`
+(its `for … of`) and `phRecipePriceLine` (so the `phRecipePricesSync` pass after every save survives too), the Dispense herb
+picker's `presFindRecipe` and `presPickMatches`, the Inventory's `renderPhStatusPop`, `phFormulasUsingHerb` (the herb drawer and
+Overstock) and `phRpSearchMatches`: 14 lines, nothing else. Readers fed only by those finders (`presPickAddRecipe`,
+`presPickAddRefillById`, `presPickSuggHtml`) are left as they are: they only ever see a record with a list.
+**Tested (the same sandbox, a bare FORMULA record `{id, name, presType: "formula", abbr}` beside a normal patient):** on the
+untouched copy that one record broke the Formula refill page outright (`renderPharmacy` threw before the tabs drew) and every
+reader above threw when called; on the patched copy Formula refill draws its four tabs, All recipes lists the bare record with
+"—", each reader returns (0 matches, an empty price line, the price pass runs), the Dispense herb picker shows its list for
+"zz", the Inventory status pop draws; console clean. **Not tested:** her real data, the phone.
