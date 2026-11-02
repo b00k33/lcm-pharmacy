@@ -9037,3 +9037,18 @@ words on the open row). Pages looked at: Today's visit, Tongue, Fang Bing Ren, M
 **Not tested:** her real records and devices; a search with real matches (the made-up patient has none); a rail taller than the
 window beside a long page (its lower rows scroll with the page, as before). Pictures: `shots/rail-teal-*-2026-11-02.png`.
 **LIVE** 2026-11-02 on her "push live": build 20261102-131600 (publish 402d6d70), together with the kJ / carbs red (its note above). Her devices need the gold Update.
+
+## 2026-11-02 — Teal rail: the band follows the Case colour
+Her word once the rail was live: "make the band follow the case colour" (the "Side rail, teal band" note's disclosed call had
+kept the band teal on every Case). The rail no longer resets `--ph-herb*` for itself, so on a Gynae patient the band is crimson
+and on MSK navy, like the rest of the panel; teal otherwise (her own record, herb cases). The `--ph-house*` tokens went again
+(nothing else read them; `--ph-herb*` hold the hexes as before, and CLAUDE.md Theme lost the line about them). On a Case band
+(`.ph-pres-panel:is(.case-gyn, .case-msk) #presFlowRail`) the pale words `--ph-band-soft` / `-faint` / `-icon` are mixed from
+the band's own colour (84 / 82 / 86% white), the ✓ dates and ticks from `--ph-good-hi` and "n left" from `--ph-gold-hi` (each
+60% with white): the teal steps and the brass fell under 4.5:1 on crimson. The open row reads the Case's tint and deep bar. The
+teal band itself is unchanged.
+**Measured on crimson** (pixels through a 1×1 canvas, the Browser pane): group heads, counts and This visit / Next up words
+4.82, a step's line and More's line 4.66, dates 4.96, "n left" 4.57, white 6.13; on the open row its words 10.17 and its
+"n left" 5.36. Navy is darker than crimson, so each pair is higher there. Pictures (headless Edge, the made-up patient on a
+Natural fertility plan and on a low back plan): `shots/rail-case-gynae-2026-11-02.png`, `shots/rail-case-msk-2026-11-02.png`;
+her own Meals rail re-checked, still teal. **Not tested:** her real records and devices.

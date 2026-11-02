@@ -642,7 +642,8 @@ every page: "Name · age / Page" (`presBandPageSync` reads the rail's lit row), 
 (`.ph-band-bar`; the phone keeps search + camera), a Gynae / MSK case as a 3px line under it. The rail keeps her visit order;
 Supplements (taking), Blood tests and Appointments carry a cream count badge that rolls in when the number changes.
 **The teal rail (her picks 2026-11-02, rail-mock2 "C · teal band"; BUILD-NOTES "Side rail, teal band"; LIVE build 20261102-131600):** on a computer the rail
-(`presFlowRailHtml`) is a 212px band of the house teal (`--ph-house`, kept on a Gynae / MSK Case too) running the panel's full
+(`presFlowRailHtml`) is a 212px band in the panel's colour (teal; crimson on a Gynae Case, navy on MSK: her 2026-11-02 "make the band follow the
+case colour"; on a Case band the pale words, dates and "n left" are mixed from the band colour to keep 4.5:1) running the panel's full
 height: "‹ Menu" on top (`data-flow-mini`: folds it to a 56px strip of icons and circles, each name in its hover;
 `lcm-rail-mini`), then the name with its initials ("My profile" on hers), This visit and Next up, the six numbered steps (a
 24px circle, done = the brass ✓) and the page rows: each its icon (`PRES_RAIL_ICN`, the same icon the page has on Today's visit),
