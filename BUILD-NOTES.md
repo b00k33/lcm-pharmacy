@@ -9717,3 +9717,12 @@ pattern?" Matrix `fbr-integrate33-chailing-2026-11-02.html` (root until live, th
 - **Not checked:** her real records; the Key2 phone; Prescriptions search.
 - **Needs her word:** see the matrix (fever with chills scored once; fluid in the belly or chest counting as fluid accumulation; the LDH range;
   DRAFT words: 6 row names, the Ask her answer, the card lines, the picture labels).
+
+## Wombok soup with pork mince (2026-11-02)
+Her ask "include wombok cabbage soup wiht mince pork" (canh cải thảo thịt bằm; no row had it). `vn_canh_cai_thao`, Vietnamese, named
+in her words "Wombok soup with pork mince", a bowl 400 g from its parts: wombok 120 g (AFCD F001996 Chinese cabbage, raw: what cooks
+out stays in the broth; choline from the list's cabbage row), pork mince 50 g (F007057, choline from the pork row), fish sauce 5 g,
+spring onion 3 g, coriander 2 g, water 220 ml. A bowl: 446 kJ, protein 12 g, carbs 1.5 g, fat 5 g, sodium 541 mg, folate 214 µg.
+Words: wombok, cabbage soup, napa / chinese cabbage soup, pork mince soup, canh cai thao (thit bam), bai cai tang. PH_FOOD 969.
+**Tested** (test copy): 17 numbers; "wombok", "napa" and "canh cai thao" find it under Everyday › Vietnamese; the hover reads the
+parts; console clean. Picture `shots/wombok-soup.jpg`. **Not tested:** her real Meals page and devices.
