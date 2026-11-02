@@ -9052,3 +9052,4 @@ teal band itself is unchanged.
 "n left" 5.36. Navy is darker than crimson, so each pair is higher there. Pictures (headless Edge, the made-up patient on a
 Natural fertility plan and on a low back plan): `shots/rail-case-gynae-2026-11-02.png`, `shots/rail-case-msk-2026-11-02.png`;
 her own Meals rail re-checked, still teal. **Not tested:** her real records and devices.
+**LIVE** 2026-11-02 on her "push live": build 20261102-132900 (publish 01ad84fb). Her devices need the gold Update.
