@@ -33726,7 +33726,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       const own = new Set(PHARMACY.herbs.filter(h => !phIsFormula(h)).map(h => phHuKeys(h.name)[0]).filter(Boolean));
       keys = [...new Set([...keys, ...own])].filter(k => k.includes(q));
     }
-    keys.sort((a, b) => (ck.get(b) || 0) - (ck.get(a) || 0) || a.localeCompare(b));
+    keys.sort((a, b) => phAz(phHuTitle(a), phHuTitle(b)));   // A–Z (her 2026-11-02 rule; was most formulas first, the count still shows)
     if (!keys.length) return `<p class="ph-hu-none">No match</p>`;
     const sel = keys.includes(phGdHerb) ? phGdHerb : keys[0];
     return `<div class="ph-gd-hu">
@@ -34155,9 +34155,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       <select class="ph-hsup-name field-bare" aria-label="Supplier">
         <option value="">— choose supplier —</option>
         <option value="${PH_IN_HOUSE_SUP}"${name === PH_IN_HOUSE_SUP ? " selected" : ""}>In house</option>
-        ${PH_NAMED_INHOUSE_SUPS.map(n => `<option value="${esc(n)}"${n === name ? " selected" : ""}>${esc(n)}</option>`).join("")}
-        ${PH_KNOWN_SUPPLIERS.filter(ruleAllows).map(n => `<option value="${esc(n)}"${n === name ? " selected" : ""}>${esc(n)}</option>`).join("")}
-        ${extraKnown.map(s => `<option value="${esc(s.name)}"${s.name === name ? " selected" : ""}>${esc(s.name)}</option>`).join("")}
+        ${PH_NAMED_INHOUSE_SUPS.slice().sort(phAz).map(n => `<option value="${esc(n)}"${n === name ? " selected" : ""}>${esc(n)}</option>`).join("")}
+        ${[...PH_KNOWN_SUPPLIERS.filter(ruleAllows), ...extraKnown.map(s => s.name)].sort(phAz).map(n => `<option value="${esc(n)}"${n === name ? " selected" : ""}>${esc(n)}</option>`).join("")}
         <option value="__new__"${name && !isKnown && !isInHouseAny ? " selected" : ""}>+ New supplier…</option>
       </select>
       <input type="text" class="ph-hsup-new field-bare"${name && !isKnown && !isInHouseAny ? "" : " hidden"} placeholder="Supplier name" value="${name && !isKnown && !isInHouseAny ? esc(name) : ""}" aria-label="New supplier name">
@@ -34519,11 +34518,12 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       : (phHerbCode(h) || null);   // default/"code" column -- the active supplier's code (2026-08-17)
     const av = get(a), bv = get(b);
     const missA = av == null || av === "", missB = bv == null || bv === "";
-    if (missA && missB) return 0;
+    if (missA && missB) return phByName(a, b);
     if (missA) return 1;                       // blanks sink to the bottom either way
     if (missB) return -1;
-    if (typeof av === "number" && typeof bv === "number") return (av - bv) * d;
-    return String(av).localeCompare(String(bv), undefined, { numeric: true }) * d;
+    // equal values (same status, supplier, stock …) read A–Z by name (her 2026-11-02 A–Z rule)
+    if (typeof av === "number" && typeof bv === "number") return (av - bv) * d || phByName(a, b);
+    return phAz(av, bv) * d || phByName(a, b);
   }
 
   // ---- Stocktake mode (her ask 2026-08-14, refined same day: separate
@@ -35061,7 +35061,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   // second lookup here and there never was; see the note in the commit.
   let phStcSort = "shelf";   // shelf (queue order) | fast | empty -- view only,
                              // it never touches s.queue or the counting order
-  const PH_STC_SORTS = [["shelf", "Shelf order"], ["fast", "Fastest moving first"], ["empty", "Empty jars first"]];
+  const PH_STC_SORTS = [["shelf", "Shelf order"], ["az", "A–Z"], ["fast", "Fastest moving first"], ["empty", "Empty jars first"]];   // A–Z: her 2026-11-02 rule (shelf order stays the default, it is the walk round the shelves)
   // weeks of cover the counted number buys. null = nothing to divide by.
   function phStcWeeks(qty, monthlyGrams) {
     if (qty == null || !monthlyGrams || monthlyGrams <= 0) return null;
@@ -35086,7 +35086,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   function phStcTodoHtml(s, todo) {
     if (!todo.length) return `<div class="ph-stc-empty">Nothing left to count.</div>`;
     const sorted = todo.slice();
-    if (phStcSort === "fast") sorted.sort((a, b) => b.monthly - a.monthly || phByName(a.h, b.h));
+    if (phStcSort === "az") sorted.sort((a, b) => phByName(a.h, b.h));
+    else if (phStcSort === "fast") sorted.sort((a, b) => b.monthly - a.monthly || phByName(a.h, b.h));
     else if (phStcSort === "empty") sorted.sort((a, b) => (a.qty == null ? Infinity : a.qty) - (b.qty == null ? Infinity : b.qty) || phByName(a.h, b.h));
     return `<div class="ph-stc-sort ph-stocktake-order-seg">
         ${PH_STC_SORTS.map(([k, label]) => `<button type="button" class="ph-stocktake-order-opt${phStcSort === k ? " on" : ""}" data-ph-stc-sort="${k}">${label}</button>`).join("")}
@@ -36694,7 +36695,15 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   // gets sorted for display (formulas' stored names sort fine case-insensitive
   // even though they DISPLAY all-caps via phDispName)
   const phByName = (a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base", numeric: true });
-  const phZeroHerbs = () => PHARMACY.herbs.filter(h => !h.stopped && h.qty != null && h.qty <= 0);
+  // her rule (2026-11-02, CLAUDE.md "A–Z LISTS"): every list she scans reads A–Z. phAz compares two labels with case and
+  // accents ignored (Bánh = banh, đ = d), a leading emoji or mark skipped, numbers in number order; phAzBy(f) sorts by f(item).
+  // Function declarations, so a list drawn before this line runs can use them.
+  function phAz(a, b) {
+    const k = s => String(s == null ? "" : s).replace(/^[^\p{L}\p{N}]+/u, "").replace(/[đĐ]/g, "d");
+    return (phAz.c || (phAz.c = new Intl.Collator("en", { sensitivity: "base", numeric: true }))).compare(k(a), k(b));
+  }
+  function phAzBy(f) { return (a, b) => phAz(f(a), f(b)); }
+  const phZeroHerbs =() => PHARMACY.herbs.filter(h => !h.stopped && h.qty != null && h.qty <= 0);
   const phLowHerbs = () => PHARMACY.herbs.filter(h => !h.stopped && h.qty != null && h.qty > 0 && h.low != null && h.qty <= h.low);
   const phStoppedHerbs = () => PHARMACY.herbs.filter(h => phHerbStatusKey(h) === "stopped");
   const phPhaseOutHerbs = () => PHARMACY.herbs.filter(h => phHerbStatusKey(h) === "phaseout");
@@ -37244,7 +37253,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
         if (!rec) ingCounts.set(h.id, rec = { h, n: 0, grams: 0 });
         rec.n++; rec.grams = phRound2(rec.grams + (i.grams || 0));
       }));
-    const ranked = [...ingCounts.values()].sort((a, b) => b.n - a.n || b.grams - a.grams);
+    const ranked = [...ingCounts.values()].sort((a, b) => b.n - a.n || b.grams - a.grams || phByName(a.h, b.h));   // a tie reads A–Z
     const formulasAll = ranked.filter(r => phIsFormula(r.h));
     const herbsAll = ranked.filter(r => !phIsFormula(r.h));
     const topFormulas = phStatsTopAll.formula ? formulasAll : formulasAll.slice(0, 10);
@@ -37264,7 +37273,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
         if (!rec) usageCounts.set(h.id, rec = { h, grams: 0 });
         rec.grams = phRound2(rec.grams + (i.grams || 0));
       }));
-    const usageRanked = [...usageCounts.values()].sort((a, b) => b.grams - a.grams);
+    const usageRanked = [...usageCounts.values()].sort((a, b) => b.grams - a.grams || phByName(a.h, b.h));   // a tie reads A–Z
     const usageFormulasAll = usageRanked.filter(r => phIsFormula(r.h));
     const usageHerbsAll = usageRanked.filter(r => !phIsFormula(r.h));
     const usageTopFormulas = phUsageTopAll.formula ? usageFormulasAll : usageFormulasAll.slice(0, 10);
@@ -37334,7 +37343,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
         ${phStatsValList ? `<div class="rtn-table-wrap" style="margin-top:14px"><table class="rtn-table ph-table" data-ph-resize="statsval">
           <thead><tr><th>Code</th><th>Name</th><th style="text-align:right">Grams</th><th style="text-align:right">$/g</th><th style="text-align:right">Value</th></tr></thead>
           <tbody>${groups.map(([label, list]) => {
-            const items = list.filter(sellable).sort((a, b) => b.qty * b.cost - a.qty * a.cost);
+            const items = list.filter(sellable).sort((a, b) => b.qty * b.cost - a.qty * a.cost || phByName(a, b));   // a tie reads A–Z
             return items.length ? `<tr class="ph-group-row"><td colspan="5">${label} · ${items.length} counted · ${phMoney(valOf(list))}</td></tr>`
               + items.map(h => `<tr>
                 <td class="ph-code">${phHerbCode(h) ? esc(phHerbCode(h)) : "—"}</td>
@@ -38426,7 +38435,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   // her 2026-10-29 picks: her vital.ly products (each one of the list's kinds, with the dose she usually gives and its link) and the
   // list itself (a kind hidden here leaves every patient's table; one she adds joins it)
   function phSuppSettingsHtml() {
-    const prods = phSuppProducts(), off = phSuppKindsOff(), all = PH_SUPP_KINDS.concat(phSuppKindsOwn());
+    const prods = phSuppProducts(), off = phSuppKindsOff(), all = PH_SUPP_KINDS.concat(phSuppKindsOwn()).sort(phAzBy(k => k.name));
     const kindOpts = sel => `<option value=""${!sel ? " selected" : ""}>Kind</option>` + all.filter(k => !off.has(k.id)).map(k => `<option value="${esc(k.id)}"${sel === k.id ? " selected" : ""}>${esc(k.name)}</option>`).join("");
     const rows = prods.map(p => `<tr><td><input type="text" class="field-bare ph-supp-fld" data-supp-p-field="${esc(p.id)}|name" value="${esc(p.name || "")}" placeholder="Product" aria-label="Product" maxlength="80"></td><td><select class="ph-cyc-in field-bare" data-supp-p-field="${esc(p.id)}|kind" aria-label="Kind">${kindOpts(p.kind || "")}</select></td><td><input type="text" class="field-bare ph-supp-fld" data-supp-p-field="${esc(p.id)}|dose" value="${esc(p.dose || "")}" placeholder="Usual dose" aria-label="Usual dose" maxlength="80"></td><td><input type="url" class="field-bare ph-supp-fld" data-supp-p-field="${esc(p.id)}|url" value="${esc(p.url || "")}" placeholder="vital.ly link" aria-label="vital.ly link" maxlength="300"></td><td class="rm"><button type="button" class="ph-supp-own-rm" data-supp-p-rm="${esc(p.id)}" aria-label="Remove ${esc(p.name || "product")}" title="Remove">✕</button></td></tr>`).join("");
     return `<div class="ph-settings-sec">
@@ -38682,7 +38691,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
         <button type="button" class="del" data-ph-order="${h.id}" title="Take off the order list" aria-label="Take ${esc(h.name)} off the order list">×</button>
       </div>` : ""}`;
     };
-    return `<div class="ph-dash-oq">${collapse}${Object.keys(bySup).sort().map(sup =>
+    return `<div class="ph-dash-oq">${collapse}${Object.keys(bySup).sort(phAz).map(sup =>
       `<div class="ph-dash-oq-sup">${esc(sup)} · ${bySup[sup].length}</div>${bySup[sup].sort(phByName).map(row).join("")}`).join("")}
     </div>`;
   }
@@ -45753,6 +45762,21 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   const phFoodPlace = g => { const m = phFoodMenu(g); return m && !m[2] ? m : null; };
   // a name or a search, as it is compared: lower case, accents off (Phở = pho, Bánh mì = banh mi, đ = d)
   const phFoodNrm = s => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/đ/gi, "d").toLowerCase();
+  // her 2026-11-02 "alphabetical, or where relevant, ascending": foods read A–Z by name (accents ignored), and one item's sizes run
+  // small to large ("· Small · Medium · Large", "(quarter / half / whole)"). One rank per food, worked out once and again only
+  // when the list grows, so a sort on her phone is a number compare.
+  const PH_FOOD_SIZE_ORD = ["kids", "mini", "small", "regular", "medium", "large", "extra large", "family", "quarter", "half", "whole"];
+  let phFoodRankN = 0, phFoodRankM = null;
+  function phFoodRank() {
+    const ids = Object.keys(PH_FOOD);
+    if (phFoodRankM && phFoodRankN === ids.length) return phFoodRankM;
+    const sz = n => { const m = String(n || "").match(/^(.*?)\s*(?:·\s*|\(\s*)(kids|mini|small|regular|medium|large|extra large|family|quarter|half|whole)\s*\)?$/i); return m ? [m[1], PH_FOOD_SIZE_ORD.indexOf(m[2].toLowerCase())] : [String(n || ""), -1]; };
+    const k = new Map(ids.map(id => [id, sz(PH_FOOD[id][0])]));
+    ids.sort((a, b) => { const x = k.get(a), y = k.get(b); return phAz(x[0], y[0]) || x[1] - y[1] || phAz(PH_FOOD[a][0], PH_FOOD[b][0]); });
+    phFoodRankN = ids.length; phFoodRankM = new Map(ids.map((id, i) => [id, i]));
+    return phFoodRankM;
+  }
+  const phFoodAz = (a, b) => { const R = phFoodRank(); return (R.has(a) ? R.get(a) : 1e9) - (R.has(b) ? R.get(b) : 1e9); };
   // a food's search words: its name, its own words, and its place's name (a menu's)
   const phFoodWordsN = id => phFoodNrm(PH_FOOD[id][0] + " " + String(PH_FOOD[id][10]).replace(/\|.*$/, "").replace(/,/g, " ") + (phFoodMenu(PH_FOOD[id][2]) ? " " + phFoodMenu(PH_FOOD[id][2])[1] : ""));
   // its hover: the close match it counts as (PH_FOOD_SRC), then her reactions to it (phRxTipT, set while the list draws)
@@ -45770,7 +45794,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     phMlkShare = !box.dataset.mlkPt && window.innerWidth > 640;
     ps.forEach(p => {
       const g = p.dataset.mlkLazy;
-      p.insertAdjacentHTML("beforeend", Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !inM.has("food:" + id)).map(id => phMlkFoodRow(id, "")).join(""));
+      p.insertAdjacentHTML("beforeend", Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !inM.has("food:" + id)).sort(phFoodAz).map(id => phMlkFoodRow(id, "")).join(""));   // A–Z, sizes small to large
       p.removeAttribute("data-mlk-lazy"); p.hidden = false;
     });
     phRxTipT = null;
@@ -45793,25 +45817,25 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       return `<div class="ph-mlk-row" data-meal-n="${esc(n)}"${all ? " data-meal-all" : ""}${h ? " hidden" : ""}><span class="n"><span>${esc(PH_FOOD[r][0])}</span></span><span class="ph-meal-bar" role="group" aria-label="${esc(PH_FOOD[r][0])}">${[[r, "R", "Regular"], [l, "L", "Large"]].map(([id, s, t]) => `<button type="button" data-meal-tog="food:${id}" aria-label="${esc(PH_FOOD[r][0])} · ${t}" title="${t} · ${PH_FOOD[id][9][0]} kJ">${s}</button>`).join("")}</span></div>`;
     };
     const more = lbl => `<button type="button" class="ph-mlk-row more" data-meal-alltog="1" data-meal-n="" aria-expanded="${phMealAll}"${q ? " hidden" : ""}><span class="n"><span>${phMealAll ? "Fewer ▴" : lbl + " ▾"}</span></span></button>`;
-    const topOf = drink => [...new Set(Object.keys(use).filter(id => PH_FOOD[id] && PH_FOOD[id][2] !== "tb" && isDk(id) === drink).sort((a, b) => use[b] - use[a]).concat(PH_FOOD_TOP[drink ? "d" : "f"]))].filter(id => PH_FOOD[id]).slice(0, 10);
+    const topOf = drink => [...new Set(Object.keys(use).filter(id => PH_FOOD[id] && PH_FOOD[id][2] !== "tb" && isDk(id) === drink).sort((a, b) => use[b] - use[a]).concat(PH_FOOD_TOP[drink ? "d" : "f"]))].filter(id => PH_FOOD[id]).slice(0, 10).sort(phFoodAz);   // her top 10, shown A–Z (her 2026-11-02 pick)
     const pane = (k, lbl, inner) => { const h = !seen; seen = 0; return `<div class="ph-mlk-pane${phMealTab === k ? " on" : ""}" data-mlk-p="${k}" data-meal-pg${h ? " hidden" : ""}><div class="ph-meal-pgh ph-mlk-h">${lbl}</div>${inner}</div>`; };
     const sub = (lbl, inner) => { const n = seen; seen = 0; const h = !inner || !n; return { h: inner ? `<div class="ph-mlk-sub" data-meal-pg${h ? " hidden" : ""}><div class="ph-meal-pgh">${lbl}</div>${inner}</div>` : "", n }; };
     // Everyday: hers first, then the everyday ones; All foods = every other food by its group (drinks under Drinks)
     const ft = topOf(false);
     let ev = ft.filter(id => !inM("food:" + id)).map(id => food(id, false)).join("") + more("All foods"), evN = seen;
-    PH_FOOD_GRP.forEach(([g, lbl]) => { if (g === "k" || phFoodPlace(g)) return; seen = 0; const s = sub(lbl, Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !ft.includes(id) && !isDk(id) && !inM("food:" + id)).map(id => food(id, true)).join("")); ev += s.h; evN += s.n; });
+    PH_FOOD_GRP.forEach(([g, lbl]) => { if (g === "k" || phFoodPlace(g)) return; seen = 0; const s = sub(lbl, Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !ft.includes(id) && !isDk(id) && !inM("food:" + id)).sort(phFoodAz).map(id => food(id, true)).join("")); ev += s.h; evN += s.n; });
     seen = evN;
     let h = pane("ev", "Everyday", ev);
     const dt = topOf(true);
-    h += pane("dk", "Drinks", dt.filter(id => !inM("food:" + id)).map(id => food(id, false)).join("") + more("All drinks") + Object.keys(PH_FOOD).filter(id => !dt.includes(id) && (PH_FOOD[id][2] === "tb" ? PH_FOOD[id][3] === "drink" : isDk(id)) && !inM("food:" + id)).sort((a, b) => !!phFoodPlace(PH_FOOD[a][2]) - !!phFoodPlace(PH_FOOD[b][2])).map(id => food(id, true)).join(""));   // a place's drinks after the everyday ones (her plain Matcha latte before McDonald's 15)
+    h += pane("dk", "Drinks", dt.filter(id => !inM("food:" + id)).map(id => food(id, false)).join("") + more("All drinks") + Object.keys(PH_FOOD).filter(id => !dt.includes(id) && (PH_FOOD[id][2] === "tb" ? PH_FOOD[id][3] === "drink" : isDk(id)) && !inM("food:" + id)).sort((a, b) => !!phFoodPlace(PH_FOOD[a][2]) - !!phFoodPlace(PH_FOOD[b][2]) || phFoodAz(a, b)).map(id => food(id, true)).join(""));   // a place's drinks after the everyday ones (her plain Matcha latte before McDonald's 15)
     const tt = [...new Set(Object.keys(use).filter(id => PH_FOOD[id] && /^bowl:/.test(PH_FOOD[id][3])).sort((a, b) => use[b] - use[a]).map(pairOf).concat(PH_TB_TOP))].filter(Boolean).slice(0, 3);
     const tbIds = Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === "tb");
     h += pane("tb", "Thisbowl", tt.map(p => pair(p, false)).join("") + row(`<span class="n"><span>Build your own</span></span>`, "build your own thisbowl fishbowl", false, `data-meal-byo="1"`).replace(`<span class="pl">${phMealSvg("plus")}</span>`, `<span class="pl">${phMealSvg("chev-r")}</span>`) + more("All Thisbowl")
-      + [...new Set(tbIds.filter(id => /^bowl:/.test(PH_FOOD[id][3])).map(pairOf))].filter(p => p && !tt.includes(p)).map(p => pair(p, true)).join("")
-      + tbIds.filter(id => PH_FOOD[id][3] === "box" && !inM("food:" + id)).map(id => food(id, true)).join(""));
+      + [...new Set(tbIds.filter(id => /^bowl:/.test(PH_FOOD[id][3])).map(pairOf))].filter(p => p && !tt.includes(p)).sort(phAzBy(p => (PH_FOOD["tb_" + p + "_r"] || [""])[0])).map(p => pair(p, true)).join("")
+      + tbIds.filter(id => PH_FOOD[id][3] === "box" && !inM("food:" + id)).sort(phFoodAz).map(id => food(id, true)).join(""));
     // a menu's rows are drawn when its pane opens or a search starts (phMealMenuFill), not on every paint of the list: 557 rows
     // made each tap 3-4 times slower, and her phone is the limit
-    PH_FOOD_MENUS.forEach(([g, l, kit]) => { if (g === "tb" || kit) return; const ids = Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !inM("food:" + id)); if (!ids.length) return; h += phMealTab === g || q ? pane(g, `${esc(l)} · ${ids.length}`, ids.map(id => food(id, false)).join("")) : `<div class="ph-mlk-pane" data-mlk-p="${g}" data-mlk-lazy="${g}" data-meal-pg hidden><div class="ph-meal-pgh ph-mlk-h">${esc(l)} · ${ids.length}</div></div>`; });
+    PH_FOOD_MENUS.forEach(([g, l, kit]) => { if (g === "tb" || kit) return; const ids = Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !inM("food:" + id)).sort(phFoodAz); if (!ids.length) return; h += phMealTab === g || q ? pane(g, `${esc(l)} · ${ids.length}`, ids.map(id => food(id, false)).join("")) : `<div class="ph-mlk-pane" data-mlk-p="${g}" data-mlk-lazy="${g}" data-meal-pg hidden><div class="ph-meal-pgh ph-mlk-h">${esc(l)} · ${ids.length}</div></div>`; });
     h += pane("my", "My dishes", phDishList().filter(d => !inM("dish:" + d.id)).map(d => { const v = "dish:" + d.id, n = phDishSteps(d).length; return row(`<span class="n">${phMealDot(v)}<span>${esc(d.n)}</span>${n ? `<em>${n} prep</em>` : ""}</span>`, String(d.n || "").toLowerCase(), false, `data-meal-tog="${esc(v)}"${phMlkShareAt(v, phRxTip(v))} aria-label="Add ${esc(d.n || "Dish")}"`); }).join(""));
     phRxTipT = null;
     return `<div class="ph-meal-pick ph-meal-lpk ph-mlk${q ? " srch" : ""}" data-mlk-in="${esc(bases.join("\n"))}"${c.pt ? ` data-mlk-pt="1"` : ""}><div class="ph-meal-own"><label class="ph-meal-fld">${phMealSvg("search")}<input type="text" class="field-bare" data-meal-ownl="${phMealTab === "dk" ? "d" : "f"}" value="${esc(phMealSq)}" placeholder="Search or type" aria-label="Search, or type your own and press Enter" autocomplete="off" enterkeyhint="done" maxlength="120"></label><button type="button" class="ph-meal-add" data-meal-dish="new" title="New dish">+ New</button></div>
@@ -45822,7 +45846,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   function phMealTabsHtml() {
     const tab = ([k, l]) => `<button type="button" class="${phMealTab === k ? "on" : ""}" data-meal-tab="${k}" aria-pressed="${phMealTab === k}">${l}</button>`, mo = phFoodPlace(phMealTab);
     return `<div class="ph-mlk-tabs"><div class="ph-meal-bar full ph-mlk-bar" role="group" aria-label="Food group">${PH_MEAL_TABS.slice(0, 2).map(tab).join("")}<button type="button" class="${mo ? "on" : ""}" data-meal-menus="1" aria-expanded="false">${esc(mo ? mo[1] : "Menus")} ▾</button>${tab(PH_MEAL_TABS[2])}</div>
-      <div class="ph-mlk-ddl" role="group" aria-label="Menus" hidden>${PH_FOOD_MENUS.filter(([g, , kit]) => !kit && Object.keys(PH_FOOD).some(id => PH_FOOD[id][2] === g)).map(tab).join("")}</div></div>`;
+      <div class="ph-mlk-ddl" role="group" aria-label="Menus" hidden>${PH_FOOD_MENUS.filter(([g, , kit]) => !kit && Object.keys(PH_FOOD).some(id => PH_FOOD[id][2] === g)).sort((a, b) => phAz(a[1], b[1])).map(tab).join("")}</div></div>`;
   }
   // the food chips (a meal's list "f" / "d", a snack or a dish's Made of "all"): Everyday (what she has had most first, then the
   // everyday ones), All foods by group behind one chip, Thisbowl's bowls as R | L bars + Build your own. Each chip carries its
@@ -45842,17 +45866,18 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     };
     const grp = (lbl, inner, all, sr) => inner ? `<div class="ph-meal-pg" data-meal-pg${!q && (sr || all && !phMealAll) ? " hidden" : ""}><div class="ph-meal-pgh">${lbl}</div><div class="ph-meal-chs">${inner}</div></div>` : "";
     const use = phFoodUse(), fits = id => PH_FOOD[id][2] !== "tb" && (mode === "all" || isDk(id) === drink);
-    const top = [...new Set(Object.keys(use).filter(fits).sort((a, b) => use[b] - use[a]).concat(PH_FOOD_TOP[drink ? "d" : "f"]))].filter(id => PH_FOOD[id]).slice(0, 10);
-    const tbTop = tb ? [...new Set(Object.keys(use).filter(id => /^bowl:/.test(PH_FOOD[id][3])).sort((a, b) => use[b] - use[a]).map(pairOf).concat(PH_TB_TOP))].filter(Boolean).slice(0, 3) : [];
+    const top = [...new Set(Object.keys(use).filter(fits).sort((a, b) => use[b] - use[a]).concat(PH_FOOD_TOP[drink ? "d" : "f"]))].filter(id => PH_FOOD[id]).slice(0, 10).sort(phFoodAz);
+    const tbAz = phAzBy(p => (PH_FOOD["tb_" + p + "_r"] || [p])[0]);
+    const tbTop = tb ? [...new Set(Object.keys(use).filter(id => /^bowl:/.test(PH_FOOD[id][3])).sort((a, b) => use[b] - use[a]).map(pairOf).concat(PH_TB_TOP))].filter(Boolean).slice(0, 3).sort(tbAz) : [];
     const allB = `<button type="button" class="ph-meal-ch ph-meal-allb" data-meal-alltog="1" data-meal-n="" aria-expanded="${phMealAll}"${q ? " hidden" : ""}>${phMealAll ? "Fewer ▴" : "All foods ▾"}</button>`;
     let h = grp("Everyday", top.map(id => one(id, false)).join("") + allB, false);
     if (tb) h += grp("Thisbowl", tbTop.map(p => rl(p, false)).join("") + `<button type="button" class="ph-meal-ch ph-meal-byo" data-meal-byo="1" data-meal-n="build your own thisbowl fishbowl"${hid("build your own thisbowl fishbowl", false) ? " hidden" : ""}>Build your own</button>`, false);
     PH_FOOD_GRP.forEach(([g, lbl]) => {
-      const ids = Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !top.includes(id));
+      const ids = Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !top.includes(id)).sort(phFoodAz);
       let inner = "";
       if (g === "tb") {
         if (drink) inner = ids.filter(id => PH_FOOD[id][3] === "drink").map(id => one(id, true)).join("");
-        else if (tb) inner = [...new Set(ids.filter(id => /^bowl:/.test(PH_FOOD[id][3])).map(pairOf))].filter(p => p && !tbTop.includes(p)).map(p => rl(p, true)).join("") + ids.filter(id => PH_FOOD[id][3] === "box").map(id => one(id, true)).join("");
+        else if (tb) inner = [...new Set(ids.filter(id => /^bowl:/.test(PH_FOOD[id][3])).map(pairOf))].filter(p => p && !tbTop.includes(p)).sort(tbAz).map(p => rl(p, true)).join("") + ids.filter(id => PH_FOOD[id][3] === "box").map(id => one(id, true)).join("");
         h += grp(tb ? "More Thisbowl" : lbl, inner, true);
         return;
       }
@@ -49572,7 +49597,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
      - Fitness (Body): From C22 (Bring in, once) · This week (her workout + rehab routines and Steps, a dot a day: the Habits
        reads and ticks) · Weekly plan (a day's workout IS her calendar's routines: change either, both follow) · Steps + Weight
        · Steps plan (walks + stairs, Open ▾) · Today (its type, its template, the sets; ▶ Workout Mode) · Upcoming + Recent.
-     - Exercises (Body, after Fitness): My exercises (her library, most used first) · Workout templates.
+     - Exercises (Body, after Fitness): My exercises (her library, A–Z since 2026-11-02) · Workout templates.
      - The motion (her animations round, card 9 A + the week dots A): a set pops and its tick draws; its rest ring counts down
        and buzzes at zero; a timed set's ▶ hold ring does the same and ticks the set; the last set of the day rings gold; the
        week's dots pop and their link draws (the Habits way).
@@ -50199,7 +50224,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     phFitGlHit = "";
     if (on) phFitBuzz([80, 50, 80, 50, 200]);
   }
-  const phFitDlHtml = () => `<datalist id="phFitDl">${phFitLive("fex").filter(x => !x.hid).map(x => `<option value="${esc(x.n || "")}"></option>`).join("")}</datalist>`;
+  const phFitDlHtml = () => `<datalist id="phFitDl">${phFitLive("fex").filter(x => !x.hid).sort(phAzBy(x => x.n)).map(x => `<option value="${esc(x.n || "")}"></option>`).join("")}</datalist>`;
   const phFitRsSvg = (left, tot) => { const C = 2 * Math.PI * 9; return `<svg viewBox="0 0 22 22" aria-hidden="true" focusable="false"><circle class="bg" cx="11" cy="11" r="9"/><circle class="fg" cx="11" cy="11" r="9" style="stroke-dasharray:${C.toFixed(1)};stroke-dashoffset:${(C * (1 - Math.max(0, Math.min(1, left / tot)))).toFixed(1)}"/></svg>`; };
   const phFitLeft = o => Math.max(0, (o.end - Date.now()) / 1000);
   // a set's circle: tapped when done (her pick 9 A: it pops and its tick draws)
@@ -50546,8 +50571,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   function phFitPickHtml(tid) {
     phMuDefs();
     const u = phFitUses(), tp = tid ? phFitTpl(tid) : null, inn = new Set(((tp ? tp.ex : phFitToday().ex) || []).filter(e => e.x).map(e => e.x)), g = phFitPkG, q = phFitPkQ.trim().toLowerCase();
-    const L = phFitLive("fex").filter(x => !x.hid).map(x => Object.assign(phFitX({ x: x.id }), { u: u[x.id] || 0 })).filter(X => g === "all" || (PH_FIT_FG[g] || []).includes(X.ar)).sort((a, b) => b.u - a.u || a.n.localeCompare(b.n));
-    phFitPkSel = phFitPkSel.filter(id => !inn.has(id) && phFitLib(id));
+    const L = phFitLive("fex").filter(x => !x.hid).map(x => Object.assign(phFitX({ x: x.id }), { u: u[x.id] || 0 })).filter(X => g === "all" || (PH_FIT_FG[g] || []).includes(X.ar)).sort(phAzBy(X => X.n));
+    phFitPkSel =phFitPkSel.filter(id => !inn.has(id) && phFitLib(id));
     const chips = L.map(X => { const on = phFitPkSel.includes(X.id), isIn = inn.has(X.id); return `<button type="button" class="${on ? "on" : ""}${isIn ? " in" : ""}" data-fit-ptk="${esc(X.id)}" data-fit-pn="${esc(X.n.toLowerCase())}"${q && !X.n.toLowerCase().includes(q) ? " hidden" : ""} aria-pressed="${on}"${isIn ? ' aria-disabled="true"' : ""}><i style="background:${phFitAreaCol(X.ar)}"></i>${esc(X.n)}${isIn ? "<small>· in</small>" : `<em>${X.u}</em>`}<span class="tk">${phHabCk()}</span></button>`; }).join("");
     const n = phFitPkSel.length;
     return `<div class="cpick">${phFitMapFig(phFitPkSt(g), 52, 122, "")}<div class="cpside"><div class="ltop"><label class="csearch">${phMeIc("search")}<input type="search" data-fit-pq="1" value="${esc(phFitPkQ)}" placeholder="Search my exercises" aria-label="Search my exercises" autocomplete="off"></label><span class="cseg big" role="group" aria-label="Group">${PH_FIT_FILT.filter(([f]) => f !== "hid").map(([f, l]) => `<button type="button" class="${g === f ? "on" : ""}" data-fit-pg="${f}" aria-pressed="${g === f}">${l}</button>`).join("")}</span></div>
@@ -52069,7 +52094,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     all.forEach(X => { if (!X.hid) { const k = X.ty || "none"; tc[k] = (tc[k] || 0) + 1; } });
     if (phFitLt !== "all" && !tc[phFitLt]) phFitLt = "all";
     if (phFitTs !== "all" && !tc[phFitTs]) phFitTs = "all";
-    const L = all.filter(X => (phFitLf === "hid" ? X.hid : !X.hid && (phFitLf === "all" || (PH_FIT_FG[phFitLf] || []).includes(X.ar))) && (phFitLf === "hid" || phFitLt === "all" || (X.ty || "none") === phFitLt)).sort((a, b) => b.u - a.u || a.n.localeCompare(b.n));
+    const L = all.filter(X => (phFitLf === "hid" ? X.hid : !X.hid && (phFitLf === "all" || (PH_FIT_FG[phFitLf] || []).includes(X.ar))) && (phFitLf === "hid" || phFitLt === "all" || (X.ty || "none") === phFitLt)).sort(phAzBy(X => X.n));
     const op = phFitLo ? all.find(X => X.id === phFitLo) || null : null;
     if (!op) phFitLo = "";
     const chips = L.map(X => `<button type="button" class="${op && op.id === X.id ? "on" : ""}" data-fit-lo="${esc(X.id)}" data-fit-ln="${esc(X.n.toLowerCase())}"${q && !X.n.toLowerCase().includes(q) ? " hidden" : ""} aria-pressed="${!!op && op.id === X.id}"><i style="background:${phFitAreaCol(X.ar)}"></i>${esc(X.n)}<em>${X.u}</em></button>`).join("");
@@ -52124,7 +52149,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     }
     return `<div class="ph-hub ph-fit" data-hub-host="1">${phFitDlHtml()}${phFitRtDlHtml()}
       <div class="ttl">Exercises</div>
-      <div class="sh"><h3>My exercises</h3><span class="rule"></span><span class="r">most used first</span></div>
+      <div class="sh"><h3>My exercises</h3><span class="rule"></span><span class="r">A–Z</span></div>
       <div class="ltop"><label class="csearch">${phMeIc("search")}<input type="search" data-fit-q="1" value="${esc(phFitQ)}" placeholder="Search my exercises" aria-label="Search my exercises" autocomplete="off"></label><span class="cseg big" role="group" aria-label="Show">${PH_FIT_FILT.map(([f, l]) => `<button type="button" class="${phFitLf === f ? "on" : ""}" data-fit-lfl="${f}" aria-pressed="${phFitLf === f}">${l}</button>`).join("")}</span><button type="button" class="cadd" data-fit-lnew="1" aria-expanded="${phFitLn}">+ New</button>${nw}</div>
       ${phFitLtHtml(tc)}
       ${phFitSortOn ? phFitSortHtml(all) : L.length ? `<div class="lchips">${chips}</div>` : `<div class="ph-fit-empty">${phFitLf === "hid" ? "Nothing hidden" : all.length ? "None in this group" : "No exercises yet"}</div>`}
@@ -55328,7 +55353,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     const order = phMeColours().map(o => o.key).concat(Object.keys(by).filter(k => k.startsWith("c:")), [""]), out = [];
     order.forEach(k => {
       const g = by[k]; if (!g) return;
-      g.ps.sort((a, b) => (uses[phQkNorm(b.t)] || 0) - (uses[phQkNorm(a.t)] || 0) || a.t.localeCompare(b.t));
+      g.ps.sort((a, b) => phAz(a.t, b.t)); // A–Z within a colour (her A–Z rule 2026-11-02; was most used first)
       out.push(g); delete by[k];
     });
     return out;
@@ -55443,7 +55468,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     if (s) {
       const toks = s.split(" "), starts = p => p.t.toLowerCase().startsWith(s) ? 0 : 1;
       const hits = all.filter(p => { const hay = (p.t + " " + phQkColOf(p).l).toLowerCase(); return toks.every(t => hay.includes(t)); })
-        .sort((a, b) => starts(a) - starts(b) || (q.uses[phQkNorm(b.t)] || 0) - (q.uses[phQkNorm(a.t)] || 0) || a.t.localeCompare(b.t));
+        .sort((a, b) => starts(a) - starts(b) || phAz(a.t, b.t));
       let h = hits.map(row).join("");
       if (!all.some(p => phQkNorm(p.t) === s)) {
         const i = q.flat.push({ a: "new" }) - 1;
@@ -55761,7 +55786,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   }
   // the Me form's Event title reads the same list: its names in the box's own native autocomplete while typing,
   // and a name from the list fills its colour, time, length and repeat (a repeat she already has: that day only)
-  const phQkDlHtml = () => `<datalist id="phQkDl">${phMePreLive().map(p => `<option value="${esc(p.t)}"></option>`).join("")}</datalist>`;
+  const phQkDlHtml = () => `<datalist id="phQkDl">${phMePreLive().slice().sort(phAzBy(p => p.t)).map(p => `<option value="${esc(p.t)}"></option>`).join("")}</datalist>`;
   function phQkFormFill(f) {
     if (!f || f.kind !== "ev" || f.edit) return;
     const p = phMePreLive().find(x => phQkNorm(x.t) === phQkNorm(f.t));
@@ -56406,7 +56431,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       (h.suppliers || []).forEach(s => add(s && s.name));
     });
     (PHARMACY.suppliers || []).forEach(s => add(s && s.name));
-    return [...names.values()];
+    return [...names.values()].sort(phAz);
   }
   function phSupplierDirEntry(name) {
     const nameL = name.trim().toLowerCase();
@@ -68645,8 +68670,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     // ---- pickers & datalists ---- (the Suppliers LIST itself moved to its
     // own page, renderPhSuppliersPage() -- these two stay here since they
     // feed autocomplete on Inventory's own herb-edit form, unrelated to tab)
-    document.getElementById("phSupplierList").innerHTML = suppliers.map(s => `<option value="${esc(s.name)}">`).join("");
-    const patients = [...new Set(log.map(e => e.patient).filter(Boolean))];
+    document.getElementById("phSupplierList").innerHTML = suppliers.slice().sort(phByName).map(s => `<option value="${esc(s.name)}">`).join("");   // A–Z (her 2026-11-02 rule)
+    const patients = [...new Set(log.map(e => e.patient).filter(Boolean))].sort(phAz);
     document.getElementById("phPatientList").innerHTML = patients.map(p => `<option value="${esc(p)}">`).join("");
     phMobileDedupeTitles();   // Inventory's fall-through path — same one-title-per-page pass as the early returns above
     phPinSavedPill();         // re-measure the tab bar after any render that could move it
@@ -69556,7 +69581,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     q = String(q || "").trim().toLowerCase();
     if (!q) return [];
     return PHARMACY.herbs.filter(h => !h.order && !h.stopped && !phIsInHouseSup((phActiveSupplier(h) || {}).name) && phHerbLabel(h).toLowerCase().includes(q))
-      .sort((a, b) => phHerbLabel(a).localeCompare(phHerbLabel(b)))
+      // A–Z by name, not by code (her 2026-11-02 A–Z rule); a name or code starting with what she typed first, so the cut of 8 keeps it
+      .sort((a, b) => (phHerbLabel(b).toLowerCase().startsWith(q) || String(b.name || "").toLowerCase().startsWith(q)) - (phHerbLabel(a).toLowerCase().startsWith(q) || String(a.name || "").toLowerCase().startsWith(q)) || phByName(a, b))
       .slice(0, 8);
   }
   function phOsAddMenuPaint(inp) {
@@ -72023,7 +72049,7 @@ or changing anything in Cliniko.
     renderPresPanel();
     renderPresList();
     renderSchedWidget();
-    const patients = [...new Set(PHARMACY.log.map(e => e.patient).filter(Boolean))];
+    const patients = [...new Set(PHARMACY.log.map(e => e.patient).filter(Boolean))].sort(phAz);   // A–Z (her 2026-11-02 rule)
     document.getElementById("phPatientList").innerHTML = patients.map(p => `<option value="${esc(p)}">`).join("");
     // keep the header Markup field in step with whichever field last changed it
     // (this one, or the per-script one inside an open panel) -- never while
@@ -76945,10 +76971,10 @@ or changing anything in Cliniko.
      time it runs across 510 records. It is dropped from a record only once she
      actually sets a level on that patient. */
   const PH_INS_LEVELS = [["", "Rebate —"], ["high", "50% or more"], ["good", "Good"], ["low", "Low"]];
-  const PH_INS_FUNDS = ["GU Health", "Bupa", "Medibank", "HCF", "nib", "ahm", "Australian Unity",
-    "CBHS", "Defence Health", "Doctors' Health Fund", "Frank", "GMHBA", "HBF", "Health Partners",
-    "Latrobe Health", "Navy Health", "Peoplecare", "Police Health", "Queensland Country Health",
-    "St Luke's Health", "Teachers Health", "TUH", "Union Health", "Westfund"];
+  const PH_INS_FUNDS = ["ahm", "Australian Unity", "Bupa", "CBHS", "Defence Health", "Doctors' Health Fund",
+    "Frank", "GMHBA", "GU Health", "HBF", "HCF", "Health Partners", "Latrobe Health", "Medibank", "Navy Health",
+    "nib", "Peoplecare", "Police Health", "Queensland Country Health", "St Luke's Health", "Teachers Health", "TUH",
+    "Union Health", "Westfund"]; // A–Z (her A–Z rule 2026-11-02)
   const phInsLevel = key => {
     const r = phPatientPeek(key) || {};
     return r.insuranceRebate || (r.insuranceGood ? "good" : "");
@@ -77867,7 +77893,7 @@ or changing anything in Cliniko.
         <label>Template</label>
         <select id="phMsgTemplateSel">
           <option value="">Choose a template…</option>
-          ${phMsgTemplates().map(t => `<option value="${t.id}"${phMsgSelTemplateId === t.id ? " selected" : ""}>${esc(t.name)}</option>`).join("")}
+          ${phMsgTemplates().slice().sort(phAzBy(t => t.name)).map(t => `<option value="${t.id}"${phMsgSelTemplateId === t.id ? " selected" : ""}>${esc(t.name)}</option>`).join("")}
         </select>
         <button type="button" class="ph-name-link" data-ph-msg-section="templates">Manage templates</button>
       </div>
@@ -77935,7 +77961,8 @@ or changing anything in Cliniko.
       </div>`;
     }
     const all = phMsgTemplates();
-    const groups = PH_MSG_CATEGORIES.map(([id, label]) => [label, all.filter(t => t.category === id)]).filter(([, list]) => list.length);
+    // a category's templates A–Z (her A–Z rule 2026-11-02), Cycle & IVF's keep the cycle's own order
+    const groups = PH_MSG_CATEGORIES.map(([id, label]) => [label, all.filter(t => t.category === id).sort((a, b) => id === "cycle" ? 0 : phAz(a.name, b.name))]).filter(([, list]) => list.length);
     const rowHtml = t => `<div class="ph-msg-tmpl-row">
       ${phMsgTagPillHtml(t.tag)}
       <div class="ph-msg-tmpl-row-mid"><b>${esc(t.name)}</b><span class="faint">${esc((t.body || "").split("\n")[0].slice(0, 80))}</span></div>
@@ -77943,7 +77970,7 @@ or changing anything in Cliniko.
       <button type="button" class="ph-name-link" data-ph-msg-tmpl-edit="${t.id}">Edit</button>
     </div>`;
     const rows = groups.map(([label, list]) => `<div class="ph-msg-tmpl-grouphead">${esc(label)}</div>${list.map(rowHtml).join("")}`).join("");
-    const infoRows = phInfoLtrAllTemplates().map(x => {
+    const infoRows = phInfoLtrAllTemplates().slice().sort(phAzBy(x => x.name)).map(x => {
       const words = (PHARMACY.infoLetterWords || {})[x.id] || x.body;
       const first = (words.split("\n").find(l => l.trim() && !/^(hi|dear|hello)\b/i.test(l.trim())) || "").trim();
       return `<div class="ph-msg-tmpl-row">
@@ -78327,7 +78354,7 @@ or changing anything in Cliniko.
             <div class="ph-dash-secthead"><h2>Prepare a message</h2><span class="rule"></span></div>
             <select id="phJourneyTemplateSel">
               <option value="">Choose a template…</option>
-              ${phMsgTemplates().map(t => `<option value="${t.id}"${phJourneyTemplateId === t.id ? " selected" : ""}>${esc(t.name)}</option>`).join("")}
+              ${phMsgTemplates().slice().sort(phAzBy(t => t.name)).map(t => `<option value="${t.id}"${phJourneyTemplateId === t.id ? " selected" : ""}>${esc(t.name)}</option>`).join("")}
             </select>
             <textarea id="phJourneyBodyInput" rows="4" placeholder="Message">${esc(tmpl ? tmpl.body : "")}</textarea>
             <button type="button" class="btn-save" data-ph-journey-prepare="1">Prepare</button>
@@ -78339,7 +78366,7 @@ or changing anything in Cliniko.
       <div class="ph-jr-composerbar">
         <select id="phJourneyBarTemplateSel">
           <option value="">Choose a template…</option>
-          ${phMsgTemplates().map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join("")}
+          ${phMsgTemplates().slice().sort(phAzBy(t => t.name)).map(t => `<option value="${t.id}">${esc(t.name)}</option>`).join("")}
         </select>
         <button type="button" class="btn-save" data-ph-journey-prepare="1">Prepare</button>
       </div>`;
@@ -78837,9 +78864,9 @@ or changing anything in Cliniko.
   // (PH_TP_SYM_PRESETS, PH_TP_OBJ_MMT_LIB, PH_TP_FORMULA_ACTIONS).
   const PH_HX_NOTE_PRESETS = {
     diabetes: ["Type 1", "Type 2"],
-    blood_thinning_medication: ["Warfarin", "Aspirin", "Clopidogrel", "Rivaroxaban", "Apixaban"],
-    cancer: ["Active treatment", "In remission", "Past (cured)", "Monitoring"],
-    thyroid_condition: ["Hypothyroid", "Hyperthyroid", "Hashimoto's", "Graves'"],
+    blood_thinning_medication: ["Apixaban", "Aspirin", "Clopidogrel", "Rivaroxaban", "Warfarin"],
+    cancer: ["Active treatment", "In remission", "Past (cured)", "Monitoring"], // a course in time order, not A–Z
+    thyroid_condition: ["Graves'", "Hashimoto's", "Hyperthyroid", "Hypothyroid"],
   };
   function phHxNoteHasPreset(note, label) {
     return String(note || "").split(",").map(s => s.trim().toLowerCase()).includes(label.toLowerCase());
@@ -79170,7 +79197,7 @@ or changing anything in Cliniko.
     // Allergies only (her 2026-10-15): only the rows phHxApplicableItems keeps are drawn
     const okKeys = new Set(phHxApplicableItems(rec).map(it => it.k));
     const groupHtml = groups.map(gr => {
-      const rows = gr.items.filter(([k]) => okKeys.has(k));
+      const rows = gr.items.filter(([k]) => okKeys.has(k)).sort((x, y) => phAz(x[1], y[1]));   // A–Z inside each group, the groups keep their order (her 2026-11-02 picks)
       if (!rows.length) return null;
       const quiet = reproQuiet && PH_HX_CASE_QUIET_GROUPS.has(gr.g);
       const unaskedLeft = gr.items.some(([k]) => phHxVal(rec, k) === "unasked");
@@ -79287,7 +79314,7 @@ or changing anything in Cliniko.
   // field, two places it can be typed into, never two copies of the text.
   function phHxFlagsStripHtml(rec) {
     const items = phHxApplicableItems(rec);
-    const yes = items.filter(it => phHxVal(rec, it.k) === "yes");
+    const yes = items.filter(it => phHxVal(rec, it.k) === "yes").sort(phAzBy(it => it.label));   // A–Z (her 2026-11-02 rule)
     const fresh = presHxFreshFlag;
     // her synth22 batch 2026-10-19 ("i dont like this design, i want it to be clean and modern" +
     // "make it space saving"): a note box no longer sits open on every chip -- only one already
@@ -83409,7 +83436,7 @@ or changing anything in Cliniko.
   // every answer that is on in the version on screen, with the area it lights
   function phAhAreas(S) {
     const out = [];
-    PH_AH_TOPICS.forEach(t => { const s = S.sel[t.id]; if (!s) return; t.a.forEach((a, i) => { const k = phAhKey(a, S.mode); if (k && s.on[i]) out.push({ area: phAhAreaOf(t.id, k), label: phAhLabel(a, S.mode), key: k }); }); });
+    PH_AH_TOPICS.forEach(t => { const s = S.sel[t.id]; if (!s) return; phAhAns(t, S.mode).forEach(({ a, i, key: k }) => { if (k && s.on[i]) out.push({ area: phAhAreaOf(t.id, k), label: phAhLabel(a, S.mode), key: k }); }); });   // the answers' A–Z order
     return out;
   }
   function phAhFigureHtml(name, S) {
@@ -85129,13 +85156,16 @@ or changing anything in Cliniko.
     const grouped = new Set();
     PH_REN_FAM_GROUPS.forEach(g => { grouped.add(g.herb); g.formulas.forEach(f => grouped.add(f)); });
     let h = "";
-    PH_REN_FAM_GROUPS.filter(g => g.formulas.length).forEach(g => {
+    // A–Z (her 2026-11-02 rule): the family cards, the formulas on each (its own herb stays first), On their own, Notes only.
+    // Copies are sorted; PH_REN_FAM_GROUPS keeps its order, which sets each formula's colour shade.
+    const az = ids => ids.slice().sort(phAzBy(phGdfName));
+    PH_REN_FAM_GROUPS.filter(g => g.formulas.length).sort(phAzBy(g => phGdfName(g.herb))).forEach(g => {
       const j = PH_BTJ[g.herb] || {};
-      h += cardOf([g.herb].concat(g.formulas, g.also || []), phGdfName(g.herb), (j.hz || "") + (j.en ? " · " + j.en : ""), "", g.herb);
+      h += cardOf([g.herb].concat(az(g.formulas.concat(g.also || []))), phGdfName(g.herb), (j.hz || "") + (j.en ? " · " + j.en : ""), "", g.herb);
     });
-    const solo = PH_REN_FAM_GROUPS.filter(g => !g.formulas.length).map(g => g.herb).concat(Object.keys(PH_FORMULAS).filter(id => !grouped.has(id)));
+    const solo = az(PH_REN_FAM_GROUPS.filter(g => !g.formulas.length).map(g => g.herb).concat(Object.keys(PH_FORMULAS).filter(id => !grouped.has(id))));
     if (solo.length) h += cardOf(solo, "On their own", "", "solo");
-    const notes = phFormulaNotes().filter(f => !phGdfNoteIsFam(f)).map(f => "n:" + f.id), hidN = phFormulaNotesHidden().length;
+    const notes = az(phFormulaNotes().filter(f => !phGdfNoteIsFam(f)).map(f => "n:" + f.id)), hidN = phFormulaNotesHidden().length;
     h += `<div class="gf-mc nt"><h3>Notes only <span>not scored in Fang Bing Ren</span></h3><div class="gf-tiles">${notes.map(i => phGdfTileHtml(i, hits, sel)).join("")}`
       + `${phGdfNewNote ? "" : `<button type="button" class="gf-chip" data-gdf-note-new="1">${PH_GDF_IC.plus} Notes-only formula</button>`}`
       + `${hidN ? `<button type="button" class="gf-chip" data-gd-fkb-restore="1">${hidN} hidden · show again</button>` : ""}</div>`
@@ -92311,12 +92341,12 @@ or changing anything in Cliniko.
     const inCat = c => [
       ...current.filter(t => t.category === c.id).map(t => ({ t, mine: false })),
       ...users.filter(t => t.category === c.id).map(t => ({ t, mine: true })),
-    ];
+    ].sort(phAzBy(x => x.t.name));   // A–Z in a category (her A–Z rule 2026-11-02)
     const groups = PH_TP_CATEGORIES.map(c => ({ id: c.id, label: c.label, items: inCat(c) }));
     const leftover = [
       ...current.filter(t => !PH_TP_CATEGORIES.some(c => c.id === t.category)).map(t => ({ t, mine: false })),
       ...users.filter(t => !PH_TP_CATEGORIES.some(c => c.id === t.category)).map(t => ({ t, mine: true })),
-    ];
+    ].sort(phAzBy(x => x.t.name));
     if (leftover.length) groups.push({ label: "Other", items: leftover });
     return groups.filter(g => g.items.length).map(g => {
       const catCls = g.id ? `cat-${g.id}` : "";
@@ -93298,8 +93328,10 @@ or changing anything in Cliniko.
       .map(c => isMan && c === "gynae" ? "mens" : c);
     const wantCat = wantCats[0] || null;
     const catItems = [...tpls.map(t => ({ t, mine: false })), ...usersCat.map(t => ({ t, mine: true }))];
-    let groups = PH_TP_CATEGORIES.map(c => ({ id: c.id, label: c.label, items: catItems.filter(x => x.t.category === c.id) }));
-    const leftover = tpls.filter(t => !hasCat(t)).map(t => ({ t, mine: false }));
+    // a category's plans A–Z (her A–Z rule 2026-11-02); the complaint's fit order below still leads where it applies
+    const tAz = phAzBy(x => x.t.name);
+    let groups = PH_TP_CATEGORIES.map(c => ({ id: c.id, label: c.label, items: catItems.filter(x => x.t.category === c.id).sort(tAz) }));
+    const leftover = tpls.filter(t => !hasCat(t)).map(t => ({ t, mine: false })).sort(tAz);
     if (leftover.length) groups.push({ id: null, label: "Other", items: leftover });
     // a category flagged `always` survives the Case filter -- Acute & immune
     // is the only one, because getting sick is not a kind of patient
@@ -100607,7 +100639,7 @@ or changing anything in Cliniko.
   function phDxPatternOptions() {
     const out = PH_PAT_DEFS.map(p => p.name);
     PH_REN_FAM_GROUPS.forEach(g => { [g.herb].concat(g.formulas).forEach(id => { const f = PH_FORMULAS[id]; if (f && f.name && !out.includes(f.name)) out.push(f.name); }); });
-    return out;
+    return out.sort(phAz);   // patterns and families in one A–Z list (her 2026-11-02 rule)
   }
   function phCcDxListHtml() { return `<datalist id="phCcDxList">${phDxPatternOptions().map(t => `<option value="${esc(t)}">`).join("")}</datalist>`; }
   // her 2026-10-18 ask ("do the same for all how long buttons in the app"): the same combobox
@@ -103800,7 +103832,7 @@ or changing anything in Cliniko.
   const PH_AH_TOPICS = [
     { id: "bowels", t: "Bowels", basic: 1, a: [["Daily, soft", "", ""], ["Hard, dry, strains", "constipation_tend", "constipation_now", "Constipated"], ["Loose or watery", "stool_watery_tend", "diarrhea", "Loose stools"], ["Dry first, then watery", "stool_dry_then_watery_tend", null], ["Sticky stools", "stool_sticky_tend", "stool_sticky_now"], ["Smelly stools", "stool_smelly_tend", "stool_smelly_now"], ["Rumbling, gurgling", "borborygmus_tend", "borborygmus_now"], ["Loose, hot and urgent", "diarrhea_heat_tend", "diarrhea_heat_now"], ["Burning at the anus", "anus_burning_tend", "anus_burning_now"], ["Fissures", "fissure_hemorrhoid_tend", "fissure_hemorrhoid_now"], ["Piles", "hemorrhoids_tend", "hemorrhoids_now"], ["Prolapse", null, "anal_prolapse_now"]] },
     { id: "appetite", t: "Appetite & digestion", basic: 1, a: [["Eats well, no trouble", "", ""], ["Very hungry, eats a lot", "appetite_vigorous", "appetite_vigorous_now"], ["Poor appetite", "appetite_poor_tend", "appetite_poor_now"], ["Craves sweets", "appetite_sweet_tend", null], ["Craves spicy food", "appetite_spicy_tend", null], ["Changes with mood", "appetite_emotional", null], ["Nausea", "nausea_tend", "nausea_vomit"], ["Dry heaving", null, "dry_heave_now"], ["Vomiting", "vomiting_tend", "vomiting_now"], ["Nausea after drinking water", null, "nausea_after_drink_now"], ["Bloated belly", "bloating_tend", "bloating_now"], ["Picky eating", "appetite_picky_tend", "appetite_picky_now"], ["Weak digestion", "digestive_dysfunction_tend", "digestive_dysfunction_now"]] },
-    { id: "thirst", t: "Thirst & mouth", a: [["Normal", "", ""], ["Not thirsty", "thirst_none_tend", "thirst_none"], ["Very thirsty", "thirst_intense_tend", "thirst_intense"], ["Prefers warm drinks", "drinks_warm_tend", "drinks_warm"], ["Dry mouth", "dry_mouth_tend", "dry_mouth_now"], ["Dry lips", "dry_lips_tend", "lips_peeling_now"], ["Bitter taste", "bitter_taste_tend", "bitter_taste_now"], ["Sticky mouth", "sticky_mouth_tend", "sticky_mouth_now"], ["Spits clear saliva", null, "saliva_clear_now"], ["Dull taste", null, "taste_dull_now"], ["Thirsty, no wish to drink", "thirst_no_drink_tend", "thirst_no_drink_now"], ["Dry lips", "dry_lips_tend", "lips_peeling_now", "Dry, peeling lips"]] },
+    { id: "thirst", t: "Thirst & mouth", a: [["Normal", "", ""], ["Not thirsty", "thirst_none_tend", "thirst_none"], ["Very thirsty", "thirst_intense_tend", "thirst_intense"], ["Prefers warm drinks", "drinks_warm_tend", "drinks_warm"], ["Dry mouth", "dry_mouth_tend", "dry_mouth_now"], ["Bitter taste", "bitter_taste_tend", "bitter_taste_now"], ["Sticky mouth", "sticky_mouth_tend", "sticky_mouth_now"], ["Spits clear saliva", null, "saliva_clear_now"], ["Dull taste", null, "taste_dull_now"], ["Thirsty, no wish to drink", "thirst_no_drink_tend", "thirst_no_drink_now"], ["Dry lips", "dry_lips_tend", "lips_peeling_now", "Dry, peeling lips"]] },
     { id: "heat", t: "Heat & cold", basic: 1, a: [["Comfortable", "", ""], ["Dreads heat, likes cool", "dreads_heat", "heat_averse"], ["Whole body feels hot", "body_hot_tend", null], ["Feels feverish", null, "feverish"], ["Feels the cold", "cold_sens", "cold_feel"], ["Cold hands or feet", "cold_extrem", "cold_limbs"], ["Hot, but limbs are cold", "heat_cold_limbs_tend", null], ["Sensitive to temperature changes", "temp_sensitive", null], ["Chills", "chills_tend", "chills_now"], ["Symptoms worse with cold", "cold_aggravates_tend", null], ["Mixed cold and heat", "cold_heat_mixed_tend", null], ["Dislikes wind", "wind_averse_tend", "wind_averse"], ["Cold back", "back_cold_tend", "back_cold_now"], ["Hot palms and soles", null, "palms_soles_hot_now"], ["Feverish in the afternoon", null, "feverish_afternoon_now"]] },
     { id: "sweat", t: "Sweat", a: [["Normal", "", ""], ["Sweats easily", "sweats_easy", "spont_sweat", "Sweats without effort"], ["Hardly sweats", "no_sweat_tend", "no_sweat"], ["Light or uneven", "sweat_uneven_tend", null], ["Night sweats", "night_sweats_tend", "night_sweats"], ["Profuse sweating", "sweat_profuse_tend", "sweat_profuse"], ["Mostly head and neck", "sweat_head_tend", "sweat_head_now"]] },
     { id: "urine", t: "Urine", a: [["Normal", "", ""], ["Yellow, scanty", "urine_yellow_scanty_tend", "urine_yellow_scanty"], ["Little passed", "urine_reduced_tend", "urine_reduced"], ["Copious, clear", "urine_copious_clear_tend", "urine_copious_clear"], ["Often", "urine_frequent_tend", "urine_frequent_now"], ["At night", "nocturia_tend", "nocturia_now"], ["Hard to pass", "urine_difficult_tend", "urine_difficult_now"], ["Leaks", "incontinence_tend", "incontinence_now"], ["Wets the bed", null, "bedwetting_now"], ["Cannot empty fully", "urine_retention_tend", "urine_retention_now"]] },
@@ -103834,7 +103866,9 @@ or changing anything in Cliniko.
   const phAhKey = (a, mode) => mode === "d" ? a[2] : a[1];            // null = not asked in this version, "" = the normal answer
   const phAhLabel = (a, mode) => (mode === "d" && a[3]) || a[0];
   const phAhW = (fam, key, mode) => { const f = PH_FORMULAS[fam], w = f && (mode === "d" ? f.bing : f.ren); return (w && w[key]) || 0; };
-  const phAhAns = (t, mode) => t.a.map((a, i) => ({ a, i, key: phAhKey(a, mode) })).filter(x => x.key !== null && x.key !== undefined);
+  // the normal answer ("Normal", "None", "Daily, soft": the one with no sign) first, then A–Z (her 2026-11-02 picks); x.i keeps the answer's place in t.a
+  const phAhAns = (t, mode) => t.a.map((a, i) => ({ a, i, key: phAhKey(a, mode) })).filter(x => x.key !== null && x.key !== undefined)
+    .sort((x, y) => (x.key === "" ? 0 : 1) - (y.key === "" ? 0 : 1) || phAz(phAhLabel(x.a, mode), phAhLabel(y.a, mode)));
   const phAhTopicW = (fam, t, mode) => phAhAns(t, mode).reduce((m, x) => Math.max(m, x.key ? phAhW(fam, x.key, mode) : 0), 0);
   function phAhRoot(rec) {
     const ah = (rec.askHer && rec.askHer.v) ? rec.askHer : (rec.askHer = { v: 1, t: {}, d: {} });
@@ -106056,11 +106090,12 @@ or changing anything in Cliniko.
       return `<div class="ph-rf-signs"><h4>${esc(title)}<span>${items.filter(i => i.ticked).length} ticked · ${items.length} signs count</span></h4><div class="ph-rf-slist">${shown.map(i => `<button type="button" class="sg${i.ticked ? " on" : ""}" data-rf-sign="${i.kind}:${i.key}"${i.site ? ` data-rf-mk="${i.site}"` : ""} aria-pressed="${i.ticked ? "true" : "false"}"><span class="n${i.num ? "" : " none"}">${i.num || "·"}</span><span class="tk">${i.ticked ? "✓" : ""}</span><span>${esc(i.label)}<span class="tag${i.kind === "bing" ? " b" : ""}">${i.kind === "bing" ? "Bing" : "Ren"}</span></span><span class="w">+${i.w}</span></button>`).join("")}</div>${hid > 0 ? `<button type="button" class="more" data-rf-more="1">${PH_REN_SHOWALL ? "Show fewer" : "Show " + hid + " more signs"}</button>` : ""}</div>`;
     };
     const listed = new Set(PH_REN_FAM_GROUPS.flatMap(g => [g.herb, ...g.formulas]));
+    const fnm = id => (PH_FORMULAS[id] || {}).name || id;
     const groups = PH_REN_FAM_GROUPS.concat(ids.filter(id => !listed.has(id)).map(id => ({ herb: id, formulas: [] })))
-      .map(g => ({ g, herb: ids.includes(g.herb) ? g.herb : "", fs: g.formulas.concat(g.also || []).filter(f => ids.includes(f)).sort((a, b) => pct(b) - pct(a)) }))
+      .map(g => ({ g, herb: ids.includes(g.herb) ? g.herb : "", fs: g.formulas.concat(g.also || []).filter(f => ids.includes(f)).sort((a, b) => pct(b) - pct(a) || phAzBy(fnm)(a, b)) }))
       .filter(x => x.herb || x.fs.length);
     groups.forEach(x => { x.top = Math.max(x.herb ? pct(x.herb) : 0, ...x.fs.map(pct)); });
-    groups.sort((a, b) => b.top - a.top);
+    groups.sort((a, b) => b.top - a.top || phAz(fnm(a.g.herb), fnm(b.g.herb)));   // equal scores read A–Z (her 2026-11-02 rule)
     const rows = groups.map((x, gi) => {
       const hid = x.g.herb, members = [hid, ...x.g.formulas, ...(x.g.also || [])];
       const gSel = PH_REN_FAMGRP === hid, oneIn = PH_REN_FAM && members.includes(PH_REN_FAM);
@@ -109993,8 +110028,11 @@ or changing anything in Cliniko.
     PH_FBR_TP_GROUPS.forEach(g => g.rows.forEach(x => { if (x.b) listed.add("d|" + x.b); if (x.r) listed.add("p|" + x.r); }));
     const left = [];
     ["d", "p"].forEach(k => Array.from(rowOf[k].values()).sort(phSignCmp).forEach(r => { if (!listed.has(k + "|" + r[0])) left.push(k === "d" ? { b: r[0] } : { r: r[0] }); }));
+    // rows A–Z by the row's sign (the Ren one where the row has one, so a Bing sign keeps its Ren twin beside it; her 2026-11-02 A–Z rule)
+    const sgnOf = x => (x.r && rowOf.p.get(x.r)) || (x.b && rowOf.d.get(x.b)) || null;
+    const rowCmp = (x, y) => { const a = sgnOf(x), b = sgnOf(y); return a && b ? phSignCmp(a, b) : 0; };
     const groups = PH_FBR_TP_GROUPS.concat(left.length ? [{ lab: "More tongue and pulse signs", icon: "tongue", rows: left, more: true }] : [])
-      .map(g => ({ g, rows: g.rows.filter(x => (x.b && vis("d", x.b)) || (x.r && vis("p", x.r))) })).filter(x => x.rows.length);
+      .map(g => ({ g, rows: g.rows.filter(x => (x.b && vis("d", x.b)) || (x.r && vis("p", x.r))).sort(rowCmp) })).filter(x => x.rows.length);
     if (!groups.length) return "";
     const ownB = x => { const o = x.b || x.bFrom; return o && vis("d", o) ? o : null; };
     const ownR = x => (x.r && vis("p", x.r) ? x.r : null);
@@ -110067,7 +110105,7 @@ or changing anything in Cliniko.
       const pairs = [], split = [];
       tw.b2r.forEach((r, b) => { if (areaOfPair(b, r) === ix) pairs.push([b, r]); });
       PH_FBR_TWINS_DRAFT.forEach(([b, r]) => { if (offSet.has(b + "|" + r) && areaOfPair(b, r) === ix) split.push([b, r]); });
-      const freeB = PH_BING_SIGNS.filter(r => phFbrAreaOf("d", r) === ix && !tw.b2r.has(r[0])), freeR = PH_REN_SIGNS.filter(r => phFbrAreaOf("p", r) === ix && !tw.r2b.has(r[0]));
+      const freeB = PH_BING_SIGNS.filter(r => phFbrAreaOf("d", r) === ix && !tw.b2r.has(r[0])).sort(phSignCmp), freeR = PH_REN_SIGNS.filter(r => phFbrAreaOf("p", r) === ix && !tw.r2b.has(r[0])).sort(phSignCmp);   // A–Z
       const add = freeB.length && freeR.length ? `<div class="ph-fbt-add"><select data-fbt-b="${ix}" aria-label="Bing sign"><option value="">Bing sign…</option>${freeB.map(opt).join("")}</select><select data-fbt-r="${ix}" aria-label="Ren sign"><option value="">Ren sign…</option>${freeR.map(opt).join("")}</select><button type="button" class="ph-pfw-link" data-fbt-add="${ix}">Pair</button></div>` : "";
       if (!pairs.length && !split.length && !add) return "";
       return `<div class="ph-lk-link"><div class="ph-lk-link-hd"><span class="nm" style="font-weight:700;color:var(--ph-herb-deep)">${esc(A.lab)}</span><span class="ph-lk-own">${pairs.length} twin${pairs.length === 1 ? "" : "s"}</span></div>${pairs.map(p => pairRow(p)).join("")}${split.map(p => pairRow(p, true)).join("")}${add}</div>`;
@@ -111288,10 +111326,12 @@ or changing anything in Cliniko.
       const groups = PH_REN_FAM_GROUPS.concat(ranked.map(r => r.id).filter(id => !listed.has(id)).map(id => ({ herb: id, formulas: [] })))
         .map(g => ({ herb: g.herb, ms: g.formulas.concat(g.also || []).map(id => rankedById.get(id)).filter(Boolean), h: rankedById.get(g.herb) })).filter(g => g.h);
       const best = g => Math.max(tileScore(g.h), ...g.ms.map(tileScore));
-      const cards = groups.filter(g => g.ms.length).sort((a, b) => best(b) - best(a));
-      const alone = groups.filter(g => !g.ms.length).sort((a, b) => best(b) - best(a));
-      // her 2026-10-13: the formulas in a card run from the best fit down (equal fits keep the order PH_REN_FAM_GROUPS lists them in); no tinted box, no gold ring on the card -- the leading block wears the ring
-      const down = a => a.slice().sort((x, y) => fitOf(y) - fitOf(x));
+      // equal scores read A–Z (her 2026-11-02 rule; with nothing ticked that is the whole board)
+      const nm = id => (PH_FORMULAS[id] || {}).name || id;
+      const cards = groups.filter(g => g.ms.length).sort((a, b) => best(b) - best(a) || phAz(nm(a.herb), nm(b.herb)));
+      const alone = groups.filter(g => !g.ms.length).sort((a, b) => best(b) - best(a) || phAz(nm(a.herb), nm(b.herb)));
+      // her 2026-10-13: the formulas in a card run from the best fit down (equal fits A–Z since 2026-11-02); no tinted box, no gold ring on the card -- the leading block wears the ring
+      const down = a => a.slice().sort((x, y) => fitOf(y) - fitOf(x) || phAz(nm(x.id), nm(y.id)));
       return `<div class="ph-fbr-cards">${cards.map(g => `<div class="ph-fbr-g${g.ms.length >= 4 ? " wide" : ""}"><div class="ph-fbr-gh">${mosaicTile(g.h, true)}</div><div class="ph-fbr-gf">${down(g.ms).map(m => mosaicTile(m, false)).join("")}</div></div>`).join("")}${alone.length ? `<div class="ph-fbr-alone"><span class="alab">On their own</span>${alone.map(g => mosaicTile(g.h, false)).join("")}</div>` : ""}</div>`;
     })();
     // her 2026-10-13 sleek card (mock fbr-page-sleek-mock-c3-2026-10-13.html, "Yes, build it"; the family named on top = "Best match", the family with the best fit):
@@ -111596,7 +111636,7 @@ or changing anything in Cliniko.
     return `<div class="ph-lk-aud">
       <h5>Entered by you (${mine.length})</h5><ul>${mine.map(x => li(`${esc(phSignLabel(x.k))} · <b>${x.v ? "Yes" : "No"}</b>`)).join("") || li("nothing yet")}</ul>
       <h5>Filled in by a link (${auto.length})</h5><ul>${auto.map(x => li(`${esc(phSignLabel(x.k))} · <b>${x.v ? "Yes" : "No"}</b> <span class="why">because ${x.a.yes ? "you ruled out " : ""}“${esc(phSignLabel(x.a.from))}”${x.a.overrode ? " (changed your earlier Yes)" : ""}</span> <button type="button" class="ph-lk-mine" data-lk-mine="${x.kind}:${x.k}">make mine</button>`)).join("") || li("nothing yet")}</ul>
-      <h5>From charts, history, the form and last visit (${chart.length})</h5><ul>${chart.slice(0, 10).map(l => li(`${esc(l)}: <b>Yes</b>`)).join("") || li("nothing")}${chart.length > 10 ? li(`+ ${chart.length - 10} more`) : ""}</ul>
+      <h5>From charts, history, the form and last visit (${chart.length})</h5><ul>${chart.sort(phAz).slice(0, 10).map(l => li(`${esc(l)}: <b>Yes</b>`)).join("") || li("nothing")}${chart.length > 10 ? li(`+ ${chart.length - 10} more`) : ""}</ul>
       <h5>Recent changes</h5><ul>${log.join("") || li("nothing yet")}</ul></div>`;
   }
   // ---- the Linked symptoms sheet (add / edit / switch off links) ----
@@ -111626,7 +111666,7 @@ or changing anything in Cliniko.
         <div class="ph-lk-link-hd"><label class="ph-lk-sw"><input type="checkbox" data-lk-toggle="${esc(l.id)}"${off.has(l.id) ? "" : " checked"}> <span class="nm">${builtin ? esc(l.name) : `<input type="text" class="ph-lk-nm" data-lk-name="${esc(l.id)}" value="${esc(l.name)}" maxlength="60" aria-label="Link name">`}</span></label><span class="ph-lk-own">${builtin ? "built-in" : "yours"}${edited ? " · edited" : ""}</span>${!builtin ? `<button type="button" class="ph-pfw-link" data-lk-del="${esc(l.id)}">Delete</button>` : edited ? `<button type="button" class="ph-pfw-link" data-lk-reset="${esc(l.id)}">Reset</button>` : ""}</div>
         <div class="ph-lk-sides">${sg(l.id, "a", l.a)}<span class="ph-lk-arrow" aria-hidden="true">⇄</span>${sg(l.id, "b", l.b)}</div></div>`).join("")}
       <button type="button" class="ph-rc-chip" data-lk-new="1">+ Add a link</button>
-      <datalist id="phLkSigns">${Object.keys(phLkChoices()).map(k => `<option value="${esc(k)}"></option>`).join("")}</datalist></div>`;
+      <datalist id="phLkSigns">${Object.keys(phLkChoices()).sort(phAz).map(k => `<option value="${esc(k)}"></option>`).join("")}</datalist></div>`;
   }
   function phLinkSheetRender() {
     const host = document.getElementById("phLkSheet"); if (host && !host.hidden) host.innerHTML = `<div class="ph-lk-backdrop" data-lk-close="1"></div>${phLinkSheetHtml()}`;
@@ -113699,7 +113739,7 @@ or changing anything in Cliniko.
         if (!m) merged.set(c.text, Object.assign({}, c, { feeds: (c.feeds || []).slice() }));
         else m.feeds = Array.from(new Set(m.feeds.concat(c.feeds || [])));
       });
-      const list = Array.from(merged.values());
+      const list = Array.from(merged.values()).sort(phAzBy(c => c.text));   // A–Z under each source heading (her 2026-11-02 rule)
       if (!list.length) return "";
       const meta = PH_PAT_SRC[src] || PH_PAT_SRC.notes;
       return `<div class="ph-pat-src">${phPatIc(meta[1])}${esc(meta[0])}</div>` + list.map(c => {
@@ -114586,7 +114626,7 @@ or changing anything in Cliniko.
     const moves = PH_FP_MOVES.map(x => item(x,
       `<span class="ph-fp-scale" role="radiogroup" aria-label="${esc(x.label)}">${PH_FP_SCALE.map(([v, l, hint]) => `<button type="button" class="ph-fp-sbtn v-${v}${d.m[x.key] === v ? " on" : ""}" data-fp-move="${x.key}|${v}" title="${esc(hint)}" aria-pressed="${d.m[x.key] === v ? "true" : "false"}">${l}</button>`).join("")}</span>`,
       lm[x.key] ? PH_FP_SCALE_LABEL[lm[x.key]] || "" : "", phFpPhotoPairHtml(pk, name, x.photo || ""))).join("");
-    const syms = PH_FP_SYMS.map(x => item(x,
+    const syms = PH_FP_SYMS.slice().sort(phAzBy(x => x.label)).map(x => item(x,   // A–Z (her 2026-11-02 rule; the moves above keep the exam order)
       `<span class="ph-fp-scale" role="radiogroup" aria-label="${esc(x.label)}">
         <button type="button" class="ph-fp-sbtn v-absent${d.s[x.key] === false ? " on" : ""}" data-fp-sym="${x.key}|no" aria-pressed="${d.s[x.key] === false ? "true" : "false"}">Absent</button>
         <button type="button" class="ph-fp-sbtn v-present${d.s[x.key] === true ? " on" : ""}" data-fp-sym="${x.key}|yes" aria-pressed="${d.s[x.key] === true ? "true" : "false"}">Present</button>
@@ -114717,8 +114757,9 @@ or changing anything in Cliniko.
   // changed Dark -> Dark red, so nothing already logged orphans), "red" and "pale"
   // are new, "pink" is dropped (the questionnaire never had it).
   const PH_CYCLE_LOOKS = [["bright", "Bright red"], ["red", "Red"], ["dark", "Dark red"], ["brown", "Brown"], ["darkpale", "Dark-pale"], ["pale", "Pale"], ["watery", "Watery"]];   // Dark-pale: her 2026-10-28 answer (Wen Jing Tang)
-  const PH_CYCLE_FEELS = [["cramping", "Cramping"], ["stabbing", "Stabbing"], ["dragging", "Dragging"], ["nerve", "Nerve-like"], ["backleg", "Back or leg"]];
-  const PH_CYCLE_SYMPTOMS = [["cramping", "Cramping"], ["mood", "Mood changes"], ["breast", "Breast tenderness"], ["headache", "Headaches"], ["bloating", "Bloating"], ["fatigue", "Fatigue"], ["acne", "Acne"]];
+  // feels and symptoms read A–Z (her 2026-11-02 rule); blood colour above stays a scale
+  const PH_CYCLE_FEELS = [["cramping", "Cramping"], ["stabbing", "Stabbing"], ["dragging", "Dragging"], ["nerve", "Nerve-like"], ["backleg", "Back or leg"]].sort((a, b) => phAz(a[1], b[1]));
+  const PH_CYCLE_SYMPTOMS = [["cramping", "Cramping"], ["mood", "Mood changes"], ["breast", "Breast tenderness"], ["headache", "Headaches"], ["bloating", "Bloating"], ["fatigue", "Fatigue"], ["acne", "Acne"]].sort((a, b) => phAz(a[1], b[1]));
   const PH_CYCLE_CONTRACEPTION = [["none", "None"], ["pill", "Pill"], ["iud_h", "IUD (hormonal)"], ["iud_c", "IUD (copper)"], ["implant", "Implant"], ["condoms", "Condoms"], ["recent", "Recently stopped"], ["other", "Other"]];
   const PH_CYCLE_CONTRACEPTION_LABEL = PH_CYCLE_CONTRACEPTION.reduce((m, [v, l]) => (m[v] = l, m), {});
   // Her ask straight after the Cycle tab redesign, 2026-09-15: "i need to
@@ -115643,7 +115684,7 @@ or changing anything in Cliniko.
       .map(r => ({ name: phDispName(r.name, true), src: "refill:" + r.id, d: "recipe", keys: [presAbbr(r)] })).sort(az);
     const jars = PHARMACY.herbs.filter(h => phIsFormula(h))
       .map(h => ({ name: phDispName(h.name, true), src: "jar:" + h.id, d: "jar", keys: phHerbCodes(h).concat(phFormulaAbbr(h) || []) })).sort(az);
-    return recipes.concat(jars);
+    return recipes.concat(jars).sort(az);   // one A–Z run under "Your recipes + jars" (her 2026-11-02 A–Z rule)
   }
   // the herb families (Gui Zhi, Chai Hu ...) are not formulas, so only the names ending Tang / San / Wan; one she stocks
   // under the same name pours from her own stock
@@ -119272,7 +119313,7 @@ or changing anything in Cliniko.
   let phPmCauseOpen = null;
   var PH_PM_FEELS = [["tension", "Tension"], ["sharp", "Sharp"], ["dull", "Dull"], ["aching", "Aching"], ["burning", "Burning"], ["electric", "Electric"],
     ["throbbing", "Throbbing"], ["stabbing", "Stabbing"], ["pins", "Pins and needles"], ["numb", "Numb"], ["shooting", "Shooting"], ["stiff", "Stiff"],
-    ["cramping", "Cramping"], ["heavy", "Heavy"], ["weak", "Weak"], ["tender", "Tender to touch"], ["comesgoes", "Comes and goes"]];   // her 2026-10-14: the retired Kind question's "comes and goes", kept as a word
+    ["cramping", "Cramping"], ["heavy", "Heavy"], ["weak", "Weak"], ["tender", "Tender to touch"], ["comesgoes", "Comes and goes"]].sort((a, b) => phAz(a[1], b[1]));   // her 2026-10-14: the retired Kind question's "comes and goes", kept as a word; A–Z everywhere they show (her 2026-11-02 rule)
   // `var` + the `|| []` guards: Came in for and Patterns can read these during boot, before this line has run
   function phPmFeelsOf(p) { const f = p && Array.isArray(p.f) ? p.f : []; return (PH_PM_FEELS || []).filter(([k]) => f.includes(k)); }
   function phPmTensionOnly(p) { return !!(p && Array.isArray(p.f) && p.f.length === 1 && p.f[0] === "tension"); }
@@ -119341,7 +119382,7 @@ or changing anything in Cliniko.
     try { effP = phTriEffective(rec, name, "p", t.p) || {}; } catch (e) { /* not ready */ }
     (PH_BING_SIGNS || []).forEach(([key, label]) => { if (effD[key] && phSignSexOk(rec.sex, key, label)) out.push({ type: "fbr", key, kind: "d", label }); });
     (PH_REN_SIGNS || []).forEach(([key, label]) => { if (effP[key] && phSignSexOk(rec.sex, key, label)) out.push({ type: "fbr", key, kind: "p", label }); });
-    return out;
+    return out.sort(phAzBy(o => o.label));   // A–Z, Bing and Ren together (her 2026-11-02 rule)
   }
   // the live display label for a saved cause -- resolves against today's data first, falls back to
   // the plain name if that finding no longer shows today (never breaks, per the mock's stage 4 note)
@@ -119766,7 +119807,7 @@ or changing anything in Cliniko.
     "Iliotibial band syndrome", "Meniscal tear", "Prepatellar bursitis", "Achilles tendinopathy", "Plantar fasciitis",
     "Lateral ankle sprain grade II", "De Quervain's tenosynovitis", "Carpal tunnel syndrome", "Trigger finger", "Trochanteric bursitis",
     "Osteoarthritis", "Fibromyalgia"];
-  const PH_PM_DX_LIST_HTML = `<datalist id="phPmDxList">${PH_PM_DX_TERMS.map(t => `<option value="${esc(t)}">`).join("")}</datalist>`;
+  const PH_PM_DX_LIST_HTML = `<datalist id="phPmDxList">${PH_PM_DX_TERMS.slice().sort(phAz).map(t => `<option value="${esc(t)}">`).join("")}</datalist>`;
   // her 2026-10-18 ask ("make the how long type in or dropdown, mock A: one combobox"): the quick picks
   // are a native datalist on the SAME box instead of a separate dropdown row -- typing still works
   // exactly as before (phCcParseDate already reads "2 yr"/"6 mo" text), and every PH_SINCE_OPTS label
@@ -124698,11 +124739,11 @@ or changing anything in Cliniko.
   // field, no separate "custom" slot, since a typed addition lives in the
   // same array as a picked one and there is nothing to keep in sync.
   const PH_TP_FORMULA_ACTIONS = [
-    { group: "Tonify", items: ["Tonify Qi", "Tonify Blood", "Tonify Yin", "Tonify Yang"] },
-    { group: "Move", items: ["Move Qi", "Move Blood", "Move Qi and Blood"] },
-    { group: "Clear / Resolve", items: ["Clear Heat", "Clear Damp", "Clear Damp-Heat", "Resolve Phlegm"] },
-    { group: "Warm / Stabilise", items: ["Warm the Interior", "Stabilise / Astringe", "Calm Shen"] },
-  ];
+    { group: "Tonify", items: ["Tonify Blood", "Tonify Qi", "Tonify Yang", "Tonify Yin"] },
+    { group: "Move", items: ["Move Blood", "Move Qi", "Move Qi and Blood"] },
+    { group: "Clear / Resolve", items: ["Clear Damp", "Clear Damp-Heat", "Clear Heat", "Resolve Phlegm"] },
+    { group: "Warm / Stabilise", items: ["Calm Shen", "Stabilise / Astringe", "Warm the Interior"] },
+  ]; // items A–Z, the groups stay (her A–Z rule 2026-11-02)
   let phTpFormulaActionOpen = null;   // phase id currently showing the picker
   // Treatment therapies (her mock, "yes i like this 2+3... build") -- a
   // multi-pick of modalities for the phase, each with its own Left/Right/
@@ -129696,11 +129737,11 @@ or changing anything in Cliniko.
      nothing she already wrote moves or vanishes -- the two coexist rather
      than one migrating into the other. */
   const PH_TP_SYM_PRESETS = [
-    { key: "sleep", label: "Sleep" },
     { key: "pain", label: "Pain" },
     { key: "rom", label: "Range of motion" },
+    { key: "sleep", label: "Sleep" },
     { key: "custom", label: "Custom" },
-  ];
+  ]; // A–Z, Custom last
   // "insomnia: MOTNI, daily, wake 3am, with night sweats" -- complaint is
   // whatever sits before the first : or =; everything after is split on
   // commas, and the one clause that reads as a frequency peels off into its
@@ -133773,7 +133814,7 @@ or changing anything in Cliniko.
     else { (all[tmplId] || (all[tmplId] = {}))[sec] = value; }
   }
   function phLtrTemplatesSectionHtml() {
-    const tmpls = [...phLtrAllTemplates(), PH_PRG_TMPL];   // the Progress letter (2026-10-29) is edited here too, never offered as a herbal letter
+    const tmpls = [...phLtrAllTemplates(), PH_PRG_TMPL].sort(phAzBy(x => x.name));   // A–Z (her A–Z rule 2026-11-02); the Progress letter (2026-10-29) is edited here too, never offered as a herbal letter
     const tmpl = tmpls.find(x => x.id === phLtrSetTpl) || tmpls[0], prg = tmpl === PH_PRG_TMPL;
     if (prg) phPrgHome();   // Home care from the first build moves in before it is shown
     const ov = phLtrOverrides()[tmpl.id] || {};
@@ -134169,9 +134210,11 @@ or changing anything in Cliniko.
   // quality's placement here is MY clinical read, DRAFT, hers to move.
   const PH_PULSE_GROUPS = [
     { label: "Concavity", q: ["normal", "wiry"] },
-    { label: "Arterial radius", q: ["thin", "blocked", "Muddy", "Thick", "Inflated", "Empty", "Restricted"] },
-    { label: "Intensity", q: ["soft", "weak", "flatamp", "slightpound", "pounding", "robust", "Amplitude Change", "Reduced Substance", "Feeble-Absent", "Forceful"] },
-    { label: "Additional textures", q: ["smallcomp", "medcomp", "Tense", "Tight", "Smooth Vibration", "Rough Vibration", "Choppy", "Muffled", "Diffuse", "Slippery", "Leather-Hard", "Ropy", "Heat", "Deep", "Floating", "Long"] },
+    // her 2026-11-02 "alphabetical, or where relevant, ascending": each group's arrow chips first, Intensity weakest to strongest
+    // (↓↓↓ Flat … ↑↑↑ Robust), then its word qualities A–Z
+    { label: "Arterial radius", q: ["thin", "blocked", "Empty", "Inflated", "Muddy", "Restricted", "Thick"] },
+    { label: "Intensity", q: ["flatamp", "weak", "soft", "slightpound", "pounding", "robust", "Amplitude Change", "Feeble-Absent", "Forceful", "Reduced Substance"] },
+    { label: "Additional textures", q: ["smallcomp", "medcomp", "Choppy", "Deep", "Diffuse", "Floating", "Heat", "Leather-Hard", "Long", "Muffled", "Ropy", "Rough Vibration", "Slippery", "Smooth Vibration", "Tense", "Tight"] },
   ];
   // her real paper chart (photo, 2026-09-13): two mirrored wrist halves, each
   // a row of organ-zone columns (narrow = one system, wide = 2-3 stacked).
@@ -134936,10 +134979,11 @@ or changing anything in Cliniko.
   // "relatively flat"); Temp gains "cool" between cold and warm; Feel loses "Xia Xin tender" (her "xia xin tender sign is the same as
   // epigastric tender sign": tender at epi IS it) and gains "tight hypochondrium" (her "intercostal tightness = rib tightness = tight
   // hypochondria sign", 胸脇苦満, felt only under the ribs, R or L hypo)
-  const PH_ABD_SEEN = [["distended", "full / distended"], ["bulging", "bulging"], ["sunken", "sunken"], ["flat", "flat"], ["vispulse", "visible pulsation"]];
+  // Seen, Sounds and Feel read A–Z; Temp (and Tension) are scales, low to high (her 2026-11-02 "alphabetical, or where relevant, ascending")
+  const PH_ABD_SEEN = [["distended", "full / distended"], ["bulging", "bulging"], ["sunken", "sunken"], ["flat", "flat"], ["vispulse", "visible pulsation"]].sort((a, b) => phAz(a[1], b[1]));
   const PH_ABD_TEMP = [["cold", "cold"], ["cool", "cool"], ["warm", "warm"]];
-  const PH_ABD_SOUNDS = [["water", "water sounds"], ["gas", "gas sounds"]];
-  const PH_ABD_FEEL = [["tender", "tender"], ["tighthypo", "tight hypochondrium"], ["pulsation", "pulsation"], ["tightrect", "tight rectus"], ["thinwall", "thin wall"]];
+  const PH_ABD_SOUNDS = [["water", "water sounds"], ["gas", "gas sounds"]].sort((a, b) => phAz(a[1], b[1]));
+  const PH_ABD_FEEL = [["tender", "tender"], ["tighthypo", "tight hypochondrium"], ["pulsation", "pulsation"], ["tightrect", "tight rectus"], ["thinwall", "thin wall"]].sort((a, b) => phAz(a[1], b[1]));
   const PH_ABD_HYPO = ["hypoR", "hypoL"], PH_ABD_HYPO_MSG = "Tight hypochondrium sits under the ribs (R or L hypo)";
   // one temperature per place: painting cold, cool or warm on a place takes the other two off it
   function phAbdTempOnly(a, keep, z) {
@@ -137903,7 +137947,7 @@ Please let me know if you have any questions.`;
   function phIntakeNameOptionsHtml() {
     const names = new Set();
     (PRESC.items || []).forEach(t => { if (presIsFormula(t)) return; const nm = presPatientFor(t) || t.name; if (nm) names.add(phTitle(nm)); });
-    return [...names].sort().map(n => `<option value="${esc(n)}">`).join("");
+    return [...names].sort(phAz).map(n => `<option value="${esc(n)}">`).join("");
   }
   // her ask (2026-09-05): a one-tap path from the generated link straight
   // into her SMS/Messages app, not just a raw Copy she has to paste herself
@@ -140343,6 +140387,10 @@ Please let me know if you have any questions.`;
       && (hit(r.name) || hit(presAbbr(r))));
     const herbs = PHARMACY.herbs.filter(h => !phIsFormula(h)
       && (hit(h.name) || phHerbCodes(h).some(c => hit(c))));
+    // A–Z (her 2026-11-02 rule), a name or code that starts with what she typed on top, so the 6 / 8 cut never hides it
+    const lead = (x, codes) => String(x.name || "").toLowerCase().startsWith(s) || codes.some(c => String(c || "").toLowerCase().startsWith(s)) ? 0 : 1;
+    const az = (list, codesOf) => list.sort((a, b) => lead(a, codesOf(a)) - lead(b, codesOf(b)) || phByName(a, b));
+    az(jars, h => phHerbCodes(h).concat(phFormulaAbbr(h))); az(refills, r => [presAbbr(r)]); az(herbs, h => phHerbCodes(h));
     return { jars, refills, herbs };
   }
   function presPickSuggHtml(q) {
@@ -143983,7 +144031,7 @@ Dosage: {dosage}
   function refResolveRecipeCandidates(raw) {
     const t = String(raw || "").trim().split(" · ")[0].trim().toLowerCase();
     if (!t) return [];
-    return PRESC.items.filter(x => presIsFormula(x) && (x.ingredients || []).length && x.name.toLowerCase().includes(t));
+    return PRESC.items.filter(x => presIsFormula(x) && (x.ingredients || []).length && x.name.toLowerCase().includes(t)).sort(phByName);   // her A–Z rule
   }
   function renderRefill() {
     const wrap = document.getElementById("phRefillWrap");
