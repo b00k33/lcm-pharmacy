@@ -1116,6 +1116,16 @@ goals are stored. Code: "MACROS" (`phMac*`). **What counts as eaten** in every n
 `phMealEaten`, her "these kj dont look right" 2026-10-28): a meal with Had it at once; any other meal once its time on her calendar has
 passed (an earlier day: all of it); Skipped and a fast night's Dinner never. Had it itself (the ✓, Today's meals, the meal habit) is
 unchanged. NOT live.
+**Hover breakdown** (her 2026-11-02 "when i hover, show breakdown of foods that contributed to hte macro", on her Meals rings): pointing
+at a ring (kJ, protein, carbs, fat; not Fasting), a Numbers cell, a Table kJ · P · C · F cell or a Grid Total number shows one box
+under it (above when there is no room): the number (+ what is still planned) of her goal, then a row a food, most first, had then
+planned (pale, as on the ring): the food with its amount, its meal (Breakfast · Lunch · Dinner · Snack · Drink), a bar of its share,
+the amount, the %; past 12 rows (and crumbs under 1) one "+ N more" row (a single one shows itself, "<1 g"); "Not counted · …"
+names what could not count it. Read from the rows the ring adds up (`phDietSum` returns `rows`; its items carry their meal:
+`phDietMyDay` = had, today's or a day to come's `phMplPlanSum` meals not had = planned; `phMacFoods`), whole numbers by largest
+remainder, so the rows add up to the ring's number, the pale ones to "+ N planned", the % to 100. One box (`#phMacBk`,
+`phMacBkHtml` / `phMacBkShow` / `phMacBkHide`, `data-mac-bk="day|number"`), the record's colour copied from the ring; any other
+point, a tap elsewhere, a scroll or Esc closes it; the goal field never opens it. Phone: a tap on a ring. NOT live.
 **Food reactions**: a meal she had (her card, under Had it) and a patient's noted day or usual meal (Diet sheet, "Usually after it")
 take an **After it**: Gut / Body / Felt good chips + her own words (+ Own, they stay), ONE How strong bar, Started, From (which
 thing), a Note. The mark (the first reaction's picture in a pale red circle, green for Felt good) shows on the grid block, the Me
