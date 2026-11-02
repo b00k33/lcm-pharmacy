@@ -9166,3 +9166,4 @@ dialogs open as cards (1220 / 800) and sheets (360); no sideways scroll at 360; 
 before); console clean after a reload. Pictures: shots/reloc-audit-*.jpg (list, dialog, phone -before / -after; sheet-after).
 **Not tested:** her real records and devices, a row that is overdue or due this week (none in the test copy), Print and Export
 themselves (their dialogs only).
+**LIVE** 2026-11-02 on her "Push live": build 20261102-140800 (publish 97097d8a). Checked on the live copy: the dialog card, Cancel the chip, the row circle, the joined filter bar, the head room for ⋯ and How they did are in it. Her devices need the gold Update.
