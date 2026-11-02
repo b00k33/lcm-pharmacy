@@ -9229,3 +9229,40 @@ fills with its count beside it; fill + number roll on change only; the fast's cl
 1220, 900 and 375 (default, fasting 2:15, search open); a ticked dose sweeps the herb ring 0 → ½ and rolls 0/2 → 1/2; the Steps tap
 opens its box in the row with the cursor in it; another patient's head unchanged (full search box, Book appt.); no console errors.
 **Not tested:** her real record and devices; a due meal's gold in the row (same class as before, restyled).
+
+## How a herb is used (2026-11-02)
+Her ask: "i want an option to see how a herb is commonly used in certain formulas - do you know what i mean?" Her three popup
+picks: **Whose** "Both, side by side"; **Where** "While prescribing, The herb in Inventory, The Guide"; **Look** "A table".
+- **One card** for all three places, `phHuCardHtml(key)` (`.ph-hu`): **In the classics** (Formula · Dose · With · Does, a Draft pill)
+  over **In your prescriptions** (one line "N prescriptions · usually a–b g · most often with …", then her recipes: Your formula ·
+  Dose · With). Empty states: "Not in these formulas" / "Not prescribed". A row's hover holds the whole recipe and the book.
+- **Classical data:** `PH_HU_SRC`, 52 rows `"name|book|use|Herb:dose · …|Pair+Pair · …"` (Shang Han Lun and Jin Gui first, plus the
+  later classics she uses: Xiao Yao San, Chai Hu Shu Gan San, Liu Wei Di Huang Wan, Wen Dan Tang, Huang Lian Jie Du Tang, Yu Ping Feng
+  San, Xue Fu Zhu Yu Tang, Si Wu Tang, Wai Tai Fu Ling Yin …). **Claude-drafted: DRAFT until she reads and corrects it** (the Draft
+  pill says so in its hover). Herb keys: `phHuBase` (the pinyin before "/", no "(…)", "#" or "*", lower case) through `PH_HU_ALIAS`
+  (zhi gan cao → gan cao; the book's shao yao → bai shao AND chi shao; gan di huang / sheng di huang → sheng di; ban xia, fu zi, long
+  gu, mu li variants …). "With" = the formula's own pairs that hold the herb, else its lead herb.
+- **Her own:** `phHuOwn(key)` reads `PRESC.items` when drawn, never stored: recipes (`presIsFormula`) list with their grams and two
+  biggest partners; prescriptions give the count, usual grams (25th–75th percentile from 4 on, else lowest–highest) and the three
+  most frequent partners.
+- **Where:** the Dispense herb table's name cell (`presRefreshIngTable`) ends in `.ph-hu-btn` (the book icon, a 32px circle; 28px on
+  a phone; single herbs only) → `phHuOpen` draws `#phHuPop` beside the button (right, else left; else the bigger space below or
+  above, shrunk to fit), a bottom sheet on a phone. ✕, Esc, a tap outside or the same button closes it; focus goes to ✕ and back to
+  the button. **Esc is a capture listener that stops there** (the `phQk` pattern): before that fix it closed the prescription
+  too. The Inventory drawer: `#phHerbUseSec` after Clinical reference (`phHerbUseFill(h)` in the edit opener, `(null)` on + Add herb,
+  hidden for a formula jar). The Guide: a Herbs tab between Pulse and Blood tests (`phGdHerbsHtml`; the classical herbs, most
+  formulas first; her own herbs join once she searches; `[data-gd-herb]` → `phGdHerbPick` swaps the card in place).
+- CSS: one dated block "How a herb is used" at the end of the main `<style>`, its own 640px media (phone: the Does column folds
+  under the formula's name).
+**Tested** (sandbox on port 8998, fresh storage, eight made-up "Zz" prescriptions in memory only), at 1220, 800 and 360: Guide 67
+herbs (Gan Cao 31, Bai Shao 20, Gui Zhi 19 …); Bai Shao 22 classical rows with the "Shao Yao" note and "6 prescriptions · usually
+9–12 g · most often with Bai Zhu, Dang Gui, Chai Hu"; search "bai bian" → her own herb with both empty states, "xiang" → Xiang Fu,
+Mu Xiang, Ru Xiang, cleared → 67, focus kept while typing; the drawer shows for Bai Shao, hides for the Da Chai Hu Tang jar and
++ Add herb; Dispense: 4 circles, ✕ / Esc / toggle / switch / tap inside stays / tap outside, focus back each time; a second Esc
+still closes the prescription; at 800 the card never covers its button (row at the top, middle and bottom); the phone sheet with
+no sideways scroll; the Prescriptions search 6 → 1 → 6; console clean. Fixed in testing: the card first sat over the herb rows
+(now beside them) and Esc closed the prescription (above). Pictures: `shots/hu-{guide,dispense,drawer,phone}.jpg`.
+**Integration:** one card, one name reader (`phHuKeys`) on the three pages it shows (Dispense, Inventory drawer, Guide), all checked.
+The Overstock list's "Formulas that use this herb" (her recipes only) is unchanged.
+**Not tested:** her real prescriptions (the own-use numbers), her devices, the Key2's 469px height; the classical rows' accuracy is
+hers to check (Draft).
