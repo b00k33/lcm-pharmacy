@@ -9834,3 +9834,43 @@ the "No classical recipe" words, the Key2's height. **Trap met:** a sandbox on a
 service worker until it is unregistered and its caches deleted; the first run picked a row's jar by her recipe's name first, which
 chose the phase-out "Gan Cao (Zhi)" and blocked every column's Can make now (now the live jar wins).
 **LIVE** 2026-11-02 in build 20261102-201300 (publish 3f5f1a1e, her "push live"; mocks moved to mocks/). Her devices need the gold Update.
+
+## Meal photos (2026-11-02)
+Her ask: "add a function where i can attach photos to my meals", and mid-round "allow for multiple photos of meal". Mock
+`meal-photos-mock-2026-11-02.html` (artifact UErrauw5V4PmUvKPoCCAQQ; real pictures of her test Meals with drawn stand-in food
+photos). Her picks: 1 for = all three (what I really ate · add the foods later · show someone); 2 table = **A small photo** beside
+the foods; 3 computer = **A Photo tile**; 4 phone = **A Camera · Photos**; 5 a photo **ticks Had it at the photo's time**; 6 seeing =
+**big view AND a Photos view**; 7 snacks · drinks **too**; 8 **just hers**; 9 no foods yet = **Add foods mark**; 10 **Share in the
+big view**; "Yes, build it".
+- **Kept:** her own record's photo store (`lcm-ren-photos`), `{ kind: "meal", meal: b|l|d|s, dateKey, takenAt, srcSize, srcMtime }`,
+  shrunk like every photo (`phRenCompressToBlob`, her 1600 / 0.85), bytes held at pick time (`phRenHold`). The photo's time = the
+  file's (a camera photo: now). A re-pick of the same file (or same size, day and meal) is skipped: "Already on this meal".
+- **Out of her Photos pages:** `phRenLoadPhotosFor` and `phRecPhotosLoad` drop kind "meal", so her own record's Photos, the
+  Comparison table and Records → Photos never see them. `phRenLoadPhotosFor` then reads them again for Meals (`phMealPhLoad`), so
+  every add, delete, Undo and phone import repaints Meals. `phRenDeletePhotosWithUndo` finds them in `phMealPhList()` (the one undo).
+- **Relay:** `phCapRelayPath(…, meal)` adds `_m<slot>`; push, retry and backfill pass `rec.meal` (backfill sends type "meal", not
+  "other"); `phCapAutoImport` accepts type "meal" (not a `PH_REN_PHOTO_TYPES` kind, so no kind list grows) and files `meal` from
+  `_m<slot>`. `PH_REN_BACKUP_FIELDS` + `meal`, `takenAt`.
+- **Table (`phMplCellHtml`):** class `ph` + `.ph-mph-th` (40 px, +N), a second grid column; a narrow table (`.ph-mpl-body:has(>
+  .ph-mpl-col)`: a meal or day open; the Grid's `.ph-mpl-t.blk`) puts it under the foods at 32 px (first build squeezed the names
+  letter by letter with the picker open). Photo, no foods: `.ph-mph-nf` "Add foods" (gold dot) + the photo. Snacks: `phMealPhSnHtml`.
+- **Open meal:** `phMealPhRowHtml(day, sl)` under the header of `phMplPickHtml` (not on Every <meal>), the snack picker and both
+  states of `phMealCardHtml`; 72 px photos, + Photo (`data-mph-add`, drop on it) / phone chips Camera (`capture`) · Photos (`multiple`).
+- **Had it:** `phMealHadSet(day, sl, v, at0)`; `phMealPhHad` after a save and from `phMealListPut` when foods arrive on a meal with a
+  photo; never a day to come, a Skipped meal, or a meal with no foods.
+- **Big view:** `#phMealPhView` + `#phMealPhBd` (direct children of #pharmacyPage), `phMealPhRender`; ‹ › / ← → over the day's meal
+  photos (b, l, d, s), Esc / backdrop closes (capture listeners, so the picker under it stays); Share = `navigator.share` with the
+  file on a touch screen, else Save (a download); Delete = `phAsk` then `phRenDeletePhotosWithUndo`, the view moves to the next.
+- **Photos view:** `phMplLay` "ph" (button "Photos" beside Numbers), `phMplPv` while the Table draws: a 78 px photo + the first food
+  (+N), a dashed camera for a meal with none. Toolbar: the week label 150 → 122 px and view buttons 12 → 10 px padding, so the row
+  still holds at 1220 with Photos (it wraps, as before, when Check reads "N to answer").
+- Icons `i-image`, `i-share`. Code: "MEAL PHOTOS".
+**Tested** (test copy, Browser pane at 1220 and 375): photos saved through `phMealPhSave` with set file times: Lunch ticked Had it at
+12:40 (its photo), Breakfast at its photo's hour, Dinner (already had) unchanged; 2 photos on Dinner = +1; a photo on yesterday's
+empty Lunch read "Add foods", adding 2 eggs ticked it at 1:05 pm (the photo's time); Tue (a day to come) photo-only: Add foods, no
+tick; a tap on a cell's photo opened the big view, not the meal; ‹ › and ← → walked "2 of 4 today"; Delete asked, kept the view on
+the next photo, "Photo deleted · Undo" put it back; Esc closed; Photos view of last week (22 photos, 3 dashed); phone: Camera ·
+Photos chips, the photos beside each meal, no sideways scroll; relay name `cap_meal_<day>_…_ml.jpg` parses back to meal "l";
+her record's Photos cache and Records → Photos hold 0 meal photos; Prescriptions search: Jane narrows, Zzqx none, clear returns.
+**Not tested:** a real camera or gallery on her phone, the phone → laptop relay end to end (needs her login), Share on a phone,
+her real Meals.
