@@ -9031,3 +9031,4 @@ the head's "/ Page" follows (Tongue, Medical history, Today's visit), the profil
 words on the open row). Pages looked at: Today's visit, Tongue, Fang Bing Ren, Medical history, Dispense, her Meals.
 **Not tested:** her real records and devices; a search with real matches (the made-up patient has none); a rail taller than the
 window beside a long page (its lower rows scroll with the page, as before). Pictures: `shots/rail-teal-*-2026-11-02.png`.
+**LIVE** 2026-11-02 on her "push live": build 20261102-131600 (publish 402d6d70), together with the kJ / carbs red (its note above). Her devices need the gold Update.

@@ -641,7 +641,7 @@ round buttons. The phone keeps its chips and Scheduled line.
 every page: "Name · age / Page" (`presBandPageSync` reads the rail's lit row), Book appt. (solid) · Text joined
 (`.ph-band-bar`; the phone keeps search + camera), a Gynae / MSK case as a 3px line under it. The rail keeps her visit order;
 Supplements (taking), Blood tests and Appointments carry a cream count badge that rolls in when the number changes.
-**The teal rail (her picks 2026-11-02, rail-mock2 "C · teal band"; BUILD-NOTES "Side rail, teal band"):** on a computer the rail
+**The teal rail (her picks 2026-11-02, rail-mock2 "C · teal band"; BUILD-NOTES "Side rail, teal band"; LIVE build 20261102-131600):** on a computer the rail
 (`presFlowRailHtml`) is a 212px band of the house teal (`--ph-house`, kept on a Gynae / MSK Case too) running the panel's full
 height: "‹ Menu" on top (`data-flow-mini`: folds it to a 56px strip of icons and circles, each name in its hover;
 `lcm-rail-mini`), then the name with its initials ("My profile" on hers), This visit and Next up, the six numbered steps (a
@@ -1078,7 +1078,7 @@ split); Targets tags it "from kJ". **Today's rings** (`phMacRingsHtml`, after th
 solid = had, pale = still planned, the % in it, the amount, "of" + the goal as a field (`data-diet-goal`, `phDietGoalSet`; clearing fat
 returns it to the rest), "n to go" / "n over" / "✓ goal". **A day's numbers** (MEALS TABLE: the Table's kJ · P · C · F columns and
 the Grid's Total row, `phMplDayNums`; the Macros row's bars went): a day to come as planned, pale (a plan over its goal = a deep number). Over the goal = **red for kJ and carbs** (her 2026-11-02 "for kj and carbs,
-show red when over": the rings, Table, Grid, Numbers and its bars, the keys "kJ · carbs over"; `PH_MAC_RD`, `phMacOv`), deep for protein and fat; under
+show red when over": the rings, Table, Grid, Numbers and its bars, the keys "kJ · carbs over"; `PH_MAC_RD`, `phMacOv`; LIVE build 20261102-131600), deep for protein and fat; under
 60% = amber (today: only when the plan also falls short). Worked out on read (`phMacDay` = `phDietMyDay` + `phMplPlanSum`); only the
 goals are stored. Code: "MACROS" (`phMac*`). **What counts as eaten** in every number of hers (kJ, macros, water, warm · cool;
 `phMealEaten`, her "these kj dont look right" 2026-10-28): a meal with Had it at once; any other meal once its time on her calendar has
