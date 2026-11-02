@@ -1004,7 +1004,8 @@ the line ON TOP (hers): **↻ Repeat meal ▾** (every food in it at once) and, 
 HER day's meal each food has its **repeat chip** on a line under it, see MEAL REPEATS) · **+ Add food or drink** opens the list UNDER the meal (search or type + New; one bar
 Everyday | Drinks | **Menus ▾** | My dishes, the place picked showing on it ("Hungry Jack's ▾"; the bar keeps every word whole and
 scrolls in itself where it is too wide, a phone's sheet); Menus' list: McDonald's, Hungry Jack's, KFC, Oporto, El Jannah, Chagee,
-Thisbowl, Chinese, Vietnamese (`PH_FOOD_MENUS`, `phMealTabsHtml`); a menu's rows are drawn when its pane opens or a search starts
+Thisbowl (`PH_FOOD_MENUS`, `phMealTabsHtml`); Chinese and Vietnamese are kitchens, listed under All foods like Grains (her pick
+2026-11-02, `phFoodPlace`; still off the shopping list, still found by the word); a menu's rows are drawn when its pane opens or a search starts
 (`phMealMenuFill`, never on every paint); a row a food with its usual amount and + (`phMlkFoodRow`, the one row); Thisbowl R | L,
 Build your own; a thing in the meal is NOT listed; Done adding) · one numbers line, small numbers behind a tap · **Eating out | Skipped** one bar (beside Had it on
 her card, beside + Add in the planner's foot). **Skipped** is on every meal (her 2026-10-28 "give option to skip meals"):
