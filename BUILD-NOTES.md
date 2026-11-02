@@ -9833,3 +9833,4 @@ Chai Hu family's two Xiao Chai Hu recipes and the Recipe ▾), her devices, a fo
 the "No classical recipe" words, the Key2's height. **Trap met:** a sandbox on a reused port serves a STALE copy through the old
 service worker until it is unregistered and its caches deleted; the first run picked a row's jar by her recipe's name first, which
 chose the phase-out "Gan Cao (Zhi)" and blocked every column's Can make now (now the live jar wins).
+**LIVE** 2026-11-02 in build 20261102-201300 (publish 3f5f1a1e, her "push live"; mocks moved to mocks/). Her devices need the gold Update.
