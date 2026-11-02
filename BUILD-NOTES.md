@@ -10110,3 +10110,4 @@ made-up patient, Qqx → "0 match", clear → both. **Not tested:** her real rec
 grey dot was seen; the other colours by CSS), + Add jar on a column with her recipe (tested by B33 C4 LCM on Formula refill). Pages
 checked: the Herbs table was the only place these chips were drawn; the Families and Herbs tabs' stock chips (`.ph-gd-stock`) are untouched.
 Picture `shots/compare-one-line-2026-11-02.jpg`.
+**LIVE** in build 20261102-223500 (publish 485b7893, her "push live"; the + Add jar head button with it); her devices need the gold Update.
