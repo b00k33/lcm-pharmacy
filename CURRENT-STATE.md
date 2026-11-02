@@ -1132,6 +1132,17 @@ names what could not count it. Read from the rows the ring adds up (`phDietSum` 
 remainder, so the rows add up to the ring's number, the pale ones to "+ N planned", the % to 100. One box (`#phMacBk`,
 `phMacBkHtml` / `phMacBkShow` / `phMacBkHide`, `data-mac-bk="day|number"`), the record's colour copied from the ring; any other
 point, a tap elsewhere, a scroll or Esc closes it; the goal field never opens it. Phone: a tap on a ring. LIVE build 20261102-175700.
+**Food share** (her 2026-11-02 "when i hover over food i want to see what percentage of my daily macros that food will take up", on
+her Meals cells; mock `food-share-hover-mock-2026-11-02.html`, her picks: Bars · this food only · of her day's goal · everywhere ·
+the whole meal too · red past 100% · the phone a line): pointing at a food shows the same box as the rings (`#phMacBk`): the food
+with its amount, its meal + had / planned / usual (or "not added yet", Snack, Drink), then kJ · Protein · Carbs · Fat, each its
+amount, a bar of its share of her day's goal (`phDietGoal`) and the %; kJ and carbs past 100% turn the bar red (`PH_MAC_RD`, her
+rings' rule). Where: a food in a Meals table cell, the cell's empty part = the whole meal ("2 foods · planned", its drag words under
+it), a snack · drink chip ("Tap to remove" under it), a row of the open meal, and a row of + Food's list before adding (Everyday ·
+Drinks · Menus · My dishes; not a patient's Diet sheet). Words that were a hover title (close match, her reactions, drag, remove) go
+under the box instead. Every amount is `phDietSum([[x]]).t`, the ring's own sum. Phone (no hover): one line under each food of the
+open meal ("16% kJ · 19% P · 92% C · 5% F", a red dot past 100%); no box. Code: "FOOD SHARE" (`phMacFsOf` / `phMacFsRows` /
+`phMacFsHtml` / `phMacFsLine`, `data-mac-bk="f|…"`, `m|`, `s|`, `x|`, `a|`). NOT live.
 **Food reactions**: a meal she had (her card, under Had it) and a patient's noted day or usual meal (Diet sheet, "Usually after it")
 take an **After it**: Gut / Body / Felt good chips + her own words (+ Own, they stay), ONE How strong bar, Started, From (which
 thing), a Note. The mark (the first reaction's picture in a pale red circle, green for Felt good) shows on the grid block, the Me

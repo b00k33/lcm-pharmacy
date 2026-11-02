@@ -9736,3 +9736,37 @@ Words: wombok, cabbage soup, napa / chinese cabbage soup, pork mince soup, canh 
 **Tested** (test copy): 17 numbers; "wombok", "napa" and "canh cai thao" find it under Everyday › Vietnamese; the hover reads the
 parts; console clean. Picture `shots/wombok-soup.jpg`. **Not tested:** her real Meals page and devices.
 **LIVE** 2026-11-02 in build 20261102-192700 (publish a3d44cd3, her "Push live"; Chai Ling Tang rode along). Her devices need the gold Update.
+
+## Food share on hover (2026-11-02)
+Her ask, on a picture of her Meals cells (5:30 am ↻ 250 ml milk / 1 Matcha Latte · Medium; 7:53 pm had it 2 eggs / 250 ml milk): "when i
+hover over food i want to see what percentage of my daily macros that food will take up - know what i mean? show me mock". Mock
+`food-share-hover-mock-2026-11-02.html` (artifact 1MXaKwmS7yqrum1wnyHDT9, real pictures from a temp prototype). Her picks: box **B Bars**
+(she asked "show me" first: the popup's drawn previews did not count, the mock was not yet open on her screen; labelled pictures + the
+mock opened, then B); **this food only**; % of **her day's goal**; **all four places** (the table's foods, the open meal, the list before
+adding, snacks · drinks); **A** point at the meal = the whole meal; **A** kJ and carbs red past 100%; phone **A** a line under each food;
+"Yes, build it".
+- **Box:** the rings' own box (`#phMacBk`, `.ph-mac-bk` + class `fs`, 320 px): header = the food with its amount (`phMealName`) and, on
+  the right, its meal + " · had" / " · planned" / " · usual", "not added yet", Snack or Drink, or for a meal "N foods · planned"; then a
+  table kJ · Protein · Carbs · Fat: amount, a bar of its share (3% least, full at 100%), the %. "<1%" under half a percent, "–" when a
+  food has no number. kJ or carbs past 100% (`PH_MAC_RD`, rounded) = the bar `i.rd` red (`--ph-zero`); the words stay ink.
+- **Targets** (`data-mac-bk`, read by the rings' mouseover / `phMacBkShow`): `f|day|meal|n` a food line in a Meals table cell
+  (`phMplCellHtml`, the food = `phMealShown(v)[n]`), `m|day|meal` the cell button = the whole meal (`phDietSum([[v, had ? had.nut :
+  null]])`), `s|day|n` a snack · drink chip (`phMplSnackHtml`, with its own nut), `x|day|meal|food` a row of the open meal
+  (`phMealRowHtml`, only where it shows kJ), `a|food` a row of + Food's list (Everyday / Drinks / Menus food rows + My dishes;
+  `phMlkShareAt`, on only when the list is hers: `!c.pt` in `phMealAddHtml`, `!box.dataset.mlkPt` in `phMealMenuFill`). Each amount is
+  `phDietSum([[x]]).t`, the same sum the rings add, against `phDietGoal()`.
+- **Titles moved:** a target never also carries a `title` (two tips at once): the close-match / reaction words (`phFoodTipAt`,
+  `phRxTip`), the cell's "Drag to copy to another day" and the chip's "Tap to remove" become `data-mac-tip`, shown as a soft line
+  under the box. Cells and chips without a box (phone, an empty or skipped meal) keep their old title.
+- **Phone (≤ 640, no hover):** no food-share attributes at all, so a tap never opens the box; the open meal shows one line under each
+  food, after its repeat row: `<span class="ph-meal-fs"><b>16%</b> kJ · <b>19%</b> P · <b>92%</b> C · <b>5%</b> F</span>` (`phMacFsLine`;
+  a small red dot before a % past 100 on kJ or carbs). Rule in the meal-row block (class-based, outside media queries).
+- Code: "FOOD SHARE" (6 places): `phMacFsOf`, `phMacFsPc`, `phMacFsRows`, `phMacFsHtml`, `phMacFsLine`; `phMacBkShow` builds a target
+  matching `^[fmsxa]\|` with them and returns when it has no numbers; the ring box is unchanged (class `fs` off).
+**Tested** (test copy, goals 8000 kJ · P 50 · C 50 · F 170): at 1220 the Matcha Latte · Medium box 1,259 kJ 16% · 9 g 19% · 46 g 92% ·
+8 g 5% under its line; the Breakfast cell 2 foods 1,954 kJ 24% · 18 g 36% · 60 g 120% (red bar) · 17 g 10% + "Drag to copy to another
+day"; dinner's had egg "Dinner · had"; the open meal's rows; + Food's Banana "not added yet" 479 kJ 6% · 24 g 48% · 0 g <1% with the
+close-match words under it; a snack chip "Snack" + "Tap to remove"; the ring box as before; no element with both a title and a box. 375:
+the line under each food ("9% kJ · 17% P · 28% C · 5% F", "16% kJ · 19% P · 92% C · 5% F"), no food-share attribute, no box on a tap,
+no sideways scroll. Prescriptions search: Jane narrows, Zzqx none, clear returns. Console clean. **Not tested:** her real Meals page
+and goals, a touch laptop, her devices.
