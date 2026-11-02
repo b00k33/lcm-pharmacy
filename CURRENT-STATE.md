@@ -904,7 +904,7 @@ comparison lights the dots in sequence once and grows the bars (`"new"`); a filt
 search box slides the rows that stay to their new place, fades leavers, fades newcomers in (`"filter"`, .28 s, a timer not rAF); a head tap
 fades in place (`"focus"`); all off under reduced motion. The Herbs table has the same marks (a ring = every classic shares the herb) and the
 same slide and head tap. Lists A–Z through `phAz`: the Family dropdown, the Add list (starts-with first), the signs inside a category.
-Code: `phCmp*` before `renderPhGuidePage`; CSS blocks "Guide · Compare" and "Guide · Compare, the same and the different" after the `.gf-cmpb` rules.
+**A sign's picture (her 4 picks 2026-11-02, BUILD-NOTES "Compare: sign pictures on hover"):** pointing at a sign's name shows its key-sign picture beside the row (the name cell carries `data-ks-pop` when `phKsHas`, the Compass's one popover `#phKsPop`); a tap on the name, the only way on a phone, opens the big ‹ › sheet through that table's signs that have a picture, in table order (`phCmpPicOpen`, items `{k:"kg", g}` read by `phPxKsGroup`); every sign with a picture, a sign without one shows nothing; no thumbnails, no panel. Code: `phCmp*` before `renderPhGuidePage`; CSS blocks "Guide · Compare" and "Guide · Compare, the same and the different" after the `.gf-cmpb` rules.
 **Key sign pictures (her picks):** every sign a family weighs 4 or 5 has ONE picture (`phKsDesc` / `phKsSvgHtml`; a Bing sign and
 its Ren twin share it): hand-drawn for Gui Zhi's Key signs (`PH_KS_SC`), else her Tongue / Abdomen chart, the wrist with her pulse
 lines, its body place's close-up (`PH_FBBP`) or the body figure, moving by its words (`phKsVerb`). The Guide card shows the
