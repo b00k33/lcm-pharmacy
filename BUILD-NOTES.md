@@ -9914,3 +9914,49 @@ milks together, Big Mac · Double Big Mac); Care Plan picker + Settings rail A�
 groups, Cycle & IVF in its phase order; letter chips A–Z with the emoji skipped. **Not tested:** her real event presets (43, on her
 data only), her phone.
 **LIVE** in build 20261102-204600 (publish d16caf39, pushed by another session on her word; it carried 414b2d95 + 77a5144a; her "Push live" to this one came right after); her devices need the gold Update.
+
+## Compare: the same and the different, in motion (2026-11-02)
+Her ask (late evening, a screenshot of the Compare signs table, Wu Ling San against Zhen Wu Tang): "in the formula sign comparison table:
+add relevant animations and visuals of similarities and differences. show mock". **Measured:** the pair's Ren union is 49 rows (7 shared,
+19 only Wu Ling San, 23 only Zhen Wu Tang; Key 15, Tells 26, Unique 42); the table said "same" only by two filled cells on one line and
+"different" only by a blank. **Mock** `formula-compare-motion-mock-2026-11-02.html` (root until live, then `mocks/`; published to her as an
+artifact): one live table on the real 49 rows, chips A Marks & tint · B Overlap bar · C Motion on change · D all three. **Her 12 picks (three
+popups, memory project_lcm_compare_motion_2026_11_02), every one the recommended option:** 1 D all three; 2 a shared row = a teal tint + a
+hollow teal ring before the sign; 3 a sign only one has = ghost dots (faint, hollow, the other side's count) in the empty cell; 4 both have
+it, one stronger = the extra dots pulse once; 5 a filter chip = the rows that stay slide to their new place, leavers fade, newcomers fade in;
+6 a column head tap fades the rows that formula lacks, tap again resets; 7 a new comparison = the dots light up in sequence, once; 8 quick
+(slide .28 s, pulse .55 s, fade .16 s); 9 the overlap bar above the table for two formulas, a tap filters; 10 a shared-share bar under every
+column head; 11 one mark per sign on the category line; 12 the Herbs table gets the same marks and motion.
+**Built** (the hand block "Guide · Compare, the same and the different" after the Compare CSS; the `phCmp*` module):
+- `phCmpSignsTableHtml`: a row is `tr.sh` (two or more have it) or `tr.un`, carries `data-k` + `data-has` (the columns that have it) and
+  `--r` (its place, capped at 25, for the light-up order); the sticky cell is `.nmr` = `phCmpMark(has, cols, "mk")` (ring `.mk.sh`, or `.mk.u`
+  in the shade, `phCmpDeep(col)` reads `--deep` from `phGdfStyle`) + the name; an empty cell draws `phCmpGhost(top)` (`.sg.gh`, opacity .32,
+  hollow dots in the column's shade, as many as the row's strongest side); `phCmpDots(w, from)` gives every dot `--i` and class `x` to the
+  dots above the weaker side's level on a shared row; the category line carries `.comp` marks; each head is `th[data-cmp-foc=i]` with a
+  `.mini` bar (`share(i)` = the share of this formula's signs that another picked formula also weighs); two formulas get `.ph-cmp-ovl` above
+  the table: three `button[data-cmp-filter]` segments (`only:0`, `shared`, `only:1`, `--w` to scale, `--u` the shade) and the labels under
+  them. `phCmpSignFilter` knows `only:<i>`; the chips bar shows no chip on for it (the bar's segment is the picked state).
+- `phCmpHerbsTableHtml`: the same `tr` attributes (the row's mark counts the classics that hold the herb; an "In your recipe only" row counts
+  her recipes), the same head tap, `data-side="h"`.
+- `phCmpPaint(mode)`: `"new"` redraws and adds `.in` to every row and to the tables and bar (the dots fill in sequence, the bars grow once);
+  `"filter"` measures every row's top, draws the new card into a detached div, marks leavers `.out` (160 ms fade), then swaps the card in,
+  keeps each `.ph-cmp-wrap`'s scroll, slides the stayers from their old place (`translateY` → `.mv`, armed by a 16 ms timer, not rAF, so a
+  hidden tab never holds a row displaced) and fades newcomers `.in`; `"focus"` toggles `.dim` / `.foc` in place from `data-has`; no mode =
+  a plain redraw. `phCmpRowId` scopes a row by its table (`r:`, `b:`, `h:`). `phTpReduceMotion()` turns the filter motion and the entrance
+  classes off; the CSS block ends with the reduced-motion rules. A family pick, a chip's ✕, an add (list or Enter), a side change =
+  `"new"`; a filter chip, the bar, Missing only, Can make now, Recipe ▾ and the search box (`phCmpPaintFilter` in the Guide search handler) =
+  `"filter"`; a head tap = `"focus"`; `phCmp.focus` resets whenever the formulas change and is never saved. `phCmpOpen` paints `"new"` after
+  `renderPhGuidePage`.
+- A–Z (her same-day rule, `phAz`): the Family dropdown, the "Add a formula" list (starts-with first), the signs inside a category and the
+  category tie-break. The legend reads "faint dots = not in this formula · ◯ both have it · ● only this one".
+**Tested** (sandbox on port 8998, her 27 Oct jars + recipes + one made-up patient; 1280 and 375): Gui Zhi family → 7 columns, 59 Tells = 22
+rings + 37 dots, 320 ghost cells, 7 head bars (48 · 15 · 50 · 80 · 58 · 37 · 64 %), no overlap bar (7 formulas), herbs 10 rings + 13 dots;
+the pair Wu Ling San · Zhen Wu Tang → the bar 38.8 | 14.3 | 46.9 % with "Only Wu Ling San 19 · Shared 7 · Only Zhen Wu Tang 23", 7 tinted
+rows, 4 rows with pulsing extra dots, 42 ghost cells; Shared → 7 rows after 67 leavers faded; Tells → 26 rows, 42 newcomers `.in`; the Wu
+Ling San head → 14 of the 26 Tells faded + 3 herb rows, the head underlined in both tables, tap again → none; the bar's left segment → 19
+rows, its label bold, no chip on; Both → Ren, Bing and Herbs tables with a bar on each sign table; the herbs head tap → 3 of 9 rows faded;
+search "tongue" → 5 sign rows and no herb rows through the slide path, clear → 49 and 9; Family ▾ reads Ban Xia · Chai Hu · Da Huang · Fu Zi ·
+Gui Zhi …; 375: the page is not wider than the screen, the tables scroll inside the card, the bar's labels wrap to two lines, chips 32px.
+Prescriptions search: Zz → the one made-up patient, Qq → "0 match", clear → the list. Console: the sandbox's own service-worker line only.
+**Not tested:** her real devices; the slide in a visible tab at her speed (the pane was hidden: the classes and counts were checked, not
+the frames); reduced motion on a real device.

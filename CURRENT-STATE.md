@@ -893,7 +893,17 @@ shown only), a red "—" where the classic has a herb her recipe lacks, a blue d
 Ren Shen …), "In your recipe only" for the rest; a count line (not in inventory · out · low · stopped · no recipe · no jar), Missing only
 (the marked rows), Can make now (the columns whose every classic herb is stocked, low, untracked or phasing out). Copy = both tables as
 tab-separated text through the one clipboard helper. The phone scrolls each table inside the card with the first column held; the six
-tabs scroll in their bar. Code: `phCmp*` before `renderPhGuidePage`; CSS block "Guide · Compare" after the `.gf-cmpb` rules.
+tabs scroll in their bar. **The same and the different (her 12 picks, BUILD-NOTES "Compare: the same and the different, in motion"):**
+a sign both have = a hollow teal ring before its name and a teal tint on the row; a sign only one has = a 6px dot in that formula's shade
+before the name and faint ghost dots in the empty cell; where both have it and one is stronger, the extra dots pulse once; the category line
+carries one mark per sign; every column head has a small bar (the share of its signs the other picked formulas also weigh) and is a tap that
+fades the rows that formula lacks (tap again resets, `phCmp.focus`, never saved); two formulas get an overlap bar above the table (only left |
+shared | only right, to scale; a segment or its label is that filter, `only:<i>`). Motion only on a real change (`phCmpPaint(mode)`): a new
+comparison lights the dots in sequence once and grows the bars (`"new"`); a filter chip, the bar, Missing only, Can make now, Recipe ▾ or the
+search box slides the rows that stay to their new place, fades leavers, fades newcomers in (`"filter"`, .28 s, a timer not rAF); a head tap
+fades in place (`"focus"`); all off under reduced motion. The Herbs table has the same marks (a ring = every classic shares the herb) and the
+same slide and head tap. Lists A–Z through `phAz`: the Family dropdown, the Add list (starts-with first), the signs inside a category.
+Code: `phCmp*` before `renderPhGuidePage`; CSS blocks "Guide · Compare" and "Guide · Compare, the same and the different" after the `.gf-cmpb` rules.
 **Key sign pictures (her picks):** every sign a family weighs 4 or 5 has ONE picture (`phKsDesc` / `phKsSvgHtml`; a Bing sign and
 its Ren twin share it): hand-drawn for Gui Zhi's Key signs (`PH_KS_SC`), else her Tongue / Abdomen chart, the wrist with her pulse
 lines, its body place's close-up (`PH_FBBP`) or the body figure, moving by its words (`phKsVerb`). The Guide card shows the
