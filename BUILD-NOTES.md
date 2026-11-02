@@ -9726,6 +9726,8 @@ pattern?" Matrix `fbr-integrate33-chailing-2026-11-02.html` (root until live, th
   Tang join it with their tables). Tested: fever with chills 8, with feverish or chills still 8, with her No to chills 4; ceiling 56; all 40
   families lead their own; Xiao Chai Hu + Wu Ling San pictures show the line, Chai Ling's own picture or Xiao Chai Hu's alone do not; the tap
   filters to Chai Ling Tang; 375 px it wraps as "Together · Chai Ling Tang" / "the wet Chai Hu ›", no sideways scroll; console clean.
+- **LIVE:** the run (3a9f042e) rode along in build 20261102-192700 (another session's push); her answers (314dfab5) in build 20261102-193500
+  (publish 0a0875f2, her "Push live"). Her devices need the gold Update.
 
 ## Wombok soup with pork mince (2026-11-02)
 Her ask "include wombok cabbage soup wiht mince pork" (canh cải thảo thịt bằm; no row had it). `vn_canh_cai_thao`, Vietnamese, named
