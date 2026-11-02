@@ -71864,6 +71864,9 @@ or changing anything in Cliniko.
     // (review finding 2026-09-16). Same-patient popups are left alone.
     const hxModal = document.getElementById("phHxModal");
     const t = PRESC.items.find(x => x.id === id);
+    // a record with no ingredient list yet (made outside the app's own doors, which all write `ingredients: []`) opens as an
+    // empty list: the editor, the autosave (presCommitTemplateFields), Save & log and the letters all read it (2026-11-02)
+    if (t && !Array.isArray(t.ingredients)) t.ingredients = [];
     if (hxModal && !hxModal.hidden && presHxScreenName && (!t || phPatientKey(presHxScreenName) !== phPatientKey(presPatientFor(t) || t.name))) {
       hxModal.hidden = true;
       document.getElementById("phHxBackdrop").hidden = true;
@@ -138148,7 +138151,8 @@ Please let me know if you have any questions.`;
     // The brand-new-draft form (renderPresEditForm) has no band, so its own
     // call keeps the summary by leaving opts unset (defaults true).
     const showSummary = !opts || opts.showSummary !== false;
-    return `<div class="ph-tmpl-sec"><span>Ingredients</span>${showSummary && t.ingredients.length ? `<span class="ph-tmpl-sub">${t.ingredients.length} herb${t.ingredients.length === 1 ? "" : "s"} · ${phFmtG(t.ingredients.reduce((a, i) => a + (i.grams || 0), 0))}g template</span>` : ""}</div>
+    const ings = t.ingredients || [];   // no list yet = an empty list, never a crash (2026-11-02)
+    return `<div class="ph-tmpl-sec"><span>Ingredients</span>${showSummary && ings.length ? `<span class="ph-tmpl-sub">${ings.length} herb${ings.length === 1 ? "" : "s"} · ${phFmtG(ings.reduce((a, i) => a + (i.grams || 0), 0))}g template</span>` : ""}</div>
       <div class="ph-build-add">
         <input type="text" id="presPickHerb" placeholder="Herb or formula" autocomplete="off" aria-label="Find herb or recipe" title="A herb, or a formula's abbreviation: its herbs pour in">
         <input type="number" id="presPickGrams" min="0" step="any" placeholder="g" aria-label="Grams">
@@ -138157,7 +138161,7 @@ Please let me know if you have any questions.`;
       </div>
       <div id="presIngTable"></div>
       <button type="button" class="tab-link" data-pres-raw-toggle="1" aria-expanded="false">✎ Edit as a plain list ▾</button>
-      <textarea id="presEditIngs" rows="8" hidden>${esc(t.ingredients.map(i => `${i.herb} — ${i.grams}`).join("\n"))}</textarea>
+      <textarea id="presEditIngs" rows="8" hidden>${esc(ings.map(i => `${i.herb} — ${i.grams}`).join("\n"))}</textarea>
       <div id="presEditMatch" class="ph-formula-meta">${presEditMatchStatic(t)}</div>`;
   }
   // --- the Follow-up block, shown with the dosage fields (her §2) --------
@@ -138634,11 +138638,12 @@ Please let me know if you have any questions.`;
   // same verdict as presEditMatchHtml, but computed from the record — the
   // textarea doesn't exist yet while the form's HTML string is being built
   function presEditMatchStatic(t) {
-    if (!t.ingredients.length) return `<span class="ph-ing-hint">No ingredients yet.</span>`;   // a hint, not an error (red was shouting at an empty form)
-    const miss = t.ingredients.filter(i => !presResolveLineName(i.herb));
+    const ings = t.ingredients || [];   // no list yet = an empty list, never a crash (2026-11-02)
+    if (!ings.length) return `<span class="ph-ing-hint">No ingredients yet.</span>`;   // a hint, not an error (red was shouting at an empty form)
+    const miss = ings.filter(i => !presResolveLineName(i.herb));
     return miss.length
-      ? `<span class="ph-ing-warn"><svg class=icn aria-hidden=true><use href=#i-warn></use></svg> ${miss.length} of ${t.ingredients.length} not in the inventory (won't deduct stock): ${miss.slice(0, 4).map(i => esc(i.herb)).join(", ")}${miss.length > 4 ? "…" : ""}</span>`
-      : `<span class="ph-ing-ok">✓ all ${t.ingredients.length} ingredient${t.ingredients.length === 1 ? "" : "s"} matched</span>`;
+      ? `<span class="ph-ing-warn"><svg class=icn aria-hidden=true><use href=#i-warn></use></svg> ${miss.length} of ${ings.length} not in the inventory (won't deduct stock): ${miss.slice(0, 4).map(i => esc(i.herb)).join(", ")}${miss.length > 4 ? "…" : ""}</span>`
+      : `<span class="ph-ing-ok">✓ all ${ings.length} ingredient${ings.length === 1 ? "" : "s"} matched</span>`;
   }
   // the picker feeds the textarea with the herb's EXACT inventory name, so the
   // saved line always resolves — and always deducts
