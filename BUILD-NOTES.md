@@ -8974,3 +8974,11 @@ too (a frame matter; the headless phone picture shows five across).
 **Integration:** a day's fast is worked out on read (logged fasts, else the meal gap), never stored. Checked: the rings (computer and
 phone), Table, Grid, Numbers; unchanged and still the running fast: the top Fasting chip, Your fasts ›, the fasting ring on today.
 **LIVE** build 20261102-123700 (her "Push live", 2026-11-02; publish abe2ee67, build ec2841bf); her devices need Update.
+
+## 2026-11-02 — Meals: kJ and carbs red when over
+**Her words:** "for kj and carbs, show red when over" (with her rail screenshot, same message). **Built:** `PH_MAC_RD` + `phMacOv(x)`
+("ov rd" for kJ and carbs, "ov" for protein and fat) in `phMacOne`, `phMplDayNums` (a planned day over too) and the Numbers average;
+the rings' arc `--ph-zero` and its "n over" line `--ph-zero-deep`; the Table's number, the Grid's Total, the Numbers cells, rings
+and bars; both keys gain "kJ · carbs over" (red) before "over goal" (deep). Protein and fat over stay deep. **Tested** (her mock
+week, Wed 28): kJ and carbs rings, cells and bars red (rgb 198 40 40 / text 166 27 27), protein deep, fat teal; Table, Grid and
+Numbers pictures `shots/meals-red-over-{numbers,grid}-2026-11-02.png`. **Not tested:** her real records, her devices, the phone.
