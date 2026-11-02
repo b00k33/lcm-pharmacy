@@ -9494,3 +9494,4 @@ none for the small parts. A plate: 3378 kJ, protein 54 g, carbs 88 g, fat 25 g, 
 parts (`PH_FOOD_SRC`, "Close match: a recipe: …", the toum precedent). PH_FOOD 949.
 **Tested** (test copy): 17 numbers; "com tam" shows both plates under Everyday › Vietnamese; the hover reads the parts; console
 clean. Picture `shots/com-tam.jpg`. **Not tested:** her real Meals page and devices.
+**LIVE** 2026-11-02 in build 20261102-181100 (publish 56f55f80, her "Push live"). Her devices need the gold Update.
