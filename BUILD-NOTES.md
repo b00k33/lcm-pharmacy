@@ -9637,3 +9637,4 @@ PH_FOOD 955; Vietnamese 37.
 "banh mi" lists all five rolls; "matcha latte" shows Drinks › Matcha latte · 300 ml first; All drinks: everyday drinks first, the
 first place drink 15th; hovers read the parts; console clean. Picture `shots/banh-mi-matcha.jpg`. **Not tested:** her real Meals
 page and devices.
+**LIVE** 2026-11-02 in build 20261102-184800 (publish bd320e0a, her "Push live"; Fang Bing Ren run 21 rode along). Her devices need the gold Update.
