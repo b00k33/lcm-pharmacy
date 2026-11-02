@@ -1018,13 +1018,13 @@ today or before = she skipped it; a day ahead = that day planned Skipped; on whi
 computer only. The snack picker (Snacks · drinks) and a dish's Made of keep their chips; a menu's foods show there on a search
 only, never under All foods (`data-meal-srch`). Code: "A CALMER MEAL" (`phMealListHtml`, `phMealTblHtml`,
 `phMealAddHtml`, `phMealNumsHtml`, `phMealInstHtml`).
-**Food numbers**: foods from `PH_FOOD` (968 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
+**Food numbers**: foods from `PH_FOOD` (969 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
 credited on Targets; AUSNUT 2023 by FSANZ for what AFCD lacks: the curry meat pie, the kebab wraps, creamy milk; choline and beef
 bacon from USDA FoodData Central; matcha powder from the Standard Tables of Food Composition in Japan 2020 (MEXT); Thisbowl's June
 2026 sheet; groups include **Snacks** (packet chips) and **Takeaway** (pies, sausage roll, kebabs,
 hot chips), her word; **Water** is a drink in ml, every number 0; **the menus and dishes** (her synth22 2026-11-01, whole menus,
 everyday dishes; BUILD-NOTES "Menus + dishes"): McDonald's 261, Hungry Jack's 257 (its whole menu, her 2026-11-02 "Yes, add them"), KFC 74 (the Wicked Wings row kept), Oporto 53,
-El Jannah 18, Chagee 10, Chinese 33 (Clear chicken soup: USDA's home-made chicken stock, her 2026-11-02 ask), Vietnamese 37 (Cơm tấm sườn bì chả, Bún riêu, Bún mắm, Bánh xèo and Bánh cuốn with their plates, and four bánh mì: thịt heo, heo quay, xíu mại, bì, worked out from their parts, her 2026-11-02 asks; a Matcha latte and a Hojicha latte for each milk in Drinks (full cream, creamy, light, skim, oat, soy, almond; the milk in its name), which lists a place's drinks after the everyday ones), each place a group of its own; a place or dish with no numbers of its own counts
+El Jannah 18, Chagee 10, Chinese 33 (Clear chicken soup: USDA's home-made chicken stock, her 2026-11-02 ask), Vietnamese 38 (Cơm tấm sườn bì chả, Bún riêu, Bún mắm, Bánh xèo and Bánh cuốn with their plates, four bánh mì: thịt heo, heo quay, xíu mại, bì, and Wombok soup with pork mince, worked out from their parts, her 2026-11-02 asks; a Matcha latte and a Hojicha latte for each milk in Drinks (full cream, creamy, light, skim, oat, soy, almond; the milk in its name), which lists a place's drinks after the everyday ones), each place a group of its own; a place or dish with no numbers of its own counts
 as its closest food, named in its hover ("Close match: … · SG FoodID", `PH_FOOD_SRC`, `phFoodSrcTip`, `phFoodTipAt` with her
 reactions); names as she says them (Phở bò, Quẩy (youtiao)) and search finds either name, accents optional (`phFoodNrm`,
 `phFoodWordsN`, a place's name included); a place's foods keep their capital ("1 Whopper", `PH_FOOD_NAMED`), a dish does not
