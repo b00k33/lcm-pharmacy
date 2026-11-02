@@ -9053,3 +9053,46 @@ teal band itself is unchanged.
 Natural fertility plan and on a low back plan): `shots/rail-case-gynae-2026-11-02.png`, `shots/rail-case-msk-2026-11-02.png`;
 her own Meals rail re-checked, still teal. **Not tested:** her real records and devices.
 **LIVE** 2026-11-02 on her "push live": build 20261102-132900 (publish 01ad84fb). Her devices need the gold Update.
+
+## Week pages audit (2026-11-02)
+Her "continue consistency audit", after the Dashboard second pass: the side list's pages that had not had an audit of their own
+(Intake review, Stock statistics, Dispense history, Photos, Stock movements, Suppliers, Patient directory, Relocation, the Guide).
+Measured at 1220, 800 and 360 against TAPPABLE THINGS, Terse and Separation & grouping (Audit = apply). Every finding was
+rule-covered, so no question went to her.
+- **Every resizable table** (app-wide): the last column's drag grip (`.ph-col-grip`, absolute, right -5px) rode 5px past the
+  table, so a table that fits counted as wider than its box and `phMarkScrollableTables` switched on the always-on scrollbar and
+  "↔ wider than the screen — scrolls sideways" (five times on Stock statistics). The last grip now sits inside (right 0, 6px). The
+  note itself stays (her table spec 2026-08-26 §1); it shows only on a table that really scrolls.
+- **A hidden chip stays hidden** (app-wide): `.ph-load-btn`'s inline-flex beat `[hidden]` from 641px up (the CLAUDE.md [hidden]
+  trap): Photos showed "0 possible duplicate groups — Review", Dispense history "Show all 16" while a search was open.
+- **Dispense history / Stock movements' older list** (cards up to 1400px, her Step 9b, kept): each card is white on the page tone
+  with no outline (a lined box before, and the table's zebra tint drew a grey box inside every other card); the date she taps to
+  change is the Field (tint, 6px, 32px); × is a 32px circle with the red act line, + (the details) a 32px circle (both were the
+  browser's own grey boxes).
+- **Stock movements:** the date range is the dropdown, as Everything beside it (it was the browser's grey pill); rows holding the
+  32px date and ⋮ are 36px tall (28px rows let them run into the next row); their dates are the Field.
+- **Stock statistics:** the four dates are the Field (29px with 10px corners and a line before), Usage period the dropdown (a 21px
+  pill with 11px words). Say a fact once: the value band's line repeated the tiles under it ("N of M jars counted · you paid …,
+  sells for …") and went; "see the N never counted" stays beside the head. The six months' explaining line moved into the head's
+  hover title; the profit tiles keep their one word and say their meaning on hover (Sales keeps "N prescriptions dispensed", a
+  fact). The four band colours stay (her yes on the 2026-09-03 mock).
+- **Suppliers:** both section heads take the one label look with no rule beside them; "4 suppliers" is said once (the page head);
+  Add a supplier and Suggest from codes are the Button, so the head's Add supplier is the one solid on the screen (there were three).
+- **Empty states, two words:** Intake "No forms waiting"; Directory "None missing" / "No patients"; Dispense history "No match" /
+  "Nothing dispensed". Relocation's "Built from patient records" line went into the count's hover title.
+- **Phone (360):** Show all / Refresh / Full list and the Everything, All types and date range dropdowns keep 6px corners (a base
+  rule made them pills); the controls above are 28px / 12.5px; the By date | By type and Missing a prescription | Everyone bars
+  28px; "see the N never counted" is a chip (it was 20px words).
+- **Kept / left:** the Guide (nothing off the rules); the Usage tables wrapping long names in narrow columns; the Intake "↻ Refresh"
+  glyph; `.fam-empty`'s outlined box (app-wide, many pages). **Found, not fixed:** Relocation on the phone has 11 plain-text taps
+  (its own page work; left for her word).
+
+**Code:** one dated block "Week pages audit" at the end of the main `<style>` (after the teal rail), plus seven markup lines (the
+value band, the six months head, the profit tiles, Relocation's count, the Directory, Dispense history and Intake empty states).
+Commit 6968ae37.
+**Tested** (sandbox on its own port, the seeded test patients): every page measured at 1220 / 800 / 360 with before / after
+pictures; no Stock statistics table scrolls (0px) and no page scrolls sideways at 360; a Dispense history search hides Show all,
+"zzzz" shows No match, clearing brings the 15 rows and Show all 16 back; Prescriptions search 2 → 1 → 2; console clean after a
+reload. Pictures: shots/wk-audit-*.jpg (disp, moves, stats, stats2, supp, photos, dir, intake at 1220; tab at 800; phone at 360;
+-before / -after). **Not tested:** her real records, her phone (Key2), Photos with photos in it, Intake with forms waiting,
+Relocation on the phone.

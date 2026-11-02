@@ -629,6 +629,14 @@ row ends in **Review prices** (Price review on that supplier); Price review is n
 (every qty null: a brand-new row, or a fresh profile on the built-in list, which is her live inventory baked 2026-11-01 as `PH_HERB_SEED`,
 stock null) opens Inventory with no status filter (`phStatusStart`); one counted jar brings the everyday default back.
 
+**Week pages (her 2026-11-02 audit) [Week pages audit]:** Dispense history and Stock movements' cards (up to 1400px) are white on
+the page tone with no outline; their dates are tint fields, × a 32px circle with the red line, + a 32px circle; Stock movements'
+rows are 36px and its date range the dropdown. Stock statistics: dates are fields, Usage period the dropdown; the value band and
+the six months say each fact once (meanings in hover titles, the profit tiles too). Suppliers: label-look heads, the count once,
+its two buttons the Button. Empty states: "No forms waiting", "None missing" / "No patients", "No match" / "Nothing dispensed".
+App-wide: the last column's drag grip stays inside its table (the "wider than the screen" note shows only on a table that really
+scrolls); a hidden `.ph-load-btn` stays hidden.
+
 **Patient profile list on a computer (her audit: "make it more space saving make it cleaner") [Patient profile list audit]:** the
 five tiles are the filters (tap again = all; "No history" only while anyone has none), no Filters button or chip row; "Schedule"
 sits in the toolbar while nothing is scheduled (the quiet line hides); no list head line unless searching ("N match ..."); bands
