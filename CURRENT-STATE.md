@@ -279,7 +279,7 @@ two phases when a course starts (`presTpInlineCreate`, `phTpCreate`) or is swapp
 years +1 / +1, longer +2 / +2, only to a phase with a count; cycle courses keep theirs. Start reads "Course · Low back pain · 3
 phases · 9 visits".
 
-**Words first, no case first (her 4 picks 2026-11-02, "i dont want to choose case first")**: Came in for's "What brought her
+**Words first, no case first (her 4 picks 2026-11-02, "i dont want to choose case first"; LIVE in build 20261102-135900)**: Came in for's "What brought her
 in?" box keeps her own words. While she types, the top row is `+ "her words"` (Enter takes it), the plan types they match sit
 under it (`phCcMenuPaint`); either way her words are the complaint (`phCcAddWords`: `mainText` = her words, `main` = the plan
 type she tapped, else `phCcGuessIds` / the first family the box matches, else none with `autoOff`). Words with no plan type are a

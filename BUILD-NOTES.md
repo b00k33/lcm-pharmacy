@@ -9128,3 +9128,5 @@ on the Start button, every course at once. (The mock showed 1 A; the build follo
   her words, and a Natural fertility plan; Today's visit, Care Plan, Tongue and Patient details show the words, no console
   errors; phone 375: no sideways page scroll, Start + Course fit. Pictures `shots/came-in-for-words-first-*-2026-11-02.png`.
   **Not tested:** her real records, her phone (Key2), IVF / Pregnancy picked from Course ▾ (their questions come first).
+**LIVE** 2026-11-02 on her "Push live": build 20261102-135900 (publish e4c93032, code 17ba5020). Checked on the live copy: the
+stamp, `phCcAddWords`, `data-cc-addwords`, `.ph-tp-dmenu`, `phCcPlanMenuPlace`, `phTpDoorPick`, the "Plan type" pill style.
