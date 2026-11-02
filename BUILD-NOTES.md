@@ -10038,3 +10038,4 @@ already ignores clicks inside a button. A jar record is the first step; Formula 
 **Tested** (sandbox 8998): Formula refill "+ Add jar" on a recipe without a jar opens the drawer with the recipe name and kind Formula; a
 made-up element with an empty recipe id and `data-ph-jar-name="Zz Named Test"` opens it with that name and kind Formula; console clean.
 **Not tested:** the head button itself (not yet built), her devices.
+**LIVE** in build 20261102-214100 (publish a11776ae, her "push live"); the head button follows with the herbs-table rework; her devices need the gold Update.
