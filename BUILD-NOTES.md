@@ -9559,3 +9559,4 @@ rows for cucumber and garlic. A plate: 2112 kJ, protein 26 g, carbs 54 g, fat 19
 step ½. "cheung fun" now finds only the two Chinese rows; "cha lua" finds bánh cuốn. PH_FOOD stays 951.
 **Tested** (test copy): 17 numbers; "banh" lists Bánh cuốn · 1 plate under Vietnamese; the hover reads the parts; console clean.
 Picture `shots/banh-cuon.jpg`. **Not tested:** her real Meals page and devices.
+**LIVE** 2026-11-02 in build 20261102-183600 (publish 4a3737d2, her "Push live"). Her devices need the gold Update.
