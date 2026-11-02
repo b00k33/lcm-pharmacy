@@ -1070,7 +1070,8 @@ else the rest of her kJ goal after protein and carbs (FSANZ: 17 kJ a gram of pro
 split); Targets tags it "from kJ". **Today's rings** (`phMacRingsHtml`, after the toolbar, the fasting ring first; the day picked: Rings follow, above): a ring each,
 solid = had, pale = still planned, the % in it, the amount, "of" + the goal as a field (`data-diet-goal`, `phDietGoalSet`; clearing fat
 returns it to the rest), "n to go" / "n over" / "✓ goal". **A day's numbers** (MEALS TABLE: the Table's kJ · P · C · F columns and
-the Grid's Total row, `phMplDayNums`; the Macros row's bars went): a day to come as planned, pale (a plan over its goal = a deep number). Over the goal = deep for all four, under
+the Grid's Total row, `phMplDayNums`; the Macros row's bars went): a day to come as planned, pale (a plan over its goal = a deep number). Over the goal = **red for kJ and carbs** (her 2026-11-02 "for kj and carbs,
+show red when over": the rings, Table, Grid, Numbers and its bars, the keys "kJ · carbs over"; `PH_MAC_RD`, `phMacOv`), deep for protein and fat; under
 60% = amber (today: only when the plan also falls short). Worked out on read (`phMacDay` = `phDietMyDay` + `phMplPlanSum`); only the
 goals are stored. Code: "MACROS" (`phMac*`). **What counts as eaten** in every number of hers (kJ, macros, water, warm · cool;
 `phMealEaten`, her "these kj dont look right" 2026-10-28): a meal with Had it at once; any other meal once its time on her calendar has
