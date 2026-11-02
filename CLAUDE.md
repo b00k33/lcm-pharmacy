@@ -378,6 +378,15 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   dark heads, cards and bands; All templates' coloured groups; the Guide; the Dispense head, jar art and her herb-row green.
   The sweep that applied it and the hand block "COLOUR AUDIT 2026-11-02" (before `</style>`) are in BUILD-NOTES "Colour
   audit (2026-11-02)". A new rule follows the law by hand; outlined buttons' words are ink (teal stays on the line).
+- **Her Body pages are one app (her 2026-11-02 "make these pages have a consistency where they look like the come from the
+  same app"; her 8 picks):** Cycle · Meals · Herbs · Fitness · Habits use the app's shapes in the page colour (`--ph-herb`, her
+  record's Case colour), never a status green, C22's green or black: Buttons 6px with the colour's line (words ink), ONE solid per
+  page; every bar a joined 6px bar with a line between segments (Fitness' workout kinds and body areas too, from 641px; they wrap
+  as chips on the phone); every ‹ › a 32px circle on the colour's line; a section's name is the capitals label (10.5px, 11px on
+  the phone; Habits' head is its count "n of m today", the rail names the page); today = the gold tint, no left line; **no
+  frames** (the record card is the frame; space and labels group). Data colours stay (cycle phases, food rings, habit dots, gym
+  booking colours). The hand block "Body pages, one look" (before `</style>`); `.ph-cp` is shared, so a patient's Cycle page
+  wears the same shapes in the patient's colour. BUILD-NOTES "Body pages, one look".
 - **Contrast:** text on a tinted card uses the family's `-press` step when
   `-deep` fails 4.5:1. Hover lifts (brighter), never deepens. Never mix toward
   a pale tint to make a "stronger" fill (tints have almost no chroma).

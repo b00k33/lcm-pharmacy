@@ -1345,6 +1345,13 @@ Fitness + Exercises), the rest in Life.
   Phone's sideways row: Body · Life · File · Clinic captions. **Birthdays** (by month, + Birthday) and **Routines** (Morning ·
   Afternoon · Evening · Any time, + Routine) are pages (`phMeBdaysPageHtml`, `phMeRtsPageHtml`), rows shared with the drawer
   (`phMeBdRowHtml`, `phMeRtRowHtml`). Next on one of her pages goes to her next page; her last one goes to the file.
+- **Her Body pages share one look** (her 2026-11-02 "…look like the come from the same app", mock A, her 8 picks; CLAUDE.md rule;
+  BUILD-NOTES "Body pages, one look"): Start fast, Your fasts ›, + Formula, Dispense, + Habit, Pregnant?, Workout Mode, + Add
+  exercise, From my exercises › are the 6px Button in her record's colour (one solid each page: Start fast, + Formula, + Habit,
+  Workout Mode); Fitness has no "Fitness" word (the rail names it), its bars, kinds and body areas are joined 6px bars, its
+  Today and Steps plan are capitals labels; Habits' head is "n of m today" + the solid + Habit; Meals' today row is the gold tint;
+  no frames round Meals, Habits, Fitness' cards or the Cycle day card; Cycle's months, Fitness' week and the day card's ‹ › are
+  one circle. On the phone the same, at its own sizes (Meals' rings without their box, Cycle's bar the joined bar).
 - **Opens at This week** (`presAssessFirst`); the "This visit · Next up" box is hidden on her record.
 - **Her today things sit in the name's row on every page of her record** (her 2026-11-02 "merge 2 rows", pick F; `phMineBandHtml`
   inside `.ph-pres-band.ph-mine-head`, repainted by `phMeDrwPaint`): no words, each an icon in a ring that fills (`phMineRing`, green
