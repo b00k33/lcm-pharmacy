@@ -902,7 +902,7 @@ board shows the big one beside a row she points at; Compass sign rows and Ask he
 phone). One picture moves at a time; all still under reduced motion. Only Gui Zhi's Key signs are hand-drawn so far [Key sign
 pictures].
 **Herbs (how a herb is used; her 2026-11-02 picks: both, all three places, a table):** a list of the herbs the classics hold
-(most formulas first, the count beside; her own herbs join once she searches) and the picked herb's card beside it (`phGdHerbsHtml`,
+(A–Z, the count of formulas beside; her own herbs join once she searches) and the picked herb's card beside it (`phGdHerbsHtml`,
 `phGdHerbPick` updates in place). The card (`phHuCardHtml`, one card for all three places) is **In the classics** (Formula · Dose ·
 With · Does; 52 formulas in `PH_HU_SRC`, marked Draft until she checks them; the book's "Shao Yao" counts for Bai Shao and Chi Shao)
 over **In your prescriptions** (times used, usual grams, most-often partners and her recipes, worked out from `PRESC.items` when

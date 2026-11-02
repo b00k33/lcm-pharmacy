@@ -119,6 +119,28 @@ reads it; do not render it again.
 **Build order (her go, 2026-10-15):** 1 this rule · 2 plain-text taps become rows / fields / chips · 3 chip walls become dropdowns and joined 0–10 bars · 4 explaining lines out. All four have been worked page by page since (live on `main`, audited 2026-10-18); a page not named in a BUILD-NOTES.md note may still be unconverted, so check that page in the live app before assuming.
 
 <!-- ============================================================ -->
+# ★★ A–Z LISTS — standing rule (her 2026-11-02 "things need to be listed in alphabetical order e.g. symptoms herbs formulas etc." + "lists - alphabetical, or where relevant, ascending order"; her 4 picks = the recommended option) ★★
+<!-- ============================================================ -->
+**Every list is A–Z; a list whose items have a natural order runs low → high.** Herbs, formulas, families, patterns, symptoms
+and signs, foods, menus, patients, suppliers, funds, supplements, exercises, event presets, templates, letters, datalists and
+dropdowns: A–Z. A new list is A–Z from its first build.
+- **A scale keeps its scale, ascending** (her pick "Keep the scale"): light → heavy (Ren build), pale → dark (tongue, blood
+  colour), cold → hot, soft → firm, weak → strong (pulse intensity), C5 → T1, Type 1 → Type 2. A food's sizes sit together under
+  its name, small → large (kids · mini · small · regular · medium · large · extra large · family; quarter · half · whole).
+- **Most-used shortcut lists are A–Z** (her pick "A–Z"): the cut (top 6 / 8 / 10) still picks by use; what it keeps shows A–Z.
+- **Groups: the items A–Z, the headings stay** (her pick "Items A–Z, headings stay"): category, family, colour and meal order
+  is fixed. Never sort PH_REN_FAM_GROUPS itself (its order sets each formula's colour shade): sort a copy.
+- **Normal first, then A–Z** (her pick): a symptom list led by Normal / None keeps it first. In house leads a supplier list;
+  Custom / Other / + New… stay last.
+- **Kept as they are:** a rank keeps its rank and uses A–Z for ties only (FBR fit, Quick assess, body charts, Dashboard urgency,
+  a search: starts-with matches first, then A–Z); time lists keep time order (prescriptions recent first, timelines, a cycle's
+  days, Cycle & IVF messages, a course like Active treatment → In remission → Past → Monitoring); a document's own order (a
+  letter's sections, a plan's phases, the Session grid, which is LOCKED); Stocktake opens in shelf order, A–Z is a view.
+- **How:** `phAz(a, b)` (Intl.Collator "en", base, numeric; skips a leading emoji or mark; đ → d) and `phAzBy(f)`; herbs
+  `phByName`; foods `phFoodAz` (name, then size). Sort a copy (`.slice().sort(…)`), never a shared constant whose order means
+  something (PH_SUPP_KINDS: first match wins). The audit that applied this, with every list changed and kept: BUILD-NOTES "A–Z lists".
+
+<!-- ============================================================ -->
 # ★★★ PATIENT WORKFLOW — THE LAW (her design, 2026-10-10) ★★★
 <!-- ============================================================ -->
 > **Read this before touching ANY patient page** (Patient details, Ren,

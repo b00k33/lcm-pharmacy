@@ -9874,3 +9874,42 @@ Photos chips, the photos beside each meal, no sideways scroll; relay name `cap_m
 her record's Photos cache and Records → Photos hold 0 meal photos; Prescriptions search: Jane narrows, Zzqx none, clear returns.
 **Not tested:** a real camera or gallery on her phone, the phone → laptop relay end to end (needs her login), Share on a phone,
 her real Meals.
+
+## A–Z lists (2026-11-02)
+**Her words:** "do an app rule and audit that things need to be listed in alphabeitcal order e.g. symptoms herbs formulas etc. -
+check", then mid-audit "lists - aphabetical, or where relevant, ascending order". **Her 4 picks (all the recommended option):**
+Keep the scale · most-used shortcut lists A–Z · items A–Z, headings stay · Normal first, then A–Z. The rule is CLAUDE.md
+"★★ A–Z LISTS". Commit 414b2d95. Picture: `shots/az-lists-careplan-2026-11-02.jpg` (Settings › Care Plan templates).
+**Helpers:** `phAz(a, b)` (one cached Intl.Collator "en", sensitivity base, numeric; a leading emoji or mark is skipped, đ/Đ read
+as d) and `phAzBy(f)`, beside `phByName`; `phFoodAz` (after `phFoodNrm`): one rank per food, built once per PH_FOOD size
+(`phFoodRank`), name A–Z, then a size word at the end (`· Small`, `(half)`) in PH_FOOD_SIZE_ORD order, so a food's sizes sit
+together small → large.
+**Changed to A–Z (or A–Z for ties):**
+- Herbs + formulas: the Dispense herb picker (`presPickMatches`, starts-with first so the 6 / 8 cut never hides the match), the
+  formula picker, the acupuncture formula pick list, recipe candidates, the order-sheet add list, Compare-rows ties, Inventory
+  sort ties (equal status / supplier / stock read A–Z by name), Stock statistics ties, Dashboard To-order suppliers, Stocktake
+  (a new "A–Z" view; Shelf order stays the default).
+- Guide + Fang Bing Ren: Guide › Herbs (was most formulas first; the count still shows), Families (copies sorted, the family's own
+  herb first), the Patterns list, FBR board ties, the Ren family list, the twin-sheet free signs, the Treatment-plan area rows.
+- Symptoms + signs: Ask her answers (`phAhAns`: the normal answer first, then A–Z; a doubled "Dry lips" in Thirst & mouth went),
+  Medical history rows + the flags strip, pain feels and causes, Links' sign datalist and chart list, patient clues, abdomen Seen /
+  Sounds / Feel, cycle feels + symptoms, facial-paralysis symptoms, pulse words (Intensity's scale runs weak → strong first).
+- Foods: the meal add list (Everyday's 10, every group, Drinks, Thisbowl pairs + boxes, menu panes, Menus ▾ dropdown), the chip
+  picker (`phFoodPickHtml`), lazy menu fill (`phMealMenuFill`).
+- Others: patient datalists, supplier datalist + the Suppliers page + the herb form's supplier select (In house, then the named
+  in-house ones A–Z, then all others A–Z), insurance funds (`PH_INS_FUNDS`), supplement kinds in Settings (a sorted copy:
+  PH_SUPP_KINDS' order is its match order), MSK diagnosis words, exercises (picker, library, datalist; "most used first" → "A–Z"),
+  event presets (within each colour, the search, the datalist), Care Plan templates (picker + Settings, A–Z in a category; the
+  complaint's fit order still leads), message templates (A–Z per category, Cycle & IVF keeps the cycle's order), information
+  letters, template selects, letter template chips, medical-history note chips (blood thinners, thyroid), formula actions (items
+  A–Z, groups stay), symptom-measure chips (Custom last).
+**Kept:** ranks (FBR fit, Quick assess, body charts, search relevance, Dashboard urgency, rebates, composer moments), time order
+(prescriptions recent first, timelines, a cycle's days, the cancer course), scales (Ren build, tongue, abdomen temp + tension,
+blood colour, pulse intensity, MMT C5 → T1), a document's own order (letter sections, plan phases, the Session grid, LOCKED).
+**Told:** the Compare tab's session (its Add a formula list + Family dropdown sort starts-with, then A–Z with localeCompare; it
+can swap to phAz now that 414b2d95 is in).
+**Tested** on a test copy (since recycled): boots clean, console clean; funds, MSK words, exercises, presets datalists A–Z;
+Dispense herb search "bai" starts-with first then A–Z; the meal add list's 13 groups A–Z with sizes small → large (Matcha latte's
+milks together, Big Mac · Double Big Mac); Care Plan picker + Settings rail A–Z in all 8 categories; message templates A–Z in 4
+groups, Cycle & IVF in its phase order; letter chips A–Z with the emoji skipped. **Not tested:** her real event presets (43, on her
+data only), her phone.
