@@ -548,7 +548,8 @@ label (calculates first when needed), 3 Log; Log is always its own tap, never au
 · cost · profit. Desktop (≥901px): the one-screen `.ph-dsp-fit` layout, supply-by-days chips (7/10/14/21/28), one Blood-moving
 caution line (`.ph-dsp-caution`), the "Plan formula" pour-in, and the script + label in full in the right column, every herb with
 no inner scroll, the label in full under it, the right column the one scroller (her pick) [Dispense: the script moved into the
-right column]. **The per-herb shelf → after bar is the herb table's In stock column** (checked 2026-11-02, at 1440 and 375; the OPEN line that called it not built was stale): "50 → 20 g" with a bar whose fill is the share of the shelf left after this bag (`presIngStockCellCore`; green; gold once it lands at or under the low line; red "short N g" when the bag takes more than the shelf holds, "out" at zero), eased in place on every grams / dose change (`presIngStockRefresh`). Grams follow the herb total, and a manual Grams figure survives
+right column]. A single herb's name in the herb table carries a 32px book circle that opens How it's used beside the table
+(`phHuOpen`; a sheet on the phone; Esc closes the card only) [How a herb is used]. **The per-herb shelf → after bar is the herb table's In stock column** (checked 2026-11-02, at 1440 and 375; the OPEN line that called it not built was stale): "50 → 20 g" with a bar whose fill is the share of the shelf left after this bag (`presIngStockCellCore`; green; gold once it lands at or under the low line; red "short N g" when the bag takes more than the shelf holds, "out" at zero), eased in place on every grams / dose change (`presIngStockRefresh`). Grams follow the herb total, and a manual Grams figure survives
 Log [Dispense: Log silently discarded a manual Grams figure]. A substitute picker includes stopped/phasing-out herbs when stock
 allows.
 
@@ -630,7 +631,7 @@ A row in Urgent stock opens the edit drawer; the name is plain text.
 Level · ⋮; the row opens the edit drawer, the name is plain text; the other columns wait in Columns (`PH_INV_LEAN_HIDDEN`; her
 saved set was moved once by `phMigrateInvLean`). The ⋮ menu holds Add to order. A Bottle $ worked out from $/g is plain
 faint figures in its field. **The edit drawer** (`#phHerbForm`; her 2026-11-01 audit): Essentials (Formula source only for a
-formula), Suppliers & pricing and Notes folded, Clinical reference, Stock history ("No movements" + Adjust stock); one label
+formula), Suppliers & pricing and Notes folded, Clinical reference, How it's used (a single herb only: `phHerbUseFill`, the Guide's Herbs card), Stock history ("No movements" + Adjust stock); one label
 look, no lines, tint fields, 32px controls and section heads, Kind one joined bar; what a field means sits in its hover, never in its label.
 **The toolbar** (second pass, BUILD-NOTES "Inventory page audit, second pass"): Status ▾ and Columns ▾ are white dropdowns, picked
 or not; Columns hides up to 900px (compact rows ignore it) and Status hides in the sheet (the status strip does it); the count,
@@ -860,7 +861,7 @@ signs; the Care Plan Diagnosis = its pictures; the Patterns page = every pattern
 (`--px-h`), so nothing moves; a sign's name is said once, in the header with its Ren / Bing marks and weight dots.
 
 ## Guide — Families (study + edit)
-The Guide is **[Families] [Tongue map] [Pulse]**: a herb card is the body type with its formulas under it, notes-only formulas are
+The Guide is **[Families] [Tongue map] [Pulse] [Herbs] [Blood tests]**: a herb card is the body type with its formulas under it, notes-only formulas are
 dashed tiles, a study card sits on the right (in Study, the concept picture of the pattern(s) the family counts for, under the
 pearl). **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): her edits live in `PHARMACY.fbrEdits[id]` (+
 `fbrEditsAt`), and `phFbrEditsApply()` rebuilds `.ren/.bing/.or/.core` in place from `phFbrPristine`; `phFbrEditsSync()` (top of
@@ -877,6 +878,13 @@ family's Key + Strong signs as a big picture taking turns (4.5 s) with tiles und
 board shows the big one beside a row she points at; Compass sign rows and Ask her answers carry a small still one (none on a
 phone). One picture moves at a time; all still under reduced motion. Only Gui Zhi's Key signs are hand-drawn so far [Key sign
 pictures].
+**Herbs (how a herb is used; her 2026-11-02 picks: both, all three places, a table):** a list of the herbs the classics hold
+(most formulas first, the count beside; her own herbs join once she searches) and the picked herb's card beside it (`phGdHerbsHtml`,
+`phGdHerbPick` updates in place). The card (`phHuCardHtml`, one card for all three places) is **In the classics** (Formula · Dose ·
+With · Does; 52 formulas in `PH_HU_SRC`, marked Draft until she checks them; the book's "Shao Yao" counts for Bai Shao and Chi Shao)
+over **In your prescriptions** (times used, usual grams, most-often partners and her recipes, worked out from `PRESC.items` when
+drawn, never stored: `phHuOwn`). The same card is the herb drawer's "How it's used" and the Dispense herb table's book circle.
+On a phone the Does column folds under the formula's name [How a herb is used].
 
 ## Photos
 **The patient's Photos page** opens on the Comparison table (a row per type, a date column each, **oldest left, newest right**; **All dates | Pair** above it once there are two dates: the Pair's two heads are the pickers, BEFORE ▾ ⇄ AFTER ▾, opening on first ↔ latest, ⇄ swaps, remembered for the session only, `phRenGalPairOf`; a phone opens on the Pair, two columns fitting the screen; her 2026-11-02 picks, BUILD-NOTES "Photos increment 2"); By visit / By type a tap away; the page's chips are the standard 32px chips, the shot row one joined bar; **with no photo on file it opens on its first action** (her 2026-10-31 pick, idea 4 of the 29 Oct audit): the camera tile (the phone’s own sheet, the computer’s chooser; then a kind per photo, the drop flow) beside the drop zone, the kinds under them, no Add tap and no "Or pick the type first" line; with photos the same block sits behind + Add (`presPhotosSectionInnerHtml`, `.ph-photos-first`, `.ph-photos-cam`); a phone shows the tile alone;
