@@ -10024,3 +10024,17 @@ and `shots/cmp-pics-build-phone-2026-11-02.jpg`. **Not tested:** her real device
 motion on a device; the picture's motion in a visible tab (the pane was hidden: the drawn elements were counted, not watched).
 **Trap met:** in a hidden tab `scrollIntoView`'s scroll event fires late and hides the popover after the mouseover showed it; point without
 scrolling when testing.
+**LIVE** in build 20261102-213400 (publish 00aaf9a3: it rode along with the herb-card push on her "Push live now"); the mock moved to `mocks/`; her devices need the gold Update.
+
+## Add jar from a name (2026-11-02)
+Her ask, relayed by the other session with her pick "A · Compare tab": "for no jar, give option to make jar" (the Compare herbs head reads
+"No jar" on a column without a jar). The head itself is being reworked in that session (her same-evening "gram only · one line · a dot
+hover"), so this build is only the door it will use, in the Inventory drawer code: the document handler for
+`[data-ph-recipe-add-inventory]` (the Formula refill "+ Add jar" path) now falls back to `phOpenHerbAddDrawerNamed(name)` when no recipe
+matches and the element carries `data-ph-jar-name` (a column with no recipe: a bought-in jar by the formula name); `phOpenHerbAddDrawerForRecipe(t)`
+is that same function given the recipe name. The same drawer, kind Formula, name filled, nothing else new. The head button (`.ph-cmp-addjar`,
+the Button shape, `data-ph-recipe-add-inventory="<recipe id or empty>" data-ph-jar-name="<name>"`) comes with the head rework; the th focus tap
+already ignores clicks inside a button. A jar record is the first step; Formula refill shows Make once it exists (no jump into the make flow).
+**Tested** (sandbox 8998): Formula refill "+ Add jar" on a recipe without a jar opens the drawer with the recipe name and kind Formula; a
+made-up element with an empty recipe id and `data-ph-jar-name="Zz Named Test"` opens it with that name and kind Formula; console clean.
+**Not tested:** the head button itself (not yet built), her devices.
