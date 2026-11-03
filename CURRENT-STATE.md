@@ -1483,7 +1483,8 @@ Fitness + Exercises), the rest in Life.
   Today and Steps plan are capitals labels; Habits' head is "n of m today" + the solid + Habit; Meals' today row is the gold tint;
   no frames round Meals, Habits, Fitness' cards or the Cycle day card; Cycle's months, Fitness' week and the day card's ‹ › are
   one circle. On the phone the same, at its own sizes (Meals' rings without their box, Cycle's bar the joined bar).
-- **Opens at This week** (`presAssessFirst`); the "This visit · Next up" box is hidden on her record.
+- **Opens at Meals** (`presAssessFirst`; her 2026-11-03 "when i open my profile i want the first page to be meals page", This week
+  before); the "This visit · Next up" box is hidden on her record.
 - **Her today things sit in the name's row on every page of her record** (her 2026-11-02 "merge 2 rows", pick F; `phMineBandHtml`
   inside `.ph-pres-band.ph-mine-head`, repainted by `phMeDrwPaint`): no words, each an icon in a ring that fills (`phMineRing`, green
   when done) with its count: the drop + CD n (no CD in the band's line then), fasts n/aim (fasting: tint, h:mm, the clock hand turns),
