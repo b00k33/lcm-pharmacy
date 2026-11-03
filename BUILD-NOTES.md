@@ -10249,3 +10249,43 @@ only (comment updated). Kept: Break's deep gold, the home visit's dark bar (her 
 edge, ink #141F23; the popup's avatar takes the mint. **Not tested:** her real bookings; the phone (same function). Picture
 `shots/solid-blocks-2026-11-03.jpg`. Commit 55467697.
 **LIVE** build 20261103-111900 (publish cf979ed7, her "Push live").
+
+## Meal amounts: ¼ ½ ¾ and a typed amount (2026-11-03)
+Her ask (a screenshot of an open breakfast, "Plain congee − 1 bowl +" and its food-share box): "give options to do 0.5 or 0.25 bowl
+or 0.5 of things - know what i mean?". **Measured:** a meal row's − amount + (`phMealRowHtml` → `phMealAmtStep`) went by the food's
+own step (`phMealStep` = `PH_FOOD[id][5]`: 662 counted foods by 1, bowls / cups / serves / plates by ½, grams by 25 / 10 / 50, ml by
+50; a dish by 1 serve) and never under one step, so an egg, a banana, a menu item or a dish could not go under 1 and a bowl stopped
+at ½. Amounts already stored decimals (`food:x*0.5`) and showed ¼ ½ ¾ (`PH_FRAC`). **Mock** `meal-amount-mock-2026-11-03.html`
+(app root until live, then `mocks/`; artifact 8inJ7TnoeDpWC2FToXWcxu): A tap the amount (a bar) · B finer − + · C type it.
+**Her picks (memory project_lcm_meal_amounts_2026_11_03):** "b and c" (both, not the recommended A); pieces ¼ · ½ · ¾; everything she
+counts (eggs, fruit, buns, menu items, bowls, cups, serves, her dishes; grams and ml keep their steps).
+**Built** ("MEAL AMOUNTS"):
+- `phMealStepQ(x, q, dir)`: a thing she counts (any unit but g / ml, a dish too) goes by ¼ below one (1 → ¾ → ½ → ¼, never under ¼)
+  and by its own step above (1 → 2 eggs, 1 → 1½ bowls), each tap landing on that step's mark (a typed 1.3 goes to 1½ or 1, then by
+  ¼); g / ml exactly as before (their step, never under one step). 40 steps at most, as before. The − greys out at the floor.
+- The amount is a field (`.fld`: the Field tint inside the joined − + bar, the unit after it, `phFoodUnitW` "bowl" / "bowls" / "g";
+  `phFoodAmt` reads the same word). She types 0.5, .25, 1.5, ½, 1½, 1/2, 1 1/2 or 0,5 (`phMealQParse`); Enter or leaving the field
+  keeps it, Esc puts back what it was (the picker or the sheet stays open); a word, 0 or over 40 steps shows the last amount again.
+- One door, `phMealAmtTo(c, x, how)`, taken by − + (`phMealAmtStep`) and the field (`phMealAmtType`): a repeating food asks its days
+  first (MEAL REPEATS) with the new amount in the field, as − + did.
+- Leaving the field by a tap: the typed amount goes in after that tap lands (the repaint would otherwise swallow the tap:
+  `phMealPtrDown`, then pointerup, with a 3 s way out); an amount field she moved to keeps the focus, its number selected.
+- A dish's Made of (`phDishEdHtml`): the same steps and a field (`phDishAmtType`), the unit before the food's name.
+- CSS "MEAL AMOUNTS" in place of the old `.ph-meal-step b` rule; on a phone the app's 16px input size holds (no zoom on focus).
+**Disclosed calls:** a dish's Made of got the same steps and field (one stepper for one job); the field is 42px (the mock 46px) so a
+row stays near its old width; a dish keeps its bare count (no "serve" word, as before); after Enter the focus leaves the field (the
+row is drawn again); a typed amount may be anything over 0 (her own value wins), only − + keep the ¼ floor.
+**Tested** (test copy on port 8998, `sandbox/mg-shot.html?ma=1`: today's breakfast = made-up plain congee 1 bowl, 2 eggs, 1 banana,
+150 g yoghurt; Browser pane at 1220 and 375, headless Edge pictures; rebased on HEAD b038bdb1 and re-checked): banana 1 → ¾ → ½ → ¼
+(− greyed) → + ½, kJ 479 → 359 → 239 → 120; congee ¼ ↔ 1 → 1½ → 2 bowls → 1½ → 1 → ¾ → ½; eggs 2 → 1 → ¾ → 1 → 2 → 3; yoghurt by its
+50 g down to 50 g (− greyed) as before; typed 1½ (leaving), 1/2 (Enter), .25, 1 1/2, 0,75 taken; "abc", "0", "99" (over 20 bowls) put
+back; Esc put 3 back to 1½ and the picker stayed; 180 g yoghurt; ½ egg; stored `food:cn_congee*0.75` … `food:yoghurt*180`; a typed
+banana then a tap on congee's + → both kept; typed then moved to the egg field → kept, the egg field focused and selected; MEAL
+REPEATS: dinner's steak set to Every day, typed 250 → the ask (Just today · Today on · Every day · Keep) with 250 shown and 200 still
+stored, − → 225, Just today → 225 stored; a dish's Made of: egg 2 → 1 → ¾, congee + → 1½ bowls, salmon typed 175 g, egg typed 1/2, Esc
+kept the sheet and its name; the Appointments grid's meal card (today's dinner): typed 175 g, − → 150 g; phone 375: no sideways
+scroll; Prescriptions search Zz → 2, Qqx → 0, clear → all 3; console: no app error. Pictures `shots/meal-amounts-build-{computer,
+phone,dish}.png`. **Pages checked (★★★):** the planner's open meal (computer, phone), the week table's words ("½ bowl plain congee",
+"¾ banana"), the meal's numbers line and food shares, the Appointments grid's meal card, a dish's Made of. **Not tested:** her real
+meals; a real finger on her phone (the tap after typing was driven with made-up pointer events); a cloud repaint landing while she
+types in the planner (it redraws the open meal, as it does for every field there).

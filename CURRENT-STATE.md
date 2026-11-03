@@ -1041,7 +1041,8 @@ Shopping.
 **A meal's list** (her pick 2026-10-27, "too busy"; it replaced the Food / Drinks sections, + Food / + Drink, Eating out and Skipped
 under Food, and Had it | Edit; BUILD-NOTES "A calmer meal"): every meal list (her card, the planner's picker, her usual meal, a patient's Diet sheet) =
 the line ON TOP (hers): **↻ Repeat meal ▾** (every food in it at once) and, once that day has changes of its own, **↺ Undo**
-(back to what repeats) · the meal as a small table (name + its mark, a cup on a drink · − amount + · kJ in the planner · ✕; on
+(back to what repeats) · the meal as a small table (name + its mark, a cup on a drink · − amount + (the amount a field she types
+into, its unit after it: MEAL AMOUNTS) · kJ in the planner · ✕; on
 HER day's meal each food has its **repeat chip** on a line under it, see MEAL REPEATS) · **+ Add food or drink** opens the list UNDER the meal (search or type + New; one bar
 Everyday | Drinks | **Menus ▾** | My dishes, the place picked showing on it ("Hungry Jack's ▾"; the bar keeps every word whole and
 scrolls in itself where it is too wide, a phone's sheet); Menus' list: McDonald's, Hungry Jack's, KFC, Oporto, El Jannah, Chagee,
@@ -1065,7 +1066,10 @@ as its closest food, named in its hover ("Close match: … · SG FoodID", `PH_FO
 reactions); names as she says them (Phở bò, Quẩy (youtiao)) and search finds either name, accents optional (`phFoodNrm`,
 `phFoodWordsN`, a place's name included); a place's foods keep their capital ("1 Whopper", `PH_FOOD_NAMED`), a dish does not
 ("1 bowl phở bò"); never on the shopping list; LIVE build 20261102-101600), stored `food:<id>*<q>`, shown in kitchen
-words with − / + (each food its own step; a dish `dish:<id>*<q>` steps in serves). A dish's **Made of** adds its numbers itself
+words with − / + (**MEAL AMOUNTS**, her 2026-11-03 picks B + C: anything she counts, a dish `dish:<id>*<q>` too, goes by ¼ below
+one, 1 → ¾ → ½ → ¼, and by its own step above, `phMealStepQ`; grams and ml keep their 25 g / 50 ml and floor; the amount is a field
+she types into, 0.5 · .25 · 1½ · 1/2, Enter or leaving keeps it, Esc puts it back, `phMealQParse` → `phMealAmtTo`, the one door − +
+take too; a dish's Made of the same, `phDishAmtType`). A dish's **Made of** adds its numbers itself
 (typed numbers only for what is not on the list); with no Made of a dish counts by itself (`phDishAuto`: the Thisbowl bowl in its
 name, else its typed ingredients matched) and Made of starts filled with that bowl. Nutrients add every item. The time is a small
 ✎ field. A day's numbers line (kJ · P · C · F) opens 15 bars against **Targets** (C22's four + NHMRC women 31–50 + carbs 50 g, each hers);
