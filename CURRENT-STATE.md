@@ -984,10 +984,10 @@ read, `phPrgHome`). The letter's **✎ Template** button opens that page on the 
 C22's fasting clock lives in LCM, only for her. Her plan: "breakfast and lunch, and fast after lunch by skipping dinner ... 3-5
 times a week". Data in her Me row (`d.fasts`, entry by entry; no `e` = running; `fastGoal`), so both logins show it. C22's fasts
 come in once (Bring in). No cheer lines, no cycle advice.
-- **On Meals**: a thin clock bar tops her Meals page (time, to Breakfast / of goal, Goal ▾, aim · n planned, **Your fasts ›**,
-  Start / Stop / Continue); the planner draws each day's fast 5 am → 5 am (cream eating, green fasted, striped to come, a line at
-  now). The Fasting step is off her rail (grp `off`); Your fasts › opens it under a ‹ Meals chip (ring, goal bar, Stop + Undo,
-  Continue last fast, tiles, last 14 / 30 / 90 days by cycle phase, history). Every Fasting door (band chip, Me drawer line)
+- **On Meals**: the goals panel's **Fast block** (FAST BLOCK, 2026-11-03: the dial, of Breakfast ▾, Start · Continue / Stop beside
+  it, **History ›** on its heading; the old clock bar is gone, see Meals goals). The Fasting step is off her rail (grp `off`); History ›
+  opens it (Your fasts) under a ‹ Meals chip (ring, goal bar, Start · Continue / Stop + Undo, the same words and helper,
+  `phFastBtnsHtml`; tiles, last 14 / 30 / 90 days by cycle phase, history). Every Fasting door (band chip, Me drawer line)
   opens Meals; Appointments also has a toolbar chip (computer only); its top bar holds Add appointments alone (her 2026-11-02 pick).
 - **Goal** 14 · 16 · 18 h · **Breakfast** · Other ▾ (Breakfast = her next Breakfast event at least 2 h on, `fastTo` beside
   `fastGoal`; none = the hours). **Aim**: 3–5 a week (two fields) + her planned days as a Mon–Sun bar (`fastAim = {lo, hi, wd, up}`);
@@ -1112,7 +1112,8 @@ Check n to answer** (Eat names today's next meal and its time, "Dinner 6:30 pm",
 MEALS GOALS, her pick 7), the first not done filled, each a door: next week · Shopping in the column (made when there is none) · today's
 next meal · How did it sit for each meal she had 1½ h ago not yet answered · **More ▾** = Copy last week, Recipes, Targets (the
 Shop step is the Shopping list's one door, MEALS GOALS), then **the goals** (Meals goals, below: the fasting dial, Reach, Stay under;
-Stop / Start fast + Your fasts › in their head; the clock bar and the Fast row are gone), then the week with a
+the Fast block's Start · Continue / Stop beside its dial and History › on its heading, FAST BLOCK; the clock bar and the Fast row
+are gone), then the week with a
 **column at the right** (Appointments' way): the meal's picker, Shopping, How did it sit, or a day (tap its name: water, numbers,
 bars, Copy this day). The week narrows and scrolls under it; the day and the four numbers stay in view. **Table**: a row a day,
 Breakfast · Lunch · Dinner · Snacks · drinks · Supps · herbs (a day's kJ · P · C · F are the goals' ticks; the number columns went,
@@ -1142,7 +1143,7 @@ off today the goals' head names the day with a Today chip; the toolbar's Today a
 ‹ day › went, MEALS GOALS pick 4); that day's row is tinted with its accent (Grid: its head), today's day name teal. A phone's goals follow the day it
 shows, as before. Off today the fasting dial is **that day's fast** (`phMplDayFast`: the fast she logged that ended that day, the
 longest, else the gap from the last thing she ate the day before to the first that day, `phMplEatAt`, kJ above 0 only; "Fasted",
-✓ goal or n short; a day to come "Fast planned" or "No fast") and Stop / Start go (Your fasts › stays); a past day's numbers read
+✓ goal or n short; a day to come "Fast planned" or "No fast") and Start / Stop go (History › stays); a past day's numbers read
 "under", today's and a day to come's "to go"; the goals' bars grow from the day before (`data-barw` in the motion helper, off under
 reduced motion). **Numbers** (`lcm-mpl-view` "num", `phMplNumHtml`): a row a day, a ring each for Fasting · kJ · Protein · Carbs · Fat (its %
 inside, then the number and how far over or under, or ✓ goal), the **average a day** under them (fasts over the days with one,
@@ -1163,13 +1164,18 @@ week n planned · aim): the page's one box (`phMacBkShow`, keys `q|now|i` and `q
 goal stays (`phMplGoalRing`). Off today the dial draws the fast that ended that day (`phMplDayFast` carries its start, `s`): green to its
 goal, or the hours done with the rest pale and "n short" against that fast's own goal; a day to come or no fast = the face and "–". A
 goal over 24 h spreads its hours round a plain face (no clock words). **Phone**: the dial (136px) leads on its own row with its line,
-→ 7 am and Stop / Start (Continue last fast) beside it (`.fb`; `phMplRactsHtml(past, ph)` leaves them out there), its week of ticks,
-Reach and Stay under under it, Your fasts › after. Code: "FASTING DIAL" (`phMplDial*`, `phFdArc`, `phFdPt`). LIVE build 20261103-102500.
+→ 7 am and Start · Continue / Stop beside it (`.fb`; a computer too since FAST BLOCK), its week of ticks, Reach and Stay under under
+it; History › on the Fast heading. Code: "FASTING DIAL" (`phMplDial*`, `phFdArc`, `phFdPt`). LIVE build 20261103-102500.
 **Meals goals** (her 2026-11-02 "audit this page and streamline any repeating elements that do the same thing. make it so it
 communicates like atomic habits- its easy for me to see my goals and limits"; mock `meals-goals-mock-2026-11-02.html`, her 8 picks,
 all A; memory project_lcm_meals_goals_2026_11_02): one panel for the goals' day (`phMplGoalsHtml`): a head (the day off today + Today ·
-today's score, "✓ n kept · n to go · n over / missed" · Stop / Start fast · Your fasts ›), the **fasting dial** with its ticks, then
-**Reach** (protein) and **Stay under** (kJ, carbs) side by side (`PH_MPL_GL`, `PH_MAC_REACH`). A goal = its name and **its goal as a
+today's score beside the day, "✓ n kept · n to go · n over / missed"), then **two white blocks on the page colour's tint** (**FAST
+BLOCK**, her 2026-11-03 picks: B "Beside the dial" + "White blocks on a teal band" + "make text in button more succinct"; mocks
+`fast-block-mock-2026-11-03.html`, `fast-block-sep-mock-2026-11-03.html`; memory project_lcm_fast_block_2026_11_03): **Fast** (a
+capitals heading with **History ›** at its end, `phMplRactsHtml`; the **fasting dial** with its line, of Breakfast ▾, → 7 am and
+**Start · Continue** / **Stop** beside it, `phFastBtnsHtml`: short words, each its full name to a screen reader, Continue its fast in
+the hover; its ticks under) and the goals, **Reach** (protein) then **Stay under** (kJ, carbs) stacked (`PH_MPL_GL`, `PH_MAC_REACH`;
+a phone stacks both blocks). A goal = its name and **its goal as a
 field** (the one place the four are set; Targets keeps the rest, her pick 6), a **bar** (had solid, still planned pale, scaled to 125% of
 the goal so **the goal is a line at 80%**; over a limit red with a cut past 125%; protein deep once reached, amber under 60%; amber
 never on a limit), the **state big** at the end (protein "n g to go" / "✓ 58 g", a past day "short"; a limit "n left", a past day
@@ -1466,7 +1472,7 @@ Fitness + Exercises), the rest in Life.
   the name. Each drawer heading of hers ends in › to its page (`phMeH4` → `data-ph-me-go` → `phMineOpen(tab)`): Today's meals →
   Diet (Meals), Herbs → Herbs, To-do → This week, Trips → the trip, Birthdays, Routines; the rows stay today's ticks.
 - **Her rail: Body · Life first** (`PRES_MINE_RANK`, grp `body` / `life`): Body = Cycle, Meals (her Diet page; Fasting is off the
-  rail, opened from Meals' Your fasts ›), Herbs, Fitness (its tabs hold Exercises and Health), Habits, Log; Life = Week, Work, Money,
+  rail, opened from Meals' History ›), Herbs, Fitness (its tabs hold Exercises and Health), Habits, Log; Life = Week, Work, Money,
   Code, trips, Birthdays, Routines; then her file and the visit steps; her bottom group reads "Clinic dated". Cycle leaves the Plan
   step on her record (`presMineCycleNorm` turns plan + cycle into profile + cycle, so every Cycle door lands there); Diet leaves Log.
   **Folded pages** (her picks 2026-10-29, the Me audit; `phMeRailFold`): a page she has not used sits in a "⋯ More" row of its
@@ -1477,8 +1483,8 @@ Fitness + Exercises), the rest in Life.
   Afternoon · Evening · Any time, + Routine) are pages (`phMeBdaysPageHtml`, `phMeRtsPageHtml`), rows shared with the drawer
   (`phMeBdRowHtml`, `phMeRtRowHtml`). Next on one of her pages goes to her next page; her last one goes to the file.
 - **Her Body pages share one look** (her 2026-11-02 "…look like the come from the same app", mock A, her 8 picks; CLAUDE.md rule;
-  BUILD-NOTES "Body pages, one look"): Start fast, Your fasts ›, + Formula, Dispense, + Habit, Pregnant?, Workout Mode, + Add
-  exercise, From my exercises › are the 6px Button in her record's colour (one solid each page: Start fast, + Formula, + Habit,
+  BUILD-NOTES "Body pages, one look"): Start (fasting), History ›, + Formula, Dispense, + Habit, Pregnant?, Workout Mode, + Add
+  exercise, From my exercises › are the 6px Button in her record's colour (one solid each page: Start / Stop, + Formula, + Habit,
   Workout Mode); Fitness has no "Fitness" word (the rail names it), its bars, kinds and body areas are joined 6px bars, its
   Today and Steps plan are capitals labels; Habits' head is "n of m today" + the solid + Habit; Meals' today row is the gold tint;
   no frames round Meals, Habits, Fitness' cards or the Cycle day card; Cycle's months, Fitness' week and the day card's ‹ › are
