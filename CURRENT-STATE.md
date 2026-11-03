@@ -431,7 +431,7 @@ Formula].
 `visits-table-mock-2026-10-29.html`, 2026-10-29), a band whose **Done · Copy for Cliniko** saves the visit
 (`presAcuLogNow`, the one save; Today's visit has the same button; "Ending a visit" under Visit logging). **The Diagnosis / Goal strip over the tab is two fields** (her 2026-10-31 pick "edit where you read", `phTsDxStripHtml`, `phTsStripCommit` → `phTpFgWritePlan`): tap, type, Enter or tap away saves (different words = hers, the auto wording or an emptied field = auto, "✓ saved" for a second), Escape restores, a quiet "Template’s words" / "Patterns’ words" chip puts the auto wording back while hers differ; Patterns › is the door; "Edit on Care Plan" is gone. **The band’s phase is a chip** (`.ph-band-ph`, plans with 2+ phases): its menu lists the phases (the live one marked, since · visits; the next one "next"), a tap makes a phase Current with the phase line’s own write (`phTpPhaseStatusData`), "+ Add a phase" opens the Care Plan’s picker. One session line (phase named once, Current ▾, "Session N · today", Herbs only
 today, Change phase), then the table: Visit · CD (cycle patients) · Phase · Response · Tongue · Pulse · Abdomen · Therapies · Herbs
-· Note; today on top (gold tint, a gold top line and left bar), logged visits newest first, one faded italic next row (the next
+· Note; today on top (gold tint and a gold top line), logged visits newest first, one faded italic next row (the next
 booked or planned session: its date, CD on that date, the phase's points and formula). **Today's row:** the Compass score
 (`phTxScoreCellHtml`, a "Score on Today's visit" chip when unscored), the three exam cells as doors to their pages (`.ph-tx-door`;
 "not yet" until done, then the drawing + words), the navy Therapies block (the phase's planned therapies lit once per visit by
@@ -675,7 +675,7 @@ case colour", LIVE build 20261102-132900; on a Case band the pale words, dates a
 height: "‹ Menu" on top (`data-flow-mini`: folds it to a 56px strip of icons and circles, each name in its hover;
 `lcm-rail-mini`), then the name with its initials ("My profile" on hers), This visit and Next up, the six numbered steps (a
 24px circle, done = the brass ✓) and the page rows: each its icon (`PRES_RAIL_ICN`, the same icon the page has on Today's visit),
-its name, its count / date / "n left" at the end. The open row is the light tint with a deep 3px bar; while a page row is open
+its name, its count / date / "n left" at the end. The open row is the light tint, no bar (her 2026-11-03 word: no side lines); while a page row is open
 its step stays plain (`par`). Every captioned group (Body, Life, File, Fertility & cycle, Log / Clinic) folds on its ▾ head (`data-flow-fold`, `lcm-rail-fold`); the page she is on never hides. Both folds are this
 device's. **On a phone** (≤640px; her picks 2026-11-02, phone-rail mock A; BUILD-NOTES "Phone rail") the same rail is a drawer
 from the left (300px, the page dimmed behind it, This visit and Next up kept), opened from one 44px bar at the foot of the head
@@ -1272,7 +1272,7 @@ Her work trips live in LCM; Nanjing is the first. Data in her Me row, entry by e
   **Plan = the trip's program** (her 2026-10-30 picks, `mocks/trip-program-full-mock-2026-10-30.html`): desktop = a week bar (Mon–Sun weeks of the trip's days) + one solid Add + a
   **week grid** (rows: breakfast = her own Me meal, a tap opens its card · travel to the first session · Morning · travel between
   venues · Afternoon · back to the hotel · Evening = hers; a full day spans Morning to Afternoon; flights as strips; an empty
-  Morning / Afternoon / Evening cell adds into that part of the day). A **card** = its kind's stripe and tag (Observe · Lecture ·
+  Morning / Afternoon / Evening cell adds into that part of the day). A **card** = its kind's tag (Observe · Lecture ·
   Conference · Ceremony · Site visit · Case review · Mine, `PH_TRIP_KINDS`), the program notes that apply as icons, teacher + 中文,
   time, venue. Travel strips are worked out on read from the venue (how + minutes from the hotel, `phTripLegs`): in the grid the
   icon says the way and the word sits in the hover. A tap opens the session under the grid (kind, day, times, What, Teacher +

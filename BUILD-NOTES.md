@@ -10289,3 +10289,42 @@ phone,dish}.png`. **Pages checked (★★★):** the planner's open meal (comput
 "¾ banana"), the meal's numbers line and food shares, the Appointments grid's meal card, a dish's Made of. **Not tested:** her real
 meals; a real finger on her phone (the tap after typing was driven with made-up pointer events); a cloud repaint landing while she
 types in the planner (it redraws the open meal, as it does for every field there).
+
+## 2026-11-03 · No side lines
+Her word: "i hate this design with line on side of box. remove it all from the app", with a picture of the Patient profile's
+"Booked today · 1" band and its curved teal line down the left. Built the same day (commit 5bfa3fee). The standing rule is in
+CLAUDE.md under "Separation & grouping" ("No line on the side of a box"). The colour law's "a band gets a 3px left stripe" now
+reads "the same dot", and "a tint AND a left accent bar" now reads "a tint alone".
+- **Gone:** every coloured line down the left or right edge of a box. That is 61 `inset Npx 0` box-shadow side lines (N ≥ 2), 39
+  `border-left` lines and 6 `::before` bars. The places: section bands; the Appointments blocks (Chinese medicine, acupuncture,
+  both, away); Fitness blocks and their key; the Dashboard's urgent task and stock rows; the popup menu; the prescription panel's
+  gold spine and history; pattern cards; 3D pain callouts; the rail's Next up, open row and sub-row; the side nav; quotes; IVF and
+  pregnancy notices; the relocation notice; the Musculoskeletal area card (lit = its whole edge now); and every "today", "now",
+  "live" and "open" row in the trip, fasting, hub, habits, diet, meal-plan, visits and weight-gain tables. Paddings that made room
+  for a line went with it: the To order supplier head, the Dashboard stock rows and the Care Plan's ask box.
+- **Kept the meaning, as the colour law's mark:**
+  - Section bands: a 7px dot in the state colour, first in the row (`::after` with `order: -1`, because `::before` is the band's
+    white mask).
+  - Check-in outcomes: a dot (better green, same amber, worse red).
+  - The Care Plan visits table's dates: a dot (done teal, planned / ahead gold, projected an open ring).
+  - The family heads: a 9px dot.
+  - The Care Plan history's code tags: a dot.
+  - The area labels on the Compass and Treatment rows: ink words with a dot in the area colour (they were coloured words).
+  - Rows whose line was their only mark now carry the light tint: the unfinished appointment, the missed code, her own goal, the
+    booking sheet's week rows, an open habit row.
+- **Kept on purpose (not box sides):** the meal goal line, connector and timeline spines (Cycle questions, IVF journey, rail
+  steps), the Care Plan grid's middle split, dividers, and the top / bottom lines (stat tiles, Dispense card, Fang Bing Ren tongue
+  link). The row-outline motion `phMoRowL` / `phMoRowR` draws a whole box and stays.
+- **How:** one script (the scratchpad's `nosides2.pl`): literal swaps, each matched exactly once, then every box-shadow part
+  `inset ±Npx 0 [0] colour` with N ≥ 2 dropped from its declaration. Declarations and one-line rules left empty were removed.
+- **Tested (sandbox, 1280 and 375):**
+  - The Booked today and Drafts bands show the dot and no line.
+  - A computed-style sweep (any left or right border of 2px or more, any inset side shadow, any thin absolute `::before` /
+    `::after` bar) found nothing on Dashboard, Patient profile, Inventory, Appointments, Communications, To order or Formula
+    refill. It found nothing on a test patient's Patient details, Medical history, Ren, Supplements, Blood tests, Today's visit,
+    Ask her, Cycle, Tongue, Pulse, Abdomen, Musculoskeletal, IVF history, Fang Bing Ren, Care Plan, Treatment or Dispense, beyond
+    the kept connectors and bottom lines.
+  - Sample rows checked by eye: the area dots, the visit-date dots, the outcome dots and the family head dot.
+  - Phone 375: no sideways scroll. Console: no errors. The test patients were removed.
+- **Pages checked (★★★):** the ones above. **Not tested:** a real patient's Compass with area groups (seen only on sample rows),
+  the Fitness and trip pages with data, and printed letters (print never had these lines).
