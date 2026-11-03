@@ -10337,3 +10337,4 @@ her name picked from the patient list both go through it. Other records still op
 pane at 1220, a made-up My profile in the sandbox): `phMineOpen(null)` → the band reads "Me · Meals", the rail lights Meals, the
 Meals table shows; another patient opened, then hers by `presGoToScript` → Meals again; the other patient opened on its profile as
 before. **Not tested:** her real record, the phone (same function). Picture `shots/my-profile-opens-meals-2026-11-03.jpg`. Commit 503d652c.
+**LIVE** build 20261103-115600 (publish 223a7de5, her "Push live").
