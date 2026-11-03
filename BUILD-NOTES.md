@@ -11121,3 +11121,29 @@ under it in a meal (beside the amount in a Try, after it in a dish) that swap it
   Hungry Jack's, Hungry Jack's own pane does not; a Try: Fries with Small · Medium · Large. Headless Edge picture. No console errors.
 - **Not tested:** her own record, her phone, the Key2.
 - **Pages checked:** Meals (a meal's rows, + Add food or drink, the Try table). No new words but the size names.
+
+## 2026-11-03 · Iron step 3: oxygen to energy
+Her "include animations for importance of red blood cells carrying oxygen which feeds mitochondria and energy production", and her
+4 picks: **C · Zoom in** (three lenses one after another), **under Enough | Low** in step 3, **the egg on Fertility, a muscle on
+Pregnancy**, and **a second iron mark** inside each mitochondrion.
+- **Where:** step 3's first box, under the two bodies and their microscopes (`phIrOzHtml(preg)`, `#phIrOz`).
+- **The lenses:** 1, the one Meals body cropped to her left ovary (her left thigh muscle when pregnant; `PH_IR_OZ[..].crop`) with a
+  dashed teal ring on it, pale at Low (`phIrBodyEase`, the same PH_IR_OK / PH_IR_LOW). 2, a vessel: Enough = 5 full red cells with
+  4 oxygens each and 3 leaving it; Low = 3 small pale cells with 1 each (`phIrOzBlood`). 3, the egg (shell, nucleus) or a striped
+  muscle fibre with 5 mitochondria, each with folds and an iron drop: gold and glowing at Enough, pale with a faded drop at Low;
+  oxygen in it (8 / 2) and gold sparks (6 / 1) (`phIrOzCell`, `phIrOzMi`).
+- **Energy:** a gold bar under the lenses, 92% at Enough, 30% at Low. A key: Oxygen · Iron · Mitochondria.
+- **Enough iron | Low iron** (`data-ir-oz`, `phIrOzSet(st, flow)`): it rests on Low. A tap sets that state, and the cells and the
+  oxygen flow in again; a tap stops a play.
+- **The play** (`phIrOzPlay`): on first sight and on Play again it waits, dimmed, at Enough while the chain plays (one thing at a
+  time), then lights lens 1, 2 and 3 one after another (cells flow in, oxygen flies into the cell, sparks, the bar fills), then
+  drops to Low with all three following, and rests. `phIrStop` rests it on Low (`phIrOzRest`). Fertility | Pregnancy plays it
+  again. Reduced motion: no play, it rests on Low, taps change it at once.
+- **Words (DRAFT):** "Oxygen to energy"; Your ovary / Your muscles: Rich red blood · Paler blood; In your blood: Red cells carry
+  oxygen · Fewer cells, less oxygen; In your egg / In a muscle cell: Mitochondria make energy · Mitochondria slow down.
+- **Tested** (a copy of HEAD b478b468's index.html, port 8997, the test "Me" Testa Mine): the play's order and times; taps on Enough
+  and Low; a chain-step tap mid-play rests it on Low; Fertility ↔ Pregnancy; leaving the step mid-play; reduced motion (no play, no
+  timers); 360 px wide (lenses 81 px, nothing past the box); headless Edge pictures of Enough, Low, Pregnancy and two moments of
+  the motion. No console errors.
+- **Not tested:** her own record, her phone, the Key2.
+- **Pages checked:** Guide › Iron step 3 (Fertility and Pregnancy). New words: the ones above.

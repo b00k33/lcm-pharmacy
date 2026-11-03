@@ -960,6 +960,10 @@ Your table is Food · Serve · Eaten · Taken up, each food's % beside it.
 then tapped; a Draft tag until she reads the words. Both are the Meals body: on first sight Low drains (blood thins and pales, she
 pales, the ovaries, brain and muscles shrink and grey); each step glows its place and a ring pulses there (the womb for the baby's
 steps).
+Under the pair, **Oxygen to energy** (her 2026-11-03 picks, BUILD-NOTES "Iron step 3: oxygen to energy"): three lenses, her ovary
+(her thigh muscle on Pregnancy) → in her blood → in her egg (a muscle cell on Pregnancy). Red cells carry oxygen to the mitochondria,
+each with an iron drop in it, which make the energy in the gold bar. Enough iron | Low iron; it rests on Low. On first sight it waits,
+dimmed, while the chain plays, then lights lens by lens with enough iron and drops to Low. Words DRAFT. Code: `phIrOzHtml`, `phIrOzSet`.
 
 State is `phIr` (view state, never saved).
 
