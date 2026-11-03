@@ -10372,3 +10372,4 @@ back; History › opened Your fasts with Start · Continue (the hover named the 
 phone 375: no sideways scroll, both blocks stacked, Start → Stop; Prescriptions search Zz → 2, Qqx → 0, clear → 3; console: no app
 error. Pictures `shots/fast-block-build-{computer,fasting,pastday,phone}.png`. **Pages checked (★★★):** Meals (computer + phone, today
 and a past day), Your fasts. **Not tested:** her real fasts; another Case colour on her record (the tint follows `--ph-herb-tint`).
+**LIVE** build 20261103-122300 (publish 7cb37764, her "push live"); both mocks moved to `mocks/`.
