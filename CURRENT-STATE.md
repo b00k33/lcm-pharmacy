@@ -944,9 +944,11 @@ It runs in three steps on one light band of white boxes (the Fast block's shared
 **1 How much:** two figures, 18 mg a day and 27 pregnant, as drops (1 drop = 1 mg). What one serve gives is ranked by
 `PH_FOOD`'s own iron × each row's usual serve. A tap on a woman opens step 2 for her.
 
-**2 Fill up your iron:** her body fills red from the feet with the iron it takes up, against 3.2 mg a day (6.8 pregnant); the
-count says taken up, then eaten. Your table is Food · Serve · Eaten · Taken up, each food's % beside it.
-- The places iron works glow with the level, labelled.
+**2 Fill up your iron:** the Meals body (her "one body" pick, BUILD-NOTES "One body, more real") takes the iron in: a food goes
+down, what she takes up travels gut → liver → heart into her blood (the vessels thicken and run red, red cells in them), past her
+need into the liver's store; she is pale while it is low. Against 3.2 mg a day (6.8 pregnant); the count says taken up, then eaten.
+Your table is Food · Serve · Eaten · Taken up, each food's % beside it.
+- Steps 1 and 3 keep their own figures (the red rising, the places labelled).
 - Foods are A to Z in six groups.
 - Taken up (DRAFT; her 2026-11-03 picks, BUILD-NOTES "Iron page: what the body takes up"): meat and fish 25%; plants, eggs and grains
   10% alone, 20% with a Vitamin C food, 2% with Tea or coffee.
@@ -1179,8 +1181,10 @@ meals for it. LIVE build 20261103-143900. **Beside it, the body** (MEALS BODY, h
 travelling through her on the app's body (PH_BODY_GEOM, the sketch face, `phRenAnatomyHtml`'s organs), one number at a time in the
 table's order (2.5 s each, its column lit): the goals' day so far + the try, against her goals. A place grows when its number meets
 the goal and shrinks, thins, cracks or pales when short (the thyroid swells, the liver turns fatty; the Baby place only glows); fuel
-only lights a place; the part past a goal is stored (liver, fat) or cleared (kidneys → bladder): carbs past her limit refill the liver,
-only kJ past the day go to fat. Eat · Body | TCM (TCM: Stomach → Spleen → the Zang that governs the tissue, in its element's colour;
+only lights a place; the part past a goal is stored (liver, fat) or cleared (kidneys → bladder): carbs past her goal refill the liver,
+then go to fat; kJ past the day go to fat too. Before it lands she is pale and grey and the places the try feeds small and dim; colour
+floods in as it lands, places swell about a fifth, the vessels thicken and run red with red cells, sparks fire across the brain (her
+2026-11-03 picks, BUILD-NOTES "One body, more real"). The Iron page's step 2 draws this same body. Eat · Body | TCM (TCM: Stomach → Spleen → the Zang that governs the tissue, in its element's colour;
 the view stays on this device) · All ▾ (follow one number). Names on hover only. It plays when the Try tab opens and on Eat; a changed
 amount sets the looks at once; reduced motion: the end looks only. Phone: above the table. Its words (`PH_MBD_FLOW`, `PH_MBD_ORG`)
 are DRAFT. A meal

@@ -10863,3 +10863,39 @@ Then on v2: the Body · TCM switch with Body first, 2.5 s a number, and "Yes, bu
   - reduced motion (by reading only: `phTpReduceMotion` → the end looks);
   - a sync repaint mid-play.
 - **Pages checked:** Meals (Try with the body, the goals above it, Table without it) and the phone's day (the Try chip).
+
+## 2026-11-03 · One body, more real (the Meals body + the Iron page)
+Her notes while looking at the bodies: "make the animation more realistic. when eating carbs, the body fat grows", "when eating red
+meat, the blood grows", "when eating choline, the brain is more active and alive", "give more contrast to before and after eating".
+Her 4 picks, all the recommended option except the first:
+1. **Both, one body:** the Meals › Try body (`phMbd*`, "Meals: where it goes") is made more real, and the Iron page's step 2 draws that
+   same body.
+2. **Pale before, colour after:** at the start of a play she is pale and grey (`.mb-pale`, her outline filled light grey over the body
+   and the brain, under the moving dots) and the places the try feeds start small and dim (`PH_MBD_H0` = .45); the wash lifts as the
+   dots land, places swell about a fifth (muscles, brain, ovaries, bones wider ranges). A short mark (a crack, a goitre, a fatty liver,
+   dry skin) shows only once its number has landed (`mk`), never in the pale start. Places nothing feeds hold as before (.85).
+3. **Brain sparks:** nine short nerve paths (`PH_MBD_SPK`, gold, inside `.mb-brn` so they grow with it) flash while it plays once a
+   brain builder (choline, omega-3, B12) has landed, faster as it fills; at rest a faint web (motion only on a real change).
+4. **Carbs → fat past the liver's store:** carbs past her carb goal (`ex: "store"`): the first third of the extra dots refill the
+   liver, the rest go through the liver into the fat stores, which now grow clearly (rx ×1.8, `fill-opacity` to .63). Replaces the
+   body's pick 3 ("only kJ past the day go to fat"); kJ past the day still go to fat.
+- **Red meat → the blood grows:** the vessels thicken (.45 → 2.6) and run from a pale grey-pink to rich red; a red-cell layer
+  (`.mb-rbc`, the vessel paths dotted) appears once iron, folate, B12 or copper lands and streams while it plays.
+- **The engine takes options** on `phMbdD` (Meals sets none): `foods` (how many food dots), `baby` (false = no Baby place), `lead`
+  (the food's way down; 2300 ms, the Iron page 1600), `from` (start looks), `pale0` / `pale1` (the wash at the start / end).
+- **The Iron page, step 2:** `phIrBody(play, from)` mounts `phMbdSvg()` in `#phIrBig` (`.ph-mbd.ir-mbd`, the steps row, its caption
+  hidden: the count says the number) with iron only: `p.fe` = taken up ÷ her need. A food: the drop flies to her mouth, the food goes
+  down, the iron travels gut → liver → heart → vessels, the blood eases from her level before the food (`from`) to the new one; past
+  her need the liver's store fills; pregnant, the Baby place glows. She is pale while iron is low (wash .8 × (1 − share)). Removing a
+  food, Reset, vitamin C / tea and Pregnant set the looks at once. Steps 1 and 3 keep their own figures (the red rising, the labelled
+  places). `phIrLevel` / `phIrPulse` / `phIrFigSvg` stay for them.
+- **Tested** (a copy of HEAD's index.html, port 8997): the Meals body through a test host with a made-up day (protein 130%, carbs 150%,
+  choline 120%, calcium 55%, iron 110%, kJ 115%): pale at the start, colour by the end, fat stores grew (.32), liver store .65, the
+  bones' cracks at calcium 55%, sparks firing on choline's turn and a faint web at rest, red cells in the vessels, the same timings
+  as before (2300 + 2.5 s a number), `phMbdFinal` (reduced motion) = the end looks. The Iron page at 1024: empty = pale, thin pale
+  vessels; steak → the iron's way drawn, 39%; + beef liver → 87%, red vessels, colour back; + oysters → 118%, the liver's store;
+  Pregnant → of 6.8 mg, the Baby place; Reset → pale; steps 1 and 3 unchanged; 375 wide: the body 300 px, no sideways scroll. No
+  console errors.
+- **Not tested:** the real Meals Try tab with her own record (the body was driven through a test host), the TCM view's new carbs
+  way, reduced motion in a real browser setting, the Key2.
+- **Pages checked:** Meals (the body through its own functions) and the Guide's Iron tab (steps 1, 2, 3). Every new word is DRAFT.
