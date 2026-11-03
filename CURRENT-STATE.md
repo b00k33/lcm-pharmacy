@@ -504,20 +504,31 @@ grid, the `data-tp-mgr-view` switch) is gone; its shared pieces (`phTpMgrSetFiel
 rhythm, Sessions, Recipe and Therapies fields, `phTpMgrRailHtml`) are the full-page editor's own.
 
 ## Cycle & IVF
-**The Cycle page** = a plain sentence, three tabs, a Day 1 chip, a "Today is day [ ]" finder, PMS on every day, a **Menopause**
+**The Cycle page** = three tabs, a "Today is day [ ]" finder, a Day 1 chip, PMS on every day, a **Menopause**
 chip (sets `rec.cycleOn = false`; the Change of life card has "Tracking a cycle again?") [Cycle PAGE redesign]. Its calendar is
-the Fertility-Friend-style calendar + BBT chart (`phCycFFHtml`), the one cycle view everywhere, opening on the month of her last
-period. **Calendar tab** (her pick): a cycle picture (wheel + hormone / lining strip, `phCycDgHtml`) top left, the day
-card ALWAYS under it (today until she taps a day), the two months stacked on the right. The card asks in her order: Last period,
-How was it (Flow, Colour, Clots = Size Small / Large + Amount A few / Many, `clotSz` / `clotAmt`, read via `phCycClots`), Painful?
-No / Yes (`painYN`; Yes opens How bad + Pain type), Between periods, PMS & mood (Mood · Gut · Body). **How bad takes a range and
+the Fertility-Friend-style calendar + BBT chart (`phCycFFHtml`), the one cycle view everywhere. **Two halves** (her 2026-11-03
+picks on the Cycle page mocks, canvas 1HUfAZbcfH7vCoSuK65UFS [Cycle page: two halves]): the tab row (tabs, the finder, the Day 1
+chip of the card's day, Pregnant? with its popover under it) and the pane sit on the Fast block's light band (one shared band
+rule, `.cp-band`). On the Calendar tab a LEFT white box holds the head (`phCpHeadHtml`: "CD 4" + Fertile · Ovulation · Period,
+each with its colour mark; late = the days late + the last period) and the day card ALWAYS (today until she taps a day); a RIGHT
+white box holds the chart (`phCycDgHtml`: the hormone curves, a drawing, over a labelled phase bar sized by days, date + CD under
+each day, a gold line on the card's day that glides on a tap; the wheel, lining and follicle are gone) and ONE month (this month
+until she moves it; every day a whole block: period by flow, follicular grey, fertile green, ovulation dark green, luteal lilac,
+the next cycle drawn from her latest cycle's shape, only the next period paler; CD on every day; today gold-ringed, the card's day
+teal-ringed). Temperature and Past cycles: the head + their pane in one white box. When the page first shows (`phCpFirstSight`,
+`.in`; never on a repaint) the halves rise, the curves wipe in, the blocks grow, the line drops, the days come in as a wave and
+today's ring pulses twice. The sentence (`phCpSentence`) stays on Today's visit and the profile's cycle panel. The card asks in
+three groups under capitals headings (her pick 3; no numbers, no joining line; the same card on Today's visit, where the Day 1
+chip heads Period): **Period** (Flow, Colour, Clots = Size Small / Large + Amount A few / Many, `clotSz` / `clotAmt`, read via
+`phCycClots`; Pain No / Yes, `painYN`, Yes opens How bad + Pain type in place), **Between periods** (BBT, LH, Other, Discharge),
+**PMS & mood** (Mood · Gut · Body + Note). **How bad takes a range and
 Pain type takes several** (her 2026-10-31 picks): tap 4, then 6 = 4–6 (`painLo` 4, `painN` 6, filled 4 to 6); a tap on a range
 is one score again; the same score again or 0 clears. The top of a range counts wherever one number is needed (the chart peak,
 the 4+ painful rule, the pain word). `feels` is a word for one type, a list for two or more; every reader goes through
 `phCycFeels`, every pain number shown through `phCycPainTxt` ("4–6"). **Its look** (her 2026-10-28
 "Combine" pick): one label column, every joined bar filling its line (a bar too long folds into an even joined grid, `phCsFit`),
 each option with its picture beside the word (Flow, Colour and Clots the picture alone, the word in its hover title, the pick
-read out at the row's end, her "icon without words for flow color clots"), a line joining the numbered steps (filled once answered), the usual ring alone (a key
+read out at the row's end, her "icon without words for flow color clots"; in a half 400-480px wide the labels keep their column), the usual ring alone (a key
 in the head), How bad a 0–10 bar, BBT and its time as tinted fields, Fang Bing Ren a band at the foot [Cycle day card: lined up,
 pictures, rail]. **No Fang Bing Ren side column on the Cycle page** (her 2026-10-28 "the last column is not needed":
 `phPfwSideWanted` leaves out "cycle"; Ren, Medical history, Usual period, Pain, Supplements and Blood tests keep it).
@@ -1471,12 +1482,12 @@ Fitness + Exercises), the rest in Life.
 - **Her card leads the drawer** (`phMeCardHtml`): initials, name, "Day n · phase · Fasting h:mm"; a tap = her record, ✎ = change
   the name. Each drawer heading of hers ends in › to its page (`phMeH4` → `data-ph-me-go` → `phMineOpen(tab)`): Today's meals →
   Diet (Meals), Herbs → Herbs, To-do → This week, Trips → the trip, Birthdays, Routines; the rows stay today's ticks.
-- **Her rail: Body · Life first** (`PRES_MINE_RANK`, grp `body` / `life`): Body = Cycle, Tongue, Pulse (her 2026-11-03 "tongue and pulse tab?": the
+- **Her rail: Body · Life first** (`PRES_MINE_RANK`, grp `body` / `life`): Body = Cycle, Tongue, Pulse, Abdomen (her 2026-11-03 "tongue and pulse tab?" + "Add Abdomen too": the
   same exam pages with no Care Plan needed, `phExamPageHtml`; the row says the day she last charted it, "Today" / "3 Nov"), Meals
   (her Diet page; Fasting is off the rail, opened from Meals' History ›), Herbs, Fitness (its tabs hold Exercises and Health), Habits, Log; Life = Week, Work, Money,
-  Code, trips, Birthdays, Routines; then her file and the visit steps; her bottom group reads "Clinic dated". Cycle, Tongue and Pulse
-  leave the Plan step on her record (`presMineCycleNorm` turns plan + cycle / tongue / pulse into profile + the same page, so every door
-  lands there; a Care Plan of hers keeps Abdomen there); Diet leaves Log.
+  Code, trips, Birthdays, Routines; then her file and the visit steps; her bottom group reads "Clinic dated". Cycle, Tongue, Pulse and
+  Abdomen leave the Plan step on her record (`presMineCycleNorm` turns plan + cycle / tongue / pulse / abdomen into profile + the same page,
+  so every door lands there); Diet leaves Log.
   **Folded pages** (her picks 2026-10-29, the Me audit; `phMeRailFold`): a page she has not used sits in a "⋯ More" row of its
   group — Life: Code (until a plan), Money (until a price or a bill), a trip (until it runs or is within 30 days); File: Supplements ·
   Blood tests; Clinic: Photos · Messages · Appointments; the page she is on never folds; one More row open at a time
