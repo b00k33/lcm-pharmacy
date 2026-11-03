@@ -10531,3 +10531,33 @@ Memory project_lcm_fat_goal_foods_2026_11_03.
   column, no sideways scroll; Prescriptions search Zz → 1 match, Qqx → 0 match, clear → all; no console errors. Pictures
   `shots/micros-build-*-2026-11-03.png` (computer, phone, copper hover, popcorn, steak, skewer).
 - **Not tested:** her own record (her typed goals and real meals), her phone.
+
+## 2026-11-03 · Routines table
+Her words, with a picture of her Routines page (18 rows, 7 of them Travel): "organise into table format - show mock", then the
+same turn "oragnise routines into categories e.g. work health self care etc". Mocks `routines-table-mock-2026-11-03.html`
+(artifact CWcWRsvVWcBmCeDT2dYz6a: A list table · B week dots · C one row a routine) and `routines-categories-mock-2026-11-03.html`
+(artifact ErcJAGRnNUMfJ9MHrawKuT: A a few categories · B her colours as they are). **Her picks:** C (not my B); today's column
+gold; start and end, the end small under each start; a time opens that routine, the name the first; the phone keeps the name
+while the days scroll, today in view; the Me drawer's short list stays a list; then A · a few categories, in her words' order,
+Code and the invoice runs in Work, Sleep in Health, Night and Morning in Self-care. The categories replace the Morning ·
+Afternoon · Evening rows she had kept in the first round (her newer word).
+- **The page** (`phMeRtsPageHtml`, ROUTINES TABLE): one table. A row a routine; routines with the same name (trimmed, any case)
+  join, so her seven Travel rows are one. The columns are this week, Mon to Sun (`phMplWeek`), today gold. Each day's cell holds
+  that day's runs from `phMeDayItems` (so a moved day shows its move and a paused trip day shows nothing), each a small faint
+  block: the start, its a / p small, the end under it (`phMeRtTimeHtml`). A routine with nothing this week (a monthly) says its
+  rule and time under its name. The head counts the rows.
+- **Categories** (`phMeRtCat`, `PH_ME_RT_CAT`): a routine's colour Mode (`it.mode`, else the Mode with its colour, else its C22
+  group) gives the category: Work, Code, Study → Work; Fitness, Meal, Medical, Sleep → Health; Personal, Upkeep, Night,
+  Morning → Self-care; Travel → Travel; Clean → Home; Birthday, Together → People; anything else → Other. The order is fixed:
+  Work · Health · Self-care · Travel · Home · People · Other; inside a category the rows run by first start.
+- **Taps:** a time block opens that one routine in Edit (`data-ph-me-edit`, the existing door); the name opens the first.
+- **The phone:** the name column is sticky, the days scroll sideways, and after each paint the table scrolls so today's
+  column sits next to the names (`phMeRttToday`).
+- **Kept:** the Me drawer's Routines list and the Birthdays page stay rows (`phMeRtRowHtml`, `phMeBdRowHtml`).
+- **Tested** (test copy on port 8989, my `mg-shot.html` harness with her 18 routines entered as test data: her Modes Work,
+  Travel, Fitness, Meal, Code, Personal, Sleep, Night with her colours): 12 rows, Work 4 · Health 5 · Self-care 2 · Travel 1;
+  Travel's one row holds both runs on Mon, Tue, Wed, Thu, Fri and Sat; David Dinh's monthly says "Monthly · 8:30 am"; a
+  routine with no Mode lands in Other; Fri 7:00p in Travel opened that Travel (7:00 – 8:00 pm, weekly Fri) in Edit; phone 375:
+  the names stay, today first in view, no sideways page scroll, every time on one line; no errors. Pictures
+  `shots/routines-table-*.jpg`.
+- **Not tested:** her own record (her real Mode names decide each category; a Mode name outside the 14 lands in Other).
