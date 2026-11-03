@@ -1122,7 +1122,14 @@ reactions); names as she says them (Phở bò, Quẩy (youtiao)) and search find
 words with − / + (**MEAL AMOUNTS**, her 2026-11-03 picks B + C: anything she counts, a dish `dish:<id>*<q>` too, goes by ¼ below
 one, 1 → ¾ → ½ → ¼, and by its own step above, `phMealStepQ`; grams and ml keep their 25 g / 50 ml and floor; the amount is a field
 she types into, 0.5 · .25 · 1½ · 1/2, Enter or leaving keeps it, Esc puts it back, `phMealQParse` → `phMealAmtTo`, the one door − +
-take too; a dish's Made of the same, `phDishAmtType`; LIVE build 20261103-112900). A dish's **Made of** adds its numbers itself
+take too; a dish's Made of the same, `phDishAmtType`; LIVE build 20261103-112900). **DRINK SIZES** (her 2026-11-03 "also include
+drink size selection"; her picks: size chips, on every drink amount, a shop's drink one row; not live yet): Small · Regular · Large
+chips with the ml under each (a café cup 220 · 350 · 470 ml, a glass 200 · 250 · 375 ml; an espresso Single · Double), on a line of
+their own under a meal's drink, beside the amount in a Try, after it in a dish's Made of; − / + still fine-tunes. A shop's drink sold
+in sizes (75: McDonald's 46, Hungry Jack's 29) is one row in + Add (its sizes one bar, its place's name beside it), one chip
+(S · M · L) in the food chips, and its chips swap it to that size's own row; one logged keeps its size. A drink sold as one cup, can
+or bottle has none. Code: "DRINK SIZES" (`phDkSib`, `phDkSizes`, `phDkSzHtml`; a meal's change goes through `phMealAmtTo`, a
+repeating drink keeps its base through `phMealRepQ`'s `ob`). A dish's **Made of** adds its numbers itself
 (typed numbers only for what is not on the list); with no Made of a dish counts by itself (`phDishAuto`: the Thisbowl bowl in its
 name, else its typed ingredients matched) and Made of starts filled with that bowl. Nutrients add every item. The time is a small
 ✎ field. A day's numbers line (kJ · P · C · F) opens 17 bars against **Targets** (C22's four + NHMRC women 31–50 + carbs 50 g, each hers;

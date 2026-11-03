@@ -6460,6 +6460,16 @@
   #pharmacyPage .ph-meal-rl button { width: 30px; height: auto; min-height: 0; margin: 0; padding: 0; flex: none; border: 0; border-left: 1px solid var(--ph-line); border-radius: 0; background: var(--ph-white); color: var(--ph-ink); font: 700 var(--fs-12)/1 var(--font-body); cursor: pointer; }
   #pharmacyPage .ph-meal-rl button:hover { background: var(--ph-herb-tint); }
   #pharmacyPage .ph-meal-rl button.on { background: var(--ph-herb); color: #fff; }
+  /* DRINK SIZES (her 2026-11-03 pick A): Small · Regular · Large chips, the ml under each, beside the amount */
+  #pharmacyPage .ph-dksz { display: inline-flex; gap: 4px; flex: none; vertical-align: middle; }
+  #pharmacyPage .ph-dksz button { height: 32px; min-height: 0; margin: 0; padding: 0 8px; box-sizing: border-box; display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); box-shadow: none; color: var(--ph-ink); font: 600 var(--fs-12)/1 var(--font-body); cursor: pointer; }
+  #pharmacyPage .ph-dksz button small { font: 500 var(--fs-10-5)/1 var(--font-body); color: var(--ph-soft); }
+  #pharmacyPage .ph-dksz button:hover { background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-dksz button.on { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
+  #pharmacyPage .ph-dksz button.on small { color: #fff; }
+  #pharmacyPage .ph-meal-tr > .ph-dksz { grid-column: 1 / -1; justify-self: start; }
+  #pharmacyPage .ph-mtry-t td.am .ph-dksz { margin-right: 6px; }
+  #pharmacyPage .ph-mlk-row .ph-meal-bar.dk button { width: auto; padding: 0 9px; }
   #pharmacyPage .ph-meal-when { flex-wrap: wrap; }
   #pharmacyPage .ph-meal-tm { height: 32px; min-height: 0; margin: 0; padding: 0 10px; box-sizing: border-box; display: inline-flex; align-items: center; gap: 6px; border: 0; border-radius: 6px; background: var(--ph-herb-tint); color: var(--ph-ink); font: 600 var(--fs-13)/1 var(--font-disp, inherit); font-variant-numeric: tabular-nums; cursor: pointer; }
   #pharmacyPage .ph-meal-tm:hover { box-shadow: 0 0 0 1.5px var(--ph-herb); }
@@ -45638,6 +45648,41 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     n = Math.round(n * 100) / 100;
     return n < 0.25 - e || n > st * 40 + e ? null : n;
   }
+  // DRINK SIZES (her 2026-11-03 "also include drink size selection"; her picks: A · size chips with the ml under each, beside the
+  // − / + amount; on every drink amount (a meal's rows, a dish, a Try); a shop's drink one row, its own menu sizes): a café cup
+  // 220 · 350 · 470 ml (8 · 12 · 16 oz), a glass 200 · 250 · 375 ml, an espresso one or two shots; a shop's drink sold in sizes
+  // swaps to that size's own row (its own numbers; one already logged keeps its size). A drink sold as one cup, can or bottle has
+  // no chips; − / + still fine-tunes any amount
+  const PH_DK_CUP = [["Small", 220], ["Regular", 350], ["Large", 470]], PH_DK_GLASS = [["Small", 200], ["Regular", 250], ["Large", 375]], PH_DK_SHOT = [["Single", 1], ["Double", 2]];
+  const PH_DK_CAFE = /^(long_black|flat_white|(matcha|hojicha)_latte)/, PH_DK_SZRE = / · (Small|Medium|Large|Regular)$/;
+  let phDkSibM = null;
+  // a shop's drink sold in 2+ sizes: its sizes [word, id], small to large (one list for all of them); else null
+  function phDkSib(id) {
+    if (!phDkSibM) {
+      const g = {}, ord = { Small: 0, Regular: 1, Medium: 1, Large: 2 };
+      Object.keys(PH_FOOD).forEach(k => { const f = PH_FOOD[k], m = f[7] && PH_FOOD_NAMED.has(f[2]) ? PH_DK_SZRE.exec(f[0]) : null; if (m) { const b = f[2] + "|" + f[0].slice(0, m.index); (g[b] = g[b] || []).push([m[1], k]); } });
+      phDkSibM = new Map();
+      Object.values(g).forEach(L => { if (L.length < 2) return; L.sort((a, b) => ord[a[0]] - ord[b[0]]); L.forEach(([, k]) => phDkSibM.set(k, L)); });
+    }
+    return phDkSibM.get(id) || null;
+  }
+  const phDkName = id => PH_FOOD[id][0].replace(PH_DK_SZRE, "");
+  const phDkRep = id => { const S = phDkSib(id); return S ? S[0][1] : id; };   // the row that stands for all its sizes in a list
+  const phDkFirst = id => phDkRep(id) === id;
+  // a drink's chips: [word, ml shown under it (or ""), its hover, the item at that size, on]; null = not a drink, or one size only
+  function phDkSizes(x) {
+    const p = phMealQ(x), f = p.k === "food" ? PH_FOOD[p.id] : null;
+    if (!f || !f[7]) return null;
+    const S = phDkSib(p.id);
+    if (S) return S.map(([w, id]) => [w, "", `${w} · ${PH_FOOD[id][4]} ml`, `food:${id}*${Math.round(p.q * 100) / 100}${p.side ? "~" + p.side : ""}`, id === p.id]);
+    const L = f[3] === "shot" ? PH_DK_SHOT : f[3] !== "ml" ? null : PH_DK_CAFE.test(p.id) ? PH_DK_CUP : PH_DK_GLASS;
+    return L ? L.map(([w, v]) => [w, f[3] === "ml" ? v : "", f[3] === "ml" ? "" : `${w} · ${v} ${v > 1 ? "shots" : "shot"}`, phMealWithQ(x, v), Math.abs(p.q - v) < 1e-9]) : null;
+  }
+  // the chips; at = the place's own attributes (a tap carries the item at that size in data-dksz)
+  function phDkSzHtml(x, at) {
+    const S = phDkSizes(x);
+    return S ? `<span class="ph-dksz" role="group" aria-label="Size">${S.map(([w, ml, t, y, on]) => `<button type="button" class="${on ? "on" : ""}" ${at} data-dksz="${esc(y)}" aria-pressed="${on}"${t ? ` title="${esc(t)}"` : ""}>${w}${ml ? `<small>${ml} ml</small>` : ""}</button>`).join("")}</span>` : "";
+  }
   // an amount she typed (her C): 0.5 · .25 · 1.5 · 2 · ½ · 1½ · 1 ½ · 1/2 · 1 1/2 (a comma for the point too); null = not an amount
   function phMealQParse(v) {
     const t = String(v == null ? "" : v).trim().replace(/,/g, ".").replace(/\s+/g, " "), F = { "¼": 0.25, "½": 0.5, "¾": 0.75 };
@@ -45880,8 +45925,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     }, `${nm} · removed ${how === "on" ? "from " + phMeDayLbl(day) : "every day"}`, phMealRepKeys(day, sl, [cut]));
   }
   // a food that repeats at another amount (her pick 7): the same three choices
-  function phMealRepQ(day, sl, y, how) {
-    const b = phMealBase(y), nv = phMealV(phMealVs(phMealPlan(day, sl).v).map(z => phMealBase(z) === b ? y : z)), r = phMealRepOn(day, sl).find(z => phMealBase(z.x) === b), nm = phMealName(y);
+  function phMealRepQ(day, sl, y, how, ob) {   // ob: the base it had (DRINK SIZES: a shop's size is its own row)
+    const b = ob || phMealBase(y), nv = phMealV(phMealVs(phMealPlan(day, sl).v).map(z => phMealBase(z) === b ? y : z)), r = phMealRepOn(day, sl).find(z => phMealBase(z.x) === b), nm = phMealName(y);
     if (how === "just" || !r) return phMealPlanSet(day, sl, nv, "day", w => `✓ ${w} · ${nm}`);
     const nw = phMealRpNew(), cut = phMealRpNew();
     return phMealSave((d, now) => {
@@ -46614,9 +46659,9 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     const cur = phMealVs(phMealList(c).v), b = phMealBase(x), at = cur.findIndex(y => phMealBase(y) === b), lid = phMealLid(c);
     if (at < 0) return false;
     const ask = phMealRpUi && phMealRpUi.m === "q" && phMealRpUi.lid === lid && phMealRpUi.b === b ? phMealRpUi : null;   // MEAL REPEATS: the amount she is choosing
-    const y = ask ? ask.y : cur[at], q = how(y);
-    if (q == null || Math.abs(q - phMealQ(y).q) < 1e-9) return false;
-    const nx = phMealWithQ(y, q), nv = cur.slice();
+    const y = ask ? ask.y : cur[at], q = how(y), sz = typeof q === "string";   // DRINK SIZES: a size chip gives the item itself
+    if (q == null || (sz ? q === y : Math.abs(q - phMealQ(y).q) < 1e-9)) return false;
+    const nx = sz ? q : phMealWithQ(y, q), nv = cur.slice();
     // MEAL REPEATS (her pick 7): a food that repeats asks which days first (Just <day> · <day> on · Every day · Keep)
     if (phMealRpMine(c) && phMealRepOf(c.day, c.sl, cur[at])) { phMealRpUi = nx === cur[at] ? null : { lid, b, m: "q", y: nx }; phMealCardRepaint(); return true; }
     nv[at] = nx;
@@ -46727,14 +46772,14 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     const ask = phMealRpUi && phMealRpUi.m === "q" && phMealRpUi.lid === lid && phMealRpUi.b === phMealBase(x) ? phMealRpUi.y : null;   // MEAL REPEATS: the amount she is choosing shows
     const p = phMealQ(ask || x), nm = phMealName(x) || "Dish", d = p.k === "dish" ? phDishOf(x) : null, f = p.k === "food" ? PH_FOOD[p.id] : null;
     let w = nm, u = "";
-    if (f) { const r = phFoodAmt(p.id, p.q)[1]; u = phFoodUnitW(p.id, p.q); w = f[2] === "tb" || !f[3] ? r.charAt(0).toUpperCase() + r.slice(1) : f[0]; }
+    if (f) { const r = phFoodAmt(p.id, p.q)[1]; u = phFoodUnitW(p.id, p.q); w = phDkSib(p.id) ? phDkName(p.id) : f[2] === "tb" || !f[3] ? r.charAt(0).toUpperCase() + r.slice(1) : f[0]; }
     else if (d) w = d.n || "Dish";
     const nmEl = d && !d.del ? `<button type="button" class="nm" data-meal-dish="${esc(d.id)}" title="Open ${esc(d.n || "Dish")}">${esc(w)}</button>` : `<span>${esc(w)}</span>`;
     // − amount + (MEAL AMOUNTS, her B + C): ¼ below one on a thing she counts; the amount a field she types into, its unit after it
     const btn = dir => `<button type="button" class="st" data-meal-q="${esc(lid)}" data-meal-v="${esc(x)}" data-meal-d="${dir}" aria-label="${dir < 0 ? "Less" : "More"}: ${esc(w)}"${dir < 0 && phMealStepQ(ask || x, p.q, -1) == null ? " disabled" : ""}>${dir < 0 ? "−" : "+"}</button>`;
     const am = `<label class="am"><input type="text" class="fld field-bare" data-meal-qv="${esc(lid)}" data-meal-v="${esc(x)}" value="${esc(phFoodNum(p.q))}" inputmode="decimal" enterkeyhint="done" autocomplete="off" maxlength="7" aria-label="Amount: ${esc(w)}${u ? " (" + esc(u) + ")" : ""}">${u ? `<span class="u">${esc(u)}</span>` : ""}</label>`;
-    const kv = kj ? phNutOf(x).v.kj : null;
-    return `<div class="ph-meal-tr${phMealFresh === x ? " new" : ""}"${ph ? ` data-mph-b="${esc(phMealBase(x))}"` : ""}${kj && window.innerWidth > 640 ? ` data-mac-bk="x|${esc(lid)}|${esc(x)}"` : ""}><span class="n">${ph ? phMealPhNbHtml(ph.n, ph.on) : ""}${phMealDot(x)}${nmEl}</span>${ph && !ph.on ? phMealPhPlcHtml(ph.at, phMealBase(x), ph.plc) : f || d ? `<span class="ph-meal-step">${btn(-1)}${am}${btn(1)}</span>` : "<span></span>"}${kj ? `<span class="k">${kv == null ? "" : Math.round(kv) + " kJ"}</span>` : ""}${ph && ph.card ? "" : `<button type="button" class="ph-meal-rm" data-meal-rm="${esc(lid)}" data-meal-v="${esc(x)}" aria-label="Remove ${esc(nm)}">${phMealSvg("x")}</button>`}${phMealRpRowHtml(lid, x)}${kj && window.innerWidth <= 640 ? phMacFsLine(x) : ""}</div>`;
+    const kv = kj ? phNutOf(x).v.kj : null, dz = f && !(ph && !ph.on) ? phDkSzHtml(ask || x, `data-dksz-meal="${esc(lid)}" data-meal-v="${esc(x)}"`) : "";   // DRINK SIZES
+    return `<div class="ph-meal-tr${phMealFresh === x ? " new" : ""}"${ph ? ` data-mph-b="${esc(phMealBase(x))}"` : ""}${kj && window.innerWidth > 640 ? ` data-mac-bk="x|${esc(lid)}|${esc(x)}"` : ""}><span class="n">${ph ? phMealPhNbHtml(ph.n, ph.on) : ""}${phMealDot(x)}${nmEl}</span>${ph && !ph.on ? phMealPhPlcHtml(ph.at, phMealBase(x), ph.plc) : f || d ? `<span class="ph-meal-step">${btn(-1)}${am}${btn(1)}</span>` : "<span></span>"}${kj ? `<span class="k">${kv == null ? "" : Math.round(kv) + " kJ"}</span>` : ""}${ph && ph.card ? "" : `<button type="button" class="ph-meal-rm" data-meal-rm="${esc(lid)}" data-meal-v="${esc(x)}" aria-label="Remove ${esc(nm)}">${phMealSvg("x")}</button>`}${dz}${phMealRpRowHtml(lid, x)}${kj && window.innerWidth <= 640 ? phMacFsLine(x) : ""}</div>`;
   }
   // the meal's numbers (FOOD NUMBERS): one line; a tap opens the small ones (her pick 3; this visit only)
   const phMealMic = new Set();
@@ -46793,7 +46838,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   // hover words (close match, her reactions) go under the box instead of a second tip
   let phMlkShare = false;
   const phMlkShareAt = (v, tip) => phMlkShare ? String(tip || "").replace(' title="', ' data-mac-tip="') + ` data-mac-bk="a|${esc(v)}"` : tip;
-  const phMlkFoodRow = (id, ex) => { const f = PH_FOOD[id]; return `<button type="button" class="ph-mlk-row" data-meal-tog="food:${id}"${phMlkShareAt("food:" + id + "*" + f[6], phFoodTipAt(id))} aria-label="Add ${esc(f[0])}" data-meal-n="${esc(phFoodWordsN(id))}"${ex}><span class="n"><span>${esc(f[0])}</span><em>${f[2] === "sh" ? "shop · " : ""}${esc(phFoodAmt(id, f[6])[0])}</em></span><span class="pl">${phMealSvg("plus")}</span></button>`; };
+  const phMlkDkRow = (id, ex) => { const S = phDkSib(id), nm = phDkName(id); return `<div class="ph-mlk-row" data-meal-n="${esc(phFoodWordsN(id))}"${ex}><span class="n"><span>${esc(nm)}</span>${phFoodMenu(PH_FOOD[id][2]) ? `<em>${esc(phFoodMenu(PH_FOOD[id][2])[1])}</em>` : ""}</span><span class="ph-meal-bar dk" role="group" aria-label="${esc(nm)}">${S.map(([w, s]) => `<button type="button" data-meal-tog="food:${s}" aria-label="Add ${esc(nm)} · ${w}" title="${w} · ${PH_FOOD[s][4]} ml">${w}</button>`).join("")}</span></div>`; };   // DRINK SIZES
+  const phMlkFoodRow = (id, ex) => { if (phDkSib(id)) return phMlkDkRow(id, ex); const f = PH_FOOD[id]; return `<button type="button" class="ph-mlk-row" data-meal-tog="food:${id}"${phMlkShareAt("food:" + id + "*" + f[6], phFoodTipAt(id))} aria-label="Add ${esc(f[0])}" data-meal-n="${esc(phFoodWordsN(id))}"${ex}><span class="n"><span>${esc(f[0])}</span><em>${f[2] === "sh" ? "shop · " : ""}${esc(phFoodAmt(id, f[6])[0])}</em></span><span class="pl">${phMealSvg("plus")}</span></button>`; };
   // the menu panes left empty by phMealAddHtml, drawn now (a food already in the meal stays out)
   function phMealMenuFill(box, ps) {
     const inM = new Set(String(box.dataset.mlkIn || "").split("\n"));
@@ -46801,7 +46847,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     phMlkShare = !box.dataset.mlkPt && window.innerWidth > 640;
     ps.forEach(p => {
       const g = p.dataset.mlkLazy;
-      p.insertAdjacentHTML("beforeend", Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !inM.has("food:" + id)).sort(phFoodAz).map(id => phMlkFoodRow(id, "")).join(""));   // A–Z, sizes small to large
+      p.insertAdjacentHTML("beforeend", Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && phDkFirst(id) && !(phDkSib(id) || [[0, id]]).some(([, s]) => inM.has("food:" + s))).sort(phFoodAz).map(id => phMlkFoodRow(id, "")).join(""));   // A–Z, sizes small to large
       p.removeAttribute("data-mlk-lazy"); p.hidden = false;
     });
     phRxTipT = null;
@@ -46815,7 +46861,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     phMlkShare = !c.pt && window.innerWidth > 640;
     let seen = 0;   // rows showing in the pane being drawn (an empty one stays hidden, as phFoodFilter keeps it)
     const row = (inner, n, all, attrs) => { const h = hid(n, all); if (!h) seen++; return `<button type="button" class="ph-mlk-row" ${attrs} data-meal-n="${esc(n)}"${all ? " data-meal-all" : ""}${h ? " hidden" : ""}>${inner}<span class="pl">${phMealSvg("plus")}</span></button>`; };
-    const food = (id, all) => { const h = hid(words(id), all); if (!h) seen++; return phMlkFoodRow(id, (all ? " data-meal-all" : "") + (h ? " hidden" : "")); };
+    const food = (id, all) => { if (phDkSib(id) && phDkSib(id).some(([, s]) => inM("food:" + s))) return ""; const h = hid(words(id), all); if (!h) seen++; return phMlkFoodRow(id, (all ? " data-meal-all" : "") + (h ? " hidden" : "")); };
     const pair = (p, all) => {
       const r = "tb_" + p + "_r", l = "tb_" + p + "_l";
       if (!PH_FOOD[r] || !PH_FOOD[l] || inM("food:" + r) || inM("food:" + l)) return "";
@@ -46824,7 +46870,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       return `<div class="ph-mlk-row" data-meal-n="${esc(n)}"${all ? " data-meal-all" : ""}${h ? " hidden" : ""}><span class="n"><span>${esc(PH_FOOD[r][0])}</span></span><span class="ph-meal-bar" role="group" aria-label="${esc(PH_FOOD[r][0])}">${[[r, "R", "Regular"], [l, "L", "Large"]].map(([id, s, t]) => `<button type="button" data-meal-tog="food:${id}" aria-label="${esc(PH_FOOD[r][0])} · ${t}" title="${t} · ${PH_FOOD[id][9][0]} kJ">${s}</button>`).join("")}</span></div>`;
     };
     const more = lbl => `<button type="button" class="ph-mlk-row more" data-meal-alltog="1" data-meal-n="" aria-expanded="${phMealAll}"${q ? " hidden" : ""}><span class="n"><span>${phMealAll ? "Fewer ▴" : lbl + " ▾"}</span></span></button>`;
-    const topOf = drink => [...new Set(Object.keys(use).filter(id => PH_FOOD[id] && PH_FOOD[id][2] !== "tb" && isDk(id) === drink).sort((a, b) => use[b] - use[a]).concat(PH_FOOD_TOP[drink ? "d" : "f"]))].filter(id => PH_FOOD[id]).slice(0, 10).sort(phFoodAz);   // her top 10, shown A–Z (her 2026-11-02 pick)
+    const topOf = drink => [...new Set(Object.keys(use).filter(id => PH_FOOD[id] && PH_FOOD[id][2] !== "tb" && isDk(id) === drink).sort((a, b) => use[b] - use[a]).concat(PH_FOOD_TOP[drink ? "d" : "f"]).map(phDkRep))].filter(id => PH_FOOD[id]).slice(0, 10).sort(phFoodAz);   // her top 10, shown A–Z (her 2026-11-02 pick)
     const pane = (k, lbl, inner) => { const h = !seen; seen = 0; return `<div class="ph-mlk-pane${phMealTab === k ? " on" : ""}" data-mlk-p="${k}" data-meal-pg${h ? " hidden" : ""}><div class="ph-meal-pgh ph-mlk-h">${lbl}</div>${inner}</div>`; };
     const sub = (lbl, inner) => { const n = seen; seen = 0; const h = !inner || !n; return { h: inner ? `<div class="ph-mlk-sub" data-meal-pg${h ? " hidden" : ""}><div class="ph-meal-pgh">${lbl}</div>${inner}</div>` : "", n }; };
     // Everyday: hers first, then the everyday ones; All foods = every other food by its group (drinks under Drinks)
@@ -46834,7 +46880,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     seen = evN;
     let h = pane("ev", "Everyday", ev);
     const dt = topOf(true);
-    h += pane("dk", "Drinks", dt.filter(id => !inM("food:" + id)).map(id => food(id, false)).join("") + more("All drinks") + Object.keys(PH_FOOD).filter(id => !dt.includes(id) && (PH_FOOD[id][2] === "tb" ? PH_FOOD[id][3] === "drink" : isDk(id)) && !inM("food:" + id)).sort((a, b) => !!phFoodPlace(PH_FOOD[a][2]) - !!phFoodPlace(PH_FOOD[b][2]) || phFoodAz(a, b)).map(id => food(id, true)).join(""));   // a place's drinks after the everyday ones (her plain Matcha latte before McDonald's 15)
+    h += pane("dk", "Drinks", dt.filter(id => !inM("food:" + id)).map(id => food(id, false)).join("") + more("All drinks") + Object.keys(PH_FOOD).filter(id => !dt.includes(id) && (PH_FOOD[id][2] === "tb" ? PH_FOOD[id][3] === "drink" : isDk(id)) && !inM("food:" + id) && phDkFirst(id)).sort((a, b) => !!phFoodPlace(PH_FOOD[a][2]) - !!phFoodPlace(PH_FOOD[b][2]) || phFoodAz(a, b)).map(id => food(id, true)).join(""));   // a place's drinks after the everyday ones (her plain Matcha latte before McDonald's 15)
     const tt = [...new Set(Object.keys(use).filter(id => PH_FOOD[id] && /^bowl:/.test(PH_FOOD[id][3])).sort((a, b) => use[b] - use[a]).map(pairOf).concat(PH_TB_TOP))].filter(Boolean).slice(0, 3);
     const tbIds = Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === "tb");
     h += pane("tb", "Thisbowl", tt.map(p => pair(p, false)).join("") + row(`<span class="n"><span>Build your own</span></span>`, "build your own thisbowl fishbowl", false, `data-meal-byo="1"`).replace(`<span class="pl">${phMealSvg("plus")}</span>`, `<span class="pl">${phMealSvg("chev-r")}</span>`) + more("All Thisbowl")
@@ -46842,7 +46888,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       + tbIds.filter(id => PH_FOOD[id][3] === "box" && !inM("food:" + id)).sort(phFoodAz).map(id => food(id, true)).join(""));
     // a menu's rows are drawn when its pane opens or a search starts (phMealMenuFill), not on every paint of the list: 557 rows
     // made each tap 3-4 times slower, and her phone is the limit
-    PH_FOOD_MENUS.forEach(([g, l, kit]) => { if (g === "tb" || kit) return; const ids = Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !inM("food:" + id)).sort(phFoodAz); if (!ids.length) return; h += phMealTab === g || q ? pane(g, `${esc(l)} · ${ids.length}`, ids.map(id => food(id, false)).join("")) : `<div class="ph-mlk-pane" data-mlk-p="${g}" data-mlk-lazy="${g}" data-meal-pg hidden><div class="ph-meal-pgh ph-mlk-h">${esc(l)} · ${ids.length}</div></div>`; });
+    PH_FOOD_MENUS.forEach(([g, l, kit]) => { if (g === "tb" || kit) return; const ids = Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !inM("food:" + id) && phDkFirst(id)).sort(phFoodAz); if (!ids.length) return; h += phMealTab === g || q ? pane(g, `${esc(l)} · ${ids.length}`, ids.map(id => food(id, false)).join("")) : `<div class="ph-mlk-pane" data-mlk-p="${g}" data-mlk-lazy="${g}" data-meal-pg hidden><div class="ph-meal-pgh ph-mlk-h">${esc(l)} · ${ids.length}</div></div>`; });
     h += pane("my", "My dishes", phDishList().filter(d => !inM("dish:" + d.id)).map(d => { const v = "dish:" + d.id, n = phDishSteps(d).length; return row(`<span class="n">${phMealDot(v)}<span>${esc(d.n)}</span>${n ? `<em>${n} prep</em>` : ""}</span>`, String(d.n || "").toLowerCase(), false, `data-meal-tog="${esc(v)}"${phMlkShareAt(v, phRxTip(v))} aria-label="Add ${esc(d.n || "Dish")}"`); }).join(""));
     phRxTipT = null;
     return `<div class="ph-meal-pick ph-meal-lpk ph-mlk${q ? " srch" : ""}" data-mlk-in="${esc(bases.join("\n"))}"${c.pt ? ` data-mlk-pt="1"` : ""}><div class="ph-meal-own"><label class="ph-meal-fld">${phMealSvg("search")}<input type="text" class="field-bare" data-meal-ownl="${phMealTab === "dk" ? "d" : "f"}" value="${esc(phMealSq)}" placeholder="Search or type" aria-label="Search, or type your own and press Enter" autocomplete="off" enterkeyhint="done" maxlength="120"></label><button type="button" class="ph-meal-add" data-meal-dish="new" title="New dish">+ New</button></div>
@@ -46863,7 +46909,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     // a menu's foods (PH_FOOD_MENUS) show here on a search only: under All foods its 557 chips were a wall and 3x the paint
     const hid = (n, all, sr) => q ? !n.includes(phFoodNrm(q)) : sr || !!all && !phMealAll;
     const words = phFoodWordsN;
-    const one = (id, all, sr) => { const on = isIn(id), n = words(id); return `<button type="button" class="ph-meal-ch${on ? " in" : ""}" ${attr(id)}${phFoodSrcTip(id) ? ` title="${esc(phFoodSrcTip(id))}"` : ""} aria-pressed="${on}" data-meal-n="${esc(n)}"${all ? " data-meal-all" : ""}${sr ? " data-meal-srch" : ""}${hid(n, all, sr) ? " hidden" : ""}><span>${esc(PH_FOOD[id][0])}</span></button>`; };
+    const dk = (id, all, sr) => { const S = phDkSib(id), nm = phDkName(id), n = words(id); return `<span class="ph-meal-rl" data-meal-n="${esc(n)}"${all ? " data-meal-all" : ""}${sr ? " data-meal-srch" : ""}${hid(n, all, sr) ? " hidden" : ""}><span class="nm">${esc(nm)}</span>${S.map(([w, s]) => `<button type="button" class="${isIn(s) ? "on" : ""}" ${attr(s)} aria-pressed="${isIn(s)}" aria-label="${esc(nm)} · ${w}" title="${w} · ${PH_FOOD[s][4]} ml">${w.charAt(0)}</button>`).join("")}</span>`; };   // DRINK SIZES
+    const one = (id, all, sr) => { if (phDkSib(id)) return dk(id, all, sr); const on = isIn(id), n = words(id); return `<button type="button" class="ph-meal-ch${on ? " in" : ""}" ${attr(id)}${phFoodSrcTip(id) ? ` title="${esc(phFoodSrcTip(id))}"` : ""} aria-pressed="${on}" data-meal-n="${esc(n)}"${all ? " data-meal-all" : ""}${sr ? " data-meal-srch" : ""}${hid(n, all, sr) ? " hidden" : ""}><span>${esc(PH_FOOD[id][0])}</span></button>`; };
     const pairOf = id => String(PH_FOOD[id][10]).split("|")[1] || "";
     const rl = (pair, all) => {
       const r = "tb_" + pair + "_r", l = "tb_" + pair + "_l";
@@ -46873,14 +46920,14 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     };
     const grp = (lbl, inner, all, sr) => inner ? `<div class="ph-meal-pg" data-meal-pg${!q && (sr || all && !phMealAll) ? " hidden" : ""}><div class="ph-meal-pgh">${lbl}</div><div class="ph-meal-chs">${inner}</div></div>` : "";
     const use = phFoodUse(), fits = id => PH_FOOD[id][2] !== "tb" && (mode === "all" || isDk(id) === drink);
-    const top = [...new Set(Object.keys(use).filter(fits).sort((a, b) => use[b] - use[a]).concat(PH_FOOD_TOP[drink ? "d" : "f"]))].filter(id => PH_FOOD[id]).slice(0, 10).sort(phFoodAz);
+    const top = [...new Set(Object.keys(use).filter(fits).sort((a, b) => use[b] - use[a]).concat(PH_FOOD_TOP[drink ? "d" : "f"]).map(phDkRep))].filter(id => PH_FOOD[id]).slice(0, 10).sort(phFoodAz);
     const tbAz = phAzBy(p => (PH_FOOD["tb_" + p + "_r"] || [p])[0]);
     const tbTop = tb ? [...new Set(Object.keys(use).filter(id => /^bowl:/.test(PH_FOOD[id][3])).sort((a, b) => use[b] - use[a]).map(pairOf).concat(PH_TB_TOP))].filter(Boolean).slice(0, 3).sort(tbAz) : [];
     const allB = `<button type="button" class="ph-meal-ch ph-meal-allb" data-meal-alltog="1" data-meal-n="" aria-expanded="${phMealAll}"${q ? " hidden" : ""}>${phMealAll ? "Fewer ▴" : "All foods ▾"}</button>`;
     let h = grp("Everyday", top.map(id => one(id, false)).join("") + allB, false);
     if (tb) h += grp("Thisbowl", tbTop.map(p => rl(p, false)).join("") + `<button type="button" class="ph-meal-ch ph-meal-byo" data-meal-byo="1" data-meal-n="build your own thisbowl fishbowl"${hid("build your own thisbowl fishbowl", false) ? " hidden" : ""}>Build your own</button>`, false);
     PH_FOOD_GRP.forEach(([g, lbl]) => {
-      const ids = Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !top.includes(id)).sort(phFoodAz);
+      const ids = Object.keys(PH_FOOD).filter(id => PH_FOOD[id][2] === g && !top.includes(id) && phDkFirst(id)).sort(phFoodAz);
       let inner = "";
       if (g === "tb") {
         if (drink) inner = ids.filter(id => PH_FOOD[id][3] === "drink").map(id => one(id, true)).join("");
@@ -47094,7 +47141,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     const nat = Object.keys(PH_DIET_TCM).map(k => `<button type="button" class="${dr.tcm === k ? "on" : ""}" data-dish-tcm="${k}" aria-pressed="${dr.tcm === k}"><i class="ph-meal-dot ${k}"></i>${PH_DIET_TCM[k]}</button>`).join("");
     // Made of (FOOD NUMBERS, her mock's card c): its foods for one serve, each − / + and ✕; + Food opens the food list here
     // MEAL AMOUNTS (her 2026-11-03 B + C): ¼ below one on a food she counts; the amount a field, its unit before the food's name
-    const fd = dr.fd.map((x, i) => { const p = phMealQ(x), nm = phFoodAmt(p.id, p.q)[1], u = phFoodUnitW(p.id, p.q); return `<span class="ph-meal-amt"><button type="button" class="st" data-dish-q="${i}" data-dish-d="-1" aria-label="Less: ${esc(nm)}"${phMealStepQ(x, p.q, -1) == null ? " disabled" : ""}>−</button><input type="text" class="fld field-bare" data-dish-qv="${i}" value="${esc(phFoodNum(p.q))}" inputmode="decimal" enterkeyhint="done" autocomplete="off" maxlength="7" aria-label="Amount: ${esc(nm)}${u ? " (" + esc(u) + ")" : ""}"><span class="v">${u ? `<span class="u">${esc(u)}</span>` : ""}<span class="nm">${esc(nm)}</span></span><button type="button" class="st" data-dish-q="${i}" data-dish-d="1" aria-label="More: ${esc(nm)}">+</button><button type="button" class="ph-meal-rm" data-dish-fdx="${i}" aria-label="Remove ${esc(nm)}">${rm}</button></span>`; }).join("");
+    const fd = dr.fd.map((x, i) => { const p = phMealQ(x), nm = phDkSib(p.id) ? phDkName(p.id) : phFoodAmt(p.id, p.q)[1], u = phFoodUnitW(p.id, p.q); return `<span class="ph-meal-amt"><button type="button" class="st" data-dish-q="${i}" data-dish-d="-1" aria-label="Less: ${esc(nm)}"${phMealStepQ(x, p.q, -1) == null ? " disabled" : ""}>−</button><input type="text" class="fld field-bare" data-dish-qv="${i}" value="${esc(phFoodNum(p.q))}" inputmode="decimal" enterkeyhint="done" autocomplete="off" maxlength="7" aria-label="Amount: ${esc(nm)}${u ? " (" + esc(u) + ")" : ""}"><span class="v">${u ? `<span class="u">${esc(u)}</span>` : ""}<span class="nm">${esc(nm)}</span></span><button type="button" class="st" data-dish-q="${i}" data-dish-d="1" aria-label="More: ${esc(nm)}">+</button><button type="button" class="ph-meal-rm" data-dish-fdx="${i}" aria-label="Remove ${esc(nm)}">${rm}</button></span>${phDkSzHtml(x, `data-dksz-dish="${i}"`)}`; }).join("");
     const fq = phDishFq.trim().toLowerCase();
     const pick = dr.fpk ? `<div class="ph-meal-pick ph-meal-lpk"><label class="ph-meal-fld">${phMealSvg("search")}<input type="text" class="field-bare" data-dish-fq="1" value="${esc(phDishFq)}" placeholder="Food" aria-label="Food" autocomplete="off" enterkeyhint="done" maxlength="60"></label>${phFoodPickHtml(id => dr.fd.some(x => phMealBase(x) === "food:" + id), id => `data-dish-ftog="${id}"`, "all", false, fq)}</div>` : "";
     const sum = phDishNut(dr), line = phNutLine(sum.v), typedAny = PH_NUT_K.some(k => phDishTyped(dr, k) != null);
@@ -48337,9 +48384,9 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     const rows = fd.map((x, i) => {
       const p = phMealQ(x), f = PH_FOOD[p.id];
       if (!f) return "";
-      const nm = (w => w.charAt(0).toUpperCase() + w.slice(1))(p.q > 1 && f[1] && !f[3] ? f[1] : f[0]), u = phFoodUnitW(p.id, p.q), n = phFoodNut(p.id, p.q);
+      const nm = (w => w.charAt(0).toUpperCase() + w.slice(1))(phDkSib(p.id) ? phDkName(p.id) : p.q > 1 && f[1] && !f[3] ? f[1] : f[0]), u = phFoodUnitW(p.id, p.q), n = phFoodNut(p.id, p.q);
       const amt = `<span class="ph-meal-amt"><button type="button" class="st" data-mtry-q="${i}" data-mtry-d="-1" aria-label="Less: ${esc(nm)}"${phMealStepQ(x, p.q, -1) == null ? " disabled" : ""}>−</button><input type="text" class="fld field-bare" data-mtry-qv="${i}" value="${esc(phFoodNum(p.q))}" inputmode="decimal" enterkeyhint="done" autocomplete="off" maxlength="7" aria-label="Amount: ${esc(nm)}${u ? " (" + esc(u) + ")" : ""}">${u ? `<span class="v"><span class="u">${esc(u)}</span></span>` : ""}<button type="button" class="st" data-mtry-q="${i}" data-mtry-d="1" aria-label="More: ${esc(nm)}"${phMealStepQ(x, p.q, 1) == null ? " disabled" : ""}>+</button></span>`;
-      return `<tr><th scope="row" class="fd">${esc(nm)}</th><td class="am">${amt}</td>${ks.map(k => `<td>${phMtryN(k, n[k])}</td>`).join("")}<td class="x"><button type="button" class="ph-meal-rm" data-mtry-x="${i}" aria-label="Remove ${esc(nm)}">${rm}</button></td></tr>`;
+      return `<tr><th scope="row" class="fd">${esc(nm)}</th><td class="am">${phDkSzHtml(x, `data-dksz-mtry="${i}"`)}${amt}</td>${ks.map(k => `<td>${phMtryN(k, n[k])}</td>`).join("")}<td class="x"><button type="button" class="ph-meal-rm" data-mtry-x="${i}" aria-label="Remove ${esc(nm)}">${rm}</button></td></tr>`;
     }).join("");
     const S = phMtryFd(t).length ? phDishNut({ fd: phMtryFd(t) }) : null;
     const foot = S ? `<tfoot><tr class="tot"><th scope="row" class="fd" colspan="2">This meal</th>${ks.map(k => `<td>${phMtryN(k, S.v[k])}${S.v[k] != null && S.miss.includes(k) ? "+" : ""}</td>`).join("")}<td class="x"></td></tr>
@@ -48352,12 +48399,13 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     return `<div class="ph-mtry">${tabs ? `<div class="ph-mtry-hd">${tabs}</div>` : ""}<div class="ph-mtry-scr"><table class="ph-mtry-t"><thead><tr><th scope="col" class="fd">Food</th><th scope="col" class="am">Amount</th>${th}<th scope="col" class="x" aria-label="Remove"></th></tr></thead><tbody>${rows || `<tr class="none"><td colspan="${ks.length + 3}">No foods</td></tr>`}</tbody>${foot}</table></div>${ft}${pick}</div>`;
   }
   document.addEventListener("click", e => {
-    const T = e.target, el = T && T.closest ? T.closest("#pharmacyPage [data-mtry-open], #pharmacyPage [data-mtry-new], #pharmacyPage [data-mtry-q], #pharmacyPage [data-mtry-x], #pharmacyPage [data-mtry-fadd], #pharmacyPage [data-mtry-ftog], #pharmacyPage [data-mtry-all], #pharmacyPage [data-mtry-pd], #pharmacyPage [data-mtry-plan], #pharmacyPage [data-mtry-dish], #pharmacyPage [data-mtry-clr]") : null;
+    const T = e.target, el = T && T.closest ? T.closest("#pharmacyPage [data-mtry-open], #pharmacyPage [data-mtry-new], #pharmacyPage [data-mtry-q], #pharmacyPage [data-dksz-mtry], #pharmacyPage [data-mtry-x], #pharmacyPage [data-mtry-fadd], #pharmacyPage [data-mtry-ftog], #pharmacyPage [data-mtry-all], #pharmacyPage [data-mtry-pd], #pharmacyPage [data-mtry-plan], #pharmacyPage [data-mtry-dish], #pharmacyPage [data-mtry-clr]") : null;
     if (!el) return;
     e.stopImmediatePropagation();
     const ds = el.dataset;
     if (ds.mtryOpen) { phMtryId = ds.mtryOpen; phDietRefresh(); return; }
     if (ds.mtryNew) { phMtryId = "new"; phMtryFq = ""; phDietRefresh(); phMtryFocus(); return; }
+    if (ds.dkszMtry != null && ds.dksz) { const t = phMtryCur(), i = +ds.dkszMtry, y = ds.dksz; if (t && t.fd[i]) phMtryPut(t.id, e => { e.fd[i] = y; }); return; }   // DRINK SIZES
     if (ds.mtryQ != null && el.matches("[data-mtry-q]")) { phMtryStep(+ds.mtryQ, +ds.mtryD || 0); return; }
     if (ds.mtryX != null && el.matches("[data-mtry-x]")) { phMtryRm(+ds.mtryX); return; }
     if (ds.mtryFadd) { phMtryPk = !phMtryPk; phMtryFq = ""; phDietRefresh(); if (phMtryPk) phMtryFocus(); return; }
@@ -49400,7 +49448,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   document.addEventListener("click", e => {
     const T = e.target;
     if (!T || !T.closest || !T.closest("#pharmacyPage")) return;
-    const el = T.closest("[data-meal-add], [data-meal-tab], [data-meal-menus], [data-meal-out], [data-meal-mic], [data-meal-tog], [data-meal-rm], [data-meal-skip],[data-meal-same], [data-meal-back], [data-meal-pick], [data-meal-dish], [data-meal-had], [data-meal-undo], [data-meal-prep], [data-meal-ing], [data-meal-edit], [data-meal-tick], [data-meal-open], [data-meal-water], [data-meal-shop], [data-meal-bring], [data-meal-shx], [data-meal-snack], [data-meal-snackx], [data-meal-def], [data-diet-wk], [data-diet-pt], [data-diet-ptw], [data-diet-note], [data-diet-noteadd], [data-diet-notex], [data-dish-tcm], [data-dish-dk], [data-dish-prepx], [data-dish-ingx], [data-dish-save], [data-dish-del], [data-meal-q], [data-meal-byo], [data-meal-alltog], [data-tb-pick], [data-tb-sz], [data-tb-add], [data-dish-q], [data-dish-fdx], [data-dish-fadd], [data-dish-ftog], [data-dish-tn], [data-diet-nl], [data-diet-more], [data-diet-tg], [data-rx-k], [data-rx-s], [data-rx-w], [data-rx-f], [data-rx-own], [data-rx-ownadd], [data-rx-fine], [data-rxck-x], [data-rxck-go], [data-meal-rp], [data-meal-rpall], [data-meal-rpto], [data-meal-rpwd], [data-meal-rpgo]");
+    const el = T.closest("[data-meal-add], [data-meal-tab], [data-meal-menus], [data-meal-out], [data-meal-mic], [data-meal-tog], [data-meal-rm], [data-meal-skip],[data-meal-same], [data-meal-back], [data-meal-pick], [data-meal-dish], [data-meal-had], [data-meal-undo], [data-meal-prep], [data-meal-ing], [data-meal-edit], [data-meal-tick], [data-meal-open], [data-meal-water], [data-meal-shop], [data-meal-bring], [data-meal-shx], [data-meal-snack], [data-meal-snackx], [data-meal-def], [data-diet-wk], [data-diet-pt], [data-diet-ptw], [data-diet-note], [data-diet-noteadd], [data-diet-notex], [data-dish-tcm], [data-dish-dk], [data-dish-prepx], [data-dish-ingx], [data-dish-save], [data-dish-del], [data-meal-q], [data-meal-byo], [data-meal-alltog], [data-tb-pick], [data-tb-sz], [data-tb-add], [data-dish-q], [data-dish-fdx], [data-dish-fadd], [data-dish-ftog], [data-dish-tn], [data-diet-nl], [data-diet-more], [data-diet-tg], [data-rx-k], [data-rx-s], [data-rx-w], [data-rx-f], [data-rx-own], [data-rx-ownadd], [data-rx-fine], [data-rxck-x], [data-rxck-go], [data-meal-rp], [data-meal-rpall], [data-meal-rpto], [data-meal-rpwd], [data-meal-rpgo], [data-dksz]");
     if (!el) return;
     e.stopImmediatePropagation();
     const ds = el.dataset;
@@ -49422,6 +49470,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     if (ds.rxckX) { phRxCkShut(ds.rxckX); return; }
     if (ds.rxckGo) { phRxCkOpen(ds.rxckGo); return; }
     // FOOD NUMBERS: − / + on a food or dish in a meal · All foods · Thisbowl's Build your own · her Diet page's lines and Targets
+    if (ds.dkszMeal != null && ds.dksz) { const y = ds.dksz; phMealAmtTo(phMealCtx(ds.dkszMeal), ds.mealV || "", () => y); return; }   // DRINK SIZES
     if (ds.mealQ) { phMealAmtStep(phMealCtx(ds.mealQ), ds.mealV || "", +ds.mealD || 0); return; }
     if (ds.mealAlltog) { phMealAll = !phMealAll; phMealCardRepaint(); return; }
     if (ds.mealByo) { const pk = phMealPkOf(el), sheet = phDietSh && phDietSh.kind !== "dish" && phDietSh.kind !== "byo" ? phDietSh : null; phTbByoOpen({ pk: pk ? Object.assign({}, pk) : null, sheet }); return; }
@@ -49514,7 +49563,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       phMealRpUi = null;
       const c = u ? phMealCtx(u.lid) : null, x = c ? phMealVs(phMealPlan(c.day, c.sl).v).find(y => phMealBase(y) === u.b) : null;
       if (!x || ds.mealRpgo === "keep") { phMealCardRepaint(); return; }
-      if (u.m === "rm") phMealRepRm(c.day, c.sl, x, ds.mealRpgo); else phMealRepQ(c.day, c.sl, u.y, ds.mealRpgo);
+      if (u.m === "rm") phMealRepRm(c.day, c.sl, x, ds.mealRpgo); else phMealRepQ(c.day, c.sl, u.y, ds.mealRpgo, u.b);
       return;
     }
     if (ds.mealSkip) {   // a planned Skipped comes off with a second tap (a day back to usual, Every to nothing planned)
@@ -49567,6 +49616,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     if (ds.dietNotex) { const p = String(ds.dietNotex).split("|"), k = p.pop(), name = p.join("|"); phDietPtChange(name, D => { delete D.days[k]; }, `${phMeDayLbl(k)} · removed`); return; }
     const s = phDietSh && phDietSh.kind === "dish" ? phDietSh : null;
     if (!s) return;
+    if (ds.dkszDish != null && ds.dksz) { phDishEdTake(); if (s.dr.fd[+ds.dkszDish]) { s.dr.fd[+ds.dkszDish] = ds.dksz; phDietSheetPaint(); } return; }   // DRINK SIZES
     if (ds.dishTcm) { phDishEdTake(); s.dr.tcm = s.dr.tcm === ds.dishTcm ? "" : ds.dishTcm; phDietSheetPaint(); return; }
     if (ds.dishDk != null && el.matches("[data-dish-dk]")) { phDishEdTake(); s.dr.dk = ds.dishDk === "1"; phDietSheetPaint(); return; }
     if (ds.dishPrepx != null && el.matches("[data-dish-prepx]")) { phDishEdTake(); s.dr.prep.splice(+ds.dishPrepx, 1); phDietSheetPaint(); return; }
