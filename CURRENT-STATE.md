@@ -35,7 +35,10 @@ timeout had fired before the sync's own `<script>` was parsed, so the housekeepi
 The app opens here. It mirrors Cliniko's day view: solid blocks coloured from `PH_CLINIKO_TYPE_COLOURS` (her Settings →
 Appointment types, 21 types read live; words white or dark, whichever measures higher, `phCkInkByContrast`, her yes), a time
 gutter; the page scrolls, no inner scroller (except "Whole day" below). **Cliniko look (her picks 2026-11-01):** the colours
-are the clear ones Cliniko paints (`phCkClear`, seven sampled off her Cliniko calendar; Break keeps the deeper `phCkTone`); a
+are the clear ones Cliniko paints (`phCkClear`, seven sampled off her Cliniko calendar; Break keeps the deeper `phCkTone`); **every
+block is one solid colour** (her 2026-11-03 "all blocks must be whole block color"): a booking with no type (a calendar click books
+the name only) or a type with no Cliniko colour takes her usual type's colour for its kind (`PH_CK_KIND_TYPE` in `phCkStyle`: ACU + CHM
+= 4. Subsequent Acupuncture with herbs, CHM = Herbal Subsequent, ACU = 5. Subsequent Acupuncture), never a pale tint with an edge; a
 block reads the name first in bold, then "10:00 – 11:00", then the day's ticks (`phApptBlockTicksHtml`: ✓ visit saved, jar =
 herbs out, copy = copied for Cliniko); a past day keeps its full colour (no fade); a booking or event new since the last paint
 drops into its time with a gold ring (`phApptBlkFresh`), a new tick pops, a plain repaint plays nothing. Grid opens by default at every width (List a tap away). A
