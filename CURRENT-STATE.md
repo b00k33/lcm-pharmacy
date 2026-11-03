@@ -1471,10 +1471,12 @@ Fitness + Exercises), the rest in Life.
 - **Her card leads the drawer** (`phMeCardHtml`): initials, name, "Day n · phase · Fasting h:mm"; a tap = her record, ✎ = change
   the name. Each drawer heading of hers ends in › to its page (`phMeH4` → `data-ph-me-go` → `phMineOpen(tab)`): Today's meals →
   Diet (Meals), Herbs → Herbs, To-do → This week, Trips → the trip, Birthdays, Routines; the rows stay today's ticks.
-- **Her rail: Body · Life first** (`PRES_MINE_RANK`, grp `body` / `life`): Body = Cycle, Meals (her Diet page; Fasting is off the
-  rail, opened from Meals' History ›), Herbs, Fitness (its tabs hold Exercises and Health), Habits, Log; Life = Week, Work, Money,
-  Code, trips, Birthdays, Routines; then her file and the visit steps; her bottom group reads "Clinic dated". Cycle leaves the Plan
-  step on her record (`presMineCycleNorm` turns plan + cycle into profile + cycle, so every Cycle door lands there); Diet leaves Log.
+- **Her rail: Body · Life first** (`PRES_MINE_RANK`, grp `body` / `life`): Body = Cycle, Tongue, Pulse (her 2026-11-03 "tongue and pulse tab?": the
+  same exam pages with no Care Plan needed, `phExamPageHtml`; the row says the day she last charted it, "Today" / "3 Nov"), Meals
+  (her Diet page; Fasting is off the rail, opened from Meals' History ›), Herbs, Fitness (its tabs hold Exercises and Health), Habits, Log; Life = Week, Work, Money,
+  Code, trips, Birthdays, Routines; then her file and the visit steps; her bottom group reads "Clinic dated". Cycle, Tongue and Pulse
+  leave the Plan step on her record (`presMineCycleNorm` turns plan + cycle / tongue / pulse into profile + the same page, so every door
+  lands there; a Care Plan of hers keeps Abdomen there); Diet leaves Log.
   **Folded pages** (her picks 2026-10-29, the Me audit; `phMeRailFold`): a page she has not used sits in a "⋯ More" row of its
   group — Life: Code (until a plan), Money (until a price or a bill), a trip (until it runs or is within 30 days); File: Supplements ·
   Blood tests; Clinic: Photos · Messages · Appointments; the page she is on never folds; one More row open at a time

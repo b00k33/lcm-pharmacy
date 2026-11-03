@@ -80829,7 +80829,7 @@ or changing anything in Cliniko.
   setInterval(() => { if (document.visibilityState === "visible" && PHARMACY.activeTab === "prescriptions" && phPfwName()) phCapAutoImport(); }, 10000);
   // the patient whose Today's visit or Tongue page is on screen ("" when none): there the tile is the door, so no toast
   function phTngHerePk() {
-    return PHARMACY.activeTab === "prescriptions" && presStage === "plan" && (presTpMainTab === "today" || presTpMainTab === "tongue")
+    return PHARMACY.activeTab === "prescriptions" && (presStage === "plan" && (presTpMainTab === "today" || presTpMainTab === "tongue") || presStage === "profile" && presAssessTab === "tongue")
       ? phPatientKey(phPfwName() || "") : "";
   }
   // today's tongue shot to chart from: Natural light first (PH_TONGUE_SHOT_RANK), the newest of its kind
@@ -80852,7 +80852,7 @@ or changing anything in Cliniko.
   // the photos landed while her Today's visit (or Tongue page) is on screen: the tile repaints in place and flashes gold
   function phTvTngArrived(pk) {
     if (phTngHerePk() !== pk) return;
-    if (presTpMainTab === "tongue") { try { phTngRefresh(phPfwName()); } catch (e) { /* the page is not drawn */ } return; }
+    if ((presStage === "plan" ? presTpMainTab : presAssessTab) === "tongue") { try { phTngRefresh(phPfwName()); } catch (e) { /* the page is not drawn */ } return; }
     try { phTodayTilesRefresh(phPfwName()); } catch (e) { /* Today's visit is not open */ }
     const t = document.querySelector('#pharmacyPage [data-today-tile="tongue"]');
     if (t) { t.classList.add("ph-tv-flash"); setTimeout(() => t.classList.remove("ph-tv-flash"), 1400); }
@@ -84517,7 +84517,7 @@ or changing anything in Cliniko.
     const inlineEl = document.getElementById("presMedHxHost");
     const constitEl = document.getElementById("presConstitHost");
     // the Pulse page (law 2026-10-10: its own page now) shares this same chart + handlers
-    const examEl = document.querySelector("#presTpMainHost [data-exam-page=\"pulse\"]");
+    const examEl = document.querySelector("#pharmacyPage [data-exam-page=\"pulse\"]");   // a Care Plan's page, or her own in Body
     if ((!modal || modal.hidden) && !inlineEl && !constitEl && !examEl) return;
     // her 2026-10-15 "when i select things, the page jumps": the inline card is rebuilt whole, so
     // the browser's own scroll anchoring has nothing to hold on to; hold the tapped row (else the
@@ -88520,7 +88520,7 @@ or changing anything in Cliniko.
   // rail shows beside Medical history (her pick: the count lives there only).
   // ONE ME: her own pages' order on her record; under 0.55 = Body, under 1 = Life (her trips sit at 0.7). Health and her Log
   // follow Fitness in Body (her synth22 pick 1, 2026-10-26: "group my personal together, including log stuff")
-  const PRES_MINE_RANK = { cycle: 0.1, diet: 0.2, fasting: 0.3, herbs: 0.4, "hub-fit": 0.5, "hub-ex": 0.505, "hub-hab": 0.51, "hub-health": 0.52, log: 0.53, "hub-week": 0.6, "hub-work": 0.61, "hub-money": 0.62, "hub-code": 0.63, bdays: 0.8, routines: 0.81 };
+  const PRES_MINE_RANK = { cycle: 0.1, tongue: 0.12, pulse: 0.14, diet: 0.2, fasting: 0.3, herbs: 0.4, "hub-fit": 0.5, "hub-ex": 0.505, "hub-hab": 0.51, "hub-health": 0.52, log: 0.53, "hub-week": 0.6, "hub-work": 0.61, "hub-money": 0.62, "hub-code": 0.63, bdays: 0.8, routines: 0.81 };
   // her picks (2026-10-29, the Me audit): the pages of hers that fold into their group's "⋯ More" row until they hold data
   function phMeRailFold(id) {
     if (id === "hub-code") return !phHubPlans().length;
@@ -88616,6 +88616,12 @@ or changing anything in Cliniko.
     // ONE ME (her picks 2026-10-26): on her own record her Cycle page sits with her Body pages (it left the Plan step for her),
     // and Birthdays and Routines are pages of hers in Life
     if (phFastIsMe(name) && peek && phCycleTracked(peek)) sections.push({ id: "cycle", label: "Cycle", mini: (c => c ? `CD ${c.day}` : "")(phMeCycleAt(keyOf(new Date()))), body: () => presCycleSectionBodyHtml(t) });
+    // her 2026-11-03 "tongue and pulse tab?": on her record Tongue and Pulse sit in Body after Cycle (the same exam pages, no Care Plan
+    // needed); the row says the day she last charted it
+    if (phFastIsMe(name)) ["tongue", "pulse"].forEach(id => {
+      const x = peek && (id === "tongue" ? peek.tongueExam : peek.constitPulse), d = x && x.at ? new Date(x.at) : null;
+      sections.push({ id, label: id === "tongue" ? "Tongue" : "Pulse", mini: !d ? "" : keyOf(d) === keyOf(new Date()) ? "Today" : `${d.getDate()} ${MON_SHORT[d.getMonth()]}`, body: () => phExamPageHtml(t, id) });
+    });
     if (phFastIsMe(name)) sections.push({ id: "bdays", label: "Birthdays", mini: String(phMeBdSoonN() || ""), body: () => phMeBdaysPageHtml() },
       { id: "routines", label: "Routines", mini: String(phMeRoutines(keyOf(TODAY)).filter(o => o.on).length || ""), body: () => phMeRtsPageHtml() });
     // the rail's groups: 1 her file (once) · 2 today's check (every visit) · 3 putting it together · Log
@@ -90083,10 +90089,10 @@ or changing anything in Cliniko.
   // chip, Today's visit, the cycle history) lands there instead
   function presMineCycleNorm() {
     phFitTabNorm();   // a door to her old Exercises or Health page opens Fitness at that tab (her body week, 2026-10-28)
-    if (presStage !== "plan" || presTpMainTab !== "cycle") return false;
+    if (presStage !== "plan" || !["cycle", "tongue", "pulse"].includes(presTpMainTab)) return false;   // Tongue and Pulse too (her 2026-11-03)
     const t = PRESC.items.find(x => x.id === presOpenId);
     if (!t || !phFastIsMe(presPatientFor(t))) return false;
-    presStage = "profile"; presAssessTab = "cycle"; presTpMainTab = null;
+    presStage = "profile"; presAssessTab = presTpMainTab; presTpMainTab = null;
     return true;
   }
   function renderPresPanel() {
@@ -124814,7 +124820,7 @@ or changing anything in Cliniko.
       // Ask her (her 2026-10-13): smart general questions for the top 3 Fang Bing Ren families; its own count, never in "n of m done"
       ...(examOn ? [{ id: "askher", label: phAskLabel(name), sub: phAhCountText(name), body: () => phAhPageHtml(openT) }] : []),
       ...(cycleOn ? [{ id: "cycle", label: "Cycle", body: () => presCycleSectionBodyHtml(openT) }] : []),
-      ...(examOn ? ["tongue", "pulse", "abdomen"].map(id => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1), body: () => phExamPageHtml(openT, id) })) : []),
+      ...(examOn ? ["tongue", "pulse", "abdomen"].filter(id => id === "abdomen" || !phFastIsMe(name)).map(id => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1), body: () => phExamPageHtml(openT, id) })) : []),   // her Tongue and Pulse are pages in her Body (2026-11-03)
       // Musculoskeletal Assessments (her ask 2026-10-11): pain map + pain intake + a full MSK exam, only for pain / MSK patients
       // always on (her 2026-10-11 "make it always visible"); only pain / MSK patients COUNT it in the visit checklist (phTodayParts)
       ...(examOn ? [{ id: "msk", label: "Musculoskeletal", body: () => phMskPageHtml(openT, plan) }] : []),

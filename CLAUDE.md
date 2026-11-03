@@ -198,7 +198,8 @@ dropdowns: A–Z. A new list is A–Z from its first build.
 - **Tongue, Pulse, Abdomen and Cycle are each their own page** (her pick,
   reversing the earlier one-card fold). Cycle has ONE home: its own page,
   reached from its Today's visit tile. No second Cycle tab. On HER own record
-  (My profile) that one page sits in her Body group instead (One Me, 2026-10-26).
+  (My profile) that one page sits in her Body group instead (One Me, 2026-10-26), and her
+  Tongue and Pulse pages beside it (her 2026-11-03 "tongue and pulse tab?"; no Care Plan needed).
 - **The Review step is retired** — folded into Today's visit (strip + pain
   map + pain intake). Nothing lost, only repeats removed.
 - **Timeline** (her picks 2026-10-13 and 2026-10-16): a rail item right after Fang Bing Ren, before Treatment Care Plan, and in the Next walk, only on a Pregnancy / Natural fertility / IVF plan (see "Timeline promoted to its own rail step" in BUILD-NOTES.md). **Since 2026-10-29 (her audit pick) it and Patterns · Diagnosis sit folded under one "⋯ More" row there** (`presFlowMoreOpen`): open on a tap or while one of them is the page, closed when she leaves.
