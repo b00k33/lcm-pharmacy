@@ -10804,3 +10804,60 @@ comes). Memory project_lcm_seafood_2026_11_03.
   50 g baby clams = 7.5 mg iron, 41 µg B12; phone 375: the snack sheet's search, no sideways scroll; Prescriptions search Zz → 1
   match, Qqx → 0, clear → all; no console errors (the shop-foods file 404s in the test copy only). Pictures `shots/seafood-*-2026-11-03.*`.
 - **Not tested:** her own record and phone.
+
+## 2026-11-03 · Meals: where it goes (the body beside the Try tab)
+Her words, while the trial meal was being built: "can you make an animated visual of macros and micros filling into the body when
+consuming the food? e.g. excess carbs shows its stored as fat, calcium goes to bones, choline goes to brain etc etc"; on the first mock
+"the animation looks good, its not too obvious where teh corresponding nutrient goes to. show that the organ/nutriet grows or cracks
+and shrinks from deficiency", then "protein grows muscles/repairs muscles (find the appropriate scientific nutritional and tcm nutrient
+equivalent to show visually". Mock `meal-body-mock-2026-11-03.html` (artifact V2bwYk9ShC8cN8ePdKeoVJ: v1 every number at once with
+names round the body, v2 one number at a time with the looks and a Body · TCM switch).
+**Her picks:**
+1. Beside the trial meal.
+2. Today + the try.
+3. Carbs past her limit = the liver's store, fat only past the day's kJ (my rec, over her first "liver then fat": the body fills the
+   liver first).
+4. It plays when it opens + on Eat; a changed amount sets it at once.
+5. **Names on hover only** (not my rec).
+6. A Baby place.
+7. Every extra shown.
+8. The phone: above the table.
+
+Then on v2: the Body · TCM switch with Body first, 2.5 s a number, and "Yes, build it".
+- **Where:**
+  - JS: MEALS BODY, after TRY A MEAL's handlers. `phMbdHtml` sits beside `phMtryHtml` in `phMplHtml`; on the phone it sits above it in the Try rows.
+  - CSS: "MEALS BODY" after TRY A MEAL's, plus two phone lines in PHONE REDESIGN.
+- **The figure** (`phMbdSvg`, built once):
+  - `PH_BODY_GEOM.svg("f", front, sketch face)` plus `phRenAnatomyHtml`'s organs (no hook: titled parts; the Ren tap handler needs `.ph-rf`, so they stay quiet here).
+  - Its own shapes: muscles, bones and their cracks, vessels, kidneys, the spleen, the bladder, fat stores, dry-skin lines, fatty-liver spots, gut bacteria and the thyroid.
+  - The brain sits over the sketch face, because her hair covers the skull.
+- **The numbers** (`phMbdData`):
+  - The goals' day (had; a day to come: planned) + `phMtryNut()`, over `phDietGoal()`.
+  - In the table's order (`phMtryKs()`: her 8, or All 19 with the table).
+- **The play:**
+  - `phMbdPlan`: each number's turn = its dots by share, then the part past its goal; kJ past the day comes last.
+  - `phMbdTick`: one loop (rAF + a timer for a hidden tab) that stops when calm; the heart beats only while it plays.
+  - `phMbdLand`: a building dot moves its place's look; an extra fills a store.
+  - Also: `phMbdLook`, `phMbdLight` (the glow, plus the table column `.mbd-on`), `phMbdCaption`, `phMbdTitles`.
+  - `phMbdMount` runs after each paint:
+    - the same play carries on if the numbers are unchanged;
+    - otherwise it plays once after the Try tab opens (a `[data-mpl-lay="try"]` tap resets it);
+    - otherwise the end looks show at once.
+  - Body | TCM is kept in `lcm-mbd-view` (this device only).
+  - Every word in `PH_MBD_FLOW` / `PH_MBD_ORG` is DRAFT.
+- **Tested** (8989 harness, the made-up "Zz Me Test", a five-food try):
+  - 1220:
+    - the table keeps her 8 numbers without scrolling (the body column is 250 px);
+    - the turns come in the table's order, each with its column lit;
+    - Calcium 58% → the bones thin and crack; Protein 230% → the muscles grow.
+  - TCM: Spleen → Muscles · Lung → Skin "Spleen Qi full", with the Spleen and Lung lit and the TCM steps and key.
+  - All ▾: A–Z; picking Calcium plays it alone, and the menu closes.
+  - + on salmon: the end looks show at once (the bones' title reads "Calcium 59%").
+  - Phone 375: the body above the table, no sideways scroll.
+  - No console errors.
+- **Not tested:**
+  - her own record (her real numbers);
+  - the Key2;
+  - reduced motion (by reading only: `phTpReduceMotion` → the end looks);
+  - a sync repaint mid-play.
+- **Pages checked:** Meals (Try with the body, the goals above it, Table without it) and the phone's day (the Try chip).
