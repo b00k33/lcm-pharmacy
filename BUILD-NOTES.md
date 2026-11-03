@@ -11147,3 +11147,62 @@ Pregnancy**, and **a second iron mark** inside each mitochondrion.
   the motion. No console errors.
 - **Not tested:** her own record, her phone, the Key2.
 - **Pages checked:** Guide › Iron step 3 (Fertility and Pregnancy). New words: the ones above.
+
+## 2026-11-03 · The Guide and the record's pages: Tongue map, Pulse, Abdomen linked both ways
+Her word (a picture of Guide › Pulse › Complementary positions): "link teh study with the profiles e.g. tongue pulse abdomen etc so
+they both interact and sync", then, while it was being built: "make so i can edit teh signs and symptoms from guide and it will sync
+to the profiles. i want to see the pulse chart in guides so i can edit it without going into the profiles". **Her picks (popup with
+pictures):** all four links (Guide shows today's marks · pages show the Guide's lines · mark from the Guide · add a note from the
+page); an Abdomen tab from the Ren belly signs; one tongue chart. Memory project_lcm_guide_profile_link_2026_11_03.
+- **Whose chart (my call):** the record open behind the Guide (`phPfwName`), else her own record from Me (`phMeProfile`): `phGdWho`.
+  The chart's head says "<name> · today · the same chart as the <Tongue / Pulse / Abdomen> page"; no record: one line saying how to
+  get one; no sex / birth date: the page's own "add sex and date of birth first".
+- **The live chart in each tab** (`phGdChartHtml`): the page's own builder (`phTngHtml` / `phHxConstitPulseHtml` / `phAbdHtml`)
+  inside `[data-exam-page]`, so every tap goes through the page's handlers and saves (`phTngWrite`, `phHxConstitPulse`,
+  `phAbdChartWrite`, the day-rollover and `phExamMirrorToday` with them). Edits show on the profile and the profile's on the Guide.
+- **Signs and symptoms:** a chart mark already ticks its Fang Bing Ren signs (as on the page); the Abdomen tab's belly-sign rows
+  also carry "+ / ✓ <name>" = the Fang Bing Ren page's own Yes / No (`phGdSignTick`, the same write as `phRenSignTick`), and the
+  pulse and tongue charts bring their own Fang Bing Ren tabs with them.
+- **Gold dot + Today:** Pulse uses the page's own lookup (`phVisitPulseKbHits` → `phGdPulseHits`); Tongue: a place with anything
+  marked today (`phTngJzHas` over `PH_TNG_JIAO_SIGNS`) dots its notes and names what is marked in its heading; Abdomen: a sign's chart
+  words found in today's chart (`phAbdChartWordsOf`, the same substring rule as `phFbrChartKnown`). Today on Pulse shows every
+  reached note across the sections ("Today · <first name>"); a section tap turns it off.
+- **Mark from the Guide:** a pulse note's "+ <first name>" ticks the same Rate & rhythm chip the page's tab ticks (rhythm, wave,
+  first impressions, depths, complementary positions; `data-constit-hm`), "✓" when on, a tap takes it off; a box quality ("+ <name> ·
+  pick a box") picks the chart's brush, then a box is tapped (`data-constit-pulse-stamp`). A note with no chip of its own has no "+".
+- **Tongue map:** the old demo model (`phGdTngModelHtml`, `phGdTngDemo`) and the 4-region outline with its overlays are gone (her
+  "one tongue chart"); the notes show by place: Tip · Upper (Heart · Lung), Middle (Spleen · Stomach), Root · Lower (Kidney ·
+  Bladder), Sides (Liver · GB) (`PH_GD_TNG_ZONE`); the add form gains a place picker (`data-gd-tng-zone`).
+- **Abdomen tab (new):** the chart, then "Belly signs": every abdomen spec of `PH_FBR_CHART_PREFILL` (37 Ren and Bing signs,
+  built each time, so a new belly sign joins by itself), grouped by what is marked (A–Z), each: the sign, Ren / Bing, "From the chart:
+  <mark · place>", the formulas whose `ren` / `bing` weigh it (A–Z); then her own notes, `PHARMACY.abdNotes`
+  (`{id, w: "abd:<mark>[@zone]", meaning, formulas, source}`; in pharmacy_core like `pulseNotes` / `tongueNotes`), with an add form
+  (mark · place or anywhere · means · formulas) and ✕. A place's popup open on the chart, or a picked sign, shows only that place's /
+  sign's rows (named in a band). Search: "Search belly signs".
+- **The pages' side** (`phGdLinesHtml` under the chart in `phExamPageHtml`, on her Body pages and a Care Plan's): "From your Guide"
+  with a door to the tab; Tongue and Abdomen list today's notes (a sign with a Ren and a Bing row once), each line a door; "+ my note"
+  (a pick of today's marks + a line) saves into the Guide: Tongue → that place's notes (what is marked there as its words), Pulse →
+  her own pulse notes for that quality and place, Abdomen → `abdNotes`. Every pulse note line on the page (and in the visit panel)
+  has its own "Guide ›" (`data-gd-open="pulse:<id>"`): the Guide opens on Pulse at that note's section, the note flashed in view.
+- **Two copies of a chart on the page:** the profile behind the Guide keeps its page (hidden), and the charts' repaints take the
+  first host on the page (#phPresWrap sits before #phGuideWrap). While the Guide draws a chart the hidden copies are removed
+  (`phGdStripHidden`: after a paint and, through the capture listener `phGdClaim`, before each Guide tap, which also points
+  `presHxScreenName` at the Guide's record); going back to Prescriptions draws the page again (renderPrescriptions → renderPresPanel).
+  `renderHxScreen` and `phAbdRepaint` also take the open Guide's host first. The abdomen's click and change handlers read the record
+  through `phAbdName` (the Guide's record, else `phPfwName`): her own record charts from the Guide with no patient open.
+- `phGdLinkRefresh(id, fresh)` repaints the Guide's notes and the pages' boxes after `renderHxScreen`, `phTngRefresh` and
+  `phAbdRepaint`, keeping what she was typing (not after her own save). The Guide's search on Pulse / Abdomen repaints the notes only.
+- **Tested** (a copy of HEAD 7f2ba0c3's index.html with this patch, port 8998, made-up records "Mia Samplecase" as Me and "Zara
+  Testwood"): Me with no patient open: Guide › Pulse charted a box (saved on Mia, Today 1, a dot), "+ Mia" on a Pleura note ticked
+  Tight (✓, Today 2), Today showed both notes; her Body › Pulse page then showed both marks, and its "+ my note" (Slippery, left
+  distal) landed in the chart's own note lines with a "Guide ›" that opened the Guide at that note, flashed, dotted; the hidden page
+  copy gone. Tongue map: "red tip" saved on Mia, the Tip notes dotted (Today 6), the heading "· red". Abdomen with no patient open:
+  tender at the epigastrium (from the place's popup) saved on Mia (`phAbdName`), five belly signs lit and ticked; "+ Mia" on
+  borborygmus wrote `tri.p` Yes, "✓" on a lit Bing sign wrote its No; Body › Abdomen showed "From your Guide" with the formulas, its
+  "+ my note" saved into `abdNotes` (kept through a reload). With Zara open: the Guide charted Zara (gas sounds, lower belly), Mia's
+  chart unchanged. Guide → back to the page: the page's chart drawn again. 375 wide: Pulse, Tongue map and Abdomen with nothing past
+  the screen. Prescriptions search Zz → found, Qqx → none, clear → all. No console errors. Pictures `shots/guide-link-*-2026-11-03.jpg`.
+- **Not tested:** her own record, her phone, the Key2, a Care Plan's Tongue / Pulse / Abdomen pages (the same `phExamPageHtml`).
+- **Pages checked:** Guide › Tongue map, Pulse, Abdomen; her Body › Pulse and Abdomen. New words: "the same chart as the … page",
+  "Today", "+ / ✓ <first name>", "· pick a box", "Belly signs", "From the chart:", "From your Guide", "Guide ›", "+ my note",
+  "Saved to your Guide", "Search belly signs", the Abdomen tab's intro line and empty lines.

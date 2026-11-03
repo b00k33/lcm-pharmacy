@@ -881,7 +881,7 @@ signs; the Care Plan Diagnosis = its pictures; the Patterns page = every pattern
 (`--px-h`), so nothing moves; a sign's name is said once, in the header with its Ren / Bing marks and weight dots.
 
 ## Guide — Families (study + edit)
-The Guide is **[Families] [Compare] [Tongue map] [Pulse] [Herbs] [Blood tests] [Iron]**: a herb card is the body type with its formulas under it, notes-only formulas are
+The Guide is **[Families] [Compare] [Tongue map] [Pulse] [Abdomen] [Herbs] [Blood tests] [Iron]**: a herb card is the body type with its formulas under it, notes-only formulas are
 dashed tiles, a study card sits on the right (in Study, the concept picture of the pattern(s) the family counts for, under the
 pearl). **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): her edits live in `PHARMACY.fbrEdits[id]` (+
 `fbrEditsAt`), and `phFbrEditsApply()` rebuilds `.ren/.bing/.or/.core` in place from `phFbrPristine`; `phFbrEditsSync()` (top of
@@ -891,6 +891,26 @@ written as 0, and lists filter `w !== 0`. Cloud: `mergeFbrEdits` beside `mergeTe
 A notes-only formula that has become a scoring family (Wen Jing Tang, 2026-10-28) leaves Notes only; its memory aid, distinction,
 conditions and source show on the family's card (`phGdfNoteIsFam`, `phGdfFamNoteId`).
 Details and tests: [Guide Families].
+
+## Guide — Tongue map, Pulse, Abdomen (linked to the record's own pages, 2026-11-03)
+Each tab draws the **open record's LIVE chart** (the patient open behind the Guide, else her own record from Me: `phGdWho`) with
+the page's own builder, handlers and save (`phGdChartHtml`: `phTngHtml` / `phHxConstitPulseHtml` / `phAbdHtml`), so a tap in the
+Guide is on the profile and a tap there is here. Under it the notes (`[data-gd-notes]`, `phGdLinkRefresh(id)` after every chart
+tap): a **gold dot** on each note today's chart reaches and a **Today** chip that shows only those (`phGdToday`). Pulse: the hits
+are the page's own `phVisitPulseKbHits`; "+ <name>" on a note ticks the same Rate & rhythm chip (`data-constit-hm`) or picks the
+chart's brush for a box quality (`data-constit-pulse-stamp`). Tongue map: the Tongue page's chart; the 14+ notes by place (tip →
+Upper, middle → Middle, root → Lower, sides → L / R; `PH_GD_TNG_ZONE`), a place marked today dots its notes; the old demo model and
+4-region map are gone. **Abdomen (new):** the Abdomen page's chart; the belly signs Fang Bing Ren reads off it (built each time
+from the abdomen specs of `PH_FBR_CHART_PREFILL`, with the formulas whose `ren` / `bing` weigh them), each with "+ / ✓ <name>" =
+the Fang Bing Ren page's Yes / No (`phGdSignTick`, `phRenSignTick`'s write); her own notes in **`PHARMACY.abdNotes`**
+(`{id, w: "abd:<mark>[@zone]", meaning, formulas, source}`, syncs in pharmacy_core like `pulseNotes` / `tongueNotes`); a place's
+popup open on the chart (or a picked sign) shows that place's rows. **The pages' side:** under the Tongue / Pulse / Abdomen pages'
+chart a "From your Guide" box (`phGdLinesHtml`, `[data-gd-lines]`): today's notes, each a door (`data-gd-open="tab:id"`,
+`phGdOpenAt` → the tab, the note flashed in view), and "+ my note" about one of today's marks into the Guide's study. Every pulse
+note line (`phPulseKbLineHtml`, the visit panel too) has its own "Guide ›". **Safety:** the profile's hidden copy of a chart is
+removed while the Guide draws one (`phGdStripHidden`, on paint and on each Guide tap via the capture listener `phGdClaim`, which
+also sets `presHxScreenName`); `renderHxScreen` and `phAbdRepaint` take the open Guide's host first; abdomen taps resolve the
+record with `phAbdName` (the Guide's record, else `phPfwName`). Details and tests: BUILD-NOTES "The Guide and the record's pages".
 
 ## Guide — Compare (formulas side by side)
 The Compare tab (her 2026-11-02 picks, BUILD-NOTES "Compare formulas") holds **one picked set of formulas** (`phCmp.ids`, view state,
