@@ -10338,3 +10338,37 @@ pane at 1220, a made-up My profile in the sandbox): `phMineOpen(null)` → the b
 Meals table shows; another patient opened, then hers by `presGoToScript` → Meals again; the other patient opened on its profile as
 before. **Not tested:** her real record, the phone (same function). Picture `shots/my-profile-opens-meals-2026-11-03.jpg`. Commit 503d652c.
 **LIVE** build 20261103-115600 (publish 223a7de5, her "Push live").
+
+## Fast block: the fasting buttons beside the dial, two white blocks on the tint (2026-11-03)
+Her ask (a screenshot of her live Meals goals panel): "organise the ui of this better, fasting buttons should stay within the fasting
+block - show 2 mocks"; then "make text in button more succinct" and "mock 2 block separating designs". **Measured:** on a computer
+Start fast · Continue last fast · Your fasts › sat at the panel head's right end (`phMplGoalsHtml` `.hd` + `phMplRactsHtml`), above Stay
+under and far from the dial (a 170px column); Reach held one goal with empty space under it; the phone had Start / Stop beside its dial
+(`.fb`) but Your fasts › at the panel's foot. **Mocks** `fast-block-mock-2026-11-03.html` (artifact FM1znWQDHXyaC93XoQmf6y: Now · A Under
+the dial · B Beside the dial) and `fast-block-sep-mock-2026-11-03.html` (artifact VPqjR1Ls56cAiYVYZonuE4: 1 Tinted fast block · 2 White
+blocks on a teal band; the shorter words). **Her picks (memory project_lcm_fast_block_2026_11_03):** B Beside the dial; 2 White blocks
+on a teal band (not the recommended 1); Start · Continue · Stop · History ›.
+**Built** ("FAST BLOCK"):
+- `phMplGoalsHtml`: the head = the day + its score (beside the day now, `.sc` no longer pushed right); then `.fc` (a capitals **Fast**
+  heading with the moon and **History ›** at its end, the dial, its ticks) and `.gcol` (Reach, then Stay under, stacked).
+- `phMplFastRingHtml(days)`: Start · Continue / Stop beside the dial on every screen (`.fb`; it was phone only). `phFastBtnsHtml(a,
+  last)` = the one helper for those buttons, shared with Your fasts' clock card (`.ph-fast-acts`): words Start · Continue · Stop,
+  aria-labels Start fast · Continue last fast · Stop fast, Continue's hover "Continue the fast from 9:05 pm (ended 7:05 am)".
+- `phMplRactsHtml()` = the History › door (`data-flow-prof="fasting"`, hover "Your fasts"), on the Fast heading any day; Start / Stop
+  only today, as before.
+- CSS "FAST BLOCK" in the MEALS GOALS block: the panel on `--ph-herb-tint` (the page colour's tint; 12px pad, 10px corners), two
+  columns 420px + the rest, both blocks white, 10px corners, stretched to one height; the dial side by side on a computer as on the
+  phone (136px, its line, of Breakfast ▾, → 7 am / last, the buttons); the ticks a row under it. Phone: one column, 8px tint, 10px
+  blocks. The `.ph-mpl-racts` rules went (4, incl. the colour audit block's `.q` line; the door is the plain outlined Button).
+**Disclosed calls:** Your fasts' own clock card takes the same short words (one helper, one wording for one action); the lunch
+toast keeps "Start fast" (a toast has no heading to name the fast); the door's word is History › while the page it opens is still
+called Your fasts (its hover says so); the day's score moved beside the day (the right end held only the buttons); the fast block is
+420px wide (the mock's).
+**Tested** (test copy on port 8998, `sandbox/mg-shot.html`: the made-up "me" with 8 days of meals; `fast=last` = a fast that ended an
+hour ago, `fast=0` none, default a running fast; Browser pane + headless Edge at 1220 and 375): computer: the tint band 945px, Fast
+420px and goals 489px both white and one height, Fast heading with History ›, "Not fasting", of Breakfast ▾, "last 6.3 h ✓", Start ·
+Continue beside the dial, ticks under; Continue → a fast running from its own start ("✓ goal +2:12"), Stop → back, Start → Stop, Stop →
+back; History › opened Your fasts with Start · Continue (the hover named the fast); a past day (Sat 31): Fasted 12:50, History › only;
+phone 375: no sideways scroll, both blocks stacked, Start → Stop; Prescriptions search Zz → 2, Qqx → 0, clear → 3; console: no app
+error. Pictures `shots/fast-block-build-{computer,fasting,pastday,phone}.png`. **Pages checked (★★★):** Meals (computer + phone, today
+and a past day), Your fasts. **Not tested:** her real fasts; another Case colour on her record (the tint follows `--ph-herb-tint`).
