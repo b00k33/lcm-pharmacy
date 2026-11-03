@@ -942,20 +942,24 @@ The Iron tab (her 2026-11-03 picks, BUILD-NOTES "Iron teaching page"; mock 8SRMu
 It runs in three steps on one light band of white boxes (the Fast block's shared band rule).
 
 **1 How much:** two figures, 18 mg a day and 27 pregnant, as drops (1 drop = 1 mg). What one serve gives is ranked by
-`PH_FOOD`'s own iron × each row's usual serve. A tap on a woman opens step 2 for her.
+`PH_FOOD`'s own iron × each row's usual serve. A tap on a woman opens step 2 for her. Both women are the Meals body, still (her
+"yes", BUILD-NOTES "Iron steps 1 and 3 on the same body"): pale and grey at first, colour and blood fill in once; the pregnant one
+has the womb with the baby. Try it sits top right, off her head.
 
 **2 Fill up your iron:** the Meals body (her "one body" pick, BUILD-NOTES "One body, more real") takes the iron in: a food goes
 down, what she takes up travels gut → liver → heart into her blood (the vessels thicken and run red, red cells in them), past her
 need into the liver's store; she is pale while it is low. Against 3.2 mg a day (6.8 pregnant); the count says taken up, then eaten.
 Your table is Food · Serve · Eaten · Taken up, each food's % beside it.
-- Steps 1 and 3 keep their own figures (the red rising, the places labelled).
+- Pregnant swaps in the womb with the baby on the same body.
 - Foods are A to Z in six groups.
 - Taken up (DRAFT; her 2026-11-03 picks, BUILD-NOTES "Iron page: what the body takes up"): meat and fish 25%; plants, eggs and grains
   10% alone, 20% with a Vitamin C food, 2% with Tea or coffee.
 - The drops under her are the mg eaten (18 / 27, as in step 1); a gold ring plays when full.
 
 **3 When it runs low:** Enough vs Low, with the red cells under a microscope. Fertility or Pregnancy, five steps played once,
-then tapped; a Draft tag until she reads the words.
+then tapped; a Draft tag until she reads the words. Both are the Meals body: on first sight Low drains (blood thins and pales, she
+pales, the ovaries, brain and muscles shrink and grey); each step glows its place and a ring pulses there (the womb for the baby's
+steps).
 
 State is `phIr` (view state, never saved).
 

@@ -10997,3 +10997,26 @@ that session, and the strength comes from the real before, the grey, the pale be
 - The first body build (0a253caa) went LIVE in 20261103-154400 with the seafood publish, before her "push live".
 **LIVE in build 20261103-165100** (her "push live"; publish f85daee1; checked on the live page: the build stamp, `phMbdWipe`, the
 BEFORE copy, the key's "short: grey, shrinks, cracks", the Iron page's `phIrBody`). Her devices need the gold Update.
+
+## 2026-11-03 · Iron steps 1 and 3 on the same body
+Her "yes" to "On the Iron page, step 1 (How much) and step 3 (When it runs low) still use the old red that rises from the feet.
+Would you like those on the same body too?". All three steps now draw the Meals body (`phMbd*`), so the page and Meals match.
+- **The body takes `preg`:** `phMbdSvg(uid = "mbd", preg)` adds the womb with the baby (`phIrWombSvg`, now one `<g class="ir-womb">`);
+  its cache key is uid + "p". Meals' "mbd" / "mbd0" are unchanged. The Iron page's figures: step 1 `mbdir0` / `mbdir1`, step 2
+  `mbdir` (Pregnant swaps the figure in place), step 3 `mbdir3a` / `mbdir3b`.
+- **Still bodies:** `phIrBodyEase(host, a, b, dur, delay)` paints `phMbdLook(now, E, S)` with its own E (so not the play's: no
+  sparks flashing, no beat, no streaming red cells) from `phIrBodyState`: blood `lv` plus ovaries, brain and muscles, each a place
+  in `S.H` (short = grey, as on Meals); pale = .8 × (1 − lv). `PH_IR_EMPTY` (lv 0), `PH_IR_OK` (1), `PH_IR_LOW` (.2).
+- **Step 1:** both women go from empty to enough once on first sight (18 / 27 × 70 ms, the drops' timing); after that, enough at once.
+  Try it moved top right (it sat over her head on the narrower body); the phone hides it as before.
+- **Step 3:** Enough at once; Low drains Enough → Low over 1.5 s on first sight (`phIrPlay`), else at once. Each step glows its place
+  (`PH_IR_LIT`: vessels + heart, ovaries, uterus, thyroid, brain, the womb for the baby's two steps) with the ring pulsing there.
+- **Gone:** the old figure (`PH_IR_SPOTS`, `phIrFigSvg`, `phIrLevel`, `phIrPulse`) and its CSS (`.ir-fill`, `.ir-spots`, `.ir-wash`,
+  `.ir-wave`, `.ir-spot`, `phIrWave`, `phIrSpot`).
+- **Tested** (a copy of HEAD 41be7b2c's index.html, port 8997, and headless Edge pictures at 1280): step 1 fills (pale .50 → 0,
+  vessels .45 → 2.15 red), the pregnant woman's womb; step 2 a food, Pregnant on and off (the womb swaps in place); step 3
+  Fertility (Enough pale 0, vessels 2.15 #a3262a; Low pale .40, vessels .79 #d8adab, ovaries smaller and greyed; the five steps
+  light and ring) and Pregnancy (the womb on both, step 2 glows it); 375 wide: figures 92 × 230 side by side, no sideways scroll;
+  `phMbdSvg()` / `("mbd0")` as before. No console errors.
+- **Not tested:** reduced motion in a real browser setting, the Key2, the Meals Try tab with her record (its code path is unchanged).
+- **Pages checked:** Guide › Iron (steps 1, 2, 3). No new words.
