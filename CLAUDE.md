@@ -99,7 +99,7 @@ reads it; do not render it again.
 4. **Field = a value you edit.** Faint tint (`--ph-herb-tint`), 6px corners, no outline. A number, supplier or note you tap to edit is a field, never bare text (Inventory stock, low-at, notes).
 5. **Row = open something.** The whole row is the target, on a faint surface. A herb name or code in a list stays plain text inside its row (Dashboard, Inventory, Refill, To order).
 
-**Menus** (sidebar, patient rail, tabs): each item a full-width row on a faint surface with its icon or number; the open item is filled. **The patient rail is the teal band** (her picks 2026-11-02, rail-mock2 "C"; CURRENT-STATE "The teal rail"; crimson / navy on a Gynae / MSK Case, her same-day word): an icon on every page row, the open row = the light tint + a deep bar (one lit row: its step stays plain), number circles on the steps, groups fold on a ▾ head, "‹ Menu" folds it to 56px icons. **On a phone it is a drawer from the left** (her picks 2026-11-02, phone-rail mock A): one 44px bar at the foot of the head, "group · page ▾" + ‹ ›, opens it; never a strip of steps or a boxed tab row back.
+**Menus** (sidebar, patient rail, tabs): each item a full-width row on a faint surface with its icon or number; the open item is filled. **The patient rail is the teal band** (her picks 2026-11-02, rail-mock2 "C"; CURRENT-STATE "The teal rail"; crimson / navy on a Gynae / MSK Case, her same-day word): an icon on every page row, the open row = the light tint, no bar (one lit row: its step stays plain), number circles on the steps, groups fold on a ▾ head, "‹ Menu" folds it to 56px icons. **On a phone it is a drawer from the left** (her picks 2026-11-02, phone-rail mock A): one 44px bar at the foot of the head, "group · page ▾" + ‹ ›, opens it; never a strip of steps or a boxed tab row back.
 **0–10 scores:** one joined bar of 11 cells, one tap. Never 11 separate chips.
 **Chip rows for one category join into a bar** (her 2026-10-15 pick, the Tongue photo viewer chip audit; **confirmed as the standard 2026-10-16** — screenshot of the Abdomen exam's live Tension row, her words "i like this chip design. make this the standard for grouping chips"): chips from ONE category — whether she picks one or ticks several — sit edge to edge in a single pill-shaped segmented bar, no gaps, a 1px `--ph-line` divider between segments, the bar rounded only at its two ends (not each chip). Picked segment(s) fill solid `--ph-herb` (or the page's case colour, where one applies — Tension's screenshot was a gynae-case crimson page), white text, same as a lone chip. Where an option has its own meaningful colour (a `[key, label, hex]` triple — Tension's soft/medium/hard, Colour, Coat colour), draw it as a small round dot (`<i style="background:hex">`) inside the segment, same position picked or not — keep the dot, don't simplify it away. A gap only separates two DIFFERENT categories sharing one row (e.g. Coat's Thickness group vs its Colour group) — it never splits one category into loose chips with air between them. Applies wherever a chip row is really one pick/tick set (the Tongue analysis rows: Colour, Shape, Coat, Under, Marks; the "Which shot" row; the Abdomen Tension row) — not to a row of unrelated actions (footer buttons, Same as / Clear).
 **NEVER:** underlined, dotted, arrowed OR PLAIN COLOURED text that taps; a tap target the same colour as the words beside it; a new chip size, corner or font size; a sentence under a control that explains it. A trailing › / → stays only where audit step 5 kept it (flow-wide "Next: ..." buttons, earlier / later pair, arrow-only buttons, data arrows).
@@ -394,7 +394,7 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   a nav label, a flag. THE UI IS THREE COLOURS: teal (lines, fills, the picked state), white (surfaces, chips, pills, cards)
   and gold (counts, the one primary disc, the one gold card). EVERYTHING ELSE IS A MARK, never a word: a state word gets a
   6px `::before` dot (`--ph-dot` carries its colour: `--ph-zero` empty / overdue, `--ph-low` low / due / draft, `--ph-blue`
-  plan / restock, `--ph-good` better, `--ph-phaseout`, `--ph-stopped`); a band gets a 3px left stripe; a chart its stroke.
+  plan / restock, `--ph-good` better, `--ph-phaseout`, `--ph-stopped`); a band gets the same dot, first in its row (never a side line, her 2026-11-03 word); a chart its stroke.
   A tinted state pill or chip is the standard chip (white + hairline + dot); a solid dark one keeps white words only where she
   kept the surface dark. Kept by her picks: the Case colour on the patient rail, ‹ and tab lines; solid calendar blocks; the
   dark heads, cards and bands; All templates' coloured groups; the Guide; the Dispense head, jar art and her herb-row green.
@@ -499,8 +499,8 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   Give a data table `table-layout: fixed` and a `<colgroup>` (or declared
   widths), so the first column read cannot take the space a later select or
   action cell needs. Rows alternate a faint tint; the row she is on gets a
-  tint AND a left accent bar, never one without the other. One exception, her
-  2026-11-02 pick "Tint only": the Compass's asked row is the gold tint alone.
+  tint alone, never a line on its side (her 2026-11-03 word, under "Separation
+  & grouping"; her 2026-11-02 "Tint only" on the Compass's asked row came first).
 - **Her work phone is a BlackBerry Key2** — design phone screens against
   360 × 469 (not 360 × 780) when a feature is specifically phone-targeted;
   Android 8.1 / Chrome 138 is a speed constraint, not a capability one (the
@@ -556,6 +556,16 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 - Never put a box inside a box. Avoid nested cards and clutter.
 - No solid line or bracket beside a row label or a chip group (her
   2026-10-18; see TAPPABLE THINGS).
+- **No line on the side of a box** (her 2026-11-03: "i hate this design with
+  line on side of box. remove it all from the app", her picture the Booked
+  today band). No coloured stripe or bar down the left or right edge of a box,
+  row, card, band, block, chip, quote, notice or menu item: not a
+  `border-left`, not an `inset Npx 0` box-shadow, not a `::before` bar. A
+  state or category the line carried shows as the colour law's dot (bands,
+  outcomes, visit dates, family and area heads) or the row's light tint (the
+  row she is on, missed, unfinished). Kept: chart and connector lines (a goal
+  line, timeline spines, step connectors), a table's split, dividers, and top
+  or bottom lines. The sweep: BUILD-NOTES "No side lines".
 - **Say a fact once.** A fact shown near the top of a page (a phase or cycle
   day in the band) is not repeated in a section header below it; if two places
   would say the same thing, drop the second or make it say something new.
