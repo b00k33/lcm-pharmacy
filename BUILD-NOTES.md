@@ -10440,3 +10440,11 @@ finished by hand), reduced motion in a real browser setting, her own record's Cy
 LH-confirmed cycle, the Key2.
 **Pages checked for the same facts:** the Cycle page (patients and her own record share `.ph-cp`), Today's visit cycle card (same
 day card), the Care Plan's cycle bar (untouched), the profile's cycle panel (sentence unchanged).
+
+## Her Abdomen in Body too (2026-11-03)
+Her answer to "Push it live?" on Tongue and Pulse in Body (note above, 3a46eb80): "Add Abdomen too, then push". Abdomen joins them (`PRES_MINE_RANK` abdomen 0.16, its row's
+day from `abdomen.at`), `presMineCycleNorm` takes plan + abdomen too, and a Care Plan of hers lists none of the three (they live in Body).
+The Abdomen page repaints through `[data-abd-host]` anywhere in `#pharmacyPage`, so nothing else changed. **Tested:** her Body = Cycle ·
+Tongue · Pulse · Abdomen · Meals …; flat + Whole abdomen saved `abdomen.at`, the chip repainted on, the row read "Today"; Next on Pulse =
+Abdomen, on Abdomen = Meals; `phFlowGoPlanTab("abdomen")` landed on her profile page; the patient's Abdomen saves and ticks under Today's
+visit as before; Prescriptions search 4 → Jane 2 → Zzqx 0 → clear 4.
