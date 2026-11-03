@@ -1184,7 +1184,11 @@ the goal and shrinks, thins, cracks or pales when short (the thyroid swells, the
 only lights a place; the part past a goal is stored (liver, fat) or cleared (kidneys → bladder): carbs past her goal refill the liver,
 then go to fat; kJ past the day go to fat too. Before it lands she is pale and grey and the places the try feeds small and dim; colour
 floods in as it lands, places swell about a fifth, the vessels thicken and run red with red cells, sparks fire across the brain (her
-2026-11-03 picks, BUILD-NOTES "One body, more real"). The Iron page's step 2 draws this same body. Eat · Body | TCM (TCM: Stomach → Spleen → the Zang that governs the tissue, in its element's colour;
+2026-11-03 picks, BUILD-NOTES "One body, more real"). **Before → after** (her 2026-11-03 picks, BUILD-NOTES "Meals body: before → after"): the play
+starts from the day so far (BEFORE, `phMbdData`'s `pb`) and only the try's own share travels; when it ends a line opens to the middle,
+BEFORE (still, pale) on its left and AFTER on its right, "BEFORE 3/8 · AFTER 6/8" at the top (places at their goal); she drags it
+anywhere on the body (← → on its ‹› circle); a place a number on the table builds turns grey as that number falls short; a changed
+amount keeps the line where she left it. The Iron page's step 2 draws this same body (no line there). Eat · Body | TCM (TCM: Stomach → Spleen → the Zang that governs the tissue, in its element's colour;
 the view stays on this device) · All ▾ (follow one number). Names on hover only. It plays when the Try tab opens and on Eat; a changed
 amount sets the looks at once; reduced motion: the end looks only. Phone: above the table. Its words (`PH_MBD_FLOW`, `PH_MBD_ORG`)
 are DRAFT. A meal

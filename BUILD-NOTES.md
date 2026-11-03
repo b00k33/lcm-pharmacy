@@ -10946,3 +10946,52 @@ Memory project_lcm_seaweed_noodles_2026_11_03.
 **LIVE in build 20261103-163700** (her "push live", published by the other session with its "One body, more real" 932500f8: publish
 1a368014; checked on the live page: the build stamp, the Instant noodles group, the packet unit, the seaweed rows). Her devices need the
 gold Update.
+
+## 2026-11-03 · Meals body: before → after (the wipe)
+Her words: "i want a strong visual impact of before and after food". Mock `meal-body-before-after-mock-2026-11-03.html` (artifact
+Lnnr7tXfLeR73yQNVxzzbZ, on the live code): A side by side, B wipe, C flip + count, with Strong | As now and Grey | Colour switches.
+**Her 8 picks (all the recommended options):**
+1. B · Wipe.
+2. Before = today so far, without the try.
+3. Looks: Strong.
+4. Short places: Grey.
+5. The line opens at the end of the play.
+6. The count small, on the labels.
+7. The phone: the same wipe.
+8. Drag anywhere on the body.
+
+Built on the "One body, more real" body (932500f8, another session, the same hour), which keeps its "about a fifth" sizes, its pale
+start, red cells and sparks. Her pick 3 ("Strong") here was made on the mock's bigger sizes; the sizes stay at her "about a fifth" from
+that session, and the strength comes from the real before, the grey, the pale before side and the line. Ask her if she wants them bigger.
+- **Where:** MEALS BODY:
+  - `phMbdData` adds `pb` (the day so far / her goals). The Iron page passes none, so it keeps its own start (`from`, `pale0`).
+  - `phMbdLooksFor(P)` gives the looks straight from numbers, the stores included ("store": the liver first, then fat).
+  - `phMbdMet` counts the places at their goal.
+  - `phMbdBefore` draws the still BEFORE figure: a second copy, `phMbdSvg("mbd0")`, own ids, `phMbdE0`, pale like the play's first look.
+  - `phMbdWipe(x, sweep)`: the line.
+  - `phMbdGrey`: grey when short, on the muscles, thyroid, liver, heart and ovaries (the brain and blood already had their own).
+  - `phMbdLook` / `phMbdTitles` take a figure and its looks, so BEFORE draws through them.
+  - `phMbdPlay` starts from BEFORE; `phMbdLand` moves a place's share from before to after.
+  - `phMbdPlan` plays only the numbers the try adds to (the try's own share in dots, only its part past a goal as extras).
+  - `phMbdFinal` draws AFTER from `phMbdLooksFor` and keeps the line where she left it (`phMbdX`).
+  - The drag (pointer events on the open figure, `touch-action: pan-y` so the page still scrolls); ← → on the ‹› circle.
+  - CSS: "MEALS BODY before → after" after `.mb-lit`.
+  - The key now says "short: grey, shrinks, cracks".
+- **Tested** (8989 harness, the made-up "Zz Me Test", a five-food try):
+  - At 800:
+    - the play runs, then the line opens to the middle: "BEFORE 3/8 · AFTER 6/8";
+    - the BEFORE side is pale, grey and thin, with pale vessels; AFTER has red vessels and fuller muscles;
+    - dragging moves the line (86.8%);
+    - hover titles: before "Bones · thinning, cracks · Calcium 40%, Magnesium 48%", after "Bones · strong · Calcium 111%…";
+    - + on salmon keeps the line at 86.8% and the end looks;
+    - TCM plays again and opens at 50% ("Kidney xu: brittle" | "Kidney full").
+  - The Iron page's step 2: a food plays the body, no line, and it ends with "Blood · pale (anaemia) · Iron 48%".
+  - Phone 375: the body above the table, the line open, no sideways scroll, figure 300 px.
+  - No console errors.
+- **Not tested:**
+  - her own record;
+  - the Key2 and a real finger drag;
+  - reduced motion (by reading: the end looks with the line open at once);
+  - a sync repaint mid-sweep.
+- **Pages checked:** Meals Try (desktop and phone), the Iron page step 2.
+- The first body build (0a253caa) went LIVE in 20261103-154400 with the seafood publish, before her "push live".
