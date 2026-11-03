@@ -10329,3 +10329,11 @@ reads "the same dot", and "a tint AND a left accent bar" now reads "a tint alone
   - Phone 375: no sideways scroll. Console: no errors. The test patients were removed.
 - **Pages checked (★★★):** the ones above. **Not tested:** a real patient's Compass with area groups (seen only on sample rows),
   the Fitness and trip pages with data, and printed letters (print never had these lines).
+
+## My profile opens on Meals (2026-11-03)
+Her words: "when i open my profile i want the first page to be meals page". `presAssessFirst` now picks her record's Meals page
+(`diet`) first, This week only if Meals is missing; `phMineOpen(null)` (the Me drawer's name, My profile on her own item's card) and
+her name picked from the patient list both go through it. Other records still open on their first page. **Tested** (test copy, Browser
+pane at 1220, a made-up My profile in the sandbox): `phMineOpen(null)` → the band reads "Me · Meals", the rail lights Meals, the
+Meals table shows; another patient opened, then hers by `presGoToScript` → Meals again; the other patient opened on its profile as
+before. **Not tested:** her real record, the phone (same function). Picture `shots/my-profile-opens-meals-2026-11-03.jpg`. Commit 503d652c.
