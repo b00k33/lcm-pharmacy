@@ -10248,3 +10248,4 @@ only (comment updated). Kept: Break's deep gold, the home visit's dark bar (her 
 4. Subsequent Acupuncture with herbs), "Herbal consult" → yellow, "Acupuncture only" → cyan, Break → deep gold; every one `.ck`, 0px
 edge, ink #141F23; the popup's avatar takes the mint. **Not tested:** her real bookings; the phone (same function). Picture
 `shots/solid-blocks-2026-11-03.jpg`. Commit 55467697.
+**LIVE** build 20261103-111900 (publish cf979ed7, her "Push live").
