@@ -10289,6 +10289,7 @@ phone,dish}.png`. **Pages checked (★★★):** the planner's open meal (comput
 "¾ banana"), the meal's numbers line and food shares, the Appointments grid's meal card, a dish's Made of. **Not tested:** her real
 meals; a real finger on her phone (the tap after typing was driven with made-up pointer events); a cloud repaint landing while she
 types in the planner (it redraws the open meal, as it does for every field there).
+**LIVE** build 20261103-112900 (publish 956d8ab0, her "push live"; the side-line removal 5bfa3fee went with it); the mock moved to `mocks/`.
 
 ## 2026-11-03 · No side lines
 Her word: "i hate this design with line on side of box. remove it all from the app", with a picture of the Patient profile's

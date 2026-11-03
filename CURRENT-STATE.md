@@ -1069,7 +1069,7 @@ reactions); names as she says them (Phở bò, Quẩy (youtiao)) and search find
 words with − / + (**MEAL AMOUNTS**, her 2026-11-03 picks B + C: anything she counts, a dish `dish:<id>*<q>` too, goes by ¼ below
 one, 1 → ¾ → ½ → ¼, and by its own step above, `phMealStepQ`; grams and ml keep their 25 g / 50 ml and floor; the amount is a field
 she types into, 0.5 · .25 · 1½ · 1/2, Enter or leaving keeps it, Esc puts it back, `phMealQParse` → `phMealAmtTo`, the one door − +
-take too; a dish's Made of the same, `phDishAmtType`). A dish's **Made of** adds its numbers itself
+take too; a dish's Made of the same, `phDishAmtType`; LIVE build 20261103-112900). A dish's **Made of** adds its numbers itself
 (typed numbers only for what is not on the list); with no Made of a dish counts by itself (`phDishAuto`: the Thisbowl bowl in its
 name, else its typed ingredients matched) and Made of starts filled with that bowl. Nutrients add every item. The time is a small
 ✎ field. A day's numbers line (kJ · P · C · F) opens 15 bars against **Targets** (C22's four + NHMRC women 31–50 + carbs 50 g, each hers);
