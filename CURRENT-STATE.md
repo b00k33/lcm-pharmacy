@@ -1175,7 +1175,7 @@ BLOCK**, her 2026-11-03 picks: B "Beside the dial" + "White blocks on a teal ban
 capitals heading with **History ›** at its end, `phMplRactsHtml`; the **fasting dial** with its line, of Breakfast ▾, → 7 am and
 **Start · Continue** / **Stop** beside it, `phFastBtnsHtml`: short words, each its full name to a screen reader, Continue its fast in
 the hover; its ticks under) and the goals, **Reach** (protein) then **Stay under** (kJ, carbs) stacked (`PH_MPL_GL`, `PH_MAC_REACH`;
-a phone stacks both blocks). A goal = its name and **its goal as a
+a phone stacks both blocks; LIVE build 20261103-122300). A goal = its name and **its goal as a
 field** (the one place the four are set; Targets keeps the rest, her pick 6), a **bar** (had solid, still planned pale, scaled to 125% of
 the goal so **the goal is a line at 80%**; over a limit red with a cut past 125%; protein deep once reached, amber under 60%; amber
 never on a limit), the **state big** at the end (protein "n g to go" / "✓ 58 g", a past day "short"; a limit "n left", a past day
