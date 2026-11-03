@@ -1507,9 +1507,11 @@ Fitness + Exercises), the rest in Life.
   group — Life: Code (until a plan), Money (until a price or a bill), a trip (until it runs or is within 30 days); File: Supplements ·
   Blood tests; Clinic: Photos · Messages · Appointments; the page she is on never folds; one More row open at a time
   (`presFlowMoreOpen` = its key; "1" is a patient's Patterns · Timeline row). The phone's sideways row is unchanged (every page a tab).
-  Phone's sideways row: Body · Life · File · Clinic captions. **Birthdays** (by month, + Birthday) and **Routines** (Morning ·
-  Afternoon · Evening · Any time, + Routine) are pages (`phMeBdaysPageHtml`, `phMeRtsPageHtml`), rows shared with the drawer
-  (`phMeBdRowHtml`, `phMeRtRowHtml`). Next on one of her pages goes to her next page; her last one goes to the file.
+  Phone's sideways row: Body · Life · File · Clinic captions. **Birthdays** (by month, + Birthday) and **Routines** (ROUTINES
+  TABLE, her 2026-11-03 picks: one table, a row a routine with the same name joined, this week's days across with each run's
+  start and end, today gold, the rows under Work · Health · Self-care · Travel · Home · People · Other by her colour Mode; a time
+  opens that routine; the phone keeps the names while the days scroll; + Routine) are pages (`phMeBdaysPageHtml`,
+  `phMeRtsPageHtml`); Birthdays' rows and the drawer's routines stay rows (`phMeBdRowHtml`, `phMeRtRowHtml`). Next on one of her pages goes to her next page; her last one goes to the file.
 - **Her Body pages share one look** (her 2026-11-02 "…look like the come from the same app", mock A, her 8 picks; CLAUDE.md rule;
   BUILD-NOTES "Body pages, one look"): Start (fasting), History ›, + Formula, Dispense, + Habit, Pregnant?, Workout Mode, + Add
   exercise, From my exercises › are the 6px Button in her record's colour (one solid each page: Start / Stop, + Formula, + Habit,
