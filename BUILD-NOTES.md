@@ -11054,3 +11054,50 @@ drinks join); her 3 picks, all the recommended ones:
 - **Not tested:** her own record, her phone, the Key2.
 - **Pages checked:** Meals (a meal's rows, + Add food or drink, the Try table and its + Food), a dish's Made of. No new words but the
   size names.
+
+## 2026-11-03 · Snacks: a tap opens them; milk tea sugar
+Her words (a picture of her snacks cell: 250 ml water · 1 sheet nori · 1 cup Osmanthus Long Jing Milk Tea): "i need to be able to adjust
+the milk tea to reduce sugar. i dont like thqat when i tap my snacks it deletes, remove that". Two popups with text previews.
+**Her 8 picks (all the recommended options):**
+1. A tap on a snack opens the day's Snacks · drinks: the snacks as a table like a meal's (− amount +, kJ, Sugar, ✕), the add list under it.
+2. Sugar levels 0 · 25 · 50 · 75 · 100%.
+3. Only milk teas and bubble teas get Sugar.
+4. A drink added again starts at her last level for it.
+5. The grid names it "… Milk Tea · 50%" (only when not 100%).
+6. The control: a "Sugar 50% ▾" dropdown chip under the name.
+7. Supplements · herbs the same: a tap opens their list, ✕ takes one out.
+8. ✕ removes with Undo in the one toast.
+
+- **Where:** "MILK TEA SUGAR":
+  - The planner's snack and supplement chips carry `data-mpl-cell` (the cell's own open) in place of `data-meal-snackx` /
+    `data-mpl-hx`; the hover's line-through went. The ✕ in a dot's card and the photo rows still use `data-meal-snackx`.
+  - `phMealSnTblHtml(k)`: the day's snacks through `phMealRowHtml`, each row's lid `<day>|s|@<its time>` (`phMealSnLid`,
+    `phMealSnAt`). `phMealAmtTo` sends such a lid to `phMealSnackSet` (amount, or a DRINK SIZES item), which changes the snack where
+    it is and keeps its time (a photo's dot is "@" + that time). Its ✕ (`data-meal-rm`) goes to `phMealSnackDel`.
+  - The item format reads a level, `food:<id>*<q>~<side>^<level>` (`phMealQ`'s `sg`, kept by `phMealWithQ`, `phMealWithSg`).
+    A snack keeps it beside itself (`sg` on its entry): a build before this one shows the drink at full sugar, never blank.
+    `phMealSnacks` joins it to the item (`phMealSnShow`, `raw` = the item as kept).
+  - `phFoodSgOk`: CHAGEE's milk teas (`cg_*`, not BO·YA's `_less` / `_none` rows) and `cn_bubble_milk_tea`.
+  - `phFoodNut(id, q, sg)`: the added sugar = the row's sugar less the milk's own 1.4 g a 100 ml (BO·YA no sugar's row); the part
+    left out comes off sugar and carbs, and 17 kJ a gram. Check: Osmanthus Long Jing 500 ml at 0% = 7 g sugar, 1182 kJ (CHAGEE's
+    BO·YA no sugar: 7 g, 1150 kJ).
+  - `phMealSgLast(base)`: her latest snack of that drink gives the level a new one starts at (`phMealSnackAdd`).
+  - `phMealSgHtml`: the Sugar chip (a `select`, `data-meal-sg`, 32px, 6px corners) on its own line under the name; its change
+    listener sits after `[data-rx-note]`'s.
+  - `phMealName` adds " · 50%" (`phMealSgW`). The phone's day list lets a long snack name take a second line (`.ph-mpl-pday
+    .ph-mpl-sx`), so the level shows.
+  - Supplements: `phMplSuppListHtml` puts what she took in a table above the search (✕ = `data-mpl-hx`), out of the groups.
+- Built on DRINK SIZES (9de15d57, another session, the same hour): a snack's water gets its size chips too, and they work there.
+- **Tested** (8989 harness, the made-up "Zz Me Test", 800 and phone 375):
+  - a tap on the milk tea chip opens the table (water, nori, milk tea; Sugar on the milk tea only);
+  - Sugar 50% → kept as `sg: 50`, the grid "1 cup Osmanthus Long Jing Milk Tea · 50%", the toast with Undo;
+  - + → 2 cups at 50%; a typed 1.5 → 1½ cups at 50%; water Large → 375 ml;
+  - ✕ on nori → "1 sheet nori · removed", Undo brings it back; the tea added again from the list starts at 25% (her last);
+  - a bubble tea with no level before starts at 100%;
+  - supplements: a chip opens the list, ✕ → "Magnesium glycinate · removed", Undo;
+  - the hover card's numbers on a sugared tea; a meal's water size chips still work (Small → 200 ml) and show no Sugar;
+  - phone 375: the table, the chip, the numbers line, no sideways scroll; the grid name on two lines;
+  - no console errors.
+- **Not tested:** her own record; the Key2's own dropdown; a build before this one reading a sugared snack (by reading: it sees
+  `{v, at, sg}` and shows the drink at full sugar).
+- **Pages checked:** Meals Grid (snacks, supplements, a dinner), desktop and phone. New words: "Sugar" and the levels.
