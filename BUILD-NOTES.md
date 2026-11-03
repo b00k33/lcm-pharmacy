@@ -10804,6 +10804,8 @@ comes). Memory project_lcm_seafood_2026_11_03.
   50 g baby clams = 7.5 mg iron, 41 µg B12; phone 375: the snack sheet's search, no sideways scroll; Prescriptions search Zz → 1
   match, Qqx → 0, clear → all; no console errors (the shop-foods file 404s in the test copy only). Pictures `shots/seafood-*-2026-11-03.*`.
 - **Not tested:** her own record and phone.
+**LIVE in build 20261103-154400** (her "push live", publish f20ae567; checked on the live page: the build stamp, the Seafood group, the
+seafood rows). The Meals "where it goes" body beside the Try tab (0a253caa) went live in the same build. Her devices need the gold Update.
 
 ## 2026-11-03 · Meals: where it goes (the body beside the Try tab)
 Her words, while the trial meal was being built: "can you make an animated visual of macros and micros filling into the body when
