@@ -10899,3 +10899,44 @@ Her 4 picks, all the recommended option except the first:
 - **Not tested:** the real Meals Try tab with her own record (the body was driven through a test host), the TCM view's new carbs
   way, reduced motion in a real browser setting, the Key2.
 - **Pages checked:** Meals (the body through its own functions) and the Guide's Iron tab (steps 1, 2, 3). Every new word is DRAFT.
+
+## 2026-11-03 · Instant noodles + seaweed in the food list
+Her word: "add seaweed, and instant noodles especially mama noodles". Before: Nori was the only seaweed; no instant noodles on the list
+(some sat only in the shop-products search, of mixed label quality). **Her picks (popup with pictures):** seaweed snacks, wakame + seaweed
+salad, kombu / kelp (iodine counted as it is); Mama (every flavour with a readable label; she typed "mama"), Indomie + Maggi, Vietnamese,
+Korean, Japanese cups; noodles their own group, seaweed with Nori, both on the shopping list; a packet = the noodles and every sachet.
+Memory project_lcm_seaweed_noodles_2026_11_03.
+- **Group `in` "Instant noodles"** after Grains in `PH_FOOD_GRP`: an ordinary group (a section of All foods and of the dish editor's
+  list, A–Z; on the shopping list). 44 rows, brand first: Mama 17 (Shrimp Tom Yum, … Jumbo, Creamy Shrimp Tom Yum, Minced Pork, Tom Yum
+  Pork, Green Curry, Spicy Seafood, Yentafo Tom Yum, Spicy Cheese, Beef, Oriental Kitchen Hot & Spicy / Kimchi / Takoyaki, Cup Shrimp
+  Tom Yum, Phở Bò, Phở Gà, Rice Vermicelli Tom Yum); Indomie 5 (Mi Goreng, … Hot & Spicy, … BBQ Chicken, Special Chicken, Chicken
+  Curry); Maggi 2 Minute 3 (Chicken, Beef, Kari); Vietnamese 9 (Hảo Hảo Tôm chua cay / Gà / Chay, Omachi Sườn hầm ngũ quả / Tôm chua
+  cay / Xốt bò hầm, Vifon Phở bò / Phở gà / Bún bò Huế); Korean 5 (Nongshim Shin Ramyun, Samyang Buldak Hot Chicken / Carbonara, Ottogi
+  Jin Ramen Mild / Spicy); Japanese 5 (Nissin Cup Noodles Chicken / Seafood / Laksa, Demae Ramen Chicken / Sesame Oil).
+- **Units:** `packet` (and `cup` for the cups), ½ steps; `PH_FOOD_UNITS` gains `pack: "packs"` and `packet: "packets"`: "1 packet Mama
+  Shrimp Tom Yum", "½ packet …", "2 packs seaweed snack".
+- **Noodle numbers.** Each packet's own label for energy, protein, carbs, fat, fibre, sugar and sodium, the noodles and every sachet,
+  stored per 100 g as sold: Open Food Facts (the packet's barcode, in its hover), Maggi's three from maggi.com.au's panels (a serve =
+  a packet: 72, 74, 79 g), Nissin Cup Noodles Chicken from Woolworths New Zealand's panel (73 g). Labels read as kcal turned to kJ
+  (× 4.184); each checked against its macros (within 8%). A label without fibre takes AFCD's instant noodles (rice ones USDA's dry rice
+  noodles); Shin Ramyun's scanned 0 g fibre likewise; the Jumbo Tom Yum's fibre = the 60 g packet's; Maggi's "less than 1 g" sugar = 0.5 g.
+  Vitamins and minerals (iron, zinc, iodine, B12, calcium, copper, magnesium): AFCD instant noodles, flavoured, dry, in step with
+  weight; rice noodles (Mama's phở and vermicelli, Vifon) AFCD rice stick noodles brought to dry weight; choline USDA's dry chicken
+  ramen / dry rice noodles (Health Canada's copy). Omachi's two bowls' labels give the packet's per 100 g (an 80 g packet).
+- **Seaweed (8, in Vegetables beside Nori):** Seaweed snack (a 5 g pack: CJ Bibigo's label; vitamins and minerals = the Nori row's
+  for its 52% seaweed; choline not counted, as Nori); Wakame, dried (a tbsp 2 g, MEXT cut wakame); Wakame, soaked (g, MEXT cut wakame
+  briefly boiled); Seaweed salad (g, 50 usual: C Weeds' Australian label; the rest MEXT wakame stem for half its weight, iodine the
+  cut wakame's); Miso soup with wakame (a bowl 163 g worked out: 150 g kombu-bonito dashi + 12 g light miso + 1 g dried wakame);
+  Kombu, dried (a piece 5 g, MEXT ma-kombu); Kelp, cooked (g, MEXT ma-kombu boiled); Dashi (kombu stock) (a cup 250 ml, MEXT
+  water-steeped). Choline USDA's raw wakame / kelp in step with protein. **Iodine as MEXT measures it (her pick):** a kombu piece
+  10,000 µg, a cup of kombu dashi 13,250 µg, 30 g cooked kelp 5,700 µg, a bowl of miso soup 2,350 µg, a tbsp of dried wakame 200 µg.
+- Built by scratchpad `nd-build.pl` + `nd-mkfrags.pl` from the sources; each row's source in its hover (`PH_FOOD_SRC`); the Targets
+  credit line names them. PH_FOOD 1143.
+- **Tested** (test copy on port 8998, the `mg-shot.html` harness, made-up data): searches mama (17 Mama rows), tom yum (7), hao hao
+  (3), mì gói (all 44), ramen, buldak, cup noodles (4), seaweed (9 with Nori), kombu (3), miso; the hover on Mama Shrimp Tom Yum ("1
+  packet Mama Shrimp Tom Yum" 1,172 kJ, 5 g protein, 38 g carbs, 12 g fat, its source) and on Kombu, dried; added to a lunch: "1 packet
+  Mama Shrimp Tom Yum" + "1 pack seaweed snack" = 1,297 kJ; the stepper to "½ packet …" (711 kJ with the snack) and "2 packs seaweed
+  snack"; phone 375: the snack sheet's search under "Instant noodles", a tap → "1 packet Mama Shrimp Tom Yum"; Prescriptions search Zz
+  → found, Qqx → none, clear → all; no console errors (the shop-foods file 404s in the test copy only). Pictures
+  `shots/noodles-*-2026-11-03.*`, `shots/seaweed-kombu-hover-2026-11-03.png`.
+- **Not tested:** her own record and phone.
