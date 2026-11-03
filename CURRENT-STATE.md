@@ -1085,7 +1085,7 @@ the line ON TOP (hers): **↻ Repeat meal ▾** (every food in it at once) and, 
 into, its unit after it: MEAL AMOUNTS) · kJ in the planner · ✕; on
 HER day's meal each food has its **repeat chip** on a line under it, see MEAL REPEATS) · **+ Add food or drink** opens the list UNDER the meal (search or type + New; one bar
 Everyday | Drinks | **Menus ▾** | My dishes, the place picked showing on it ("Hungry Jack's ▾"; the bar keeps every word whole and
-scrolls in itself where it is too wide, a phone's sheet); Menus' list: McDonald's, Hungry Jack's, KFC, Oporto, El Jannah, Chagee,
+scrolls in itself where it is too wide, a phone's sheet); Menus' list: McDonald's, Hungry Jack's, KFC, Oporto, El Jannah, Chagee, Stockman Steaks,
 Thisbowl (`PH_FOOD_MENUS`, `phMealTabsHtml`); Chinese and Vietnamese are kitchens, listed under All foods like Grains (her pick
 2026-11-02, `phFoodPlace`; still off the shopping list, still found by the word); a menu's rows are drawn when its pane opens or a search starts
 (`phMealMenuFill`, never on every paint); a row a food with its usual amount and + (`phMlkFoodRow`, the one row); Thisbowl R | L,
@@ -1095,7 +1095,7 @@ today or before = she skipped it; a day ahead = that day planned Skipped; on whi
 computer only. The snack picker (Snacks · drinks) and a dish's Made of keep their chips; a menu's foods show there on a search
 only, never under All foods (`data-meal-srch`). Code: "A CALMER MEAL" (`phMealListHtml`, `phMealTblHtml`,
 `phMealAddHtml`, `phMealNumsHtml`, `phMealInstHtml`).
-**Food numbers**: foods from `PH_FOOD` (980 rows of 19 numbers: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
+**Food numbers**: foods from `PH_FOOD` (1044 rows of 19 numbers: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
 credited on Targets; AUSNUT 2023 by FSANZ for what AFCD lacks: the curry meat pie, the kebab wraps, creamy milk; choline, beef
 bacon, popcorn and the copper AFCD leaves out from USDA FoodData Central (popcorn and copper read through Health Canada's Canadian
 Nutrient File, its copy); matcha and hojicha powder from the Standard Tables of Food Composition in Japan 2020 and 2023 (MEXT);
@@ -1106,11 +1106,11 @@ source gives none (SG FoodID, AUSNUT, the chains, Thisbowl; a row of 17 numbers 
 untrimmed; Lamb souvlaki skewer 75 g; her 2026-11-03 asks; copper, magnesium and these foods LIVE build 20261103-134900) and **Takeaway** (pies, sausage roll, kebabs,
 hot chips), her word; **Water** is a drink in ml, every number 0; **the menus and dishes** (her synth22 2026-11-01, whole menus,
 everyday dishes; BUILD-NOTES "Menus + dishes"): McDonald's 261, Hungry Jack's 257 (its whole menu, her 2026-11-02 "Yes, add them"), KFC 74 (the Wicked Wings row kept), Oporto 53,
-El Jannah 18, Chagee 10, Chinese 34 (Clear chicken soup: USDA's home-made chicken stock, her 2026-11-02 ask; Cumin lamb skewer (yang rou chuan, 羊肉串), 30 g, her 2026-11-03 ask), Vietnamese 38 (Cơm tấm sườn bì chả, Bún riêu, Bún mắm, Bánh xèo and Bánh cuốn with their plates, four bánh mì: thịt heo, heo quay, xíu mại, bì, and Wombok soup with pork mince, worked out from their parts, her 2026-11-02 asks; a Matcha latte and a Hojicha latte for each milk in Drinks (full cream, creamy, light, skim, oat, soy, almond; the milk in its name), which lists a place's drinks after the everyday ones), each place a group of its own; a place or dish with no numbers of its own counts
-as its closest food, named in its hover ("Close match: … · SG FoodID", `PH_FOOD_SRC`, `phFoodSrcTip`, `phFoodTipAt` with her
+El Jannah 18, Chagee 10, **Stockman Steaks 60** (her butcher, her 2026-11-03 "add grass fed steak and meats from stockman steaks inventory"; her picks: their own group, all four kinds, pieces as sold, Wagyu yes and Christmas no; beef cuts, Wagyu, mince 5 · 10 · 20 · 35% fat, organ mixes, burgers, sausages, meatballs, liver, heart, kidney, bone broths, beef fat, marrow, lamb, pork, bacon, chicken, veal; names start "Stockman", a piece its weight sold "(200 g)"; AFCD per cut, bone out by its analysed portion, a fat edge AFCD leaves out counted as separable fat; USDA through Health Canada's copy where AFCD has none; MEXT for oxtail; the broths' own labels; Wagyu, burgers, eye bacon, marrow as close matches), Chinese 34 (Clear chicken soup: USDA's home-made chicken stock, her 2026-11-02 ask; Cumin lamb skewer (yang rou chuan, 羊肉串), 30 g, her 2026-11-03 ask), Vietnamese 38 (Cơm tấm sườn bì chả, Bún riêu, Bún mắm, Bánh xèo and Bánh cuốn with their plates, four bánh mì: thịt heo, heo quay, xíu mại, bì, and Wombok soup with pork mince, worked out from their parts, her 2026-11-02 asks; a Matcha latte and a Hojicha latte for each milk in Drinks (full cream, creamy, light, skim, oat, soy, almond; the milk in its name), which lists a place's drinks after the everyday ones), each place a group of its own; a place or dish with no numbers of its own counts
+as its closest food, named in its hover ("Close match: … · SG FoodID", `PH_FOOD_SRC`, `phFoodSrcTip`; a source that is the food itself reads "Source: …": Stockman's cuts, the steaks, the popcorns; `phFoodTipAt` with her
 reactions); names as she says them (Phở bò, Quẩy (youtiao)) and search finds either name, accents optional (`phFoodNrm`,
 `phFoodWordsN`, a place's name included); a place's foods keep their capital ("1 Whopper", `PH_FOOD_NAMED`), a dish does not
-("1 bowl phở bò"); never on the shopping list; LIVE build 20261102-101600), stored `food:<id>*<q>`, shown in kitchen
+("1 bowl phở bò"); never on the shopping list but Stockman Steaks' raw meat (`phFoodMade`, the 4th place in `PH_FOOD_MENUS`); LIVE build 20261102-101600), stored `food:<id>*<q>`, shown in kitchen
 words with − / + (**MEAL AMOUNTS**, her 2026-11-03 picks B + C: anything she counts, a dish `dish:<id>*<q>` too, goes by ¼ below
 one, 1 → ¾ → ½ → ¼, and by its own step above, `phMealStepQ`; grams and ml keep their 25 g / 50 ml and floor; the amount is a field
 she types into, 0.5 · .25 · 1½ · 1/2, Enter or leaving keeps it, Esc puts it back, `phMealQParse` → `phMealAmtTo`, the one door − +

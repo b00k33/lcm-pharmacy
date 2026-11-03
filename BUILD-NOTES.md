@@ -10658,3 +10658,45 @@ Commit 7ae3755d.
 - Her own data.
 - The Meals chip on a real Meals page (checked in the bars' HTML only: the test copy had no meals).
 - The Key2.
+
+## 2026-11-03 · Stockman Steaks' meats in the food list
+Her word: "add grass fed steak and meats from stockman steaks inventory" (Stockman Steaks, her butcher: stockmansteaks.com.au, a Shopify
+shop; its `/products.json` lists 125 products, about 55 single meats once boxes, packs, gift cards and Christmas pre-orders are out).
+**Her picks (popup, all recommended):** their own group "Stockman Steaks", like El Jannah; all four kinds (beef cuts; mince, burgers,
+sausages; organs, broth, fat; lamb, pork, chicken, veal); pieces as sold; the grass-fed Wagyu cuts yes, the Christmas ham and turkey no.
+Memory project_lcm_stockman_meats_2026_11_03.
+- **60 rows, group `sk`** (PH_FOOD 1044 with the Iron page's four): in `PH_FOOD_GRP` after Chagee, `PH_FOOD_NAMED` (names keep their
+  capital: "1 Stockman eye fillet steak (200 g)"), `PH_FOOD_MENUS` (Menus ▾ lists it A–Z: Chagee, El Jannah, Hungry Jack's, KFC,
+  McDonald's, Oporto, Stockman Steaks, Thisbowl; a search finds them, "stockman" all 60). Every name starts "Stockman"; a piece carries
+  the weight sold ("Stockman T-bone steak (400 g)", "Stockman lamb cutlet (80 g)", a sausage 80 g, a burger 160 g, a meatball 50 g);
+  mince, diced, roasts, ribs, organs, chicken pieces and fat in grams; bacon by the rasher; the broths in ml (a drink, 250 ml usual).
+- **Numbers.** Their site gives none but the bone broths' back labels (read from the pouch photos: beef carnivore 58 kJ, 3.2 g protein,
+  140 mg sodium a 100 g; beef gut nourishment 50 kJ; chicken carnivore 70 kJ, 3.7 g; chicken gut nourishment 64 kJ, 3.1 g; the rest
+  not on a label = not counted). The cuts: AFCD Release 3 raw (Australian beef is mostly grass-fed); a piece = its raw weight sold with
+  bone out by AFCD's analysed portion (T-bone 400 g → 334 g, lamb cutlet 80 g → 57 g, midloin chop 100 → 84, shank 400 → 350, pork
+  loin cutlet 250 → 218; the bone-in rib eye 450 g → 363 g by USDA's rib roast with bone) and a fat edge AFCD leaves out counted as
+  AFCD separable fat (scotch fillet 7.6%, porterhouse 17.5%). Mince at its stated fat (5, 10, 20, 35%), the sausages and meatballs at
+  their stated 85% lean: AFCD lean meat + its separable fat to that fat; the beef and organs mince by its recipe (75% beef to 25% fat in
+  all, 10% liver, 10% hearts, 5% kidneys), the beef and liver mince 80:20 at 15% fat. USDA through Health Canada's Canadian Nutrient
+  File where AFCD has none (beef liver, heart, kidney raw; brisket; short rib; whole chicken; beef bacon; eye bacon as back bacon);
+  MEXT 2023 for oxtail (bone 40%, no omega-3). Close matches, said so in the hover: Wagyu (AFCD's same cut: no source measures
+  grass-fed Wagyu), the two beef burgers (AFCD mince: their fat not stated), eye bacon, bone marrow (caribou marrow). Salt the sausages
+  and meatballs carry is not counted (sodium "not counted"). Choline: USDA's for the same meat, in step with protein; fat tissue's
+  not counted. Copper AFCD leaves out of the burgers and shank: Health Canada's. The rules in the rows' own comment; built by a script
+  from the sources (scratchpad `sk-build.pl`), each row's source in its hover (`PH_FOOD_SRC`).
+- **Source, not "Close match".** `phFoodSrcTip` put "Close match:" before every source; a source that is the food itself now starts
+  "Source: " and shows as written (Stockman's cuts, and this morning's five steaks and four popcorns, which were exact too). Every
+  other row reads as before.
+- **On the shopping list.** The places' foods stay off it (bought made); Stockman's is raw meat she cooks, so `PH_FOOD_MENUS` takes a
+  4th place (1 = raw) and the list asks `phFoodMade` instead of `phFoodMenu` (a planned "2 Stockman eye fillet steaks (200 g)" lists
+  as "Stockman eye fillet steaks (200 g) · 2"; El Jannah and the Chinese dishes still stay off).
+- **Tested** (test copy on port 8998, the `mg-shot.html` harness, made-up data): 1044 foods, 60 in `sk`, each with 19 numbers and a
+  hover; Menus ▾ lists Stockman Steaks and its pane holds the 60 A–Z with their usual amounts (2 sausages, 2 rashers, 100 g, 250 ml);
+  wording "1 Stockman eye fillet steak (200 g)", "2 … steaks (200 g)", "250 g Stockman beef mince, 10% fat", "250 ml Stockman beef
+  bone broth · carnivore", "2 rashers Stockman bacon", "3 Stockman lamb cutlets (80 g)"; one eye fillet = 1406 kJ, 42.4 g protein,
+  18.4 g fat, choline 134 mg; a T-bone 3300 kJ; 3 beef sausages: sodium not counted; searches eye fillet (Eye fillet steak + Stockman's
+  + Wagyu), wagyu (4), liver (the Iron page's Beef liver + 4), bone broth (Miso bone broth + 4), grass fed (44); the shopping list as
+  above; the Iron page's foods all found; phone 375 no sideways scroll; Prescriptions search Zz → 1 match, Qqx → 0, clear → all; no
+  console errors. Pictures `shots/stockman-*-2026-11-03.png` (the Stockman pane, eye fillet and liver searches).
+- **Not tested:** her own record and phone; the add sheet on a phone with the Stockman pane open (the same Menus control as the other
+  places).
