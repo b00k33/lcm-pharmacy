@@ -10700,3 +10700,6 @@ Memory project_lcm_stockman_meats_2026_11_03.
   console errors. Pictures `shots/stockman-*-2026-11-03.png` (the Stockman pane, eye fillet and liver searches).
 - **Not tested:** her own record and phone; the add sheet on a phone with the Stockman pane open (the same Menus control as the other
   places).
+**LIVE in build 20261103-141400** (her "push", publish 6d3d88c0; checked on the live page: the build stamp, the `sk` rows, Stockman
+Steaks in `PH_FOOD_MENUS` with its 4th place, `phFoodMade`). Another session's Iron teaching page (7ae3755d, 6b93cfe1) went live in
+the same build. Her devices need the gold Update.
