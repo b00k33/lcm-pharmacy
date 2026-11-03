@@ -11209,3 +11209,38 @@ page); an Abdomen tab from the Ren belly signs; one tongue chart. Memory project
   "Today", "+ / ✓ <first name>", "· pick a box", "Belly signs", "From the chart:", "From your Guide", "Guide ›", "+ my note",
   "Saved to your Guide", "Search belly signs", the Abdomen tab's intro line and empty lines.
 - **LIVE in build 20261103-233500** on her "ok push" (publish a506a962), with Sized shop foods (b478b468) and Iron step 3 (7f2ba0c3); checked on the live page (the build stamp, `phGdChartHtml`, "Search belly signs", the pulse lines' doors). Her devices need the gold Update.
+
+## 2026-11-03 · Healthy tongue photo: a small icon beside Today, on the Tongue page and the Guide's Tongue map
+Her word (a picture of the old Guide › Tongue map, build 201800, before her Update): "i want tis page to correspond with hte tongue
+chart in profiles - they should be mirros of each other and for this page to use a photo of healthy tongue that i supply". The mirror
+was already LIVE in 20261103-233500 (the Guide's Tongue map draws the Tongue page's own chart; BUILD-NOTES "The Guide and the record's
+pages"). **Her picks (popup with pictures; mock widget lcm_healthy_tongue_photo_placement_mock, A–E):** she adds the photo in the app
+(✎ Change later); the places drawn over it (Upper · Middle · Lower · sides, a tap → its notes); the top only (no underside photo);
+placement **E**, a small tongue icon beside the photo; a tap opens the healthy photo **beside today's** (Healthy | Today) until she
+closes it. Memory project_lcm_guide_profile_link_2026_11_03.
+- **Where it shows:** `phTngCmpHtml` (the photo column the Tongue page and the Guide's Tongue map share, so they mirror each other):
+  the icon (`.ph-tc-hico`, `PH_TNG_HEALTHY_ICO`) sits in Today's head in all three of its states, on the Sublingual tab too (it opens
+  the top photo). Open = the Healthy tile in place of Last (`phTngHealthyTile`); ✕ in its head or the icon closes it. Open / closed and
+  the tapped place are view state only (`phTngHealthy`, never saved), shared by both copies.
+- **The photo:** "Add healthy photo" / "✎ Change" (the photo chip `ph-visit-photoadd`, a hidden file input
+  `data-tng-healthy-file`): `phRenCompressToBlob(f, 420, 0.8)` → a JPEG data URL in **`PHARMACY.healthyTongue = { img, at }`**, about
+  30–45 KB, so it syncs in pharmacy_core and shows on every device of that login. **Not** the patient photo store (that one is per
+  device, and the phone → desktop relay deletes as it imports). One per clinic login: Acupreg's login has its own. A Change replaces
+  the reference picture (it is not a patient photo). A save that fails shows `PH_PAT_SAVE_FAIL` in the one toast; an unreadable file
+  says so.
+- **The places:** an SVG over the photo (`phTngHealthyZonesSvg`, viewBox 100 × 133, the root at the top as the photo is taken):
+  Lower (root), Middle, Upper (tip), Sides (both edges); white dashed outlines, the tapped one gold; each has its full name as its hover
+  title (`PH_GD_TNG_ZONE`'s). A tap lists that place's Guide notes under the pair (`phTngHealthyNotes`: `phTongueNotes()[place]` through
+  `phGdLineHtml`, each line a "Guide ›" door to its note); the gold "today" dot is hidden there (every note of the place shows, not
+  only today's). Nothing tapped: nothing under the pair.
+- **Repaint:** `phTngHealthyRepaint` → `phTngRefresh` for each name drawn on the page, which repaints both copies and the Guide's
+  notes.
+- **Tested** (a copy of HEAD 319954c9's index.html with this patch, port 8998, made-up "Mia Samplecase" as Me, a drawn stand-in picture
+  for the healthy photo): the icon opens Healthy beside Today in the Guide; Add healthy photo saved `PHARMACY.healthyTongue` (kept
+  through a reload); Upper, Middle and Sides lit gold and listed their notes with working Guide › doors; her Body › Tongue page showed
+  the same open pair; ✕ closed both; the Sublingual tab has the icon; 375 wide nothing past the screen; Change is a 32px 6px chip.
+  Prescriptions search Zz → one, Mia → one, Qqx → none, clear → all. No console errors. Pictures `shots/healthy-tongue-*-2026-11-03.jpg`.
+- **Not tested:** her own photo, her phone, the Key2, a patient's Care Plan Tongue page (the same `phTngCmpHtml`), the Acupreg login.
+- **Pages checked:** Guide › Tongue map; her Body › Tongue (Top and Sublingual). New words: "Healthy", "Healthy tongue" / "Close the
+  healthy tongue" (hover), "Add healthy photo", "✎ Change", "No photo", "No notes", "Healthy photo saved", "That picture couldn't be
+  read. Try another.".

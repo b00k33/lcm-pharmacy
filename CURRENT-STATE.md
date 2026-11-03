@@ -900,7 +900,7 @@ tap): a **gold dot** on each note today's chart reaches and a **Today** chip tha
 are the page's own `phVisitPulseKbHits`; "+ <name>" on a note ticks the same Rate & rhythm chip (`data-constit-hm`) or picks the
 chart's brush for a box quality (`data-constit-pulse-stamp`). Tongue map: the Tongue page's chart; the 14+ notes by place (tip →
 Upper, middle → Middle, root → Lower, sides → L / R; `PH_GD_TNG_ZONE`), a place marked today dots its notes; the old demo model and
-4-region map are gone. **Abdomen (new):** the Abdomen page's chart; the belly signs Fang Bing Ren reads off it (built each time
+4-region map are gone; the healthy tongue photo opens beside today's from the same icon as on the Tongue page (below). **Abdomen (new):** the Abdomen page's chart; the belly signs Fang Bing Ren reads off it (built each time
 from the abdomen specs of `PH_FBR_CHART_PREFILL`, with the formulas whose `ren` / `bing` weigh them), each with "+ / ✓ <name>" =
 the Fang Bing Ren page's Yes / No (`phGdSignTick`, `phRenSignTick`'s write); her own notes in **`PHARMACY.abdNotes`**
 (`{id, w: "abd:<mark>[@zone]", meaning, formulas, source}`, syncs in pharmacy_core like `pulseNotes` / `tongueNotes`); a place's
@@ -1005,7 +1005,12 @@ each tile has one-tap type / shot chips and a date button. **Records → Photos*
 rings the next unlabelled photo (a tap never moves the page: it rings one already on screen or none; only the keys scroll to it);
 Select + one label for many. Tongue shots rank natural → unlabelled → side → sublingual → flash (`PH_TONGUE_SHOT_RANK`). The
 Tongue page: today's photo beside the last (the Sublingual tab flips the pair), the Flash pair under them in the same column, past
-photos at the bottom. A face / build photo full screen carries Find the Ren's own rows (Face · Eyes · Lips / Build · Skin ·
+photos at the bottom. **Healthy tongue (her picks 2026-11-03; built, NOT live yet):** a small tongue icon in Today's head (Sublingual
+too) opens the clinic's healthy tongue photo beside today's (Healthy | Today, in place of Last; ✕ or the icon closes it); Upper ·
+Middle · Lower · Sides drawn over it, a tap lists that place's Guide notes under the pair, each a Guide › door. She adds it there
+("Add healthy photo", "✎ Change"); it is kept small in the clinic's synced data (`PHARMACY.healthyTongue`, one per login), never the
+patient photo store. The Guide's Tongue map draws the same column (`phTngCmpHtml`). Code: `phTngHealthyTile`, `phTngHealthy` (view
+state, not saved). BUILD-NOTES "Healthy tongue photo". A face / build photo full screen carries Find the Ren's own rows (Face · Eyes · Lips / Build · Skin ·
 Muscles) and its spots as corners (her pick). Compare and the viewer are ONE mechanism each, wired into every surface that shows a
 photo tile. The viewer's dark title bar carries the photo's Kind (a dropdown grouped Tongue · Face · Body · Records, then Unsorted ·
 Other), the tongue Shot bar (short words on the phone) or a Face photo's view bar (below), and a Date field that saves on pick (her

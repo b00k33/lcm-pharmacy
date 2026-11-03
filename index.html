@@ -18090,6 +18090,23 @@
   #pharmacyPage .ph-tgz-grid:not(.two) .ph-tc-photos { grid-template-columns: minmax(0, 1fr); }
   #pharmacyPage .ph-tgz .ph-tc-photos { gap: 12px; }
   #pharmacyPage .ph-tgz-nolast { margin-top: 6px; font-size: var(--fs-12); color: var(--ph-faint); text-align: center; }
+  /* her healthy tongue (2026-11-03 picks): the small icon in Today's header, the Healthy tile beside Today, its places drawn over the photo */
+  #pharmacyPage .ph-tc-hico { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; margin-left: 4px; border: 1px solid var(--ph-line); border-radius: 50%; background: var(--ph-white); color: var(--ph-ink); cursor: pointer; align-self: center; }
+  #pharmacyPage .ph-tc-hico svg { width: 12px; height: 15px; }
+  #pharmacyPage .ph-tc-hico:hover, #pharmacyPage .ph-tc-hico.on { border-color: var(--ph-herb); background: var(--ph-green-tint); }
+  #pharmacyPage .ph-tc-hx { font: inherit; font-size: var(--fs-11); line-height: 1; padding: 2px 6px; border: 0; border-radius: 6px; background: none; color: var(--ph-faint); cursor: pointer; }
+  #pharmacyPage .ph-tc-hx:hover { background: var(--ph-paper); color: var(--ph-ink); }
+  #pharmacyPage .ph-tc-hp { position: relative; }
+  #pharmacyPage .ph-tc-hp img { display: block; width: 100%; aspect-ratio: 3 / 4; object-fit: cover; border-radius: 10px; border: 1px solid var(--ph-line); background: var(--ph-paper); }
+  #pharmacyPage .ph-tc-hzs { position: absolute; inset: 0; width: 100%; height: 100%; }
+  #pharmacyPage .ph-tc-hz { cursor: pointer; }
+  #pharmacyPage .ph-tc-hz rect { fill: rgba(255, 255, 255, 0); stroke: #fff; stroke-width: .8; stroke-dasharray: 3 2; }
+  #pharmacyPage .ph-tc-hz:hover rect { fill: rgba(255, 255, 255, .18); }
+  #pharmacyPage .ph-tc-hz.on rect { fill: rgba(217, 174, 71, .38); stroke: var(--ph-gold); stroke-dasharray: none; }
+  #pharmacyPage .ph-tc-hz text { font-size: 7px; font-weight: 700; text-anchor: middle; fill: #fff; paint-order: stroke; stroke: rgba(16, 38, 46, .6); stroke-width: 1.6px; pointer-events: none; }
+  #pharmacyPage .ph-tc-hzn { margin-top: 8px; font-size: var(--fs-12); }
+  #pharmacyPage .ph-tc-hzn > b { display: block; font-size: var(--fs-11); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ph-soft); margin-bottom: 2px; }
+  #pharmacyPage .ph-tc-hzn .ph-gd-line i { display: none; }   /* the gold dot means "on today's chart"; a place's notes here are all of them */
   /* the 2026-10-26 tidy-up: the Flash pair under the tongue pair in the one photo column; Reads as and Clear share a line */
   #pharmacyPage .ph-tgz-sumrow { display: flex; align-items: flex-start; gap: 8px; }
   #pharmacyPage .ph-tgz-sumrow .ph-tng2-sum { flex: 1 1 auto; min-width: 0; min-height: 32px; box-sizing: border-box; margin: 0; }
@@ -109851,6 +109868,15 @@ or changing anything in Cliniko.
   }
   function phTngClick(e) {
     const T0 = e.target, host = T0 && T0.closest ? T0.closest("[data-tng-host]") : null;
+    // her healthy tongue: the icon / ✕ opens or closes it, a place on it shows that place's notes (view only, nothing is written)
+    const hb = host ? T0.closest("[data-tng-healthy]") : null;
+    if (hb) {
+      const v = hb.dataset.tngHealthy;
+      if (v === "open") { phTngHealthy.open = !phTngHealthy.open; phTngHealthy.zone = ""; }
+      else if (v.indexOf("zone:") === 0) phTngHealthy.zone = phTngHealthy.zone === v.slice(5) ? "" : v.slice(5);
+      phTngHealthyRepaint();
+      return true;
+    }
     // the comparison's own taps (Tongue | Sublingual, a photo in the strip) only change what is shown, nothing is written
     const cmpB = host ? T0.closest("[data-tcmp-kind], [data-tcmp-sel], [data-tcmp-tab]") : null;
     if (cmpB) {
@@ -138711,6 +138737,52 @@ or changing anything in Cliniko.
     const lastTile = p ? `<div class="ph-tc-tile">${hd("Last", phRenDateKeyOf(p) === today ? "today" : phShortDate(phRenDateKeyOf(p)))}${open(p)}</div>` : "";
     return { html: `<div class="ph-tc-photos ph-tgz-flash">${todayTile}${lastTile}</div>`, two: !!p };
   }
+  // ---- her healthy tongue (2026-11-03: "for this page to use a photo of healthy tongue that i supply"; her picks: a small icon
+  // beside the photo, a tap opens it beside today's photo until closed, its places drawn over it, the top only, added in the app).
+  // One photo per clinic login, kept small in the synced data (PHARMACY.healthyTongue = { img: a JPEG data URL, longest side 420 px,
+  // at }) so it is on every device of that login; patient photos stay in their own store. The Tongue page and the Guide's Tongue map
+  // draw this same photo column, so they mirror each other. View state (phTngHealthy) is never saved. ----
+  const phTngHealthy = { open: false, zone: "" };
+  const PH_TNG_HEALTHY_ICO = `<svg viewBox="0 0 40 50" aria-hidden="true"><path d="M5 5 Q20 1 35 5 L35 26 Q35 47 20 47 Q5 47 5 26 Z" fill="#E59E9A" stroke="currentColor" stroke-width="3"/><path d="M20 12 L20 38" stroke="currentColor" stroke-width="2"/></svg>`;
+  // the places on a tongue photo (root = Lower at the top, tip = Upper at the bottom, the sides down each edge), the Guide's note places
+  function phTngHealthyZonesSvg() {
+    const z = phTngHealthy.zone, g = (k, lbl, rects, lx, ly) => `<g class="ph-tc-hz${z === k ? " on" : ""}" data-tng-healthy="zone:${k}" role="button" aria-label="${esc((PH_GD_TNG_ZONE.find(x => x[0] === k) || [0, lbl])[1])}"><title>${esc((PH_GD_TNG_ZONE.find(x => x[0] === k) || [0, lbl])[1])}</title>${rects.map(([x, y, w, h, r]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}"/>`).join("")}${lx ? `<text x="${lx}" y="${ly}">${lbl}</text>` : ""}</g>`;
+    return `<svg class="ph-tc-hzs" viewBox="0 0 100 133" preserveAspectRatio="none">${g("root", "Lower", [[22, 8, 56, 30, 8]], 50, 26)}${g("middle", "Middle", [[26, 44, 48, 46, 8]], 50, 70)}${g("tip", "Upper", [[28, 96, 44, 30, 14]], 50, 114)}${g("sides", "Sides", [[5, 40, 15, 56, 7], [80, 40, 15, 56, 7]])}</svg>`;
+  }
+  function phTngHealthyTile() {
+    const h = PHARMACY.healthyTongue, img = h && h.img;
+    const file = lbl => `<label class="ph-visit-photoadd">${img ? "" : `<svg class="icn" aria-hidden="true"><use href="#i-camera"/></svg> `}${lbl}<input type="file" accept="image/*" data-tng-healthy-file hidden></label>`;
+    return `<div class="ph-tc-tile ph-tc-healthy"><div class="ph-tc-hd"><span class="lbl">Healthy</span><button type="button" class="ph-tc-hx" data-tng-healthy="open" aria-label="Close the healthy tongue" title="Close">✕</button></div>${img
+      ? `<div class="ph-tc-hp"><img src="${esc(img)}" alt="A healthy tongue">${phTngHealthyZonesSvg()}</div>${file("✎ Change")}`
+      : `<div class="ph-tc-empty">No photo${file("Add healthy photo")}</div>`}</div>`;
+  }
+  // under the pair: the notes of the place tapped on the healthy tongue, each a door to its note in the Guide
+  function phTngHealthyNotes() {
+    if (!(PHARMACY.healthyTongue && PHARMACY.healthyTongue.img)) return "";
+    const z = PH_GD_TNG_ZONE.find(x => x[0] === phTngHealthy.zone);
+    if (!z) return "";
+    const notes = phTongueNotes()[z[0]] || [];
+    return `<div class="ph-tc-hzn"><b>${esc(z[1])}</b>${notes.length ? notes.map(n => phGdLineHtml("", n.trigger, n.points, "tongue:" + n.id)).join("") : `<span class="faint">No notes</span>`}</div>`;
+  }
+  // every tongue chart on the page draws again (the profile's and the Guide's are the same column)
+  function phTngHealthyRepaint() {
+    [...new Set([...document.querySelectorAll("#pharmacyPage [data-tng-host]")].map(h => h.dataset.tngName))].forEach(n => { if (n) phTngRefresh(n); });
+  }
+  // Add healthy photo / ✎ Change: the camera or a file, made small, saved for the clinic
+  document.addEventListener("change", async e => {
+    const el = e.target;
+    if (!el || !el.matches || !el.matches("[data-tng-healthy-file]")) return;
+    const f = el.files && el.files[0];
+    if (!f) return;
+    try {
+      const img = await phRenBlobToDataUrl(await phRenCompressToBlob(f, 420, 0.8));
+      PHARMACY.healthyTongue = { img, at: Date.now() };
+      if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
+      presSavedToast("Healthy photo saved");
+      phTngHealthy.open = true;
+      phTngHealthyRepaint();
+    } catch (err) { presSavedToast("That picture couldn't be read. Try another."); }
+  });
   // her 2026-10-24 build (mock tongue-jiao-mock-2026-10-24.html, 8 picks + "use this chip tab"): the chip rows are four tabs in the
   // Fang Bing Ren switch's own bar (Body · Coat · Jiao · Sublingual, each with its count); Shape and Marks are dropdowns with their
   // picks as chips; red tip has its own chip (red in the upper jiao); the Jiao tab is the tongue map with five zone lines, a zone
@@ -138724,16 +138796,18 @@ or changing anything in Cliniko.
     const pick = phTngCmpPick(name, kind, st.sel), today = keyOf(TODAY), nm = kind === "sub" ? "Sublingual" : "Tongue photo";
     const shotLbl = r => PH_REN_SHOT_LABEL[phRenShotOf(r)] || (kind === "sub" ? "Sublingual" : "Tongue");
     const shotAttr = kind === "sub" ? ` data-ren-tl-shot="1"` : "";
-    const hd = (lbl, em) => `<div class="ph-tc-hd"><span class="lbl">${lbl}</span><em>${esc(em)}</em></div>`;
+    const hd = (lbl, em, x) => `<div class="ph-tc-hd"><span class="lbl">${lbl}</span><em>${esc(em)}</em>${x || ""}</div>`;
     const open = r => `<button type="button" class="ph-tc-open" data-ren-tl-open="${esc(r.id)}" data-ren-tl-patient="${esc(pk)}" data-ren-tl-row="${esc(phRenRowKeyOf(r))}"${shotAttr} title="Open ${esc(nm.toLowerCase())}"><img src="${r.objectUrl}" alt="${esc(nm)}"></button>`;
     const add = txt => `<button type="button" class="ph-visit-photoadd" data-ren-cap-type="tongue"${kind === "sub" ? ` data-ren-cap-shot="sublingual"` : ""} data-ren-cap-patient="${esc(pk)}" data-ren-cap-name="${esc(name)}" data-ren-cap-date="${esc(today)}"><svg class="icn" aria-hidden="true"><use href="#i-camera"/></svg> ${txt}</button>`;
     let todayTile, pastTile = "", noLast = "", strip = "", stripN = 0;
+    // her healthy tongue's small icon sits in Today's header; open, the Healthy tile takes the earlier photo's place (Healthy | Today)
+    const hOpen = phTngHealthy.open, hIco = `<button type="button" class="ph-tc-hico${hOpen ? " on" : ""}" data-tng-healthy="open" aria-pressed="${hOpen}" title="${hOpen ? "Close the healthy tongue" : "Healthy tongue"}" aria-label="Healthy tongue">${PH_TNG_HEALTHY_ICO}</button>`;
     if (!pick) {
-      todayTile = `<div class="ph-tc-tile">${hd("Today", phShortDate(today))}<div class="ph-tc-empty">loading…</div></div>`;
+      todayTile = `<div class="ph-tc-tile">${hd("Today", phShortDate(today), hIco)}<div class="ph-tc-empty">loading…</div></div>`;
     } else {
       todayTile = pick.cur
-        ? `<div class="ph-tc-tile">${hd("Today", [phShortDate(today), kind === "t" ? PH_REN_SHOT_LABEL[phRenShotOf(pick.cur)] : ""].filter(Boolean).join(" · "))}${open(pick.cur)}${add("Add another")}</div>`
-        : `<div class="ph-tc-tile">${hd("Today", phShortDate(today))}<div class="ph-tc-empty">None yet${add("Add today's")}</div></div>`;
+        ? `<div class="ph-tc-tile">${hd("Today", [phShortDate(today), kind === "t" ? PH_REN_SHOT_LABEL[phRenShotOf(pick.cur)] : ""].filter(Boolean).join(" · "), hIco)}${open(pick.cur)}${add("Add another")}</div>`
+        : `<div class="ph-tc-tile">${hd("Today", phShortDate(today), hIco)}<div class="ph-tc-empty">None yet${add("Add today's")}</div></div>`;
       const p = pick.pick, pd = p ? phRenDateKeyOf(p) : "", isLast = p && p === pick.last;
       if (p) pastTile = `<div class="ph-tc-tile">${hd(isLast ? "Last" : "Past", [pd === today ? "today" : phShortDate(pd), isLast ? phTngCmpAgo(pd) : "", kind === "t" && !(pick.cur && phRenShotOf(pick.cur) === phRenShotOf(p)) ? PH_REN_SHOT_LABEL[phRenShotOf(p)] : ""].filter(Boolean).join(" · "))}${open(p)}</div>`;
       else noLast = `<div class="ph-tgz-nolast">${pick.cur ? `First ${esc(nm.toLowerCase())} for ${phPro(name).o}` : "No earlier photo"}</div>`;
@@ -138765,10 +138839,11 @@ or changing anything in Cliniko.
     const tb = (k, l, n) => `<button type="button" role="tab" class="${tab === k ? "on" : ""}" aria-selected="${tab === k}" data-tcmp-tab="${k}">${l}${n ? `<span class="n">${n}</span>` : ""}</button>`;
     const tabs = `<div class="ph-fbr-switch ph-tgz-tabs"><span class="seg" role="tablist" aria-label="Tongue">${phTngStepTabs(t, tb, nJiao)}</span><span class="seg" role="tablist" aria-label="Fang Bing Ren"><button type="button" role="tab" class="${tab === "fbr" ? "on" : ""}" aria-selected="${tab === "fbr"}" data-tcmp-tab="fbr" title="${esc([...new Set(fb.labels)].join("\n") || "Fang Bing Ren")}">Fang Bing Ren${fb.n ? `<span class="n gold">${fb.n} ticked</span>` : ""}</button></span></div>`;
     const panel = tab === "jiao" ? jiaoP : tab === "fbr" ? fbrP : phTngStepHtml(t, tab, chip, redTip);
-    const flash = phTngCmpFlashHtml(name, pk);
+    const flash = phTngCmpFlashHtml(name, pk), hTile = hOpen ? phTngHealthyTile() : "";
+    if (hTile) { pastTile = ""; noLast = ""; }
     return `<div class="ph-tng2 ph-tng2-v6 ph-tgz">
-      <div class="ph-tgz-grid${pastTile || flash.two ? " two" : ""}">
-        <div class="ph-tgz-photos"><div class="ph-tc-photos">${todayTile}${pastTile}</div>${noLast}</div>
+      <div class="ph-tgz-grid${pastTile || hTile || flash.two ? " two" : ""}">
+        <div class="ph-tgz-photos"><div class="ph-tc-photos">${hTile}${todayTile}${pastTile}</div>${noLast}${hTile ? phTngHealthyNotes() : ""}</div>
         <div class="ph-tgz-side">
           ${tabs}
           <div class="ph-tgz-panel" role="tabpanel">${panel}</div>
