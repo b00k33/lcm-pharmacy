@@ -892,7 +892,7 @@ A notes-only formula that has become a scoring family (Wen Jing Tang, 2026-10-28
 conditions and source show on the family's card (`phGdfNoteIsFam`, `phGdfFamNoteId`).
 Details and tests: [Guide Families].
 
-## Guide — Tongue map, Pulse, Abdomen (linked to the record's own pages, 2026-11-03)
+## Guide — Tongue map, Pulse, Abdomen (linked to the record's own pages, 2026-11-03; LIVE build 20261103-233500)
 Each tab draws the **open record's LIVE chart** (the patient open behind the Guide, else her own record from Me: `phGdWho`) with
 the page's own builder, handlers and save (`phGdChartHtml`: `phTngHtml` / `phHxConstitPulseHtml` / `phAbdHtml`), so a tap in the
 Guide is on the profile and a tap there is here. Under it the notes (`[data-gd-notes]`, `phGdLinkRefresh(id)` after every chart
@@ -984,6 +984,7 @@ Under the pair, **Oxygen to energy** (her 2026-11-03 picks, BUILD-NOTES "Iron st
 (her thigh muscle on Pregnancy) → in her blood → in her egg (a muscle cell on Pregnancy). Red cells carry oxygen to the mitochondria,
 each with an iron drop in it, which make the energy in the gold bar. Enough iron | Low iron; it rests on Low. On first sight it waits,
 dimmed, while the chain plays, then lights lens by lens with enough iron and drops to Low. Words DRAFT. Code: `phIrOzHtml`, `phIrOzSet`.
+LIVE build 20261103-233500.
 
 State is `phIr` (view state, never saved).
 
@@ -1154,7 +1155,7 @@ in sizes (75: McDonald's 46, Hungry Jack's 29) is one row in + Add (its sizes on
 (S · M · L) in the food chips, and its chips swap it to that size's own row; one logged keeps its size. A drink sold as one cup, can
 or bottle has none. Then her "yes" (same day): a shop's food sold in sizes joins the same way (28: fries, sundaes, chips, sides,
 Oporto's and El Jannah's chicken Quarter · Half · Whole, El Jannah's tubs; "· Small" or "(medium)" names); in its own place's pane
-the joined row drops the place's name. Code: "DRINK SIZES" (`phDkSib`, `phDkSizes`, `phDkSzHtml`; a meal's change goes through `phMealAmtTo`, a
+the joined row drops the place's name (LIVE build 20261103-233500). Code: "DRINK SIZES" (`phDkSib`, `phDkSizes`, `phDkSzHtml`; a meal's change goes through `phMealAmtTo`, a
 repeating drink keeps its base through `phMealRepQ`'s `ob`). **SNACKS TABLE · MILK TEA SUGAR** (her 2026-11-03 "i need to be able
 to adjust the milk tea to reduce sugar. i dont like thqat when i tap my snacks it deletes, remove that"; her 8 picks; LIVE build 20261103-201800): a
 tap on a snack in the planner no longer takes it out; it opens the day's Snacks · drinks with the snacks as a meal's table on top (−
