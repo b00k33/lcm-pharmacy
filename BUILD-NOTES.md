@@ -10450,3 +10450,36 @@ Abdomen, on Abdomen = Meals; `phFlowGoPlanTab("abdomen")` landed on her profile 
 visit as before; Prescriptions search 4 → Jane 2 → Zzqx 0 → clear 4. **LIVE** build 20261103-131400 (publish 5acc6557); Tongue and
 Pulse went live first in build 20261103-131300 (3a46eb80 rode along with another session's push).
 **LIVE (Cycle page: two halves, above):** build 20261103-131300 (publish 14fad5cd; 3a46eb80 rode along), still in 20261103-131400. Her devices need the gold Update.
+
+## 2026-11-03 · Meals week box
+Her word, with a picture of her Meals page on a computer: "top row buttons control table below, why are they separated? i need a
+better ui experience here this disjointed disconnected". The toolbar (‹ week › · Today · Grid | Table | Numbers | Photos · Plan ·
+Shop · Eat · Check · More ▾) sat on top, the Today block (fast + goals) under it, and the week table under that: the buttons were
+about 200 px from the table they work. Mock `meals-week-bar-mock-2026-11-03.html` (artifact P78kGiPc57Z25erjAo5Vi9): Now · A Today
+first · B One frame · C Eat · Check on Today, plus the parts. **Her 8 picks, all recommended:** B · one frame; the views as tabs
+into the table; all four steps on the week bar; the column inside the box; the bar in her record's light tint; the key as the
+box's foot; the bar stays in view; the phone unchanged. Built the same day (commit a12e0b4d).
+- **A computer:** `phMplHtml` draws the Today block first, then `.ph-mpl-card.ph-mpl-wkbox`: ONE white box with a hairline and
+  10px corners. Its bar (`phMplToolbarHtml`, `.ph-mpl-tbar2`) is the box's top on `--ph-herb-tint`: ‹ week › · Today
+  (`.ph-mpl-wkg`), the views as tabs (`.ph-mpl-tabs`: the open one white, so it runs into the table; still `data-mpl-lay`,
+  `aria-pressed`), the steps, More ▾. Inside: the table (12px sides), the column (`.ph-mpl-col`, 380px with 10px padding, so its
+  cards keep their 360) on a pale side drawn as the body's fill (no line), the key along the foot (`--ph-paper`, a top hairline).
+- **Stays in view:** the bar is sticky under the patient's name band (`phMplStickyTop` sets `--mpl-top` from `.ph-pres-band`, as
+  the Pulse and Today's visit pages do); the patient panel clips instead of hiding while the box shows
+  (`.ph-pres-panel:has(.ph-mpl-wkbox) { overflow: clip }`, as Pulse, Abdomen and Today's visit), so the name band stays in view on
+  Meals too. The column sticks under the bar (`top: --mpl-top + --mpl-hd + 8px`).
+- **One row or two:** one row when the four groups fit, else two (`.two`: ‹ week › · Today … More ▾ over the tabs … the steps), so
+  every step shows whole and the tabs still touch the table. `phMplStickyTop` measures after each paint and again when the box
+  changes width (a ResizeObserver: the side menu folding slides it); `phMplTwo` keeps the last answer so the next paint starts
+  right. On the test record one row needs about 1140 px (the steps with their words: "Shop 1 to buy", "Eat Dinner 6:30 pm",
+  "Check 1 to answer"); with the side menu open at 1220 the box is 945 to 1101 px, so two rows.
+- **Her 2026-11-02 "no frames" (Body pages, one look)** keeps for the other Body pages; the week box is her newer pick for Meals'
+  week only. No side line anywhere in it (her same-day rule).
+- **The phone** is unchanged (the day card with its steps on top; no box).
+- **Tested** (test copy on port 8989, my own copy of the `mg-shot.html` harness: a made-up "me" with 8 days of meals): the Today
+  block first, the box under it; Table, Grid, Numbers and Photos each open as the white tab and fill the box (no sideways scroll);
+  Check opens How did it sit in the pale side; More ▾ opens over the table; scrolled, the bar sits at 74 px under the name band
+  and the column under the bar; one row at a 1181 and 1341 px box, two rows at 945 and 1101; no repeated re-measuring once it
+  settles; phone 375: no box, the day card as before, no sideways scroll; no console errors. Pictures `shots/meals-week-box-*.jpg`.
+- **Not tested:** her own record (her real step words decide one row or two at her width), and a meal dragged to another day
+  inside the new box (the drag code is unchanged).

@@ -1117,15 +1117,16 @@ line, ↺ Same as usual on a day of its own. On HER record (the My profile recor
 Patterns (`diet_cool` / `diet_warm`, source Diet, DRAFT wording); Fang Bing Ren has no diet sign (food reactions pre-tick its signs).
 **Meals planner** (her Diet page, her word "change diet to Meals", fasting merged in), laid out as the **MEALS TABLE** (her synth22
 2026-11-01, "a table format for meal planning and recording ... clean, like the appointments page"; her picks on
-meals-table-mock-2026-11-01.html, then "include interactive animations and workflow elements"). A computer: ONE card = the toolbar
-(‹ span › · Today · **Grid | Table | Numbers**, this device's `lcm-mpl-view`, Table first · the steps **Plan n/7 · Shop n to buy · Eat <the next meal> ·
+meals-table-mock-2026-11-01.html, then "include interactive animations and workflow elements"). A computer (MEALS WEEK BOX, her 2026-11-03 picks): **the goals** first,
+then the week as ONE box, its bar on top in the record's light tint, pinned under the name band while the week scrolls (two rows
+when its words do not fit one): the bar (‹ span › · Today · the tabs **Grid · Table · Numbers · Photos**, the open one white, this device's `lcm-mpl-view`, Table first · the steps **Plan n/7 · Shop n to buy · Eat <the next meal> ·
 Check n to answer** (Eat names today's next meal and its time, "Dinner 6:30 pm", ✓ once all had, a dinner the fast covers left out;
 MEALS GOALS, her pick 7), the first not done filled, each a door: next week · Shopping in the column (made when there is none) · today's
 next meal · How did it sit for each meal she had 1½ h ago not yet answered · **More ▾** = Copy last week, Recipes, Targets (the
-Shop step is the Shopping list's one door, MEALS GOALS), then **the goals** (Meals goals, below: the fasting dial, Reach, Stay under;
-the Fast block's Start · Continue / Stop beside its dial and History › on its heading, FAST BLOCK; the clock bar and the Fast row
-are gone), then the week with a
-**column at the right** (Appointments' way): the meal's picker, Shopping, How did it sit, or a day (tap its name: water, numbers,
+Shop step is the Shopping list's one door, MEALS GOALS). The goals (Meals goals, below) hold the fasting dial, Reach, Stay under
+(the Fast block's Start · Continue / Stop beside its dial and History › on its heading, FAST BLOCK; the clock bar and the Fast row
+are gone). Inside the box (the key along its foot) the week with a
+**column at the right** on a pale side (Appointments' way): the meal's picker, Shopping, How did it sit, or a day (tap its name: water, numbers,
 bars, Copy this day). The week narrows and scrolls under it; the day and the four numbers stay in view. **Table**: a row a day,
 Breakfast · Lunch · Dinner · Snacks · drinks · Supps · herbs (a day's kJ · P · C · F are the goals' ticks; the number columns went,
 MEALS GOALS). **Grid**: days across, a block a meal (had = solid teal), Snacks, Supplements (its Total row went the same way). A meal
