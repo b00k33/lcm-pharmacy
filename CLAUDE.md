@@ -407,7 +407,8 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   page; every bar a joined 6px bar with a line between segments (Fitness' workout kinds and body areas too, from 641px; they wrap
   as chips on the phone); every ‹ › a 32px circle on the colour's line; a section's name is the capitals label (10.5px, 11px on
   the phone; Habits' head is its count "n of m today", the rail names the page); today = the gold tint, no left line; **no
-  frames** (the record card is the frame; space and labels group). Data colours stay (cycle phases, food rings, habit dots, gym
+  frames** (the record card is the frame; space and labels group; one exception, her 2026-11-03 pick: Meals' week is ONE box,
+  its bar on top with the views as tabs, see "Meals week box" in BUILD-NOTES). Data colours stay (cycle phases, food rings, habit dots, gym
   booking colours). The hand block "Body pages, one look" (before `</style>`); `.ph-cp` is shared, so a patient's Cycle page
   wears the same shapes in the patient's colour. BUILD-NOTES "Body pages, one look".
 - **Contrast:** text on a tinted card uses the family's `-press` step when
