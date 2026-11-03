@@ -10540,7 +10540,8 @@ same turn "oragnise routines into categories e.g. work health self care etc". Mo
 gold; start and end, the end small under each start; a time opens that routine, the name the first; the phone keeps the name
 while the days scroll, today in view; the Me drawer's short list stays a list; then A · a few categories, in her words' order,
 Code and the invoice runs in Work, Sleep in Health, Night and Morning in Self-care. The categories replace the Morning ·
-Afternoon · Evening rows she had kept in the first round (her newer word).
+Afternoon · Evening rows she had kept in the first round (her newer word). Built the same day (commit 8e925324); **LIVE in
+build 20261103-134900** (her "push live", with the Meals fat / Micros commit 7ade8d3e at her word; publish 125f594f).
 - **The page** (`phMeRtsPageHtml`, ROUTINES TABLE): one table. A row a routine; routines with the same name (trimmed, any case)
   join, so her seven Travel rows are one. The columns are this week, Mon to Sun (`phMplWeek`), today gold. Each day's cell holds
   that day's runs from `phMeDayItems` (so a moved day shows its move and a paused trip day shows nothing), each a small faint
