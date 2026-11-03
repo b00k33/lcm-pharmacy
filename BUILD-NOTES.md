@@ -10447,5 +10447,6 @@ day from `abdomen.at`), `presMineCycleNorm` takes plan + abdomen too, and a Care
 The Abdomen page repaints through `[data-abd-host]` anywhere in `#pharmacyPage`, so nothing else changed. **Tested:** her Body = Cycle ·
 Tongue · Pulse · Abdomen · Meals …; flat + Whole abdomen saved `abdomen.at`, the chip repainted on, the row read "Today"; Next on Pulse =
 Abdomen, on Abdomen = Meals; `phFlowGoPlanTab("abdomen")` landed on her profile page; the patient's Abdomen saves and ticks under Today's
-visit as before; Prescriptions search 4 → Jane 2 → Zzqx 0 → clear 4.
+visit as before; Prescriptions search 4 → Jane 2 → Zzqx 0 → clear 4. **LIVE** build 20261103-131400 (publish 5acc6557); Tongue and
+Pulse went live first in build 20261103-131300 (3a46eb80 rode along with another session's push).
 **LIVE (Cycle page: two halves, above):** build 20261103-131300 (publish 14fad5cd; 3a46eb80 rode along), still in 20261103-131400. Her devices need the gold Update.
