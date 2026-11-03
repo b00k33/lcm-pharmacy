@@ -1129,7 +1129,17 @@ their own under a meal's drink, beside the amount in a Try, after it in a dish's
 in sizes (75: McDonald's 46, Hungry Jack's 29) is one row in + Add (its sizes one bar, its place's name beside it), one chip
 (S · M · L) in the food chips, and its chips swap it to that size's own row; one logged keeps its size. A drink sold as one cup, can
 or bottle has none. Code: "DRINK SIZES" (`phDkSib`, `phDkSizes`, `phDkSzHtml`; a meal's change goes through `phMealAmtTo`, a
-repeating drink keeps its base through `phMealRepQ`'s `ob`). A dish's **Made of** adds its numbers itself
+repeating drink keeps its base through `phMealRepQ`'s `ob`). **SNACKS TABLE · MILK TEA SUGAR** (her 2026-11-03 "i need to be able
+to adjust the milk tea to reduce sugar. i dont like thqat when i tap my snacks it deletes, remove that"; her 8 picks; not live yet): a
+tap on a snack in the planner no longer takes it out; it opens the day's Snacks · drinks with the snacks as a meal's table on top (−
+amount +, a drink's size chips, kJ, ✕ with Undo; `phMealSnTblHtml`, a row's lid `<day>|s|@<its time>` read by `phMealSnAt`, its
+amount through `phMealAmtTo` → `phMealSnackSet`, which keeps the time, so a photo's dot stays) and the add list under it. A
+supplement's tap opens its list the same way: what she took is a table on top, ✕ takes one out. A milk tea (CHAGEE's, not BO·YA's
+less / no sugar rows, and a bubble milk tea; `phFoodSgOk`) has a Sugar 0 · 25 · 50 · 75 · 100% chip under its name; the level is
+kept beside the snack (`sg`, so an older build still shows the drink, at full sugar) and read as `food:<id>*<q>^<level>`
+(`phMealQ`'s `sg`, `phMealSnShow`); the added sugar left out comes off sugar, carbs and 17 kJ a gram, the milk's own 1.4 g a 100 ml
+stays (`phFoodNut`'s third argument); a milk tea added again starts at her last level for it (`phMealSgLast`); the grid and the
+toasts say "… Milk Tea · 50%" (`phMealSgW`), and on the phone a long snack name takes a second line. A dish's **Made of** adds its numbers itself
 (typed numbers only for what is not on the list); with no Made of a dish counts by itself (`phDishAuto`: the Thisbowl bowl in its
 name, else its typed ingredients matched) and Made of starts filled with that bowl. Nutrients add every item. The time is a small
 ✎ field. A day's numbers line (kJ · P · C · F) opens 17 bars against **Targets** (C22's four + NHMRC women 31–50 + carbs 50 g, each hers;
@@ -1213,7 +1223,7 @@ the Me drawer's Shopping (`src: "plan"`); Targets. **Recipes** (her 2026-10-28 "
 Targets in More ▾ and the phone's chips; `phRecipesHtml`, sheet kind "recipes"): every dish of hers in one list (a
 mark's own slot, name wraps, kJ a serve · n prep, ✎), Search recipes, a row = the dish editor, + New recipe; the editor's Save /
 Delete / ✕ come back to the list. LIVE build 20261028-233200. **Supplements · herbs** (her 2026-10-28 "add a row for supplements and herbs"; today and the days before): a chip a thing
-she took (a tap takes it out, with Undo), + opens a list: Today (✓), Taking (her Supplements page: the four switched on and her
+she took (a tap opens the list, her 2026-11-03 pick), + opens it too: what she took (a table, ✕ takes one out, with Undo), Taking (her Supplements page: the four switched on and her
 own), Before (her earlier days); as she types, the supplements list and her LCM formulas and jars (`phAcuFPickStock`), and Add
 "<typed>" (Enter too). Stored `"<day>|h"` {list [{n, at, src?}]}; not counted in her numbers. Code: `phMplSupp*`, `phMealSupp*`.
 **More** a day = water in ml (a glass 250 ml; the button shows the day's ml: the glasses she tapped + plain water logged in a meal
@@ -1311,7 +1321,7 @@ the whole meal too · red past 100% · the phone a line): pointing at a food sho
 with its amount, its meal + had / planned / usual (or "not added yet", Snack, Drink), then kJ · Protein · Carbs · Fat, each its
 amount, a bar of its share of her day's goal (`phDietGoal`) and the %; kJ and carbs past 100% turn the bar red (`PH_MAC_RD`, her
 rings' rule). Where: a food in a Meals table cell, the cell's empty part = the whole meal ("2 foods · planned", its drag words under
-it), a snack · drink chip ("Tap to remove" under it), a row of the open meal, and a row of + Food's list before adding (Everyday ·
+it), a snack · drink chip, a row of the open meal, and a row of + Food's list before adding (Everyday ·
 Drinks · Menus · My dishes; not a patient's Diet sheet). Words that were a hover title (close match, her reactions, drag, remove) go
 under the box instead. Every amount is `phDietSum([[x]]).t`, the ring's own sum. Phone (no hover): one line under each food of the
 open meal ("16% kJ · 19% P · 92% C · 5% F", a red dot past 100%); no box. Code: "FOOD SHARE" (`phMacFsOf` / `phMacFsRows` /
