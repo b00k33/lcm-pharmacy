@@ -10763,3 +10763,44 @@ goals with the try as stripes, tries as tabs. Her 8 picks, all the recommended o
 - **Pages checked:** Meals (the goals, Try, Table, the phone's day); the dish editor (Save as dish); a day's meal (Plan it).
 **LIVE in build 20261103-143900** (her "push", publish 54459c89; checked on the live page: the build stamp, `phMtryHtml`, the Try tab).
 The Iron page's taken-up count (277a6673) went live in the same build. The mock moved to `mocks/`. Her devices need the gold Update.
+
+## 2026-11-03 · Seafood in the food list
+Her word: "add seafood e.g. prawns clams baby clams mussels fish salmon sashimi etc etc". Before: 10 seafoods sat in Protein (salmon,
+canned salmon and tuna, prawns, mussels, oysters, sardines, barramundi, snapper, mackerel), the fish as cooked numbers (AFCD grilled or
+baked, no fat). **Her picks (popup with pictures, all recommended):** all four sets (shellfish, squid, octopus; more fish; sashimi +
+sushi; smoked, roe, fish balls); its own Seafood group, the 10 moved in; pieces where natural; cooked as eaten (sashimi raw, smoked as it
+comes). Memory project_lcm_seafood_2026_11_03.
+- **Group `sf` "Seafood"** after Protein in `PH_FOOD_GRP`: an ordinary group like Protein (a section of All foods and of the dish
+  editor's list, A–Z; on the shopping list). 57 rows: the 10 from Protein moved in (their group only; their words gain "seafood" and
+  their Vietnamese and Chinese names: cá hồi, tôm, vẹm, hàu …) and 47 new; PH_FOOD 1091. The Iron page names its foods by id, unchanged.
+- **The 47.** Shellfish, squid, octopus: Abalone, Baby clams (hến), Clam (vongole), Pipi, Cockle, Scallop, King prawn, Crab meat,
+  Lobster, Moreton Bay bug, Squid / calamari, Octopus, Cuttlefish. Fish (fillets, 150 g usual): Basa, Bream, Flake (shark), Flathead,
+  Gemfish, Hoki, Kingfish, Mullet, Ocean trout, Rainbow trout, Silver perch, Tilapia, Tuna, yellowfin, Whiting; Eel (100 g). Sashimi
+  by the slice (15 g, 6 usual): salmon, salmon belly, tuna, kingfish, ocean trout; Scallop sashimi by the scallop (30 g); nigiri by
+  the piece (salmon, tuna, kingfish: 20 g sushi rice + a 15 g slice; prawn: + a 10 g cooked prawn; 2 usual); Salmon roe (ikura).
+  Smoked salmon, Fish roe, Fish ball, Fish cake, Crab stick, Battered fish (a fish and chips shop's flake, 222 g), Crumbed fish (60 g),
+  Fish finger (22 g). Search words carry the Vietnamese and Chinese names (nghêu, hến, sò điệp, mực, bạch tuộc, cá viên, 鱼丸 …).
+- **Numbers.** AFCD Release 3 where it has the food, cooked with no fat (fish baked or grilled; squid pan-cooked; octopus boiled; crab
+  and lobster steamed; scallop with its roe), raw for sashimi; USDA through Health Canada's Canadian Nutrient File for clams (pipi),
+  cuttlefish, eel, fish roe, crab sticks; MEXT 2023 for the shijimi clam (baby clams: boiled, grams of meat), the Manila clam (vongole),
+  the bloody clam (cockle, sò huyết's cousin), canned abalone, ikura, steamed fish paste (fish ball: no table measures Asian fish balls)
+  and fried fish paste (fish cake). Sushi rice worked out: AFCD white rice 92.8%, vinegar 4.2%, sugar 2.3%, salt 0.7%. Choline: USDA's
+  for the same animal, in step with protein (clam, abalone, scallop, squid, octopus, crab, lobster, salmon, trout, tuna, tilapia, roe);
+  "not counted" for fish USDA has none for (basa, bream, flathead, kingfish …) and the fish pastes; copper AFCD leaves out of squid and
+  octopus: USDA's, in step with protein. MEXT gives no sugars for clams or roe: sugar "not counted" there (a day with clams says so).
+  Close matches said so in the hover: abalone (canned), baby clams, vongole, pipi, cockle, Moreton Bay bug (lobster), salmon belly
+  (the fillet's fat), scallop sashimi (with roe), fish ball, fish cake. Built by a script from the sources (scratchpad `sf-build.pl`),
+  each row's source in its hover (`PH_FOOD_SRC`); the Targets credit line names seafood's sources and sizes.
+- **Pieces.** A king prawn 40–50 g whole, 45% meat (Sydney Fish Market) = 20 g raw, 15 g cooked (AFCD's raw and cooked protein); a
+  scallop's meat 13 g (Sydney Fish Market), 10 g cooked; a pipi 10 g of meat (Sydney Fish Market: 8–12 g); a Manila clam 2 g of meat
+  and a sashimi slice 15 g, a Hokkaido scallop 30 g (Eatreat's standard weights, by a registered dietitian); a cockle 3 g (about 90 to
+  a kilo in the shell, 25% meat by MEXT's refuse); a fish ball and a crab stick about 15 g (no source gives one).
+- **Tested** (test copy on port 8998, the `mg-shot.html` harness, made-up data): 1091 foods, 57 in `sf` with 19 numbers and a hover
+  each; the groups d, g, f, v, p, sf, n …; the add list: Seafood after Protein, 56 A–Z (Salmon in her Everyday top 10); searches
+  seafood (57), clam (Baby clams (hến), Clam (vongole), Cockle, Pipi), sashimi (6), nigiri (4), hen, muc (Cuttlefish, Squid / calamari),
+  tom (King prawn, Prawns, Lobster), fish and chips (Battered fish), 鱼丸 (Fish ball); the hover on Salmon sashimi ("6 slices salmon
+  sashimi" 869 kJ, 18 g protein, its source); wording "12 clams (vongole)", "6 slices salmon sashimi", "8 king prawns", "2 pieces
+  salmon nigiri", "1 piece battered fish"; 12 clams added to a day on the phone: iron +0.5 mg, iodine +13 µg, "sugar not counted";
+  50 g baby clams = 7.5 mg iron, 41 µg B12; phone 375: the snack sheet's search, no sideways scroll; Prescriptions search Zz → 1
+  match, Qqx → 0, clear → all; no console errors (the shop-foods file 404s in the test copy only). Pictures `shots/seafood-*-2026-11-03.*`.
+- **Not tested:** her own record and phone.
