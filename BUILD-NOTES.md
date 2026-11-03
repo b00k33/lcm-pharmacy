@@ -10943,3 +10943,6 @@ Memory project_lcm_seaweed_noodles_2026_11_03.
   → found, Qqx → none, clear → all; no console errors (the shop-foods file 404s in the test copy only). Pictures
   `shots/noodles-*-2026-11-03.*`, `shots/seaweed-kombu-hover-2026-11-03.png`.
 - **Not tested:** her own record and phone.
+**LIVE in build 20261103-163700** (her "push live", published by the other session with its "One body, more real" 932500f8: publish
+1a368014; checked on the live page: the build stamp, the Instant noodles group, the packet unit, the seaweed rows). Her devices need the
+gold Update.
