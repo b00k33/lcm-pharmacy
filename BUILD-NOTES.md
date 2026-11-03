@@ -11020,3 +11020,37 @@ Would you like those on the same body too?". All three steps now draw the Meals 
   `phMbdSvg()` / `("mbd0")` as before. No console errors.
 - **Not tested:** reduced motion in a real browser setting, the Key2, the Meals Try tab with her record (its code path is unchanged).
 - **Pages checked:** Guide › Iron (steps 1, 2, 3). No new words.
+
+## 2026-11-03 · Drink sizes
+Her message (to the iron / one-body session): "also include drink size selection". Mocked inline (A size chips · B cups · C shop
+drinks join); her 3 picks, all the recommended ones:
+1. **Look: A · size chips:** Small · Regular · Large, the ml under each, beside the − / + amount (− / + still fine-tunes).
+2. **Where: every drink amount:** a meal's rows, a dish's Made of, the Try table.
+3. **Shop drinks join:** a shop's drink shows once with its own menu sizes; meals already logged keep their size.
+- **Sizes** (`PH_DK_CUP`, `PH_DK_GLASS`, `PH_DK_SHOT`): a café cup 220 · 350 · 470 ml (8 · 12 · 16 oz: long black, flat white,
+  matcha and hojicha lattes), a glass 200 · 250 · 375 ml (every other drink in ml: the milks, orange juice, water, coconut water,
+  Stockman's broths, her kept shop drinks), an espresso Single · Double (shots). A size chip writes that amount; one is lit when the
+  amount is exactly it (a 300 ml matcha latte lights none).
+- **A shop's drink in sizes** (`phDkSib`: a named place's drink rows "<name> · Small / Medium / Large / Regular", 2+ sizes; 75 drinks:
+  McDonald's 46, Hungry Jack's 29; KFC's are one size): its chips swap the item to that size's own row (`food:<id>*<q>`, the count
+  and the Food / Drinks side kept), so its numbers are that size's. Rows with chips name it without the size word ("Coca-Cola").
+  Fries, sundaes and other sized foods are not joined (drinks only, her word).
+- **The lists:** + Add food or drink draws a sized drink as one row, its name, its place, its sizes as one bar (a tap adds that size,
+  as Thisbowl's R | L; `phMlkDkRow`, through `phMlkFoodRow` so the lazy menu panes draw it too); it is left out when any size is in
+  the meal. The food chips (a dish, a Try, the snack picker) draw it as one chip with S · M · L (`dk` in `phFoodPickHtml`). Her top
+  10 and every group list keep one id per drink (`phDkRep`, `phDkFirst`).
+- **The chips** (`phDkSzHtml(x, at)`, `.ph-dksz`): a meal's row has them on a line of their own under it (the column is ~330 px;
+  beside the stepper they ran into it), the Try table beside the amount, a dish's Made of after the amount pill.
+- **The taps:** a meal's chip → `phMealAmtTo` (now also takes a whole item from a size chip), so a repeating drink asks Just today ·
+  Today on · Every day as an amount does; `phMealRepQ(day, sl, y, how, ob)` finds the repeat by the base it had (a shop size is
+  another base). A dish's chip sets `s.dr.fd[i]`; a Try's chip goes through `phMtryPut`.
+- **Tested** (a copy of HEAD 7a2122f6's index.html, port 8997, the test "Me" Testa Mine, signed out): Try: flat white Small → Large
+  (470), Coca-Cola Medium → Large (867 kJ), espresso Single → Double, + → 520 (no chip lit); its + Food search "coca-cola" = 3 chips
+  with S · M · L. A meal: flat white → Regular, Coca-Cola → Large, milk → Large (toast "375 ml milk" + Undo); a Coke repeating every
+  day → Small, Every day: tomorrow Small too; → Medium, Just today: tomorrow stays Small. A dish: matcha latte → Large, Coke →
+  Small. + Add · Drinks: 358 drink rows → 215, Coca-Cola left out while a size is in; Hungry Jack's Coke · Large added. KFC's Pepsi
+  (one size) no chips. Phone 375: the chips under the drink, no sideways scroll. Headless Edge picture of a meal's rows and + Add. No
+  console errors.
+- **Not tested:** her own record, her phone, the Key2.
+- **Pages checked:** Meals (a meal's rows, + Add food or drink, the Try table and its + Food), a dish's Made of. No new words but the
+  size names.
