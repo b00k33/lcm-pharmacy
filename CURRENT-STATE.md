@@ -1123,14 +1123,14 @@ words with − / + (**MEAL AMOUNTS**, her 2026-11-03 picks B + C: anything she c
 one, 1 → ¾ → ½ → ¼, and by its own step above, `phMealStepQ`; grams and ml keep their 25 g / 50 ml and floor; the amount is a field
 she types into, 0.5 · .25 · 1½ · 1/2, Enter or leaving keeps it, Esc puts it back, `phMealQParse` → `phMealAmtTo`, the one door − +
 take too; a dish's Made of the same, `phDishAmtType`; LIVE build 20261103-112900). **DRINK SIZES** (her 2026-11-03 "also include
-drink size selection"; her picks: size chips, on every drink amount, a shop's drink one row; not live yet): Small · Regular · Large
+drink size selection"; her picks: size chips, on every drink amount, a shop's drink one row; LIVE build 20261103-201800): Small · Regular · Large
 chips with the ml under each (a café cup 220 · 350 · 470 ml, a glass 200 · 250 · 375 ml; an espresso Single · Double), on a line of
 their own under a meal's drink, beside the amount in a Try, after it in a dish's Made of; − / + still fine-tunes. A shop's drink sold
 in sizes (75: McDonald's 46, Hungry Jack's 29) is one row in + Add (its sizes one bar, its place's name beside it), one chip
 (S · M · L) in the food chips, and its chips swap it to that size's own row; one logged keeps its size. A drink sold as one cup, can
 or bottle has none. Code: "DRINK SIZES" (`phDkSib`, `phDkSizes`, `phDkSzHtml`; a meal's change goes through `phMealAmtTo`, a
 repeating drink keeps its base through `phMealRepQ`'s `ob`). **SNACKS TABLE · MILK TEA SUGAR** (her 2026-11-03 "i need to be able
-to adjust the milk tea to reduce sugar. i dont like thqat when i tap my snacks it deletes, remove that"; her 8 picks; not live yet): a
+to adjust the milk tea to reduce sugar. i dont like thqat when i tap my snacks it deletes, remove that"; her 8 picks; LIVE build 20261103-201800): a
 tap on a snack in the planner no longer takes it out; it opens the day's Snacks · drinks with the snacks as a meal's table on top (−
 amount +, a drink's size chips, kJ, ✕ with Undo; `phMealSnTblHtml`, a row's lid `<day>|s|@<its time>` read by `phMealSnAt`, its
 amount through `phMealAmtTo` → `phMealSnackSet`, which keeps the time, so a photo's dot stays) and the add list under it. A

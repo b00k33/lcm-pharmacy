@@ -11101,3 +11101,4 @@ the milk tea to reduce sugar. i dont like thqat when i tap my snacks it deletes,
 - **Not tested:** her own record; the Key2's own dropdown; a build before this one reading a sugared snack (by reading: it sees
   `{v, at, sg}` and shows the drink at full sugar).
 - **Pages checked:** Meals Grid (snacks, supplements, a dinner), desktop and phone. New words: "Sugar" and the levels.
+- **LIVE in build 20261103-201800** on her "push live" (publish c24e1c82), with Drink sizes (9de15d57) and Iron steps 1 and 3 (7a2122f6), her pick to take all three. Her devices need the gold Update.
