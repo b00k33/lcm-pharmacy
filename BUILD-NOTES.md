@@ -10899,6 +10899,9 @@ Her 4 picks, all the recommended option except the first:
 - **Not tested:** the real Meals Try tab with her own record (the body was driven through a test host), the TCM view's new carbs
   way, reduced motion in a real browser setting, the Key2.
 - **Pages checked:** Meals (the body through its own functions) and the Guide's Iron tab (steps 1, 2, 3). Every new word is DRAFT.
+**LIVE in build 20261103-163700** (her "push live", publish 1a368014; checked on the live page: the build stamp, `phIrBody`,
+`PH_MBD_SPK`, `.mb-rbc`, the carbs `ex: "store"`). The other session's instant noodles and seaweed (66f39015) went live in the same
+build. Her devices need the gold Update.
 
 ## 2026-11-03 · Instant noodles + seaweed in the food list
 Her word: "add seaweed, and instant noodles especially mama noodles". Before: Nori was the only seaweed; no instant noodles on the list
