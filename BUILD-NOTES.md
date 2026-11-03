@@ -10703,3 +10703,24 @@ Memory project_lcm_stockman_meats_2026_11_03.
 **LIVE in build 20261103-141400** (her "push", publish 6d3d88c0; checked on the live page: the build stamp, the `sk` rows, Stockman
 Steaks in `PH_FOOD_MENUS` with its 4th place, `phFoodMade`). Another session's Iron teaching page (7ae3755d, 6b93cfe1) went live in
 the same build. Her devices need the gold Update.
+
+## 2026-11-03 · Iron page: what the body takes up
+Her "account for plant iron absorbing 2-20%" on the Iron teaching page. Mock v3 (8SRMuRk79NJ2zFiqBFDyuu) showed it working with A/B
+switches; her 4 picks, all the recommended option:
+1. **The red fills with iron taken up**, not eaten. The count reads "1.7 of 3.2 mg taken up", the eaten amount under it ("9.4 of 18 mg
+   eaten", `#phIrCntEat`).
+2. **The meal decides plant iron:** plants, eggs and grains 10% alone, 20% with a Vitamin C food, 2% with Tea or coffee (both on = 10%);
+   meat and fish 25%. Not shown as a 2–20% band.
+3. **Pregnant needs 6.8 mg taken up** (27 × 25%, the share the pregnancy RDI was worked out on); not pregnant 3.2 mg (18 × 18%).
+4. **The drops under her stay the mg eaten** (18 / 27, the same drops as step 1).
+- **Code:** `phIrUpTarget`, `phIrPct`, `phIrEat`, `phIrUp`, `phIrEaten`, `phIrTaken`, `phIrMgU` (two decimals under 0.1 mg) replace
+  `phIrK` / `phIrEff` / `phIrTotal` (the ×1½ / ×½ factors). Your table is Food · Serve · Eaten · Taken up, each food's % beside its
+  taken-up mg (green 20%, ink bold 2%); in a box under 420px the % drops under its number (`@container`). The flying drop shrinks to the
+  share taken up. Step 1's legend: "Meat and fish: 15–35% taken up", "Plants, eggs and grains: 2–20% taken up; most with vitamin C". The
+  source line adds Hurrell & Egli 2010. The food dot hangs left of a name that wraps. The numbers are DRAFT, like the page's words.
+- **Tested** (a copy of index.html): steak + spinach + lentils + tofu = 9.4 mg eaten, 1.7 taken up (alone), 2.1 (vitamin C), 1.3 (tea);
+  Pregnant → of 6.8 / of 27 and 27 drops; adding liver and oysters filled her, gold ring, "That's enough iron taken up for today. Well
+  done."; widths 1024, 1220 and 375 (no sideways scroll); step 1's legend; no console errors.
+- **Not tested:** her own record through a patient door, reduced motion, the Key2.
+- **Pages checked:** the Guide's Iron tab (steps 1 and 2); the doors (Blood tests, cycle card, Meals) only open it and did not change.
+Commit 277a6673. Not live: it rides on the next "push live".
