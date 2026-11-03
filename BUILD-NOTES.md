@@ -10723,7 +10723,7 @@ switches; her 4 picks, all the recommended option:
   done."; widths 1024, 1220 and 375 (no sideways scroll); step 1's legend; no console errors.
 - **Not tested:** her own record through a patient door, reduced motion, the Key2.
 - **Pages checked:** the Guide's Iron tab (steps 1 and 2); the doors (Blood tests, cycle card, Meals) only open it and did not change.
-Commit 277a6673. Not live: it rides on the next "push live".
+Commit 277a6673. **LIVE in build 20261103-143900** (her "push", with the Try tab; publish 54459c89). Her devices need the gold Update.
 
 ## 2026-11-03 · Meals: try a meal
 Her "for my meals page, i want a meal mock function where i add food to a mock meal table so i can experiment with seeing the micro
@@ -10761,3 +10761,5 @@ goals with the try as stripes, tries as tabs. Her 8 picks, all the recommended o
 - **Not tested:** her own record and a second device (the harness rewrites its record on each load, so the merge was tested by call),
   the Key2, reduced motion (nothing new moves).
 - **Pages checked:** Meals (the goals, Try, Table, the phone's day); the dish editor (Save as dish); a day's meal (Plan it).
+**LIVE in build 20261103-143900** (her "push", publish 54459c89; checked on the live page: the build stamp, `phMtryHtml`, the Try tab).
+The Iron page's taken-up count (277a6673) went live in the same build. The mock moved to `mocks/`. Her devices need the gold Update.
