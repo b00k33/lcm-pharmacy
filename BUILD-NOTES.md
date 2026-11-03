@@ -10531,6 +10531,8 @@ Memory project_lcm_fat_goal_foods_2026_11_03.
   column, no sideways scroll; Prescriptions search Zz → 1 match, Qqx → 0 match, clear → all; no console errors. Pictures
   `shots/micros-build-*-2026-11-03.png` (computer, phone, copper hover, popcorn, steak, skewer).
 - **Not tested:** her own record (her typed goals and real meals), her phone.
+**LIVE in build 20261103-134900** (it rode along with another session's Routines table push, publish 125f594f; checked on the live
+page: the build stamp, `PH_MPL_GL` with the four micros, PH_NUT's Copper, the steak, popcorn and skewer rows). Her devices need the gold Update.
 
 ## 2026-11-03 · Routines table
 Her words, with a picture of her Routines page (18 rows, 7 of them Travel): "organise into table format - show mock", then the

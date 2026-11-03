@@ -1074,7 +1074,7 @@ Nutrient File, its copy); matcha and hojicha powder from the Standard Tables of 
 source gives none (SG FoodID, AUSNUT, the chains, Thisbowl; a row of 17 numbers reads them as null); Thisbowl's June
 2026 sheet; groups include **Snacks** (packet chips; Popcorn · butter / plain / salted / sweet, her 2026-11-03 ask) and
 **Protein** (five steaks with their fat beside the lean Steak: Eye fillet, Rump, Scotch fillet, Sirloin, T-bone, AFCD grilled
-untrimmed; Lamb souvlaki skewer 75 g; her 2026-11-03 asks) and **Takeaway** (pies, sausage roll, kebabs,
+untrimmed; Lamb souvlaki skewer 75 g; her 2026-11-03 asks; copper, magnesium and these foods LIVE build 20261103-134900) and **Takeaway** (pies, sausage roll, kebabs,
 hot chips), her word; **Water** is a drink in ml, every number 0; **the menus and dishes** (her synth22 2026-11-01, whole menus,
 everyday dishes; BUILD-NOTES "Menus + dishes"): McDonald's 261, Hungry Jack's 257 (its whole menu, her 2026-11-02 "Yes, add them"), KFC 74 (the Wicked Wings row kept), Oporto 53,
 El Jannah 18, Chagee 10, Chinese 34 (Clear chicken soup: USDA's home-made chicken stock, her 2026-11-02 ask; Cumin lamb skewer (yang rou chuan, 羊肉串), 30 g, her 2026-11-03 ask), Vietnamese 38 (Cơm tấm sườn bì chả, Bún riêu, Bún mắm, Bánh xèo and Bánh cuốn with their plates, four bánh mì: thịt heo, heo quay, xíu mại, bì, and Wombok soup with pork mince, worked out from their parts, her 2026-11-02 asks; a Matcha latte and a Hojicha latte for each milk in Drinks (full cream, creamy, light, skim, oat, soy, almond; the milk in its name), which lists a place's drinks after the everyday ones), each place a group of its own; a place or dish with no numbers of its own counts
@@ -1197,7 +1197,7 @@ the hover; its ticks under) and the goals, **Reach** (protein, fat) then **Stay 
 panel's width, **Micros** (calcium, choline, copper, magnesium, A–Z in two columns; **MICROS**, her 2026-11-03 "include choline and
 calcium and copper and magnesium as well", picks B · Their own block + Women 31–50; mock `micro-goals-mock-2026-11-03.html`; memory
 project_lcm_fat_goal_foods_2026_11_03) (`PH_MPL_GL`, `PH_MAC_REACH`; a phone stacks the blocks, Micros one column; LIVE build
-20261103-122300; fat in Reach and Micros NOT live). A goal = its name and **its goal as a
+20261103-122300; fat in Reach and Micros LIVE build 20261103-134900). A goal = its name and **its goal as a
 field** (the one place the eight are set; Targets keeps the rest, her pick 6), a **bar** (had solid, still planned pale, scaled to 125% of
 the goal so **the goal is a line at 80%**; over a limit red with a cut past 125%; a goal to reach deep once reached, amber under 60%; amber
 never on a limit), the **state big** at the end (protein "n g to go" / "✓ 58 g", a past day "short"; a limit "n left", a past day
