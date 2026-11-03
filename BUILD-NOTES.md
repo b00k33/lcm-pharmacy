@@ -10484,3 +10484,50 @@ box's foot; the bar stays in view; the phone unchanged. Built the same day (comm
   settles; phone 375: no box, the day card as before, no sideways scroll; no console errors. Pictures `shots/meals-week-box-*.jpg`.
 - **Not tested:** her own record (her real step words decide one row or two at her width), and a meal dragged to another day
   inside the new box (the drag code is unchanged).
+
+## 2026-11-03 · Fat in Reach, Micros, copper + magnesium, skewers, popcorn, steaks
+Her words, three asks in a row: "add lamb skewers to food list. add popcorn, add fat consumption as a goal", then "include choline and
+calcium and copper and magnesium as well", then "add steak to food inventory". Mocks `fat-goal-mock-2026-11-03.html` (artifact
+RJFTut8PVzWy9aJKPoqjUR) and `micro-goals-mock-2026-11-03.html` (artifact 4i46VewiCggzVfSkwtboL9), root until live, then mocks/.
+**Her picks:** fat = **A · Reach** (a goal to reach under protein); foods: both skewers (cumin, souvlaki) and the four popcorns; the four
+micros = **B · Their own block** with **Women 31–50** amounts; steaks = **1 · Five cuts, with their fat** (the lean Steak stays).
+Memory project_lcm_fat_goal_foods_2026_11_03.
+- **Fat in Reach:** `PH_MPL_GL` gains `["fa","reach"]` after protein; `phMplFatHtml` (the quiet line under Stay under) is gone and fat is
+  an ordinary goal row (`phMplGlHtml`): bar, ticks, "n in a row", the hover box. Its field starts at the rest of her kJ goal
+  (`phDietGoal`, unchanged maths), pale (`au` class, title "The rest of your kJ goal") until she types her own; clearing it returns it
+  to the rest (no `fa` stored).
+- **MICROS block:** `PH_MPL_GL` gains calcium, choline, copper, magnesium (`"mic"`), drawn A–Z as a third white block across the
+  panel's width under Reach / Stay under (`.ph-mpl-gls > .mic`, two columns 28px apart; a phone one column, 10px padding). They read
+  like Reach (`PH_MAC_REACH` = p, fa, ch, ca, cu, mg): ✓ once reached, amber under 60%, "to go" / a past day "short". Helpers:
+  `phMacIs` (a macro or not), `phMacN` (a micro's number at its own decimals through `phNutR`), `phMacRd` (rounding before the
+  kept test), `phMacNm`, `phMacU`. The hover box (`phMacBkHtml`) splits a micro by largest remainder at its decimals (`sx`), so
+  copper's rows add to its 0.36 mg. Goals: `PH_DIET_GOAL0` gains `cu: 1.2, mg: 320` (NHMRC women 31–50: copper AI, magnesium RDI;
+  calcium 1,000 and choline 425 were already hers); her typed numbers win. A day's bars (`phDietBarsHtml`) and Targets
+  (`PH_DIET_TG` on her Meals page) leave out every goal of the panel, so no number shows twice.
+- **Copper + magnesium in the food numbers:** `PH_NUT` 17 → 19 (`["cu","Copper","mg",2]`, `["mg","Magnesium","mg",0]`); a row
+  of 17 numbers reads them as null ("not counted", `f[9][i] == null`), never 0. `phNutR` takes any number of decimals.
+  `PH_NUT_BARS`, `PH_NUT_MIC` and `PH_DIET_TG` gain both (17 bars). 189 rows got numbers: AFCD Release 3 (its food API, read per
+  food) for the rows whose numbers are an AFCD food's, matched by their whole number line, not by name; USDA SR Legacy / FNDDS
+  (read through Health Canada's Canadian Nutrient File, its copy, while USDA's DEMO_KEY was spent) for beef bacon, clear chicken
+  soup, El Jannah's tabouli, pickles and coleslaw, egg drop soup, bánh flan, and the copper AFCD leaves out of oats, quinoa,
+  lentils, fig, garlic, ginger, mackerel, maple syrup, stacked chips and beef mince; MEXT 2023 for matcha and hojicha powder (the
+  lattes: milk × 2.6 + powder × 0.02, over 3); creamy milk = the Milk row's. The ten Vietnamese dishes worked out from their parts
+  (bánh xèo copper 0.262 mg / 100 g, mostly the prawns: AFCD gives prawns 1.739); a part with no number is named in the dish's hover
+  ("nước chấm not counted; copper not counted for mung beans, spring onion"). SG FoodID, AUSNUT, the chains' guides and Thisbowl give
+  neither: not counted. The dish editor's typed numbers gain Copper and Magnesium (19 fields).
+- **New foods (980 rows, was 969):** Cumin lamb skewer (yang rou chuan, 羊肉串, 30 g, Chinese) and Lamb souvlaki skewer (75 g,
+  Protein) = AFCD diced lamb, untrimmed / lean, cooked with no fat (the cumin and oil not counted); Eye fillet, Rump, Scotch fillet,
+  Sirloin and T-bone steak (Protein, after Steak, 25 g steps, 150 g usual) = AFCD untrimmed, grilled; Popcorn · butter (AFCD),
+  · plain, · salted, · sweet (USDA SR Legacy air-popped, oil-popped with salt, caramel-coated; carbs less their fibre) in Snacks,
+  10 g steps, 30 g usual. Choline as the Steak and lamb rows already had it (USDA), and USDA's for popcorn. Search finds shish kebab, lamb skewer, 羊肉串, rib eye,
+  porterhouse, caramel popcorn. Each source in its hover (`PH_FOOD_SRC`); the Targets credit line names the new sources.
+- **Tested** (test copy on port 8998, the `mg-shot.html` harness: a made-up "me" with 8 days of meals): the Micros block A–Z
+  (Calcium · Choline / Copper · Magnesium), fat in Reach at 179 (pale), score "3 kept · 5 to go · 1 over"; fat typed 60 → "18 g to
+  go", "2 in a row", stored; cleared → back to 179 pale, nothing stored; copper typed 1.5 → kept, cleared → 1.2; the hover box on
+  Copper (0.22 + 0.07 + 0.06 + 0.01 = 0.36 mg, + 0.28 planned) and Magnesium (155 mg) and Fat; a past day (Sun 1 Nov: "short",
+  "4 kept · 5 missed"); the dish editor (Copper 0.09 mg · Magnesium 53 mg from congee + egg + salmon; 19 typed fields); searches
+  steak (Steak + the five), popcorn (the four in Snacks A–Z), skewer (souvlaki, cumin); 5 cumin skewers = 1209 kJ, copper 0.249,
+  magnesium 39; a matcha latte 300 ml = copper 0.027, magnesium 30; phở = not counted; phone 375: blocks stacked, Micros one
+  column, no sideways scroll; Prescriptions search Zz → 1 match, Qqx → 0 match, clear → all; no console errors. Pictures
+  `shots/micros-build-*-2026-11-03.png` (computer, phone, copper hover, popcorn, steak, skewer).
+- **Not tested:** her own record (her typed goals and real meals), her phone.

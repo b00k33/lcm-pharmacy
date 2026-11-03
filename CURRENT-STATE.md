@@ -1066,13 +1066,18 @@ today or before = she skipped it; a day ahead = that day planned Skipped; on whi
 computer only. The snack picker (Snacks · drinks) and a dish's Made of keep their chips; a menu's foods show there on a search
 only, never under All foods (`data-meal-srch`). Code: "A CALMER MEAL" (`phMealListHtml`, `phMealTblHtml`,
 `phMealAddHtml`, `phMealNumsHtml`, `phMealInstHtml`).
-**Food numbers**: foods from `PH_FOOD` (969 rows: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
-credited on Targets; AUSNUT 2023 by FSANZ for what AFCD lacks: the curry meat pie, the kebab wraps, creamy milk; choline and beef
-bacon from USDA FoodData Central; matcha powder from the Standard Tables of Food Composition in Japan 2020 (MEXT); Thisbowl's June
-2026 sheet; groups include **Snacks** (packet chips) and **Takeaway** (pies, sausage roll, kebabs,
+**Food numbers**: foods from `PH_FOOD` (980 rows of 19 numbers: the Australian Food Composition Database Release 3 by FSANZ, CC BY-SA 3.0 AU,
+credited on Targets; AUSNUT 2023 by FSANZ for what AFCD lacks: the curry meat pie, the kebab wraps, creamy milk; choline, beef
+bacon, popcorn and the copper AFCD leaves out from USDA FoodData Central (popcorn and copper read through Health Canada's Canadian
+Nutrient File, its copy); matcha and hojicha powder from the Standard Tables of Food Composition in Japan 2020 and 2023 (MEXT);
+**copper + magnesium** (MICROS, her 2026-11-03 ask) per row from its own source, a dish from its parts, "not counted" where the
+source gives none (SG FoodID, AUSNUT, the chains, Thisbowl; a row of 17 numbers reads them as null); Thisbowl's June
+2026 sheet; groups include **Snacks** (packet chips; Popcorn · butter / plain / salted / sweet, her 2026-11-03 ask) and
+**Protein** (five steaks with their fat beside the lean Steak: Eye fillet, Rump, Scotch fillet, Sirloin, T-bone, AFCD grilled
+untrimmed; Lamb souvlaki skewer 75 g; her 2026-11-03 asks) and **Takeaway** (pies, sausage roll, kebabs,
 hot chips), her word; **Water** is a drink in ml, every number 0; **the menus and dishes** (her synth22 2026-11-01, whole menus,
 everyday dishes; BUILD-NOTES "Menus + dishes"): McDonald's 261, Hungry Jack's 257 (its whole menu, her 2026-11-02 "Yes, add them"), KFC 74 (the Wicked Wings row kept), Oporto 53,
-El Jannah 18, Chagee 10, Chinese 33 (Clear chicken soup: USDA's home-made chicken stock, her 2026-11-02 ask), Vietnamese 38 (Cơm tấm sườn bì chả, Bún riêu, Bún mắm, Bánh xèo and Bánh cuốn with their plates, four bánh mì: thịt heo, heo quay, xíu mại, bì, and Wombok soup with pork mince, worked out from their parts, her 2026-11-02 asks; a Matcha latte and a Hojicha latte for each milk in Drinks (full cream, creamy, light, skim, oat, soy, almond; the milk in its name), which lists a place's drinks after the everyday ones), each place a group of its own; a place or dish with no numbers of its own counts
+El Jannah 18, Chagee 10, Chinese 34 (Clear chicken soup: USDA's home-made chicken stock, her 2026-11-02 ask; Cumin lamb skewer (yang rou chuan, 羊肉串), 30 g, her 2026-11-03 ask), Vietnamese 38 (Cơm tấm sườn bì chả, Bún riêu, Bún mắm, Bánh xèo and Bánh cuốn with their plates, four bánh mì: thịt heo, heo quay, xíu mại, bì, and Wombok soup with pork mince, worked out from their parts, her 2026-11-02 asks; a Matcha latte and a Hojicha latte for each milk in Drinks (full cream, creamy, light, skim, oat, soy, almond; the milk in its name), which lists a place's drinks after the everyday ones), each place a group of its own; a place or dish with no numbers of its own counts
 as its closest food, named in its hover ("Close match: … · SG FoodID", `PH_FOOD_SRC`, `phFoodSrcTip`, `phFoodTipAt` with her
 reactions); names as she says them (Phở bò, Quẩy (youtiao)) and search finds either name, accents optional (`phFoodNrm`,
 `phFoodWordsN`, a place's name included); a place's foods keep their capital ("1 Whopper", `PH_FOOD_NAMED`), a dish does not
@@ -1083,11 +1088,13 @@ she types into, 0.5 · .25 · 1½ · 1/2, Enter or leaving keeps it, Esc puts it
 take too; a dish's Made of the same, `phDishAmtType`; LIVE build 20261103-112900). A dish's **Made of** adds its numbers itself
 (typed numbers only for what is not on the list); with no Made of a dish counts by itself (`phDishAuto`: the Thisbowl bowl in its
 name, else its typed ingredients matched) and Made of starts filled with that bowl. Nutrients add every item. The time is a small
-✎ field. A day's numbers line (kJ · P · C · F) opens 15 bars against **Targets** (C22's four + NHMRC women 31–50 + carbs 50 g, each hers);
+✎ field. A day's numbers line (kJ · P · C · F) opens 17 bars against **Targets** (C22's four + NHMRC women 31–50 + carbs 50 g, each hers;
+copper 1.2 mg and magnesium 320 mg since MICROS);
 "not counted" where no source gives a number, never 0. **Fat · Protein · Choline lead** (her word 2026-10-28, "prioritise fat
 protein and choline"; `PH_NUT_TOP`): first in the bars, always shown on a phone, first in Targets; a meal's small numbers start
 with choline. On her Meals page fat and protein (with kJ and carbs) are the goals' own since MEALS GOALS (her 2026-11-03 "yes take
-them out of More"): a day's More has no numbers line and its bars lead with choline; Targets keeps the rest. LIVE build 20261103-105100. LIVE build 20261028-215100. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
+them out of More"): a day's More has no numbers line and no bar for a goal of the goals panel (`PH_MPL_GL`: protein, fat, kJ, carbs
+and since MICROS calcium, choline, copper, magnesium); Targets keeps the rest. LIVE build 20261103-105100. LIVE build 20261028-215100. Thisbowl bowls R | L + Build your own. Code: "FOOD NUMBERS" (`phFood*`,
 `phNut*`, `phTb*`).
 **MEAL REPEATS** (her 2026-11-01 "need an easier way to organise meals based on daily or one day", her 4th report on it; her
 picks [Meal repeats]): what repeats is a FOOD, not a whole meal (her meals change day to day). Each food of her day's meal (her
@@ -1181,47 +1188,54 @@ it; History › on the Fast heading. Code: "FASTING DIAL" (`phMplDial*`, `phFdAr
 **Meals goals** (her 2026-11-02 "audit this page and streamline any repeating elements that do the same thing. make it so it
 communicates like atomic habits- its easy for me to see my goals and limits"; mock `meals-goals-mock-2026-11-02.html`, her 8 picks,
 all A; memory project_lcm_meals_goals_2026_11_02): one panel for the goals' day (`phMplGoalsHtml`): a head (the day off today + Today ·
-today's score beside the day, "✓ n kept · n to go · n over / missed"), then **two white blocks on the page colour's tint** (**FAST
+today's score beside the day, "✓ n kept · n to go · n over / missed"), then **three white blocks on the page colour's tint** (**FAST
 BLOCK**, her 2026-11-03 picks: B "Beside the dial" + "White blocks on a teal band" + "make text in button more succinct"; mocks
 `fast-block-mock-2026-11-03.html`, `fast-block-sep-mock-2026-11-03.html`; memory project_lcm_fast_block_2026_11_03): **Fast** (a
 capitals heading with **History ›** at its end, `phMplRactsHtml`; the **fasting dial** with its line, of Breakfast ▾, → 7 am and
 **Start · Continue** / **Stop** beside it, `phFastBtnsHtml`: short words, each its full name to a screen reader, Continue its fast in
-the hover; its ticks under) and the goals, **Reach** (protein) then **Stay under** (kJ, carbs) stacked (`PH_MPL_GL`, `PH_MAC_REACH`;
-a phone stacks both blocks; LIVE build 20261103-122300). A goal = its name and **its goal as a
-field** (the one place the four are set; Targets keeps the rest, her pick 6), a **bar** (had solid, still planned pale, scaled to 125% of
-the goal so **the goal is a line at 80%**; over a limit red with a cut past 125%; protein deep once reached, amber under 60%; amber
+the hover; its ticks under) and the goals, **Reach** (protein, fat) then **Stay under** (kJ, carbs) stacked, and under both, the
+panel's width, **Micros** (calcium, choline, copper, magnesium, A–Z in two columns; **MICROS**, her 2026-11-03 "include choline and
+calcium and copper and magnesium as well", picks B · Their own block + Women 31–50; mock `micro-goals-mock-2026-11-03.html`; memory
+project_lcm_fat_goal_foods_2026_11_03) (`PH_MPL_GL`, `PH_MAC_REACH`; a phone stacks the blocks, Micros one column; LIVE build
+20261103-122300; fat in Reach and Micros NOT live). A goal = its name and **its goal as a
+field** (the one place the eight are set; Targets keeps the rest, her pick 6), a **bar** (had solid, still planned pale, scaled to 125% of
+the goal so **the goal is a line at 80%**; over a limit red with a cut past 125%; a goal to reach deep once reached, amber under 60%; amber
 never on a limit), the **state big** at the end (protein "n g to go" / "✓ 58 g", a past day "short"; a limit "n left", a past day
 "✓ n under", over "n over" with a red dot; a day to come "planned"), and **the last 7 days as ticks** up to the goals' day (`phMplTick`:
 ✓ green = kept, an empty circle = missed, a red ring = over a limit, a dashed circle = nothing logged, a pie = today on its way, gold
 ring = the goals' day; the fast's from `phMplDayFast`, today's the fast that ended today else the running one) + **"n in a row"** (the
 kept run up to that day, today on its way skipped, 30 at most, `phMplRun`; a fact, no "never miss twice" nudge, her pick 3). **Fat**
-(her pick 2) is one quiet line under Stay under: "Fat 42 g · the rest of [179] g" (her own fat goal reads "of"), no ticks, never red.
-Point at a bar, a tick or the fat number = that day's foods (the hover breakdown box); a fast tick = the fast's box. The bars grow
+(her 2026-11-03 "add fat consumption as a goal", pick A · Reach; mock `fat-goal-mock-2026-11-03.html`; before, her pick 2's quiet
+line under Stay under) is a goal to reach under protein, with its bar and ticks; its field starts pale at the rest of her kJ goal
+("The rest of your kJ goal", `au`) until she types her own; clearing it returns it to the rest. A micro's numbers keep its own
+decimals (copper 0.84 mg, `phMacRd`). Point at a bar or a tick = that day's foods (the hover breakdown box); a fast tick = the fast's box. The bars grow
 from the day before (`data-barw`). **One place for each number** (her picks 4, 5): the rings' own ‹ day ›, the Table's kJ · P · C · F
 columns and the Grid's Total row went; the bottom key keeps the table's marks (had it · repeats · bold · Fast · add a photo).
 **Today's camera** (her pick 8): today's Breakfast · Lunch · Dinner and Snacks · drinks carry a 32px camera (a computer: on the meal
 she points at; a phone: at the end of each of today's rows, not a dinner the fast covers): a tap = pick photos for that meal
-(`data-mph-add`, the + Photo's own door). Code: "MEALS GOALS" (`phMplGoals*`, `phMplGl*`, `phMplTick*`, `phMplRun`, `phMplFatHtml`). LIVE build 20261103-102500.
+(`data-mph-add`, the + Photo's own door). Code: "MEALS GOALS" (`phMplGoals*`, `phMplGl*`, `phMplTick*`, `phMplRun`) and "MICROS" (`phMacIs`,
+`phMacN`, `phMacRd`, `phMacNm`, `phMacU`; `phMplFatHtml` gone). LIVE build 20261103-102500.
 **Macros against her goal** (her picks: the Macros row AND today's rings) [Meals macros against goal]: energy, protein, carbs, fat.
 **Goals** (`phDietGoal`): kJ 8000 (her word 2026-10-28, "daily energy goal is 8000kj"), hers to change; water 2000 ml (C22's 8
 glasses; a target typed in glasses reads × 250); protein 50 g and carbs 50 g are hers (her word: "set carbs to 50g a day"); fat is hers,
 else the rest of her kJ goal after protein and carbs (FSANZ: 17 kJ a gram of protein or carbs, 37 of fat; her grams win over a
-split); the fat line reads "the rest of". **The goals** (Meals goals, above; they replaced today's rings, `phMacRingsHtml`): each goal a field
+split); the fat field starts there, pale, until she types hers; the micros start at NHMRC women 31–50 (calcium 1,000 mg, choline 425 mg,
+copper 1.2 mg, magnesium 320 mg; her MICROS pick), hers to change. **The goals** (Meals goals, above; they replaced today's rings, `phMacRingsHtml`): each goal a field
 (`data-diet-goal`, `phDietGoalSet`; clearing fat returns it to the rest). **A day's numbers** (the Numbers view, `phMplDayNums`): a day
 to come as planned, pale (a plan over its goal = a deep number). Over the goal = **red for kJ and carbs** (her 2026-11-02 "for kj and carbs,
-show red when over": the goals' bars, Numbers and its bars, its key "kJ · carbs over"; `PH_MAC_RD`, `phMacOv`; LIVE build 20261102-131600), deep for protein and fat; under
-60% = amber on protein only (a goal to reach; low is the aim under a limit, MEALS GOALS; today: only when the plan also falls short). Worked out on read (`phMacDay` = `phDietMyDay` + `phMplPlanSum`); only the
+show red when over": the goals' bars, Numbers and its bars, its key "kJ · carbs over"; `PH_MAC_RD`, `phMacOv`; LIVE build 20261102-131600), deep for a goal to reach; under
+60% = amber on a goal to reach only (protein, fat, the micros; low is the aim under a limit, MEALS GOALS; today: only when the plan also falls short). Worked out on read (`phMacDay` = `phDietMyDay` + `phMplPlanSum`); only the
 goals are stored. Code: "MACROS" (`phMac*`). **What counts as eaten** in every number of hers (kJ, macros, water, warm · cool;
 `phMealEaten`, her "these kj dont look right" 2026-10-28): a meal with Had it at once; any other meal once its time on her calendar has
 passed (an earlier day: all of it); Skipped and a fast night's Dinner never. Had it itself (the ✓, Today's meals, the meal habit) is
 unchanged. NOT live.
 **Hover breakdown** (her 2026-11-02 "when i hover, show breakdown of foods that contributed to hte macro", on her Meals rings): pointing
-at a goal's bar or tick, the fat number (the fasting dial and its ticks have their own boxes, Fasting dial above) or a Numbers cell shows one box
+at a goal's bar or tick (the fasting dial and its ticks have their own boxes, Fasting dial above) or a Numbers cell shows one box
 under it (above when there is no room): the number (+ what is still planned) of her goal, then a row a food, most first, had then
 planned (pale, as on the ring): the food with its amount, its meal (Breakfast · Lunch · Dinner · Snack · Drink), a bar of its share,
 the amount, the %; past 12 rows (and crumbs under 1) one "+ N more" row (a single one shows itself, "<1 g"); "Not counted · …"
 names what could not count it. Read from the rows the ring adds up (`phDietSum` returns `rows`; its items carry their meal:
-`phDietMyDay` = had, today's or a day to come's `phMplPlanSum` meals not had = planned; `phMacFoods`), whole numbers by largest
+`phDietMyDay` = had, today's or a day to come's `phMplPlanSum` meals not had = planned; `phMacFoods`), whole numbers (a micro at its own decimals, MICROS) by largest
 remainder, so the rows add up to the ring's number, the pale ones to "+ N planned", the % to 100. One box (`#phMacBk`,
 `phMacBkHtml` / `phMacBkShow` / `phMacBkHide`, `data-mac-bk="day|number"`), the record's colour copied from the ring; any other
 point, a tap elsewhere, a scroll or Esc closes it; the goal field never opens it. Phone: a tap on a ring. LIVE build 20261102-175700.
