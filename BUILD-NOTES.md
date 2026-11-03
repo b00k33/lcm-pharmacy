@@ -10458,7 +10458,8 @@ Shop · Eat · Check · More ▾) sat on top, the Today block (fast + goals) und
 about 200 px from the table they work. Mock `meals-week-bar-mock-2026-11-03.html` (artifact P78kGiPc57Z25erjAo5Vi9): Now · A Today
 first · B One frame · C Eat · Check on Today, plus the parts. **Her 8 picks, all recommended:** B · one frame; the views as tabs
 into the table; all four steps on the week bar; the column inside the box; the bar in her record's light tint; the key as the
-box's foot; the bar stays in view; the phone unchanged. Built the same day (commit a12e0b4d).
+box's foot; the bar stays in view; the phone unchanged. Built the same day (commit a12e0b4d); **LIVE in build 20261103-131900**
+(her "push live", publish 63eb206c; her devices need the gold Update).
 - **A computer:** `phMplHtml` draws the Today block first, then `.ph-mpl-card.ph-mpl-wkbox`: ONE white box with a hairline and
   10px corners. Its bar (`phMplToolbarHtml`, `.ph-mpl-tbar2`) is the box's top on `--ph-herb-tint`: ‹ week › · Today
   (`.ph-mpl-wkg`), the views as tabs (`.ph-mpl-tabs`: the open one white, so it runs into the table; still `data-mpl-lay`,
