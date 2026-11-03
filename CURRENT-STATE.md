@@ -944,11 +944,13 @@ It runs in three steps on one light band of white boxes (the Fast block's shared
 **1 How much:** two figures, 18 mg a day and 27 pregnant, as drops (1 drop = 1 mg). What one serve gives is ranked by
 `PH_FOOD`'s own iron × each row's usual serve. A tap on a woman opens step 2 for her.
 
-**2 Fill up your iron:** her body fills red from the feet as food goes on Your table, a table of Food · Serve · Iron.
+**2 Fill up your iron:** her body fills red from the feet with the iron it takes up, against 3.2 mg a day (6.8 pregnant); the
+count says taken up, then eaten. Your table is Food · Serve · Eaten · Taken up, each food's % beside it.
 - The places iron works glow with the level, labelled.
 - Foods are A to Z in six groups.
-- Vitamin C food ×1½ and Tea or coffee ×½ apply to plant iron, a rough guide.
-- The drops and the count follow; a gold ring plays when full.
+- Taken up (DRAFT; her 2026-11-03 picks, BUILD-NOTES "Iron page: what the body takes up"): meat and fish 25%; plants, eggs and grains
+  10% alone, 20% with a Vitamin C food, 2% with Tea or coffee.
+- The drops under her are the mg eaten (18 / 27, as in step 1); a gold ring plays when full.
 
 **3 When it runs low:** Enough vs Low, with the red cells under a microscope. Fertility or Pregnancy, five steps played once,
 then tapped; a Draft tag until she reads the words.
