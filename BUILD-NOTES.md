@@ -10373,3 +10373,23 @@ phone 375: no sideways scroll, both blocks stacked, Start → Stop; Prescription
 error. Pictures `shots/fast-block-build-{computer,fasting,pastday,phone}.png`. **Pages checked (★★★):** Meals (computer + phone, today
 and a past day), Your fasts. **Not tested:** her real fasts; another Case colour on her record (the tint follows `--ph-herb-tint`).
 **LIVE** build 20261103-122300 (publish 7cb37764, her "push live"); both mocks moved to `mocks/`.
+
+## Her Tongue and Pulse in Body (2026-11-03)
+Her ask, with a picture of her own record's rail (Body: Cycle, Meals, Herbs, Fitness, Habits, Log): "tongue and pulse tab?". On a
+record the Tongue and Pulse pages are tabs of the Care Plan stage (`presTpMainSections`), listed under Today's visit only while a plan is
+open (`presFlowSteps` `examSubs: !plan ? []`); her record has no Care Plan, so they never showed. **Built** the way her Cycle went to
+Body (One Me, 2026-10-26): on her record (`phFastIsMe`) Tongue and Pulse are pages of her Body group after Cycle (`PRES_MINE_RANK`
+tongue 0.12, pulse 0.14; `presAssessSections` pushes them with `phExamPageHtml(t, id)`, the same page, writes and checks as a patient's),
+the row's small line = the day she last charted it ("Today" / "3 Nov", from `tongueExam.at` / `constitPulse.at`).
+- `presMineCycleNorm` turns plan + tongue / pulse into profile + the same page (as it did for cycle), so every door to them on her record
+  (Today's visit tiles, `data-flow-go`, `phFlowGoPlanTab`) lands there; `presTpMainSections` leaves Tongue and Pulse out of a Care Plan of
+  hers (Abdomen stays there).
+- The Pulse page's in-place repaint (`renderHxScreen`) looked for its host only inside `#presTpMainHost`: now `#pharmacyPage`, so a chart tap
+  repaints on her Body page too. The tongue photos' arrival (`phTngHerePk`, `phTvTngArrived`) also counts her profile's Tongue page as "here".
+**Tested** (test copy, Browser pane at 1220 by DOM, headless Edge pictures at 1220 and 375): her rail Body = Cycle CD 4 · Tongue · Pulse ·
+Meals · Herbs · Fitness · Habits · Log; Tongue opens on her record with no Care Plan, "pale" saved `tongueExam.at`, the row read "Today";
+Pulse: Wiry on R lungs skin saved and the chart repainted in place (the cell pressed after the repaint), its row "Today"; Next on Tongue =
+Pulse, on Pulse = Meals; `phFlowGoPlanTab("tongue")` and a `data-flow-go="pulse"` tap landed on her profile pages; a patient on a Natural
+fertility plan unchanged (Ask her · Tongue · Pulse · Abdomen · Musculoskeletal under Today's visit, tongue saves, pulse repaints and ticks);
+375: the Body · Tongue bar, nothing past the screen's edge; Prescriptions search: Jane narrows, Zzqx none, clear returns. **Not tested:**
+her real record and photos, a tongue photo arriving from the phone while her Tongue page is open, a real phone.
