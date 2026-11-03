@@ -11102,3 +11102,22 @@ the milk tea to reduce sugar. i dont like thqat when i tap my snacks it deletes,
   `{v, at, sg}` and shows the drink at full sugar).
 - **Pages checked:** Meals Grid (snacks, supplements, a dinner), desktop and phone. New words: "Sugar" and the levels.
 - **LIVE in build 20261103-201800** on her "push live" (publish c24e1c82), with Drink sizes (9de15d57) and Iron steps 1 and 3 (7a2122f6), her pick to take all three. Her devices need the gold Update.
+
+## 2026-11-03 · Sized shop foods join too
+Her "yes" to "Would you like fries and sundaes joined into one row with their sizes too?". A shop's food sold in sizes now works
+as its drinks do (BUILD-NOTES "Drink sizes"): one row in + Add with its sizes as one bar, one chip in the food chips, size chips
+under it in a meal (beside the amount in a Try, after it in a dish) that swap it to that size's own row.
+- **Which:** 28 foods with 2+ sizes at a named place: McDonald's fries, McShaker fries and 4 sundaes; Hungry Jack's chips, onion rings
+  and 3 sundaes; KFC chips, coleslaw, potato & gravy, popcorn chicken (Snack · Regular); Oporto's chips, rice, bolas, corn, slaw,
+  tomato salad and chicken (Quarter · Half · Whole); El Jannah's chips, hommous, tabouli, coleslaw, toum (small · medium · large tub)
+  and charcoal chicken (Quarter · Half · Whole). A thing sold in one size only (Chilli sauce (small tub), Party Cake (whole)) has none.
+- **Names:** `PH_DK_SZRE` reads " · Snack / Small / Regular / Medium / Large / Quarter / Half / Whole" and " (small)" … " (whole)",
+  " (small tub)"; `PH_DK_ORD` puts them small to large; `phDkW` the chip's word ("Medium", "Quarter"); `phDkTip` its hover, in ml
+  for a drink and g for a food ("Medium · 104 g").
+- **Its place's name** beside a joined row shows where places mix (Drinks); in a place's own pane it is hidden (`em.at`).
+- **Tested** (a copy of HEAD c3084ff3's index.html, port 8997, the test "Me" Testa Mine): 103 joined (75 drinks + 28 foods); a meal:
+  Fries Medium → Large, Charcoal chicken Half → Whole; + Add · McDonald's: each sundae and fries once (Small · Large /
+  Small · Medium · Large), Fries left out while a size is in; El Jannah: Chips, Hommous, Toum once; Drinks still names McDonald's /
+  Hungry Jack's, Hungry Jack's own pane does not; a Try: Fries with Small · Medium · Large. Headless Edge picture. No console errors.
+- **Not tested:** her own record, her phone, the Key2.
+- **Pages checked:** Meals (a meal's rows, + Add food or drink, the Try table). No new words but the size names.
