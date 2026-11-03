@@ -1151,8 +1151,11 @@ read its section there in full. When a build changes a part, rewrite that part's
   and the sw.js SHELL list.
 - GitHub Pages (`b00k33/lcm-pharmacy`) publishes only index.html,
   intake.html, chart.html, chart.webmanifest, manifest.json, sw.js, icons/,
-  screenshots/ and foods-au.json (`.github/workflows/pages.yml`). The .md files, mocks and
+  screenshots/, foods-au.json and eggs.html (`.github/workflows/pages.yml`). The .md files, mocks and
   backups are never published. Never Netlify.
+- **eggs.html is made, never edited:** after any change to the EGGS code (or the Iron parts it borrows) run
+  `perl .github/scripts/make-eggs-page.pl` from the repo root and commit eggs.html with it. If the Meals body's drawing changes,
+  refresh `.github/scripts/eggs-body.svg` (the painted body, enough iron) the same way.
 
 ---
 
