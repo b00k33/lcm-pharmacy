@@ -10393,3 +10393,50 @@ Pulse, on Pulse = Meals; `phFlowGoPlanTab("tongue")` and a `data-flow-go="pulse"
 fertility plan unchanged (Ask her · Tongue · Pulse · Abdomen · Musculoskeletal under Today's visit, tongue saves, pulse repaints and ticks);
 375: the Body · Tongue bar, nothing past the screen's edge; Prescriptions search: Jane narrows, Zzqx none, clear returns. **Not tested:**
 her real record and photos, a tongue photo arriving from the phone while her Tongue page is open, a real phone.
+
+## Cycle page: two halves (2026-11-03)
+**Her words:** "mock some more polished succinct terse layout of this making it organised and showing coloured blcoks with
+proportionate spaces. show 3 mocks" → her 8 picks (B's head + A's body; hormones above the phase bar; day card all open,
+grouped; one month beside the card; labelled phase blocks; luteal pale lilac; days to come the same colour; drop the ring) →
+"Not yet" → "organise display into 2 halves and place hormoney chart over calendar. show mock" → "i like it. add a teal
+background with white boxes separating the halves" → "add relevant animations to page" → "light colour like this" (her
+screenshot of the Meals Fast block) → "i like it. build and push". Mocks: canvas https://claude.ai/artifact/1HUfAZbcfH7vCoSuK65UFS
+(board "Two halves · light band, moving in").
+**Built (commit f1a16e1b):**
+- `phCycPageHtml`: a `.cp-band` (the Fast block's band rule, now shared: `#pharmacyPage :is(.ph-mpl-gls, :where(.ph-cp) .cp-band)`
+  and its white blocks `:where(.ph-cp .cp-band) .cp-half`, same specificity as before) holds the tab row (tabs, the finder, the
+  Day 1 chip of the card's day on the Calendar tab, then `.cp-top` = Pregnant? alone, its popover anchored under the button) and
+  the pane. Calendar tab = `.cp-calwrap.cp-b.cp-h2` (cp-b kept for the outside-click and same-day-tap rules): LEFT `.cp-half`
+  = `phCpHeadHtml` ("CD n" + Fertile / Ovulation / Period with colour marks; late = days late + last period; `phCpRange` writes
+  "7–12 Nov") + the day card (`phCycleSignPopHtml(…, { flat: true, noD1: true })`); RIGHT = `phCycDgHtml` + ONE month.
+  Temperature / Past cycles = the head + their pane in one `.cp-half.cp-one`.
+- `phCycDgHtml` rewritten: the four curves (the same drawing functions) in a 96px SVG over `.cp-dgb` phase blocks (grid of N =
+  her days + the next period's day 1; Period, Follicular, Fertile, Ovulation, Luteal, Next period; a block of 5+ days shows
+  name + dates, a narrower one its day numbers, the name in its hover), `.cp-dgr` date + CD under each day (today gold, the
+  card's day teal), `.cp-dgl` the gold line on the card's day (glides via `phCycDgGlide` on `left`). The wheel, lining bars and
+  follicle are gone (pick 8); their old CSS is unused.
+- The day card (`flat`) is three groups (`grp`, `.ph-cs-g`): Period (Flow, Colour, Clots, Pain No/Yes; Yes reveals How bad +
+  Pain type in place with `.row.ph-cs-in`), Between periods (BBT, LH, Other, Discharge), PMS & mood (+ Note). No numbers, no
+  joining line. `opts.noD1` drops the Day 1 chip from the Period head (the Cycle page's tab row carries it); Today's visit keeps it
+  there. In a half 400–480px wide a container rule keeps the label column beside the bars (the mock).
+- `phCycFFHtml` part "cal": ONE month (`phCycCalDefault` = this month; the second month and the legend went; the head reads
+  "November 2026"); `calCellHtml` adds, on the Cycle page only (`calPg`): `fol` / `lut` for the current cycle, `nx-*` for the next
+  cycle drawn from her latest cycle's shape (`dayInfo` → `nx`), "CD n" on every day (spill and predicted days too), `--j` for the
+  wave. Today's visit's week cells (wk1 / wk2) are unchanged. The tp-cyc-go jump opens the day's own month (63952-ish).
+- CSS: the hand block "CYCLE PAGE, TWO HALVES" before `</style>` (tokens `--cp-me / -li / -pp / -fo / -fe / -ov / -lu`, her
+  mock's colours; cell rules at `#pharmacyPage#pharmacyPage` to beat the old `:not()` chain) + two phone lines in PHONE REDESIGN.
+- Motion: `phCpFirstSight` (in the DOM yet? else 600 ms grace for the double build) adds `.in` to the halves on a first sight; the
+  chart keeps its own draw-once (`data-sig`). Halves rise, curves wipe (clip-path), blocks grow (staggered `--i`), line drops,
+  days rise in a wave (`--j`), today's ring pulses twice; all `backwards` fill (no stacking context left), all inside
+  `prefers-reduced-motion: no-preference`, and JS skips `.in` under `phTpReduceMotion()`. Finder / paint / sweep cells are left
+  to their own animations.
+**Tested** (a made-up patient on a copy, 1220 and 1280 wide and 375 phone): her mock's numbers (CD 4; Fertile 7–12 Nov; Ovulation
+~12 Nov; Period ~27 Nov; blocks Period 31 Oct–4 Nov · 5–6 · Fertile 7–11 Nov · 12 · Luteal 13–26 Nov · 27); a day tap (card,
+line glide, teal ring, no replay of `.in`); month ‹ › (no replay); Temperature / Past cycles; Day 1 on today (period moved,
+head and stepper updated) + Undo (restored); Pregnant? popover opens under its button and cancels; Today's visit card (three
+groups, Day 1 in Period); phone: no sideways scroll, halves stack, the chart scrolls in its box; no console errors.
+**Not tested:** the motion playing live (the preview pane was hidden, so its clock stood still: the animations were listed and
+finished by hand), reduced motion in a real browser setting, her own record's Cycle page (Body) on real data, a late cycle, an
+LH-confirmed cycle, the Key2.
+**Pages checked for the same facts:** the Cycle page (patients and her own record share `.ph-cp`), Today's visit cycle card (same
+day card), the Care Plan's cycle bar (untouched), the profile's cycle panel (sentence unchanged).
