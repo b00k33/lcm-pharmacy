@@ -881,7 +881,7 @@ signs; the Care Plan Diagnosis = its pictures; the Patterns page = every pattern
 (`--px-h`), so nothing moves; a sign's name is said once, in the header with its Ren / Bing marks and weight dots.
 
 ## Guide — Families (study + edit)
-The Guide is **[Families] [Compare] [Tongue map] [Pulse] [Abdomen] [Herbs] [Blood tests] [Iron]**: a herb card is the body type with its formulas under it, notes-only formulas are
+The Guide is **[Families] [Compare] [Tongue map] [Pulse] [Abdomen] [Herbs] [Blood tests] [Iron] [Eggs]**: a herb card is the body type with its formulas under it, notes-only formulas are
 dashed tiles, a study card sits on the right (in Study, the concept picture of the pattern(s) the family counts for, under the
 pearl). **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): her edits live in `PHARMACY.fbrEdits[id]` (+
 `fbrEditsAt`), and `phFbrEditsApply()` rebuilds `.ren/.bing/.or/.core` in place from `phFbrPristine`; `phFbrEditsSync()` (top of
@@ -984,6 +984,7 @@ Under the pair, **Oxygen to energy** (her 2026-11-03 picks, BUILD-NOTES "Iron st
 (her thigh muscle on Pregnancy) → in her blood → in her egg (a muscle cell on Pregnancy). Red cells carry oxygen to the mitochondria,
 each with an iron drop in it, which make the energy in the gold bar. Enough iron | Low iron; it rests on Low. On first sight it waits,
 dimmed, while the chain plays, then lights lens by lens with enough iron and drops to Low. Words DRAFT. Code: `phIrOzHtml`, `phIrOzSet`.
+Its key ends in **Eggs ›**, a door to the Eggs tab.
 LIVE build 20261103-233500.
 
 State is `phIr` (view state, never saved).
@@ -998,6 +999,31 @@ State is `phIr` (view state, never saved).
 
 The figure is `PH_BODY_GEOM` with the sketch face and `phRenAnatomyHtml`'s organs; the pregnant womb carries PH_PP's baby
 (`phIrBabySvg`). Its foods include beef liver, mussels, oysters and black sesame, added to the food list for it [Iron teaching page].
+
+## Guide — Eggs (a teaching page)
+The Eggs tab (her 2026-11-03 ask with her chart of mitochondria per cell, her 8 picks + 3 on mock QVR4nKWeydZGUQuswXRuY2, BUILD-NOTES
+"Eggs teaching page") shows a patient how oxygen, red cells and the uterus feed egg quality. It stands on the Iron page's band and parts
+(`.ph-ir`): one scene at a time, the picture left, its numbered lines right, a Draft tag, the source line under the band.
+1. **Mitochondria:** a ladder, a row per cell on a ×10 scale, the bar solid to the low figure and pale to the high: sperm 50–75, liver
+   cell 1,000–2,000, heart muscle cell about 5,000, egg 100,000–600,000 (her chart's sperm 5 and brain 2 million were not used: the
+   first is too low, the second has no source). The key shows a mitochondrion with its iron (Iron's own drawing).
+2. **Why eggs:** Ripening (the egg fills with mitochondria), Ovulation (they split its chromosomes), First week (the embryo divides
+   and shares them out; the sperm's are not kept).
+3. **Oxygen:** her ovary (the Iron page's still body, cropped) → a follicle: vessels around it, red cells on them, oxygen seeping
+   through the fluid to the egg on its mound. Less blood flow | More blood flow (2 vessels or 6; the egg's mitochondria pale or lit).
+4. **Red cells:** iron, B12, folate and Herbs go into the bone marrow; red cells come out along a vessel with oxygen on them. Low Blood |
+   Blood built. **Iron foods ›** opens the Iron tab.
+5. **Uterus:** her uterus (a needle on the skin over it) → its lining over the muscle: spiral arteries, the lining's depth, warmth
+   (a gold wash) and an embryo settling. Less blood flow | More blood flow.
+6. **3 months:** a 90-day bar from Today; a follicle grows along it to ovulation; Herbs · acupuncture · food · iron spans it.
+On first sight the six play once in order (each scene's beats light its lines), then it rests on the last; a tab or ▸ Play again plays
+again; any tap stops the play and the scene rests at once. Reduced motion: no play. **Print** draws the six at rest (no buttons) for
+paper or a PDF. **Copy link** copies `https://b00k33.github.io/lcm-pharmacy/eggs.html`, the patient's copy (her pick "also a link she
+opens"): `eggs.html`, made from this same code by `.github/scripts/make-eggs-page.pl`; no Draft tags, no Copy link, no Iron door;
+noindex. State is `phEg` (view state, never saved). Words DRAFT. Code: "EGGS" (`phEgHtml`, `phEgRun`, `phEgSt`, `phEgAuto`).
+
+**Doors:** the tab; **Eggs ›** at the end of Iron step 3's zoom key; **Eggs · Guide** on the cycle day card's Between periods head,
+every day (her pick).
 
 ## Photos
 **The patient's Photos page** opens on the Comparison table (a row per type, a date column each, **oldest left, newest right**; **All dates | Pair** above it once there are two dates: the Pair's two heads are the pickers, BEFORE ▾ ⇄ AFTER ▾, opening on first ↔ latest, ⇄ swaps, remembered for the session only, `phRenGalPairOf`; a phone opens on the Pair, two columns fitting the screen; her 2026-11-02 picks, BUILD-NOTES "Photos increment 2"); By visit / By type a tap away; the page's chips are the standard 32px chips, the shot row one joined bar; **with no photo on file it opens on its first action** (her 2026-10-31 pick, idea 4 of the 29 Oct audit): the camera tile (the phone’s own sheet, the computer’s chooser; then a kind per photo, the drop flow) beside the drop zone, the kinds under them, no Add tap and no "Or pick the type first" line; with photos the same block sits behind + Add (`presPhotosSectionInnerHtml`, `.ph-photos-first`, `.ph-photos-cam`); a phone shows the tile alone;

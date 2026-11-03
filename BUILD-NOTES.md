@@ -11244,3 +11244,44 @@ closes it. Memory project_lcm_guide_profile_link_2026_11_03.
 - **Pages checked:** Guide › Tongue map; her Body › Tongue (Top and Sublingual). New words: "Healthy", "Healthy tongue" / "Close the
   healthy tongue" (hover), "Add healthy photo", "✎ Change", "No photo", "No notes", "Healthy photo saved", "That picture couldn't be
   read. Try another.".
+
+## 2026-11-03 · Eggs teaching page
+Her chart "Number of Mitochondria Per Human Cell" and "make an animation of this that links to mitochondria so i can use it as
+teaching material for patients to understand how tcm can improve egg quality by increasing oxygen delivery to eggs via red cell
+production - uterine environment as a means of supporting fertility". **Her picks:** A · own Guide tab (doors from Iron's egg lens and
+the cycle page); all six scenes; A · a ladder, counting up; A · checked numbers, with sources; A · "aims to / can support" words; TCM
+parts: herbs build Blood, acupuncture brings blood in, a warm uterus, iron foods; A · plays once, then tap; C · both (the screen and
+print). **On the mock (artifact QVR4nKWeydZGUQuswXRuY2):** yes, build it; B · also a link she opens; B · the cycle door always.
+- **Where:** Guide › **Eggs** (`phGdTab === "eggs"`, `phEgHtml`, `#phEg`, root class `ph-ir ph-eg`). It stands on Iron's band and
+  parts (`.ir-box`, `.ir-steps`, `.ir-seg`, `.ir-btn`, `.ir-chip`, `.ir-draft`, `.ir-src`) and draws with Iron's helpers: the still
+  body (`phMbdSvg`, `phIrBodyEase`, `PH_IR_OK` / `PH_IR_LOW`), oxygen (`phIrOzO2`), the mitochondrion with its iron (`phIrOzMi`), sparks.
+- **The six scenes** (`PH_EG_SC`, one at a time in `#phEgPane`, picture left, numbered lines right): 1 the ladder (`PH_EG_CELLS`, a
+  ×10 scale, solid to the low figure, pale to the high; numbers count up, `phEgCount`); 2 why eggs (Ripening · Ovulation · First week,
+  `phEgWhySvg`); 3 oxygen (her ovary → a follicle, `phEgFollicleSvg`); 4 red cells (bone marrow, `phEgMarrowSvg`; **Iron foods ›**
+  opens the Iron tab); 5 the uterus (her uterus with a needle → the lining, `phEgLiningSvg`); 6 the three months (`phEgMonthsSvg`).
+  Scenes 3–5 have two states (`PH_EG_SEG`, `phEgSt(n, st, flow)`): Less blood flow | More blood flow, Low Blood | Blood built.
+- **The play** (`phEgRun(n)`: `.pl` then beats `.b1`–`.b4`, each lighting its line): on first sight the six play in order with a
+  pause between (`phEgAuto`), then it rests on the last. A scene tab plays that scene; **▸ Play again** plays all six. Any tap, a
+  Guide tab change or a door stops it, and the scene rests at once (`phEgStop`: its look, its lines, its counted numbers).
+  **Reduced motion:** no play, the scenes rest, Play again is hidden.
+- **Print** (`phEgPrint`): the six scenes at rest, one under another, no buttons (`body.ph-eg-printing`), then back.
+  **Copy link** copies `https://b00k33.github.io/lcm-pharmacy/eggs.html` through `phCkCopy` ("Link copied").
+- **The patient's copy, `eggs.html`:** made by `perl .github/scripts/make-eggs-page.pl` from this file's IRON + EGGS CSS, the EGGS
+  script and six Iron one-liners, with `.github/scripts/eggs-body.svg` (the body painted with enough iron, dumped from the app) as the
+  still body (pale at Less). It has no Draft tags, no Copy link, no Iron door; noindex; nothing saved, no sign-in. Staged by
+  `pages.yml`. Re-run the script after any EGGS change and commit eggs.html with it.
+- **Doors:** **Eggs ›** at the end of Iron step 3's zoom key; **Eggs · Guide** on the cycle day card's Between periods head, every
+  day (beside Period's Iron · Guide). Both: `data-eg-open` → `phEgOpen` (stops Iron's play, Guide › Eggs, plays from scene 1).
+- **Numbers:** sperm 50–75, liver cell 1,000–2,000, heart muscle cell about 5,000 (textbook figures); egg 100,000–600,000 copies of
+  mitochondrial DNA (reviews). Her chart's sperm 5 and brain 2 million are not used (the first is below the measured range, the second
+  had no source). The source line under the band names each claim's paper.
+- **Words (DRAFT):** the tab names, titles and lines in `PH_EG_SC`, the `PH_EG_SEG` labels, the picture labels.
+- **Tested** (a copy of HEAD 9df9825d's index.html with this patch, port 8997, test patient "test cycle"): first sight plays 1 → 6
+  and rests; a scene tab plays it; a Less tap mid-play rests the scene at once; a Guide tab change stops it; Iron's Eggs › and the
+  cycle card's Eggs · Guide open it and play from 1; Print draws six then restores; Copy link calls `phCkCopy`; reduced motion (no
+  play, Play again goes to scene 1 at rest); 360 px wide nothing past the screen. eggs.html at 1280 and 360: renders, plays, the
+  body draws and pales at Less, no Draft / Copy link / Iron door. No console errors. Headless Edge pictures of the six scenes at rest
+  and moments of the motion.
+- **Not tested:** her own record, her phone, the Key2, eggs.html on GitHub Pages (it goes up with the next publish).
+- **Pages checked:** Guide › Eggs (all six), Guide › Iron step 3, the cycle day card. New words: the ones above, "Eggs · Guide",
+  "Eggs ›", "Copy link", "Link copied".
