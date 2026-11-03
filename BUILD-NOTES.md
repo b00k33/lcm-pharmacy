@@ -11121,6 +11121,7 @@ under it in a meal (beside the amount in a Try, after it in a dish) that swap it
   Hungry Jack's, Hungry Jack's own pane does not; a Try: Fries with Small · Medium · Large. Headless Edge picture. No console errors.
 - **Not tested:** her own record, her phone, the Key2.
 - **Pages checked:** Meals (a meal's rows, + Add food or drink, the Try table). No new words but the size names.
+- **LIVE in build 20261103-233500** on her "ok push" (publish a506a962), with Iron step 3 (7f2ba0c3) and the Guide ↔ pages link (259f5872). Her devices need the gold Update.
 
 ## 2026-11-03 · Iron step 3: oxygen to energy
 Her "include animations for importance of red blood cells carrying oxygen which feeds mitochondria and energy production", and her
@@ -11147,6 +11148,7 @@ Pregnancy**, and **a second iron mark** inside each mitochondrion.
   the motion. No console errors.
 - **Not tested:** her own record, her phone, the Key2.
 - **Pages checked:** Guide › Iron step 3 (Fertility and Pregnancy). New words: the ones above.
+- **LIVE in build 20261103-233500** on her "ok push" (publish a506a962), with Sized shop foods (b478b468) and the Guide ↔ pages link (259f5872). Her devices need the gold Update.
 
 ## 2026-11-03 · The Guide and the record's pages: Tongue map, Pulse, Abdomen linked both ways
 Her word (a picture of Guide › Pulse › Complementary positions): "link teh study with the profiles e.g. tongue pulse abdomen etc so
@@ -11206,3 +11208,4 @@ page); an Abdomen tab from the Ren belly signs; one tongue chart. Memory project
 - **Pages checked:** Guide › Tongue map, Pulse, Abdomen; her Body › Pulse and Abdomen. New words: "the same chart as the … page",
   "Today", "+ / ✓ <first name>", "· pick a box", "Belly signs", "From the chart:", "From your Guide", "Guide ›", "+ my note",
   "Saved to your Guide", "Search belly signs", the Abdomen tab's intro line and empty lines.
+- **LIVE in build 20261103-233500** on her "ok push" (publish a506a962), with Sized shop foods (b478b468) and Iron step 3 (7f2ba0c3); checked on the live page (the build stamp, `phGdChartHtml`, "Search belly signs", the pulse lines' doors). Her devices need the gold Update.
