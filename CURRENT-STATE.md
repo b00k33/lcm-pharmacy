@@ -1175,7 +1175,7 @@ to reach, a red dot past a limit); + Food = the dish editor's food list; Plan it
 · Dinner: its foods into that meal through the planner's door) · Save as dish (the dish editor, Made of filled) · Clear (Undo).
 While Try is open the goals lay the open try over the day as stripes, "today X + try Y" under each state (the planned pale part
 steps aside). Kept until cleared, both logins: `d.meals["try|<id>"]` {fd, o}. Phone: the Try chip beside Numbers swaps the day's
-meals for it. A meal
+meals for it. LIVE build 20261103-143900. A meal
 **dragged** onto another day's same meal is copied there (what she had, else its plan; Undo in the toast; a meal she had there
 stays). Phone: the goals (the dial, then Reach and Stay under; the fast's goal on Your fasts ›), the steps (counts only; Eat its time), a day at a time. A cell = its meal's time (a day's own bold) + its things one per
 line (a small ↻ = it repeats, bold = that day only, ✓ + the time she had it); no ✎ Usual (MEAL REPEATS). A tap opens the picker in
