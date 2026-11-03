@@ -10564,3 +10564,97 @@ build 20261103-134900** (her "push live", with the Meals fat / Micros commit 7ad
   the names stay, today first in view, no sideways page scroll, every time on one line; no errors. Pictures
   `shots/routines-table-*.jpg`.
 - **Not tested:** her own record (her real Mode names decide each category; a Mode name outside the 14 lands in Other).
+
+## Iron teaching page (2026-11-03)
+**Her words:**
+- "synth22 - i want to build an iron education page where it shows animations of women needing 18mg a day and 27 during pregnancy and how much certain foods give is, and when i click on hte animation as an exercise, a womans iron is show as a highlight in her body and when i add food to her table, it shows the iron filling her up. this is a teaching tool to show patients how iron intake links to hormonal and gynaecological benefits. show animation of when iron is low, how that impacts fertility and pregnancy."
+- "design this well and show me mock"
+- "code3 code7 work together to build this"
+
+**Mock:** https://claude.ai/artifact/8SRMuRk79NJ2zFiqBFDyuu
+
+**Her 8 picks (all the recommended option):**
+1. Doors: the Guide tab + Meals + a patient's Blood tests + her Cycle page.
+2. Opened from a patient, it fills in from her record.
+3. Red rises from the feet.
+4. Vitamin C / tea change the fill (a rough guide).
+5. Voice "you".
+6. Calm words, no emoji.
+7. Add beef liver, mussels, oysters and black sesame to the food list, with sources.
+8. The low-iron steps play once, then tap.
+
+Then "Yes, build it", with the patient words kept as Draft.
+
+**Built:** the Guide's 7th tab, Iron (`phIrHtml`; state `phIr`, view only, never saved). The whole page is one light band, `.ph-ir` joining the Fast block's shared band rule; `.ir-box` is its white boxes.
+
+**1 How much**
+- Two figures fill red, drop by drop, on a first sight: 18 drops vs 27, with the 9 extra paler.
+- The figure is `PH_BODY_GEOM` with the sketch face and `phRenAnatomyHtml`'s organs (`phIrFigSvg`).
+- The pregnant one draws a womb at about 28 weeks, with the placenta, the cord and PH_PP's baby (`phIrBabySvg`, the same drawing as strings). Her colon, uterus, tubes and ovaries come out of that view.
+- What one serve gives: `PH_IR_TOP`, ranked by the iron of one usual serve (`phIrFood`: `PH_FOOD` iron per 100 g × the row's grams × its usual amount; the serve in the list's own words, `phFoodAmt`). Ties are A–Z. Shown as drops.
+- A dot marks meat and fish vs plants, eggs and grains.
+- On a patient, the card that is hers carries a gold You.
+
+**2 Fill up your iron**
+- The labelled figure (Brain, Thyroid, Heart and lungs, Liver, Ovaries, Uterus, Bone marrow; pregnant: Placenta, Baby) fills from the feet: a wave path inside the outline's clip, `translateY` by the level.
+- The places glow with the level (`.ir-spots` opacity) and pulse on an add.
+- A drop flies from the food chip to her stomach (`phIrAdd`; a timer lands it in a hidden tab).
+- Your table is a table (Food · Serve · Iron, ×; a second tap = 2 ×; total and % of the target).
+- With the meal: Vitamin C food ×1½ and Tea or coffee ×½ on plant iron, ×¾ with both. A rough guide, in their hovers.
+- The drops row is the target in drops. The count counts up; a gold ring plays twice the first time it is full.
+- Not pregnant | Pregnant swaps the figure in place. Reset.
+- Foods are A–Z inside six groups: `PH_IR_GROUPS`, the list's own rows.
+
+**3 When it runs low**
+- Enough vs Low, each with its red cells under a microscope: many full discs vs fewer, smaller and paler, with a wide pale centre; seeded, so they never jump.
+- Fertility | Pregnancy, five steps each (`PH_IR_CHAIN`, DRAFT; a Draft tag on the box).
+- On a first sight her iron drains and pales, then each step lights its place with a red ring, 2.3 s apart; then any step taps. ▸ Play again.
+
+**Doors**
+- **Iron · Guide** on a patient's Blood tests band (`PRES_BANDS.bloods`), and on her cycle day card's Period head on a heavy day (`phCycleSignPopHtml`: the Cycle page and Today's visit share it).
+- Both go through `phIrOpen(name)`: pregnant (`phPregPositive`) → 27 mg and the Pregnancy steps. A strip shows Pregnant · her week (`phPregWk`), her latest ferritin with its band (low / low end / high, the Patterns rule) and her heavy-flow days in 12 months; × shows it plain.
+- The patient stays open behind, as with Rules · Guide.
+- Iron · Guide under the Meals day bars (`phDietBarsHtml`) opens it plain.
+- Clicks: `phIrClick`, after `phCmpClick`.
+
+**Terse:** the mock's how-to lines ("Tap her to try", "Tap a food to add it · × to take it off", "Tap a step to see where", the rough-guide sentence) went into hovers. The mock was updated to match.
+
+**CSS:** the hand block "IRON TEACHING PAGE" after the Cycle page's block. Its motion is all inside `prefers-reduced-motion: no-preference`; the JS skips the fly, the drain and the count-up under `phTpReduceMotion()`.
+
+**Foods (her pick 7, "add the big ones"):**
+- Beef liver: USDA SR Legacy 168627, pan-fried (AFCD has none); 100 g.
+- Mussel: AFCD blue mussel, steamed; 10 a serve, 6 g of meat each.
+- Oyster: AFCD Pacific, aquacultured, raw; 6 a serve, 15 g each.
+- Black sesame seeds: USDA SR Legacy 170150, whole dried, which is the unhulled seed; 9 g a tbsp.
+
+Choline comes from USDA (raw blue mussel; eastern oyster, raw: near matches). The mussel's copper is USDA's cooked mussel. The two USDA rows have no iodine. The liver's omega-3 is USDA's 0 (US beef; pasture-fed Australian liver likely has some).
+
+The existing Sesame seeds row is AFCD F008214, the hulled seed (calcium 62 against whole's 975), so its "black sesame" search word moved to the new row.
+
+`PH_FOOD_SRC` carries each source, and the Targets' source line names beef liver and black sesame under USDA.
+
+Iron a serve: liver 6.2, oysters 4.0, mussels 1.8, black sesame 1.3.
+
+Commit 7ae3755d.
+
+**Tested** (a test copy, a made-up patient: pregnant 16 weeks, ferritin 21 on 12 Oct, two heavy days in June):
+- Step 1 at 1280: 13 ranked rows, steak 5.0 first.
+- The pregnant card → step 2 at 27 mg.
+- Steak, lentils, spinach, lentils, Weet-Bix: 13.0 mg, "A third of the way there", lentils 2 × ½ cup.
+- Vitamin C: 17.0 (×1½ on lentils, spinach, Weet-Bix; steak unchanged).
+- × on lentils once: ½ cup left.
+- Not pregnant: 18 drops, "Nearly there".
+- Reset: 0.0, "Nothing on your table yet", vitamin C off.
+- Step 3 plays: mid-play step 2 is current with 3–5 dim; a tap shows step 1 with the microscope ringed; Fertility swaps the five.
+- The Blood tests band shows Iron · Guide beside Rules · Guide. A tap opens the Guide's Iron tab: the strip reads Pregnant · 16w 0d · Ferritin 21 µg/L · 12 Oct 2026 · low · Heavy flow · 2 days in 12 months, the pregnant card carries You, and the patient stays open.
+- The cycle card's Period head shows Iron · Guide on a heavy day only.
+- The Meals bars carry the chip.
+- Phone 375: no sideways page scroll; the steps bar scrolls inside itself.
+- No console errors.
+
+**Not tested:**
+- The motion playing in a visible window (the preview pane was hidden: animations were listed and finished by hand).
+- Reduced motion in a real browser setting.
+- Her own data.
+- The Meals chip on a real Meals page (checked in the bars' HTML only: the test copy had no meals).
+- The Key2.
