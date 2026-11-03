@@ -10234,3 +10234,17 @@ made-up meals): computer, Mon 2's column = water, +250 ml, 13 bars from Choline 
 More = Choline · Iron · Vitamin C · Folate + 9 more (13 after the tap), no sideways scroll; Prescriptions search (phone list) Zz → 1,
 Qqx → 0, clear → back; console: no app error. **Not tested:** her real days.
 **LIVE** in build 20261103-105100 (publish 15554e6c, her "push live"); her devices need the gold Update.
+
+## Every calendar block one solid colour (2026-11-03)
+Her word with a screenshot of a block "Linh Quach 10:00 – 10:45 · CD 10 · Folli" drawn pale cream with a gold edge: "all blocks must
+be whole block color, not like this". **Cause:** a booking with no type (the calendar click books the name only, 2026-11-02) or a typed
+service with no Cliniko colour got no `--ck`, so it fell back to its kind tint (`.both` = gold tint + 3px gold edge, since her "all
+herbs" setting makes an untyped booking ACU + CHM; `.chm` green, `.acu` blue, no kind = paper). **Fix:** `phCkStyle` falls back to her
+usual type for the kind (`PH_CK_KIND_TYPE`: both → "4. Subsequent Acupuncture with herbs", chm → "Chinese Herbal Medicine -
+Subsequent", acu or none → "5. Subsequent Acupuncture"), so every block is `.ck`: one solid clear colour, ink by contrast, no edge. The
+popup's avatar, the List view's colour bar and everything else that reads `phCkStyle` follow. The kind tint rules stay as a fallback
+only (comment updated). Kept: Break's deep gold, the home visit's dark bar (her 2026-09-09 "Both"), Acupreg's sage.
+**Tested** (test copy, Browser pane at 1220, made-up bookings today with "all herbs" on): no type → mint (#58EDC0, the same as a typed
+4. Subsequent Acupuncture with herbs), "Herbal consult" → yellow, "Acupuncture only" → cyan, Break → deep gold; every one `.ck`, 0px
+edge, ink #141F23; the popup's avatar takes the mint. **Not tested:** her real bookings; the phone (same function). Picture
+`shots/solid-blocks-2026-11-03.jpg`. Commit 55467697.
