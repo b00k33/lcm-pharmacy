@@ -881,7 +881,7 @@ signs; the Care Plan Diagnosis = its pictures; the Patterns page = every pattern
 (`--px-h`), so nothing moves; a sign's name is said once, in the header with its Ren / Bing marks and weight dots.
 
 ## Guide — Families (study + edit)
-The Guide is **[Families] [Compare] [Tongue map] [Pulse] [Herbs] [Blood tests]**: a herb card is the body type with its formulas under it, notes-only formulas are
+The Guide is **[Families] [Compare] [Tongue map] [Pulse] [Herbs] [Blood tests] [Iron]**: a herb card is the body type with its formulas under it, notes-only formulas are
 dashed tiles, a study card sits on the right (in Study, the concept picture of the pattern(s) the family counts for, under the
 pearl). **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): her edits live in `PHARMACY.fbrEdits[id]` (+
 `fbrEditsAt`), and `phFbrEditsApply()` rebuilds `.ren/.bing/.or/.core` in place from `phFbrPristine`; `phFbrEditsSync()` (top of
@@ -936,6 +936,35 @@ usual grams, most-often partners and her recipes, worked out from `PRESC.items` 
 classics** (Formula · Dose · With · Does; 52 formulas in `PH_HU_SRC`, marked Draft until she checks them; the book's "Shao Yao"
 counts for Bai Shao and Chi Shao); hers first since her 2026-11-02 "move the classics after my formulas". The same card is the herb drawer's "How it's used" and the Dispense herb table's book circle.
 On a phone the Does column folds under the formula's name [How a herb is used].
+
+## Guide — Iron (a teaching page)
+The Iron tab (her 2026-11-03 picks, BUILD-NOTES "Iron teaching page"; mock 8SRMuRk79NJ2zFiqBFDyuu) is a page to show a patient.
+It runs in three steps on one light band of white boxes (the Fast block's shared band rule).
+
+**1 How much:** two figures, 18 mg a day and 27 pregnant, as drops (1 drop = 1 mg). What one serve gives is ranked by
+`PH_FOOD`'s own iron × each row's usual serve. A tap on a woman opens step 2 for her.
+
+**2 Fill up your iron:** her body fills red from the feet as food goes on Your table, a table of Food · Serve · Iron.
+- The places iron works glow with the level, labelled.
+- Foods are A to Z in six groups.
+- Vitamin C food ×1½ and Tea or coffee ×½ apply to plant iron, a rough guide.
+- The drops and the count follow; a gold ring plays when full.
+
+**3 When it runs low:** Enough vs Low, with the red cells under a microscope. Fertility or Pregnancy, five steps played once,
+then tapped; a Draft tag until she reads the words.
+
+State is `phIr` (view state, never saved).
+
+**Doors:**
+- The tab.
+- **Iron · Guide** on a patient's Blood tests band.
+- **Iron · Guide** on her cycle day card's Period head on a heavy day.
+- Both patient doors fill it in from her record: pregnant → 27 mg and the Pregnancy steps. A strip shows her latest ferritin with its
+  band and her heavy-flow days in 12 months; × shows it plain. The patient stays open behind.
+- Iron · Guide under the Meals day bars opens it plain.
+
+The figure is `PH_BODY_GEOM` with the sketch face and `phRenAnatomyHtml`'s organs; the pregnant womb carries PH_PP's baby
+(`phIrBabySvg`). Its foods include beef liver, mussels, oysters and black sesame, added to the food list for it [Iron teaching page].
 
 ## Photos
 **The patient's Photos page** opens on the Comparison table (a row per type, a date column each, **oldest left, newest right**; **All dates | Pair** above it once there are two dates: the Pair's two heads are the pickers, BEFORE ▾ ⇄ AFTER ▾, opening on first ↔ latest, ⇄ swaps, remembered for the session only, `phRenGalPairOf`; a phone opens on the Pair, two columns fitting the screen; her 2026-11-02 picks, BUILD-NOTES "Photos increment 2"); By visit / By type a tap away; the page's chips are the standard 32px chips, the shot row one joined bar; **with no photo on file it opens on its first action** (her 2026-10-31 pick, idea 4 of the 29 Oct audit): the camera tile (the phone’s own sheet, the computer’s chooser; then a kind per photo, the drop flow) beside the drop zone, the kinds under them, no Add tap and no "Or pick the type first" line; with photos the same block sits behind + Add (`presPhotosSectionInnerHtml`, `.ph-photos-first`, `.ph-photos-cam`); a phone shows the tile alone;
