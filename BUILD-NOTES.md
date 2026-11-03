@@ -10995,3 +10995,5 @@ that session, and the strength comes from the real before, the grey, the pale be
   - a sync repaint mid-sweep.
 - **Pages checked:** Meals Try (desktop and phone), the Iron page step 2.
 - The first body build (0a253caa) went LIVE in 20261103-154400 with the seafood publish, before her "push live".
+**LIVE in build 20261103-165100** (her "push live"; publish f85daee1; checked on the live page: the build stamp, `phMbdWipe`, the
+BEFORE copy, the key's "short: grey, shrinks, cracks", the Iron page's `phIrBody`). Her devices need the gold Update.
