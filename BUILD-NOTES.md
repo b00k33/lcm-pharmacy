@@ -10724,3 +10724,40 @@ switches; her 4 picks, all the recommended option:
 - **Not tested:** her own record through a patient door, reduced motion, the Key2.
 - **Pages checked:** the Guide's Iron tab (steps 1 and 2); the doors (Blood tests, cycle card, Meals) only open it and did not change.
 Commit 277a6673. Not live: it rides on the next "push live".
+
+## 2026-11-03 · Meals: try a meal
+Her "for my meals page, i want a meal mock function where i add food to a mock meal table so i can experiment with seeing the micro
+and macros", then "help me design that. mock first". Mock `meal-try-mock-2026-11-03.html` (artifact D2SZGLwLewP61JszjSpY3L; root until
+live, then mocks/): where it lives (A a Try tab · B a sheet · C the side column), the two table shapes working from one real meal, the
+goals with the try as stripes, tries as tabs. Her 8 picks, all the recommended option:
+1. **A Try tab**, the week box's fifth (Grid · Table · Numbers · Photos · Try); the goals stay above it.
+2. **A food a row**: Food · Amount (− / +, the dish editor's steps; the amount typed too) · the numbers · ✕; under them **This meal**
+   and **Of your day**.
+3. **The goals show today + the try**: the open try as stripes after what she had, the state (to go / left / over / ✓) worked out for
+   both, "today X + try Y" under it; the planned pale part steps aside while the try shows.
+4. **Her 8 numbers first** (PH_MAC's four, then the Micros block's four), **All 19 ▸** for the other 11 in the food list's order.
+5. **Up to three tries** as one joined bar (each named by its first food, "Salmon +4"; + Try); the goals follow the open one.
+6. **Kept until she clears it, every device:** `d.meals["try|<id>"]` {id, fd, o, up} in her Me row, merged entry by entry with her
+   meals (`phDietMerge`); nothing else reads a `try|` key.
+7. **Plan it ▾** (this week's days from today, today gold, then Breakfast · Lunch · Dinner) puts its foods into that meal through the
+   planner's door (`phMealListPut`: that day's own foods, a food already there keeps its amount, 12 at most); **Save as dish** opens the
+   dish editor with Made of filled (its own Save).
+8. **A number the food list does not know = –**, and the total carries a **+** (at least: `phDishNut`'s `miss`).
+- **Code** ("TRY A MEAL", after `phMplLaySet`): `phMtrys`, `phMtryCur`, `phMtryNut`, `phMtryKs`, `phMtryPut` (the one write, through
+  `phMealSave` / `phMealPut`), `phMtryFoodTog`, `phMtryStep`, `phMtryAmtType`, `phMtryRm`, `phMtryClear` (Undo), `phMtryPlan`,
+  `phMtryDish`, `phMtryHtml`. `lcm-mpl-view` takes "try"; `phMplHtml` sets `phMtryV` around the goals' paint and gives Try the whole box
+  (no side column; the key: had · this try · your goal); `phMplGlHtml` draws `i.tr` and `.tw`. + Food = `phFoodPickHtml` + `phFoodFilter`
+  (the dish editor's list; the input, Enter and All foods ▾ hooks take `data-mtry-fq`); the typed amount joins `phMealQvTake`. Plan it ▾
+  closes on a tap outside or Esc, opens upward with no room under it and moves itself onto the screen; on the phone its days drop the
+  date. CSS "TRY A MEAL" after the week box's; one phone line in the PHONE REDESIGN block. An empty try opens on the food list.
+- **Tested** (test copy on port 8989, my `mg-shot.html` harness, the made-up "Zz Me Test"): salmon 150 g + ½ avocado + 2 eggs + 1 cup
+  spinach + 1 bowl plain congee = 3,677 kJ · 56.8 g protein · 52.7 g carbs · 48.6 g fat · 176 mg calcium · 445+ mg choline (congee's
+  micros "–"); Of your day 114% ✓ protein, 176% carbs (red dot); − / + and a typed 200 g; All 19 (22 columns, scrolling inside); a
+  second try from + Try with the search + Enter; the tabs switch; Plan it → Wed lunch ("✓ Lunch · Wed only · + 5 foods"), again =
+  "Already in Wed 4 lunch"; Save as dish → "New dish" with the five foods, saved; Clear → gone, Undo → back; the goals: 7 stripes and 8
+  "today + try" lines on Try, none on Table (the planned pale part back); the stored entry, and the sync merge keeping tries from both
+  sides; phone 375: the Try chip, the table scrolling under the names, no sideways page scroll, Plan it on the screen; no console errors.
+  Pictures `shots/meals-try-*.jpg`.
+- **Not tested:** her own record and a second device (the harness rewrites its record on each load, so the merge was tested by call),
+  the Key2, reduced motion (nothing new moves).
+- **Pages checked:** Meals (the goals, Try, Table, the phone's day); the dish editor (Save as dish); a day's meal (Plan it).

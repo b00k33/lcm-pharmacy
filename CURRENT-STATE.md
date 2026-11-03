@@ -1157,7 +1157,7 @@ Patterns (`diet_cool` / `diet_warm`, source Diet, DRAFT wording); Fang Bing Ren 
 2026-11-01, "a table format for meal planning and recording ... clean, like the appointments page"; her picks on
 meals-table-mock-2026-11-01.html, then "include interactive animations and workflow elements"). A computer (MEALS WEEK BOX, her 2026-11-03 picks): **the goals** first,
 then the week as ONE box, its bar on top in the record's light tint, pinned under the name band while the week scrolls (two rows
-when its words do not fit one): the bar (‹ span › · Today · the tabs **Grid · Table · Numbers · Photos**, the open one white, this device's `lcm-mpl-view`, Table first · the steps **Plan n/7 · Shop n to buy · Eat <the next meal> ·
+when its words do not fit one): the bar (‹ span › · Today · the tabs **Grid · Table · Numbers · Photos · Try**, the open one white, this device's `lcm-mpl-view`, Table first · the steps **Plan n/7 · Shop n to buy · Eat <the next meal> ·
 Check n to answer** (Eat names today's next meal and its time, "Dinner 6:30 pm", ✓ once all had, a dinner the fast covers left out;
 MEALS GOALS, her pick 7), the first not done filled, each a door: next week · Shopping in the column (made when there is none) · today's
 next meal · How did it sit for each meal she had 1½ h ago not yet answered · **More ▾** = Copy last week, Recipes, Targets (the
@@ -1167,7 +1167,15 @@ are gone). Inside the box (the key along its foot) the week with a
 **column at the right** on a pale side (Appointments' way): the meal's picker, Shopping, How did it sit, or a day (tap its name: water, numbers,
 bars, Copy this day). The week narrows and scrolls under it; the day and the four numbers stay in view. **Table**: a row a day,
 Breakfast · Lunch · Dinner · Snacks · drinks · Supps · herbs (a day's kJ · P · C · F are the goals' ticks; the number columns went,
-MEALS GOALS). **Grid**: days across, a block a meal (had = solid teal), Snacks, Supplements (its Total row went the same way). A meal
+MEALS GOALS). **Grid**: days across, a block a meal (had = solid teal), Snacks, Supplements (its Total row went the same way). **Try** (TRY A MEAL, her 2026-11-03 picks; `phMtry*`): a meal she builds
+to see its numbers before she eats it, nothing logged. Up to three tries as one joined bar (a tab names its first food; + Try); a
+food a row (− / + and the typed amount as a dish's, ✕); her 8 goal numbers (kJ · Protein · Carbs · Fat · Calcium · Choline · Copper ·
+Magnesium) + All 19 ▸; **This meal** (a + = a food could not count it) and **Of your day** (% of each goal: a green dot ✓ on a goal
+to reach, a red dot past a limit); + Food = the dish editor's food list; Plan it ▾ (this week's days, today first; Breakfast · Lunch
+· Dinner: its foods into that meal through the planner's door) · Save as dish (the dish editor, Made of filled) · Clear (Undo).
+While Try is open the goals lay the open try over the day as stripes, "today X + try Y" under each state (the planned pale part
+steps aside). Kept until cleared, both logins: `d.meals["try|<id>"]` {fd, o}. Phone: the Try chip beside Numbers swaps the day's
+meals for it. A meal
 **dragged** onto another day's same meal is copied there (what she had, else its plan; Undo in the toast; a meal she had there
 stays). Phone: the goals (the dial, then Reach and Stay under; the fast's goal on Your fasts ›), the steps (counts only; Eat its time), a day at a time. A cell = its meal's time (a day's own bold) + its things one per
 line (a small ↻ = it repeats, bold = that day only, ✓ + the time she had it); no ✎ Usual (MEAL REPEATS). A tap opens the picker in
