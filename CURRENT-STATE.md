@@ -867,11 +867,11 @@ pattern on the Journey card; and as a still (`phPpStillJpg`) in the Food letter,
 Lian Jie Du Tang, Xiao Chai Hu Tang, Wen Dan Tang and Wu Ling San among them) has a moving picture of the body (three burners,
 trouble, herbs at work, tongue + pulse inset), three stops Trouble / Formula at work / Settled, tap-a-herb chips. The person shows
 to mid-thigh (340 x 240), drawn at .88 (`ZK`, labels follow through `ZP`), with a pencil-sketch face (`FACE_SKETCH`,
-`face: "sketch"`; her picks: slim face, pointed chin, closed lips, minimal side-parted hair ending at the ears). The tongue
+`face: "sketch"`; her picks: slim face, pointed chin, closed lips; no hair, her 2026-11-04 "remove hair of figure", on every figure that wears it). The tongue
 inset's shape follows its trouble words (`tngFeat` / `tngD`: swollen = wide, round tip, scalloped teeth marks; wet = shine; red
 tip; dry = cracks). It replaces the pattern picture on the Guide card for those formulas and also shows on Dispense (end of the
 right column) and the Care Plan formula cell. Same runner as the pattern pictures. A new formula = one `PH_FP.SC[id]` scene +
-`PH_FP.HERBS[id]` + `PH_FP.PAT[id]`; no scene = the pattern picture stays.
+`PH_FP.HERBS[id]` + `PH_FP.PAT[id]` + its Guide story rows (`PH_FS_WORK`, `PH_FS_PAIRW`, `PH_FS_ALLW`); no scene = the pattern picture stays.
 **The big sheet (her picks):** every formula, pattern and Guide key-sign picture (the Patterns page's open card too) has an expand
 button in its top-left corner (`phPpXpHtml`) opening the one sheet at up to 1100px, which steps through the pictures it sat with
 (one opener, `phPxOpen` → `phPxPaint`): arrows on the picture's edges AND a strip of the pictures right under it (a phone: strip +
@@ -891,6 +891,15 @@ written as 0, and lists filter `w !== 0`. Cloud: `mergeFbrEdits` beside `mergeTe
 A notes-only formula that has become a scoring family (Wen Jing Tang, 2026-10-28) leaves Notes only; its memory aid, distinction,
 conditions and source show on the family's card (`phGdfNoteIsFam`, `phGdfFamNoteId`).
 Details and tests: [Guide Families].
+**The card's picture (her picks 2026-11-04; BUILT, not live; BUILD-NOTES "Guide cards: the person, and the formula's story"):** `phFsHtml`, the `phFs*` functions.
+- **A herb family is a person** (`PH_FS_PEOPLE`: Ban Xia, Chai Hu, Da Huang, Fu Zi, Gui Zhi, Huang Bo, Huang Lian, Huang Qi, Ma Huang, Shi Gao), her words "animations for gui zhi should only focus on the person, only the formulas show pathology". The card plays only its Ren rows: the body on its own build (`phFsBuild`), no burners (`PH_FP.person`), no stops, no herbs, no conditions, tiles for Ren rows only. Its rows of signs under the card stay as they are.
+- **A formula plays one story**, four stops: Person (Ren rows, the person's own words on the body) → Trouble (Bing rows) → Formula at work → Settled. Formula at work is her "one herb, herb pairs, and whole formula effect": each herb's turn (`PH_FS_WORK`, herb key → the sign it answers), then the classics' pairs (`phFsPairs` reads `PH_HU_SRC`; `PH_FS_PAIRW`, pair → sign, words), then the whole formula (`PH_FS_ALLW`, four sign pictures easing together). Only the herbs on turn keep their words (`phFsHerbSet`).
+- **The film's rules:** a sign marked both Ren and Bing has a tile on both stops and plays once; a sign a herb answers plays before the herb; Settled shows other signs (a family with too few repeats two, calm); at most two pictures of a place. Beats: 2.8 s a person's sign, 3 s a trouble, 4.5 s a herb, 4 s a pair, 6.5 s the whole, 2.4 s settled: a person 15 to 28 s, a formula about 44 to 85 s.
+- **The sign pictures are its lens:** a gold ring on the body marks the place (skin, sweat, fever, energy: the body's outline lights). Every sign draw is `draw(t, a)`, a = how much of the sign is there, so a sign eases as its herb works.
+- **Plays once, then holds;** a tile, herb or pair chip holds that picture, a second tap lets it go on; the round button holds or plays again. Under reduced motion it rests, and stops and chips still work.
+- The Conditions line under a formula's chips = its Diagnosis rows, A–Z (they stay out of the film). Cover Signs blurs the film's words too. Each person has their own build: their Ren build row, else `PH_FS_BLD_WORDS` from her person line.
+- `PH_FS_WORK`, `PH_FS_PAIRW` and `PH_FS_ALLW` are Claude's DRAFT for her to read (a Draft pill on the row); the pairs come from the classics' table, itself Draft.
+
 
 ## Guide — Tongue map, Pulse, Abdomen (linked to the record's own pages, 2026-11-03; LIVE build 20261103-233500)
 Each tab draws the **open record's LIVE chart** (the patient open behind the Guide, else her own record from Me: `phGdWho`) with
@@ -944,8 +953,7 @@ same slide and head tap. Lists A–Z through `phAz`: the Family dropdown, the Ad
 **A sign's picture (her 4 picks 2026-11-02, BUILD-NOTES "Compare: sign pictures on hover"):** pointing at a sign's name shows its key-sign picture beside the row (the name cell carries `data-ks-pop` when `phKsHas`, the Compass's one popover `#phKsPop`); a tap on the name, the only way on a phone, opens the big ‹ › sheet through that table's signs that have a picture, in table order (`phCmpPicOpen`, items `{k:"kg", g}` read by `phPxKsGroup`); every sign with a picture, a sign without one shows nothing; no thumbnails, no panel. Code: `phCmp*` before `renderPhGuidePage`; CSS blocks "Guide · Compare" and "Guide · Compare, the same and the different" after the `.gf-cmpb` rules.
 **Key sign pictures (her picks):** every sign a family weighs 4 or 5 has ONE picture (`phKsDesc` / `phKsSvgHtml`; a Bing sign and
 its Ren twin share it): hand-drawn for Gui Zhi's Key signs (`PH_KS_SC`), else her Tongue / Abdomen chart, the wrist with her pulse
-lines, its body place's close-up (`PH_FBBP`) or the body figure, moving by its words (`phKsVerb`). The Guide card shows the
-family's Key + Strong signs as a big picture taking turns (4.5 s) with tiles under it (hover shows, tap holds). The Fang Bing Ren
+lines, its body place's close-up (`PH_FBBP`) or the body figure, moving by its words (`phKsVerb`). The Guide card plays them inside its story (Guide — Families), with tiles under the lens. The Fang Bing Ren
 board shows the big one beside a row she points at; Compass sign rows and Ask her answers carry a small still one (none on a
 phone). One picture moves at a time; all still under reduced motion. Only Gui Zhi's Key signs are hand-drawn so far [Key sign
 pictures].
