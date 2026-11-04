@@ -11244,6 +11244,7 @@ closes it. Memory project_lcm_guide_profile_link_2026_11_03.
 - **Pages checked:** Guide › Tongue map; her Body › Tongue (Top and Sublingual). New words: "Healthy", "Healthy tongue" / "Close the
   healthy tongue" (hover), "Add healthy photo", "✎ Change", "No photo", "No notes", "Healthy photo saved", "That picture couldn't be
   read. Try another.".
+- **LIVE in build 20261104-111100** on her "push" (publish 3831908e), with the Eggs teaching page (5c7f5e55); the first push failed when this computer's internet dropped, and the same publish went once it was back. Checked on the live page: the build stamp, `sw.js`, `phTngHealthyTile`, "Add healthy photo". Her devices need the gold Update.
 
 ## 2026-11-03 · Eggs teaching page
 Her chart "Number of Mitochondria Per Human Cell" and "make an animation of this that links to mitochondria so i can use it as
@@ -11285,3 +11286,4 @@ print). **On the mock (artifact QVR4nKWeydZGUQuswXRuY2):** yes, build it; B · a
 - **Not tested:** her own record, her phone, the Key2, eggs.html on GitHub Pages (it goes up with the next publish).
 - **Pages checked:** Guide › Eggs (all six), Guide › Iron step 3, the cycle day card. New words: the ones above, "Eggs · Guide",
   "Eggs ›", "Copy link", "Link copied".
+- **LIVE in build 20261104-111100** on her "push" (publish 3831908e), with the Healthy tongue photo (9df9825d). Words still DRAFT. eggs.html opened on GitHub Pages at 1024 wide: it draws, scene 6 rests, no Draft tag, Copy link or Iron door showing, noindex, nothing past the screen, no console errors. Her devices need the gold Update.
