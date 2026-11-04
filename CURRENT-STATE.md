@@ -1898,7 +1898,10 @@ own column and row labels (`phPaLay`, again on a width change); today's arches i
 at-rest rate (72 when none, a Slowed chip), following the Hammer rhythm; the chart's own today drawing steps aside while it runs;
 still under reduced motion. Every quality has its own drawing (`phPaModel` picks the shape, `phPaDraw` draws one frame). Amplitude
 is HER ARROW SCALE: ↓ Soft / ↓↓ Weak / ↓↓↓ Flat, ↑ Slight pounding / ↑↑ Pounding / ↑↑↑ Robust pounding (chips, chart glyphs and
-arch height all follow the count). Thin / Narrow is one chip; no Loose; Blocked = walls both sides + her loop; Ropy = thick wiry
+arch height all follow the count). A box holds ONE strength (her 2026-11-04 "weak ampitude is opposite to robust pounding strong etc.
+only one can be selected"; her picks; `phPulseIsStrength` in `phPulseCellToggle`, the one door): the six arrows, Feeble-Absent and
+Forceful replace each other, a box at a time, so Heart can read ↓ at Qi and ↑ at Blood; Amplitude Change and Reduced Substance stay
+free; a box already saved with two keeps them until one is tapped. Thin / Narrow is one chip; no Loose; Blocked = walls both sides + her loop; Ropy = thick wiry
 line; Small compressed holds up to 3 per cell (`n` on the mark). DEEP and FLOATING ARE READ FROM THE DRAWING (`phPulseAutoDepth`,
 never stored): below the position's normal depth = Deep, Skin row = Floating; their chips light up (`.auto`) and Patterns, Fang Bing Ren and
 the SHPD notes read them as if ticked. The pulse knowledge base (`PH_PULSE_KB_SEED`) only shows hints, never writes. Bell's palsy

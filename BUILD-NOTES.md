@@ -11321,3 +11321,23 @@ now fits her photo: Lower y 28–54, Middle 58–92, Upper 96–126 as before, S
   doors. Pictures `shots/healthy-tongue-fit-2026-11-04.png`, `shots/healthy-tongue-her-photo-2026-11-04.jpg`.
 - **Not tested:** her own login, her phone, the Key2. Middle, Upper and Sides were checked by eye, not tapped.
 - **Pages checked:** Guide › Tongue map. No new words.
+
+## 2026-11-04 · Pulse: one strength in a box
+Her words (a picture of the Intensity row): "weak ampitude is opposite to robust pounding strong etc. only one can be selected".
+Her notes read depth by depth ("Qi depth Feeble-Absent, Blood depth Spreading", a5-19, pit-18), and no note needs weak and strong in one box.
+**Her 2 picks (both recommended):**
+1. Each box: a position can still read ↓ at Qi and ↑ at Blood.
+2. Feeble-Absent and Forceful count with the six arrows. Amplitude Change and Reduced Substance stay free to add.
+
+- **Where:** `PH_PULSE_STRENGTH`, `phPulseIsStrength`, and one line in `phPulseCellToggle`, the door every chart goes through (the Pulse
+  page's brush, its small box of chips, a visit's chart, the Guide's live chart). No stored mark is changed: a box already saved with two
+  shows both until one is tapped; a new strength then replaces both, a tap on one of them takes just that one off.
+- **Tested** (8989 harness, the made-up "Zz Me Test", 800, real taps on the Pulse page):
+  - Weak → Robust Pounding replaces it; Normal, Amplitude Change and Reduced Substance stay beside it;
+  - Feeble-Absent replaces Robust, Forceful replaces Feeble-Absent, Flat replaces Forceful;
+  - Heart Blood takes Pounding with Heart Qi's Flat untouched; the same chip tapped again takes it off;
+  - the small box of chips (no brush): Soft → Robust, only Robust lit;
+  - an old box with Pounding + Weak + Normal: shows both, Soft leaves Normal + Soft; Pounding tapped on Pounding + Weak leaves Weak;
+  - `phPulseCellToggle` called directly for a visit's chart, and Erase; no console errors.
+- **Not tested:** a visit's chart by real taps (the same function), her own record, the phone (no drawing changed).
+- **Pages checked:** the Pulse page on her own record's Body group. No new words.
