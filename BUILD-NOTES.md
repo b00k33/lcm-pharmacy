@@ -11547,3 +11547,20 @@ Her word: "push", for the centred lump, then "Push both" with One face. After pu
 - **Not tested:** her real formulas and jars; her own devices, the Key2.
 - **Pages checked:** Guide › Herbs (wide + phone).
 - **Not live** until her word.
+
+## Guide › Eggs: brain cells on the mitochondria chart (2026-11-05)
+
+Her words, with a picture of the chart: "include brain cells is 2 million".
+
+- **The row:** Brain cell, about 2 million, last, because a scale ascends. A small neuron icon (`PH_EG_IC.brain`). The scale now runs 6.5 steps (`PH_EG_LOGS`) to leave room past 1 million, so every bar sits a little further left. The egg stays the highlighted row, and "more of them than almost any other cell" is still true, so it stands.
+- **This reverses 2026-11-03,** when her chart's brain figure was left out for want of a source. Her newest word wins.
+- **The source, said plainly:** three searches found no original study for 2 million in one brain cell. The closest, Karl and others (PMC11412485), counts mitochondria per area of visual cortex, not per cell, so it neither backs nor rules out the figure. The source line reads "brain cell about 2 million (from a chart; original study not found)". The egg's figure counts copies of mitochondrial DNA (the line says so), the brain cell's counts mitochondria.
+- **Judgment calls, for her to overrule:** that source wording, which patients see on the link too.
+- **Not changed:** the film's bars (sperm, liver, heart, egg). Adding brain cells means re-recording both videos, about 80 MB each in the public history.
+- **eggs.html:** remade by the script from a scratch copy, because the tree's index.html is a stale snapshot. On the saved page the script reproduced the saved eggs.html exactly first.
+- **Also checked, after another session found One Face had taken the throat scene:** every sign mounted big and as a tile draws something (1,352 checks, 0 empty), and comparing names before and after One Face, `throat` was the only scene lost; the rest of its list is what it replaced.
+- **Tested** on test copies, nothing saved to her data: eggs.html at desktop and 375 wide, Guide › Eggs in the app: five rows in order, bars at 29, 51, 57, 89 and 97%, no errors, no sideways scroll on the phone.
+- **Worth knowing:** in a narrow window with the side rail open (800 wide) the track is short and the scale's words crowd. The same three words sat on the same short track before this row. Not changed.
+- **Not tested:** her own devices, the Key2.
+- **Pages checked:** Guide › Eggs (Mitochondria), eggs.html.
+- **BUILT, not live:** it goes with her next "push live".
