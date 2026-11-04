@@ -11287,3 +11287,24 @@ print). **On the mock (artifact QVR4nKWeydZGUQuswXRuY2):** yes, build it; B · a
 - **Pages checked:** Guide › Eggs (all six), Guide › Iron step 3, the cycle day card. New words: the ones above, "Eggs · Guide",
   "Eggs ›", "Copy link", "Link copied".
 - **LIVE in build 20261104-111100** on her "push" (publish 3831908e), with the Healthy tongue photo (9df9825d). Words still DRAFT. eggs.html opened on GitHub Pages at 1024 wide: it draws, scene 6 rests, no Draft tag, Copy link or Iron door showing, noindex, nothing past the screen, no console errors. Her devices need the gold Update.
+
+## 2026-11-04 · Guide › Herbs: order the list by how many formulas hold a herb
+Her word (a picture of the Herbs list): "let me have option to organise in ascending descending order of frequency of formulas". Terse
+and clear, so built with no popup.
+- **The bar:** one joined bar above the list, **A–Z · Most · Fewest** (`.ph-tng2-seg` + `.ph-ltr-qual`, `PH_GD_HERB_ORDERS`, the hover says
+  "Most formulas first" / "Fewest formulas first"). The number on each row is the count of classic formulas holding the herb
+  (`phHuClassicKeys`). Ties stay A–Z. A herb with no count (her own, found by search) counts 0.
+- **My calls:** A–Z stays the first open (her A–Z rule, CLAUDE.md "Kept as they are" names this exception). Her pick is remembered on the
+  device (`lcm-gd-herb-order`, `phGdHerbOrder`), not synced, like the app's other view picks. A tap redraws only the list, from its top
+  (`phGdHerbOrderSet`): the herb she is reading stays picked and its card stays open, the page does not move.
+- **Layout:** the bar and list sit in `.ph-gd-hu-side` (it holds the sticky; the list keeps its own scroll); static on a phone.
+- **Tested** (a copy of HEAD 39684c99's index.html with this patch, port 8998, the 67 classic herbs): A–Z on first open; Most: Gan Cao
+  31, Bai Shao 20, Gui Zhi 19 ... every row in order, ties A–Z; Fewest: Bai Tou Weng 1, Bo He 1, Fang Feng 1 ... Gan Cao 31 last; back to
+  A–Z. With Bai Tou Weng open its card and picked row stayed through each tap (real clicks at the buttons' points), the page did not
+  move. Search "shao" under Most: Bai Shao 20, Chi Shao 18, Huan Shao Dan (no count) last, the box keeps focus; "qqxz": No match; clear:
+  all back in Most. Leaving for Pulse and returning kept it; a true reload kept Fewest. 375 wide: the bar and list fit, the page does not
+  scroll sideways. Bar 32 px, 6 px ends. Prescriptions search Zz → one, Mia → one, Qqx → none, clear → all. No console errors. Pictures
+  `shots/herb-order-*-2026-11-04.jpg`.
+- **Not tested:** her own herbs with a real count of her prescriptions (the number is the classics' count either way), her phone, the Key2.
+- **Pages checked:** Guide › Herbs; the herb's card there is untouched, and the Inventory drawer's "How it's used" uses the same card, with
+  no list. New words: "Most", "Fewest", the two hover lines.
