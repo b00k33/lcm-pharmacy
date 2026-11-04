@@ -11359,3 +11359,21 @@ Her words, with a picture of the Gui Zhi card: "these animations are great but s
 - **Not tested:** her own devices, the Key2, a real patient's Dispense or Care Plan page (same functions, driven alone), the Compass and Ask her pictures on a live record, and the 30 formulas' stops were checked by the table check, not each by eye.
 - **Pages checked:** Guide › Families (people and formulas); the big sheet; formula pictures outside the card; Meals body uses the same face.
 - **BUILT, not live (commit de85f1f0):** goes live only on her "push live".
+
+## Guide: Gui Zhi Tang's own story, one chip from the Gui Zhi person (2026-11-04)
+
+Her words: "ok, build it and push". She was answering my line that I had set aside the formula picture I'd drawn for Gui Zhi Tang and that it could come back as its own formula picture. I took "it" to be that picture, and "push" as "push live", and told her so.
+
+- **The card:** Gui Zhi's Guide card now opens on a chip row, Gui Zhi | Gui Zhi Tang. Gui Zhi stays the person, no stops, herbs or pathology (her earlier "animations for gui zhi should only focus on the person, only the formulas show pathology"). Gui Zhi Tang plays the four stops: Person, Trouble, Formula at work (Gui Zhi, Shao Yao, Sheng Jiang, Da Zao, Gan Cao; Gui Zhi + Shao Yao; Sheng Jiang + Da Zao; Whole formula), Settled. 23 beats, 24 tiles.
+- **Code:** the scene I had set aside comes back as `SC.guizhitang`, with `HERBS.guizhitang` and `PAT.guizhitang: "qidef"`. `PH_FP_NAME` names it, `PH_FS_SIGNS_OF` gives it Gui Zhi's rows, `PH_FS_FORMULA` + `phFsCardHtml` + `phFsWhoTap` draw and work the chip, `phFsView` keeps the choice. New rows in `PH_FS_WORK`, `PH_FS_PAIRW`, `PH_FS_ALLW`.
+- **Judgment calls:** no `PH_FORMULAS` entry, so Fang Bing Ren scoring and the families list do not change. Which chip a card opens on: the person. The choice stays while Cover repaints and when she comes back to the card, not across a reload.
+- **Side effect, wanted:** a prescription named Gui Zhi Tang now finds this picture on Dispense and Care Plan through `phFpIdFor`, as does "Gui Zhi Tang + Long Gu". "Gui Zhi" alone, and "Gui Zhi Fu Ling Wan", find none. "Gui Zhi Jia Long Gu Mu Li Tang" keeps its own.
+- **Words:** the herb to sign pairing, "Warm out, hold in", "Warm and feed the middle" and "Surface closes, rush settles, middle fed" are Claude's DRAFT, unread by her.
+- **Tested** (test copies of the real page, no patient, nothing saved to her data):
+  - The all-cards table check with Gui Zhi Tang in it, 10 people and 31 formulas, also with `--force-prefers-reduced-motion`. The flags are the same as before: Xiao Jian Zhong and Wai Tai Fu Ling Yin's Settled repeats, and four herb chips whose short words differ from the picture's label, handled by `PH_FS_LABW`.
+  - Real taps on the plain page, Guide › Families: Gui Zhi opens on the person with two chips and no stops; the chip goes to Gui Zhi Tang with four stops; Cover Signs blurs it and the view stays; the Gui Zhi chip returns to the person; Ma Huang has no chip. By script on the same page: Wu Ling San has no chip and four stops, and coming back to Gui Zhi keeps Gui Zhi Tang. A pair lights its two herbs only; open-big opens "Gui Zhi Tang" with 33 items and lands on the held sign. No console errors.
+  - 360 wide: no sideways scroll, chips, stops and herb rows all fit. The mock page: the same chip both ways.
+  - A check script's screenshot once disagreed with what it had just read from the page. That run also had my test hook on it, so I threw it out and repeated it on a plain copy with real taps, where the pictures matched at every step.
+- **Not tested:** her own devices, the Key2, a real patient's Dispense or Care Plan page with a Gui Zhi Tang prescription.
+- **Pages checked:** Guide › Families; the big sheet; the mock page.
+- **BUILT, not live (commit 75cc9f1a):** goes live on her "ok, build it and push", above.
