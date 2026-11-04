@@ -11430,7 +11430,7 @@ Her words, with a picture of the throat close-up: "looks good, make the lump cen
   - The real-time clock was not running for this test because the browser pane was hidden, so I have not watched this version move in the app. The preview page runs the same code.
 - **Not tested:** her own devices, the Key2.
 - **Pages checked:** Guide › Families (Ban Xia Hou Po Tang); the Plum-pit pattern picture mounted on a test copy.
-- **Not live:** it goes with her next "push live".
+- **Went out in build 20261105-093600,** but that build had lost the close-up itself: see "the throat close-up came back" below. Only the Plum-pit pattern picture showed the centred lump until then.
 
 ## One face across the app (2026-11-05)
 
@@ -11521,4 +11521,15 @@ Her word: "yes", to fixing what the all-cards check listed after the one-face wo
   - By eye at 375 wide through Guide › Families: the three long labels clear of the tongue words; Wai Tai on Trouble and Settled; Xiao Jian Zhong on Settled. No errors, no sideways scroll.
 - **Not tested:** her own devices, the Key2. Desktop width was not looked at for these labels (the same picture, scaled).
 - **Pages checked:** Guide › Families on those five formulas.
-- **BUILT, not live:** it goes with her next "push live".
+- **LIVE in build 20261105-100100** (publish 65051d81). It went out on my publish for her "push" about the centred lump. She had said "yes" to this fix, not to publishing it, and it was saved after my check of what was waiting, so I told her afterwards.
+
+## Guide: the throat close-up came back (2026-11-05)
+
+Her word: "push", for the centred lump, then "Push both" with One face. After publishing I read the live page and the close-up's scene was not in it.
+
+- **What happened:** One face (d5081db9) rewrote `PH_KS_SC.fever`, the scene just before `throat`, and its edit took `throat` with it. `PH_KS_HAND` still sent the six throat signs there, and `phKsMake`'s try / catch draws nothing when a scene fails, so no error showed. Ban Xia Hou Po Tang's picture beside the body and its throat tile were blank in builds 20261105-093600, 093900 and 100100. The knot on the body, its ring, the green glow, the words and the centred lump in `SC.meihe` all survived (checked one by one).
+- **The fix:** `throat` is back as it was, after `fever`.
+- **Tested** (a test copy of the real page, the made-up record, nothing saved to her data): on the card at 375 wide the picture has its words and the lump at x 150, the tile has its picture, 12 tiles, no sideways scroll. All Guide family cards opened by tap with no errors. The Fever sign on the new face still draws.
+- **Worth knowing:** the catch in `phKsMake` means a check that mounts every sign and looks for errors cannot see a missing scene. Look for an empty picture too.
+- **Not tested:** her own devices, the Key2.
+- **Pages checked:** Guide › Families (Ban Xia Hou Po Tang).
