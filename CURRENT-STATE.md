@@ -1035,7 +1035,7 @@ photos at the bottom. **Healthy tongue (her picks 2026-11-03; LIVE build 2026110
 too) opens the clinic's healthy tongue photo beside today's (Healthy | Today, in place of Last; ✕ or the icon closes it); Upper ·
 Middle · Lower · Sides drawn over it, a tap lists that place's Guide notes under the pair, each a Guide › door. She adds it there
 ("Add healthy photo", "✎ Change"); it is kept small in the clinic's synced data (`PHARMACY.healthyTongue`, one per login), never the
-patient photo store. The Guide's Tongue map draws the same column (`phTngCmpHtml`). Code: `phTngHealthyTile`, `phTngHealthy` (view
+patient photo store. The places are fitted to the photo she supplied 2026-11-04 (`refs/healthy-tongue-2026-11-04.png`, private): Lower starts below the lip and the mouth. The Guide's Tongue map draws the same column (`phTngCmpHtml`). Code: `phTngHealthyTile`, `phTngHealthy` (view
 state, not saved). BUILD-NOTES "Healthy tongue photo". A face / build photo full screen carries Find the Ren's own rows (Face · Eyes · Lips / Build · Skin ·
 Muscles) and its spots as corners (her pick). Compare and the viewer are ONE mechanism each, wired into every surface that shows a
 photo tile. The viewer's dark title bar carries the photo's Kind (a dropdown grouped Tongue · Face · Body · Records, then Unsorted ·
