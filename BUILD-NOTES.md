@@ -11533,3 +11533,17 @@ Her word: "push", for the centred lump, then "Push both" with One face. After pu
 - **Worth knowing:** the catch in `phKsMake` means a check that mounts every sign and looks for errors cannot see a missing scene. Look for an empty picture too.
 - **Not tested:** her own devices, the Key2.
 - **Pages checked:** Guide › Families (Ban Xia Hou Po Tang).
+
+## Guide: hide formulas no longer stocked, or temporarily stopping (2026-11-05)
+
+- **Her words, with a picture of Guide › Herbs on Gan Cao:** "give option to exclude formulas that are no longer stocked, or temporarily stopping".
+- **What it does:** a Hide bar above Your formula with two chips, each with its count. A tap hides those rows and the card redraws in place; the herb list and its scroll stay. Rows that are affected and showing carry a mark. Both chips on and nothing left = "All hidden".
+- **The mapping** (`phHuRecipeOff`): No longer stocked = Phase out, or no jar in the inventory (marked "Phase out" or "Not in inventory"). Temporarily stopping = a stopped jar (the Inventory's own words). A phase-out that has run out reads Temporarily stopping, because that is what `phHerbStatusKey` and the Inventory call it. Jars are found by exact match only, her standing rule: code, exact name, initials (`refJarForRecipe`), then `findHerbByName`. `refJarForRecipe` now takes a list of jars, so stopped jars can be searched too; its default is unchanged.
+- **Judgment calls:** nothing is hidden until she picks; her pick is kept on this device (`lcm-gd-herb-hide`), not synced. Guide › Herbs only: `phHuCardHtml(key, inGuide)` draws the same card as before for the Dispense ⓘ and the Inventory drawer, because those list what a herb has been used in, and a stopped formula there is still history.
+- **Not changed, asked her:** the number beside each herb and Most · Fewest count the classical formulas (`phHuClassicKeys`), not her own, so these chips do not move them.
+- **Also fixed, seen in her picture:** a recipe named "Tao Ren" plus garbled text was its own herb in the card and its With column. `phHuBase` now drops a word with no plain letter, garbled or Chinese, so it counts under Tao Ren. Accented pinyin keeps its word ("Bái" stays "bái").
+- **Measured on the made-up test data, Gan Cao:** 34 rows; 8 No longer stocked, 14 Temporarily stopping; hide stopping = 20 rows, hide both = 12 rows, no marks.
+- **Tested** (a test copy of the real page, made-up data, nothing saved to her data): a real tap on a chip, the same herb stays picked, the focus stays on the chip; the choice survives a reload; Shi Gao with both on shows "All hidden" and its classics still draw; a herb with no recipes has no bar; the plain card has no bar and no marks, 34 rows; at 360x469 the bar and the marks wrap with no sideways scroll, marks line up with the name; no console errors.
+- **Not tested:** her real formulas and jars; her own devices, the Key2.
+- **Pages checked:** Guide › Herbs (wide + phone).
+- **Not live** until her word.

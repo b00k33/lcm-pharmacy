@@ -31076,6 +31076,11 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
 #pharmacyPage .ph-gd-hu-row.on { background: var(--ph-herb); color: #fff; font-weight: 600; }
 #pharmacyPage .ph-gd-hu-row.on small { color: rgba(255,255,255,.8); }
 #pharmacyPage .ph-gd-hu-card { min-width: 0; }
+/* her 2026-11-05 "option to exclude formulas that are no longer stocked, or temporarily stopping": the bar above Your formula, the mark on a row */
+#pharmacyPage .ph-gd-hu-hide { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 2px; font-size: var(--fs-12); color: var(--ph-soft); }
+#pharmacyPage .ph-gd-hu-hide small { margin-left: 5px; font-size: var(--fs-11); font-variant-numeric: tabular-nums; opacity: .8; }
+#pharmacyPage .ph-gd-hu-fm { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px; }
+#pharmacyPage .ph-gd-hu-fm .ph-gd-stock { font-weight: 600; }
 #pharmacyPage .ph-gd-hu-card h3 { margin: 0 0 12px; font-size: var(--fs-name); font-weight: 800; color: var(--ph-ink); }
 @media (max-width: 640px) {
   #pharmacyPage .ph-hu-pop { inset: auto 0 0 0; width: 100%; max-height: 82vh; padding: 12px 12px calc(16px + env(safe-area-inset-bottom, 0px)); border-radius: 16px 16px 0 0; }
@@ -34613,7 +34618,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     "mai men dong": ["mai dong"], "dan pi": ["mu dan pi"], "zhi qiao": ["zhi ke"], "ma ren": ["huo ma ren"], "ma zi ren": ["huo ma ren"], "shan yu rou": ["shan zhu yu"],
     "jiao yi": ["yi tang"], "su ye": ["zi su ye"], "yin chen hao": ["yin chen"], "fa ban xia": ["ban xia"], "jiang ban xia": ["ban xia"], "qing ban xia": ["ban xia"],
     "huai niu xi": ["niu xi"], "duan long gu": ["long gu"], "duan mu li": ["mu li"], "a jiao": ["e jiao"], "ku xing ren": ["xing ren"], "zhi huang qi": ["huang qi"], "hong zao": ["da zao"] };
-  const phHuBase = name => String(name == null ? "" : name).split("/")[0].replace(/\([^)]*\)/g, " ").replace(/[#*]/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+  // (a word with no plain letter goes too, garbled or Chinese: "Tao Ren 桃仁" is Tao Ren; "Bái" keeps its accent)
+  const phHuBase = name => String(name == null ? "" : name).split("/")[0].replace(/\([^)]*\)/g, " ").replace(/[#*]/g, " ").replace(/(^|\s)[^\x00-\x7F]+(?=\s|$)/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
   const phHuKeys = name => { const b = phHuBase(name); return b ? (PH_HU_ALIAS[b] || [b]) : []; };
   const phHuTitle = key => String(key).replace(/\b\w/g, c => c.toUpperCase());
   let phHuData = null;
@@ -34659,7 +34665,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       const others = ings.filter(i => !mine.includes(i));
       if (presIsFormula(t)) {
         const top = others.slice().sort((a, b) => (Number(b.grams) || 0) - (Number(a.grams) || 0)).slice(0, 2).map(i => phHuTitle(phHuKeys(i.herb)[0] || ""));
-        recipes.push({ name: t.name, g, wth: top.filter(Boolean) });
+        recipes.push({ name: t.name, t, g, wth: top.filter(Boolean) });
         return;
       }
       n++;
@@ -34674,7 +34680,23 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   }
   // the card: IN THE CLASSICS (Formula · Dose · With · Does; the whole recipe and its book in the row's hover) and IN YOUR
   // PRESCRIPTIONS (the line, then her formulas: Your formula · Dose · With)
-  function phHuCardHtml(key) {
+  // her 2026-11-05 "give option to exclude formulas that are no longer stocked, or temporarily stopping" (Guide › Herbs only; the same
+  // card in Dispense and the Inventory drawer lists them all): No longer stocked = Phase out or no jar in the inventory; Temporarily
+  // stopping = a stopped jar (a phase-out used up lands here, the Inventory's own word for it). Exact matches only, her standing rule.
+  // Nothing is hidden until she picks; remembered on this device
+  const PH_GD_HERB_OFF = [["gone", "No longer stocked", "Phase out, or not in the inventory"], ["paused", "Temporarily stopping", "Stopped in the inventory"]];
+  let phGdHerbHid = null;
+  const phGdHerbHide = () => {
+    if (!phGdHerbHid) { phGdHerbHid = {}; try { (localStorage.getItem("lcm-gd-herb-hide") || "").split(",").filter(Boolean).forEach(c => { phGdHerbHid[c] = true; }); } catch (e) { /* this visit only */ } }
+    return phGdHerbHid;
+  };
+  function phHuRecipeOff(t, active, stopped) {
+    const j = refJarForRecipe(t, active) || refJarForRecipe(t, stopped) || findHerbByName(t.name);
+    if (!j) return ["gone", "Not in inventory", "notfound"];
+    const k = phHerbStatusKey(j);
+    return k === "stopped" ? ["paused", "Temporarily stopping", "stopped"] : k === "phaseout" ? ["gone", "Phase out", "phaseout"] : null;
+  }
+  function phHuCardHtml(key, inGuide) {
     if (!key) return "";
     const cl = phHuClassicRows(key), own = phHuOwn(key);
     const recipeOf = f => f.hs.map(h => `${h.name} ${h.dose}`).join(" · ");
@@ -34683,8 +34705,15 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       : `<p class="ph-hu-none">Not in these formulas</p>`;
     const g = own.lo == null ? "" : own.lo === own.hi ? `${own.lo} g` : `${own.lo}–${own.hi} g`;
     const line = own.n ? `<p class="ph-hu-sum"><b>${own.n}</b> prescription${own.n === 1 ? "" : "s"}${g ? ` · usually <b>${esc(g)}</b>` : ""}${own.partners.length ? ` · most often with ${esc(own.partners.join(", "))}` : ""}</p>` : "";
-    const recipes = own.recipes.length ? `<table class="ph-hu-tbl own"><thead><tr><th>Your formula</th><th>Dose</th><th>With</th></tr></thead><tbody>${own.recipes.map(r =>
-      `<tr><td class="f">${phNameHtml(r.name, true)}</td><td class="d">${r.g ? `${r.g} g` : "—"}</td><td class="w">${esc(r.wth.join(", "))}</td></tr>`).join("")}</tbody></table>` : "";
+    let recipes = "";
+    if (own.recipes.length) {
+      const fj = inGuide ? PHARMACY.herbs.filter(phIsFormula) : [], active = fj.filter(h => !h.stopped), stopped = fj.filter(h => h.stopped);
+      const rows = inGuide ? own.recipes.map(r => ({ ...r, off: phHuRecipeOff(r.t, active, stopped) })) : own.recipes;
+      const hide = inGuide ? phGdHerbHide() : {}, shown = rows.filter(r => !(r.off && hide[r.off[0]]));
+      const bar = inGuide ? `<div class="ph-gd-hu-hide">Hide<div class="ph-tng2-seg" role="group" aria-label="Hide formulas">${PH_GD_HERB_OFF.map(([c, lbl, tip]) => `<button type="button" class="ph-ltr-qual${hide[c] ? " on" : ""}" data-gd-herb-hide="${c}" aria-pressed="${!!hide[c]}" title="${tip}">${lbl}<small>${rows.filter(r => r.off && r.off[0] === c).length}</small></button>`).join("")}</div></div>` : "";
+      recipes = bar + (shown.length ? `<table class="ph-hu-tbl own"><thead><tr><th>Your formula</th><th>Dose</th><th>With</th></tr></thead><tbody>${shown.map(r =>
+        `<tr><td class="f">${r.off ? `<span class="ph-gd-hu-fm"><span>${phNameHtml(r.name, true)}</span><span class="ph-gd-stock ${r.off[2]}">${r.off[1]}</span></span>` : phNameHtml(r.name, true)}</td><td class="d">${r.g ? `${r.g} g` : "—"}</td><td class="w">${esc(r.wth.join(", "))}</td></tr>`).join("")}</tbody></table>` : `<p class="ph-hu-none">All hidden</p>`);
+    }
     // her own prescriptions first, the classics after them (her 2026-11-02 "move the classics after my formulas")
     return `<div class="ph-hu">
       <div class="ph-hu-sec"><div class="ph-hu-h">In your prescriptions</div>${line || recipes ? line + recipes : `<p class="ph-hu-none">Not prescribed</p>`}</div>
@@ -34770,7 +34799,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
         <div class="ph-tng2-seg" role="group" aria-label="Order of the herbs">${PH_GD_HERB_ORDERS.map(([k, lbl, tip]) => `<button type="button" class="ph-ltr-qual${k === ord ? " on" : ""}" data-gd-herb-order="${k}" aria-pressed="${k === ord}" title="${tip}">${lbl}</button>`).join("")}</div>
         <div class="ph-gd-hu-list" role="listbox" aria-label="Herbs">${keys.map(k => `<button type="button" class="ph-gd-hu-row${k === sel ? " on" : ""}" data-gd-herb="${esc(k)}" role="option" aria-selected="${k === sel}"><span>${esc(phHuTitle(k))}</span>${ck.get(k) ? `<small>${ck.get(k)}</small>` : ""}</button>`).join("")}</div>
       </div>
-      <div class="ph-gd-hu-card"><h3>${esc(phHuTitle(sel))}</h3>${phHuCardHtml(sel)}</div>
+      <div class="ph-gd-hu-card"><h3>${esc(phHuTitle(sel))}</h3>${phHuCardHtml(sel, true)}</div>
     </div>`;
   }
   // a tap on an order: the list redraws from its top in place; the herb she is reading stays picked and its card stays open
@@ -34791,7 +34820,18 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     const wrap = btn.closest(".ph-gd-hu");
     if (!wrap) return;
     wrap.querySelectorAll(".ph-gd-hu-row").forEach(b => { const on = b === btn; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
-    wrap.querySelector(".ph-gd-hu-card").innerHTML = `<h3>${esc(phHuTitle(phGdHerb))}</h3>${phHuCardHtml(phGdHerb)}`;
+    wrap.querySelector(".ph-gd-hu-card").innerHTML = `<h3>${esc(phHuTitle(phGdHerb))}</h3>${phHuCardHtml(phGdHerb, true)}`;
+  }
+  // a tap on Hide: the card redraws in place; the list and its scroll stay
+  function phGdHerbHideSet(btn) {
+    const hide = phGdHerbHide(), c = btn.dataset.gdHerbHide, wrap = btn.closest(".ph-gd-hu");
+    if (hide[c]) delete hide[c]; else hide[c] = true;
+    try { localStorage.setItem("lcm-gd-herb-hide", Object.keys(hide).join(",")); } catch (e) { /* this visit only */ }
+    const on = wrap && wrap.querySelector(".ph-gd-hu-row.on");
+    if (!on) return;
+    const key = on.dataset.gdHerb;
+    wrap.querySelector(".ph-gd-hu-card").innerHTML = `<h3>${esc(phHuTitle(key))}</h3>${phHuCardHtml(key, true)}`;
+    const b = wrap.querySelector(`[data-gd-herb-hide="${c}"]`); if (b) b.focus();
   }
   // ---- Dashboard 12-month usage & cover (her ask 2026-08-19) -- a separate,
   // longer window from Overstock's own 6-month estimate above, deliberately
@@ -65368,6 +65408,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       if (gdHerb) { phGdHerbPick(gdHerb); return; }
       const gdHerbOrder = e.target.closest("[data-gd-herb-order]");
       if (gdHerbOrder) { phGdHerbOrderSet(gdHerbOrder); return; }
+      const gdHerbHide = e.target.closest("[data-gd-herb-hide]");
+      if (gdHerbHide) { phGdHerbHideSet(gdHerbHide); return; }
       const gdBtEdit = e.target.closest("[data-gd-bt-edit]");
       if (gdBtEdit) { phGdOpenBt(gdBtEdit.dataset.gdBtEdit); return; }
       const gdFpEdit = e.target.closest("[data-gd-fp-edit]");
@@ -148207,8 +148249,7 @@ Dosage: {dosage}
   // against the formula jars — exact label/code/name first, contains last
   // a formula recipe's abbreviation → its jar: the inverse of refSuggestRecipe
   const phSeg0 = n => (((n || "").split(/[/(#*]/)[0]) || "").trim();
-  function refJarForRecipe(r) {
-    const jars = PHARMACY.herbs.filter(h => phIsFormula(h) && !h.stopped);
+  function refJarForRecipe(r, jars = PHARMACY.herbs.filter(h => phIsFormula(h) && !h.stopped)) {
     const ab = presAbbr(r);
     return (ab && jars.find(h => phHerbCodes(h).some(c => c.trim().toUpperCase() === ab)))
       || jars.find(h => h.name.trim().toLowerCase() === r.name.trim().toLowerCase())
