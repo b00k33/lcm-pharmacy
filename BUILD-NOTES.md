@@ -11468,7 +11468,7 @@ Her words, with a picture of the Gui Zhi Tang card on Settled showing "Fever: fe
 
 **Pages checked:** Guide › Families and Guide › Iron on a test copy; the Meals body and every picture above on a contact sheet of the real functions.
 
-**BUILT, not live:** it goes with her next "push live".
+**LIVE:** build 20261105-093600, published by another session on her "push live", with the lump centred.
 
 ## 2026-11-04 · Meals: the pane stays open and slides over the table; Day · 3 days · Week
 Her words (a picture of the Grid with Lunch open beside a shrunk table): "improve this page when i add food, the pane keeps closing. can
@@ -11499,3 +11499,26 @@ Her animation ask from the same message went to its own session. No popups: comp
 - **Noticed, left:** the pane keeps its measured height until the next repaint after she scrolls the page; the side menu shifts a little when the box grows (its own sticky behaviour); the bar takes two rows until about 1530 wide with the side menu open.
 - **Pages checked:** Meals Grid, Table, Photos, Numbers, Try, the phone's day. New words: "Day", "3 days", "Week", "These 3 days".
 - **LIVE** in build 20261105-093900 (her "push live"; commit 6c64cbb0, publish 63f894b8; nothing else went with it). Her devices need the gold Update.
+
+## Guide films: Settled no longer repeats, herb labels name their herbs (2026-11-05)
+
+Her word: "yes", to fixing what the all-cards check listed after the one-face work.
+
+- **Settled replayed eased signs** on two formulas, because the herbs had eased every sign and the fallback played two of them again.
+  - Xiao Jian Zhong Tang: `tn` now answers Complexion: sallow (was palpitations); the pair Gui Zhi + Shao Yao answers Pain: cold-type (was complexion). Palpitations are free for Settled, beside its own "Heart steady, strength back".
+  - Wai Tai Fu Ling Yin: `rs` now answers Build: thin (was complexion). Complexion is free for Settled, beside its own "Colour comes back".
+  - `phFsFilm`: the fallback now takes a Ren row no herb touched, never the build, and never replays. Nothing reaches its last step (a plain Settled beat with no sign) today.
+- **Also found: Wai Tai's Trouble stop had a blank sign picture.** It is the only formula with no Bing rows. `phFsStory` now plays what a herb answers on Trouble when there are none, so Person has the build and complexion, Trouble has the sloshing stomach.
+- **Herb labels. I told her "4 herb chips with no label on the picture", and that was wrong.** They had labels, and they lit through `PH_FS_LABW`; the check did not read that table. What was off was the shorthand ("Tonics", "Jiang · Zao · Cao", "Shen · Zao · Cao", "Wu Ling San"). Each now names its herbs in full, on Xiao Chai Hu Tang, Gui Zhi Jia Long Gu Mu Li Tang and Chai Ling Tang, moved down clear of the tongue inset. `PH_FS_LABW` is gone.
+- **Judgment calls, for her to overrule:**
+  - Which sign a herb answers on the three changed rows, and the new label words: DRAFT, like the rest of these tables.
+  - Chai Ling's "Wu Ling San: drain water" is too long with five herb names, so it became two labels: "Ze Xie · Zhu Ling · Fu Ling: drain water" and "Bai Zhu · Gui Zhi: move water". The picture no longer says Wu Ling San.
+  - Xiao Jian Zhong's palpitations now play on Person, not Trouble: a both-marked sign no herb answers plays on Person under the existing rule. Its Trouble stop has the two belly signs.
+  - Wai Tai's whole-formula beat now shows two signs, not three.
+- **Tested** on a test copy of the real page, the made-up record, nothing saved to her data:
+  - All-cards headless check, normal and reduced motion: 41 cards, 0 problems, 0 herb chips unnamed (was 5 and 4).
+  - All 31 formulas: no blank sign beat, no Settled sign that a herb eased, nothing eased before it was seen.
+  - By eye at 375 wide through Guide › Families: the three long labels clear of the tongue words; Wai Tai on Trouble and Settled; Xiao Jian Zhong on Settled. No errors, no sideways scroll.
+- **Not tested:** her own devices, the Key2. Desktop width was not looked at for these labels (the same picture, scaled).
+- **Pages checked:** Guide › Families on those five formulas.
+- **BUILT, not live:** it goes with her next "push live".
