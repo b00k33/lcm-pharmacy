@@ -11398,7 +11398,7 @@ Her words, with a picture of the Ban Xia Hou Po Tang card: "i like the qi knot a
   - Reduced motion, by making the page's own check answer yes: the lens holds still with the pit and the qi circling, then shows it eased, and the film's pit is in place.
 - **Not tested:** her own devices, the Key2, the board's hover picture and the small still ones on a live record (the same functions as the tile and the lens).
 - **Pages checked:** Guide › Families; the big sheet; the Plum-pit pattern picture by script.
-- **Not live:** it goes with her next "push live".
+- **LIVE in build 20261105-011700**, carried by the Eggs film's publish (dad14bd5) from another session. Her devices need the gold Update.
 
 ## "Ninety Days": the egg film in Guide › Eggs and on the patient link (2026-11-04)
 
@@ -11414,3 +11414,18 @@ Her words, with a picture of the Ban Xia Hou Po Tang card: "i like the qi knot a
   - By tap in the app and eggs.html at 1280 wide and at 360 x 469 (Key2 size): no video before the tap, the right shape, sound on, scenes stop, no sideways scroll at phone width.
   - By script: a scene tab pauses, Close stops, a redraw kept 40.7 s and paused, no internet brings back the strip with its note, the offline store holds only the picture.
 - **Not tested:** real phones, her Key2, an iPhone; the sound by ear (levels measured only).
+
+## Guide: the lump centred on the neck (2026-11-04)
+
+Her words, with a picture of the throat close-up: "looks good, make the lump centred".
+
+- **The lump:** `SC.meihe`'s pit, its highlight, the glow and the circle the qi runs on now centre on the neck (x 150, was 162, the gullet's line). The height stays at the voice box.
+- **The gullet stays a little to the side,** where her 2026-10-22 "more anatomy" put it. So the qi now has to reach the lump: from where it is on the gullet it curves in to its circle (`p.r` eases to `p.rT`), and it lets go on the gullet's side, up or down at random (`p.dir`).
+- **Judgment call:** the Plum-pit pattern picture is the same drawing, so its lump is centred too. Its "Feels like a lump" leader moved with it; its words are unchanged. A tile's frame moved to centre on the lump.
+- **Tested** (a test copy of the real page, the made-up record, nothing saved to her data):
+  - By stepping the picture's own clock for 100 s in both forms: the qi is caught and let go over 300 times, its circle centres at about (151, 60) and stays inside the neck, it moves at most 3 going in and 7 letting go between frames. Both directions still run. Fully eased, nothing is caught.
+  - By eye at 375 wide: the close-up, the tile, the Plum-pit picture. No errors.
+  - The real-time clock was not running for this test because the browser pane was hidden, so I have not watched this version move in the app. The preview page runs the same code.
+- **Not tested:** her own devices, the Key2.
+- **Pages checked:** Guide › Families (Ban Xia Hou Po Tang); the Plum-pit pattern picture mounted on a test copy.
+- **Not live:** it goes with her next "push live".
