@@ -11469,3 +11469,32 @@ Her words, with a picture of the Gui Zhi Tang card on Settled showing "Fever: fe
 **Pages checked:** Guide › Families and Guide › Iron on a test copy; the Meals body and every picture above on a contact sheet of the real functions.
 
 **BUILT, not live:** it goes with her next "push live".
+
+## 2026-11-04 · Meals: the pane stays open and slides over the table; Day · 3 days · Week
+Her words (a picture of the Grid with Lunch open beside a shrunk table): "improve this page when i add food, the pane keeps closing. can
+you make the pane hover to slide out besides shrinking the table? is there a way to just view the day or 3 days like the calendar?"
+Her animation ask from the same message went to its own session. No popups: competence calls, her calendar's own rules.
+- **The close, reproduced with a real drag:** a press inside the pane let go just outside it shut it. The click lands on the shared parent, not the pane, so the outside-tap rule read it as a tap elsewhere. A tap on the table shut it too.
+- **MEALS PANE:**
+  - The mpl click listener: a tap on the page no longer closes (`.ph-diet` keeps it). ✕, Done, Esc, its own cell close it; another cell moves it; a button outside Meals (she is leaving) closes it, or the pane would open again on the next patient. A phone too.
+  - `phMplKeep` / `phMplKept` round `phDietRefresh`: the pane's scroll, the list's scroll, and the list stays still on the screen when a food lands above it. `aria-label` says "another meal", which starts at its top. `overflow-anchor: none` on the pane: Chrome's own anchoring would add to the keep.
+  - + Add scrolls the list up into view, its search field first. A pick leaves the search words selected, so the next food types over them.
+  - `.ph-mpl-col` takes no room (a zero-width sticky flex item); the pane hangs off it with a negative margin, so the column is the pane's height and the box grows round a tall one. Never absolute: `.ph-pres-panel` clips, and a short table would cut the pane off.
+  - Side: `.lf` when the pane would cover more than a third of its own cell and the left is clear. Week at 1220 wide: Mon to Wed right, Thu to Sun left, 0% of the cell covered each time.
+  - Height: from where it sits to the screen's foot (at least 420; opened low, the page comes up), set on each repaint. Name + ✕ and Done stay in view (`.hdr`, `.foot` sticky).
+  - The slide (`phMplColIn`, `--sl` for the left) plays only when it was shut; off under reduced motion.
+  - The pale side and the narrow-table rules for the column went.
+- **DAY · 3 DAYS · WEEK:** a joined bar in `.ph-mpl-wkg` (`phMplDn`, device-local `lcm-mpl-days`; none on Try). 3 days = that day + the next 2, ‹ › by the view's own span (her calendar's rule, 2026-09-07). `phMplShown` gives the days to Grid, Table, Photos, Numbers; `days` stays the week for the steps, usual times and Shopping, and `phDietWk` follows the first day shown (`phMplAtTo`, limits -8 to 104). A change of view stays on her day (`phMplDaysTo`: the open meal's, the goals', today, the first shown). Day: the goals follow the day; Numbers drops Average and the bars. Today and the Eat step clear `phMplAt`. An open meal stays when stepping while its day still shows.
+- **kJ in the pane:** `.ph-mpl-pick.inl .k { display: none }` was meant for the phone and hid kJ on the computer too (every column pick is `.inl`). I told her the snack table showed kJ on 2026-11-03: it did not, and I said so. Scoped to `.ph-mpl-pday`.
+- **Tested** (8989 harness, the made-up "Zz Me Test", 1400, 1220, phone 375; real clicks for the slip, the table tap and adds):
+  - press in the pane, let go over the table: stays open (before: closed); a tap under the table and on the goals: stays;
+  - adds: pane scroll 0 → 170 → 291, list's top moved 0; list scroll kept; search words selected and focused;
+  - Done adding, + Add: the list comes into view between the name and the foot;
+  - Esc, ✕, Done, its own cell close; another cell moves it, left for Fri;
+  - snacks (kJ shows), supplements, a day's panel, Shopping slide out; supplements and snacks grow when the pane is short of its height;
+  - Day and 3 days on Grid, Table, Photos, Numbers with the pane; ‹ › across a week; the limit 3 Jan 2027 disabled and past it refused; Today; Eat from another day lands on today with its cell shown; Plan; Try has no bar;
+  - phone 375: kJ still hidden, no sideways scroll, the pane stays on a tap elsewhere, ✕ closes;
+  - no console errors.
+- **Not tested:** her own record; the Key2; the reduced-motion rule by eye (by reading: 7250's rule covers `.op`).
+- **Noticed, left:** the pane keeps its measured height until the next repaint after she scrolls the page; the side menu shifts a little when the box grows (its own sticky behaviour); the bar takes two rows until about 1530 wide with the side menu open.
+- **Pages checked:** Meals Grid, Table, Photos, Numbers, Try, the phone's day. New words: "Day", "3 days", "Week", "These 3 days".
