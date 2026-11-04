@@ -11498,3 +11498,4 @@ Her animation ask from the same message went to its own session. No popups: comp
 - **Not tested:** her own record; the Key2; the reduced-motion rule by eye (by reading: 7250's rule covers `.op`).
 - **Noticed, left:** the pane keeps its measured height until the next repaint after she scrolls the page; the side menu shifts a little when the box grows (its own sticky behaviour); the bar takes two rows until about 1530 wide with the side menu open.
 - **Pages checked:** Meals Grid, Table, Photos, Numbers, Try, the phone's day. New words: "Day", "3 days", "Week", "These 3 days".
+- **LIVE** in build 20261105-093900 (her "push live"; commit 6c64cbb0, publish 63f894b8; nothing else went with it). Her devices need the gold Update.
