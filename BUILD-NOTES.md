@@ -11341,3 +11341,4 @@ Her notes read depth by depth ("Qi depth Feeble-Absent, Blood depth Spreading", 
   - `phPulseCellToggle` called directly for a visit's chart, and Erase; no console errors.
 - **Not tested:** a visit's chart by real taps (the same function), her own record, the phone (no drawing changed).
 - **Pages checked:** the Pulse page on her own record's Body group. No new words.
+- **LIVE in build 20261104-212900** on her "push live" (publish 610c1830), with Guide › Herbs ordering (a3ae0c0c) and the Healthy tongue fit (62ab04bc), her pick to take all three. Her devices need the gold Update.
