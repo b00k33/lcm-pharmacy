@@ -11393,7 +11393,7 @@ Her words, with a picture of the Ban Xia Hou Po Tang card: "i like the qi knot a
 - **Judgment call:** the close-up replaces the old sign picture of the mouth with the pharynx lit, everywhere those signs have a picture (the Fang Bing Ren board's big one, the small still ones on Compass rows and Ask her).
 - **Tested** (a test copy of the real page, the made-up record, nothing saved to her data):
   - Real taps at 1220 and 375 wide: Trouble, Ban Xia · Hou Po, Whole formula, Settled, the tile, the big sheet. No sideways scroll at 375, all four words inside the frame.
-  - Measured: pit and ring both centred at (103, 41), the circling qi within 101–108 across and 36–46 down, the neck's width; the dots move in both pictures.
+  - Measured: pit and ring both centred at (103, 41), the circling qi within 101–108 across and 36–46 down; the dots move in both pictures. The neck's own width I judged by eye from enlarged pictures.
   - All 42 Guide family cards opened by tap with no errors. Only Ban Xia and Ban Xia Hou Po Tang reach the close-up.
   - Reduced motion, by making the page's own check answer yes: the lens holds still with the pit and the qi circling, then shows it eased, and the film's pit is in place.
 - **Not tested:** her own devices, the Key2, the board's hover picture and the small still ones on a live record (the same functions as the tile and the lens).
