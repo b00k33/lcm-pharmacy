@@ -11377,3 +11377,25 @@ Her words: "ok, build it and push". She was answering my line that I had set asi
 - **Not tested:** her own devices, the Key2, a real patient's Dispense or Care Plan page with a Gui Zhi Tang prescription.
 - **Pages checked:** Guide › Families; the big sheet; the mock page.
 - **LIVE in build 20261105-003400** on her "ok, build it and push" (commit 75cc9f1a, publish 104eb9e9), with the Guide cards' person and story and no hair (de85f1f0). Her devices need the gold Update. The served page is 10.5 MB after the comment strip; a test copy of those exact bytes on localhost was driven through Gui Zhi, the chip, Whole formula, back, Wu Ling San, Xiao Chai Hu and Huang Qi: right cards, no console errors. Her live tab was not opened.
+
+## Guide: the qi knot on the throat, and a close-up of just the throat (2026-11-04)
+
+Her words, with a picture of the Ban Xia Hou Po Tang card: "i like the qi knot animation, make hte throat position more on throat than chest, and make a separate zoom in one for just the throat".
+
+- **Why it sat low:** the scene still used the old frame's "throat 52", which lands on the collarbone since the person was redrawn. The middle of the neck is 41 in the scenes' numbers, 72.6 in the body chart's.
+- **The knot moved:** in `SC.banxiahoupotang` the pit, the green glow, the squeeze, the tube's top, where the qi is caught and let go, the first chevron and the two leaders ("Qi knot: throat lump", "Nothing stuck, qi goes down"). The frame stretches a circle tall, so the pit, glow and orbit now have sizes that undo it and look round, small enough for the neck. The chest and stomach parts did not move. The motion is the one she liked.
+- **The gold ring:** `phFsSpot` puts the place "throat" at 72.6, so the ring sits on the knot. That is the film only (every formula's throat ring and Person leader): the body chart's own spot stays at 68.
+- **The close-up:** `PH_KS_SC.throat`, reached through `PH_KS_HAND` by all six throat signs (`throat_lump`, `throat_cant_clear`, `throat_emotional`, Bing and Ren). It runs the Plum-pit pattern's own throat, `PH_PP.SC.meihe`, with `S.zoom`, which adds the knot's green glow and puts the words to the right of the neck. The words are that picture's own, so nothing new to read. The pattern's picture is otherwise unchanged (its words, no glow), checked.
+  - Big: the neck stands left of the words. As the sign eases the pit shrinks, the qi runs free, the words fade and the neck comes to the middle (`viewBox` follows `a`).
+  - A tile, or a quarter of the Whole formula lens: closer in on the pit, no words.
+  - `.lbl-l`, `.lbl-d`, `.lbl-t` now also style `.ph-ks-svg`.
+- **Side effect, wanted:** one tile per picture merges the three throat tiles into one, so Ban Xia Hou Po Tang has 12 tiles, not 14. The throat is the first Trouble beat and comes back for Ban Xia · Hou Po and for Zi Su Ye + Hou Po, easing each time. Because a picture plays once before Settled, it no longer also plays on Person; the Person stop's words still name it. Ban Xia the person weighs `throat_lump` 4 on the Bing side only, so its card does not show the close-up.
+- **Judgment call:** the close-up replaces the old sign picture of the mouth with the pharynx lit, everywhere those signs have a picture (the Fang Bing Ren board's big one, the small still ones on Compass rows and Ask her).
+- **Tested** (a test copy of the real page, the made-up record, nothing saved to her data):
+  - Real taps at 1220 and 375 wide: Trouble, Ban Xia · Hou Po, Whole formula, Settled, the tile, the big sheet. No sideways scroll at 375, all four words inside the frame.
+  - Measured: pit and ring both centred at (103, 41), the circling qi within 101–108 across and 36–46 down, the neck's width; the dots move in both pictures.
+  - All 42 Guide family cards opened by tap with no errors. Only Ban Xia and Ban Xia Hou Po Tang reach the close-up.
+  - Reduced motion, by making the page's own check answer yes: the lens holds still with the pit and the qi circling, then shows it eased, and the film's pit is in place.
+- **Not tested:** her own devices, the Key2, the board's hover picture and the small still ones on a live record (the same functions as the tile and the lens).
+- **Pages checked:** Guide › Families; the big sheet; the Plum-pit pattern picture by script.
+- **Not live:** it goes with her next "push live".
