@@ -109,6 +109,9 @@ self.addEventListener("fetch", function (e) {
   // stored in it. The cache-first branch below used to keep a 7-10 MB copy
   // of the page for every check (found 2026-10-26).
   if (/[?&]probe=/.test(req.url)) return;
+  // The film (Guide > Eggs, 2026-11-04): 39 MB a file, asked for in pieces by the video player. Straight to the network the
+  // browser's own way, never stored: every app on this origin shares one storage quota.
+  if (/\.mp4(\?|$)/.test(req.url)) return;
 
   // Navigations (the app HTML itself): network-first, always -- an update
   // must be visible the moment it's live, never masked by a stale cached

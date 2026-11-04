@@ -1016,8 +1016,9 @@ The Eggs tab (her 2026-11-03 ask with her chart of mitochondria per cell, her 8 
 1. **Mitochondria:** a ladder, a row per cell on a ×10 scale, the bar solid to the low figure and pale to the high: sperm 50–75, liver
    cell 1,000–2,000, heart muscle cell about 5,000, egg 100,000–600,000 (her chart's sperm 5 and brain 2 million were not used: the
    first is too low, the second has no source). The key shows a mitochondrion with its iron (Iron's own drawing).
-2. **Why eggs:** Ripening (the egg fills with mitochondria), Ovulation (they split its chromosomes), First week (the embryo divides
-   and shares them out; the sperm's are not kept).
+2. **Why eggs:** Ripening (the egg fills with mitochondria), Ovulation (it leaves in its cloud of cells, every mitochondrion with it; no
+   chromosome split or polar body, her 2026-11-04 "not relevant to the patient"), First week (the embryo divides and shares them out; the
+   sperm's are not kept).
 3. **Oxygen:** her ovary (the Iron page's still body, cropped) → a follicle: vessels around it, red cells on them, oxygen seeping
    through the fluid to the egg on its mound. Less blood flow | More blood flow (2 vessels or 6; the egg's mitochondria pale or lit).
 4. **Red cells:** iron, B12, folate and Herbs go into the bone marrow; red cells come out along a vessel with oxygen on them. Low Blood |
@@ -1030,6 +1031,13 @@ again; any tap stops the play and the scene rests at once. Reduced motion: no pl
 paper or a PDF. **Copy link** copies `https://b00k33.github.io/lcm-pharmacy/eggs.html`, the patient's copy (her pick "also a link she
 opens"): `eggs.html`, made from this same code by `.github/scripts/make-eggs-page.pl`; no Draft tags, no Copy link, no Iron door;
 noindex. State is `phEg` (view state, never saved). Words DRAFT. Code: "EGGS" (`phEgHtml`, `phEgRun`, `phEgSt`, `phEgAuto`).
+
+**The film "Ninety Days" (her 2026-11-04 picks; BUILD-NOTES "Ninety Days"):** a strip above the scenes, in the tab and on eggs.html: its
+picture, the title, "The film · 1:53", **▸ Play film**. Nothing downloads before the tap. Play stops the scenes and opens the player, `ninety-days-wide.mp4`
+or, on a portrait screen, `ninety-days-tall.mp4` (39 MB each); Close stops the download and brings the strip back. A redraw leaves it paused where it
+was (`phEg.film`). With no internet the strip reads "The film needs the internet". `sw.js` never stores the .mp4 (every app on this origin shares one
+quota); `ninety-days-poster.jpg` is stored as usual. Its words are fixed inside the video: a change means recording both again (BUILD-NOTES says how).
+Code: `phEgFilmHtml`, `phEgFilmDraw`.
 
 **Doors:** the tab; **Eggs ›** at the end of Iron step 3's zoom key; **Eggs · Guide** on the cycle day card's Between periods head,
 every day (her pick).
