@@ -11358,7 +11358,7 @@ Her words, with a picture of the Gui Zhi card: "these animations are great but s
   - Mock pages for Gui Zhi, Wu Ling San, Da Chai Hu at 1024 and 360 wide; Ma Huang in the real page at 360: no sideways scroll.
 - **Not tested:** her own devices, the Key2, a real patient's Dispense or Care Plan page (same functions, driven alone), the Compass and Ask her pictures on a live record, and the 30 formulas' stops were checked by the table check, not each by eye.
 - **Pages checked:** Guide › Families (people and formulas); the big sheet; formula pictures outside the card; Meals body uses the same face.
-- **BUILT, not live (commit de85f1f0):** goes live only on her "push live".
+- **LIVE in build 20261105-003400** (commit de85f1f0, publish 104eb9e9), on her "ok, build it and push" below.
 
 ## Guide: Gui Zhi Tang's own story, one chip from the Gui Zhi person (2026-11-04)
 
@@ -11376,4 +11376,4 @@ Her words: "ok, build it and push". She was answering my line that I had set asi
   - A check script's screenshot once disagreed with what it had just read from the page. That run also had my test hook on it, so I threw it out and repeated it on a plain copy with real taps, where the pictures matched at every step.
 - **Not tested:** her own devices, the Key2, a real patient's Dispense or Care Plan page with a Gui Zhi Tang prescription.
 - **Pages checked:** Guide › Families; the big sheet; the mock page.
-- **BUILT, not live (commit 75cc9f1a):** goes live on her "ok, build it and push", above.
+- **LIVE in build 20261105-003400** on her "ok, build it and push" (commit 75cc9f1a, publish 104eb9e9), with the Guide cards' person and story and no hair (de85f1f0). Her devices need the gold Update. The served page is 10.5 MB after the comment strip; a test copy of those exact bytes on localhost was driven through Gui Zhi, the chip, Whole formula, back, Wu Ling San, Xiao Chai Hu and Huang Qi: right cards, no console errors. Her live tab was not opened.
