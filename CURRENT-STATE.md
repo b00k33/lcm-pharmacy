@@ -964,7 +964,7 @@ pictures].
 usual grams, most-often partners and her recipes, worked out from `PRESC.items` when drawn, never stored: `phHuOwn`) over **In the
 classics** (Formula · Dose · With · Does; 52 formulas in `PH_HU_SRC`, marked Draft until she checks them; the book's "Shao Yao"
 counts for Bai Shao and Chi Shao); hers first since her 2026-11-02 "move the classics after my formulas". The same card is the herb drawer's "How it's used" and the Dispense herb table's book circle.
-On a phone the Does column folds under the formula's name [How a herb is used].
+On a phone the Does column folds under the formula's name [How a herb is used]. In Guide › Herbs only, a Hide bar above Your formula (her 2026-11-05 words): No longer stocked = Phase out or no jar in the inventory; Temporarily stopping = a stopped jar; each with its count, a mark on every affected row, off until she picks, kept on the device (`lcm-gd-herb-hide`); Dispense and the Inventory drawer list them all [Guide: hide formulas no longer stocked].
 
 ## Guide — Iron (a teaching page)
 The Iron tab (her 2026-11-03 picks, BUILD-NOTES "Iron teaching page"; mock 8SRMuRk79NJ2zFiqBFDyuu) is a page to show a patient.
