@@ -1255,15 +1255,14 @@ Patterns (`diet_cool` / `diet_warm`, source Diet, DRAFT wording); Fang Bing Ren 
 2026-11-01, "a table format for meal planning and recording ... clean, like the appointments page"; her picks on
 meals-table-mock-2026-11-01.html, then "include interactive animations and workflow elements"). A computer (MEALS WEEK BOX, her 2026-11-03 picks): **the goals** first,
 then the week as ONE box, its bar on top in the record's light tint, pinned under the name band while the week scrolls (two rows
-when its words do not fit one): the bar (‹ span › · Today · the tabs **Grid · Table · Numbers · Photos · Try**, the open one white, this device's `lcm-mpl-view`, Table first · the steps **Plan n/7 · Shop n to buy · Eat <the next meal> ·
+when its words do not fit one): the bar (‹ span › · Today · **Day · 3 days · Week** (her 2026-11-04 ask; this device's `lcm-mpl-days`; 3 days = that day + the next 2, ‹ › by the view's own span; Day: the goals follow the day; none on Try) · the tabs **Grid · Table · Numbers · Photos · Try**, the open one white, this device's `lcm-mpl-view`, Table first · the steps **Plan n/7 · Shop n to buy · Eat <the next meal> ·
 Check n to answer** (Eat names today's next meal and its time, "Dinner 6:30 pm", ✓ once all had, a dinner the fast covers left out;
 MEALS GOALS, her pick 7), the first not done filled, each a door: next week · Shopping in the column (made when there is none) · today's
 next meal · How did it sit for each meal she had 1½ h ago not yet answered · **More ▾** = Copy last week, Recipes, Targets (the
 Shop step is the Shopping list's one door, MEALS GOALS). The goals (Meals goals, below) hold the fasting dial, Reach, Stay under
 (the Fast block's Start · Continue / Stop beside its dial and History › on its heading, FAST BLOCK; the clock bar and the Fast row
-are gone). Inside the box (the key along its foot) the week with a
-**column at the right** on a pale side (Appointments' way): the meal's picker, Shopping, How did it sit, or a day (tap its name: water, numbers,
-bars, Copy this day). The week narrows and scrolls under it; the day and the four numbers stay in view. **Table**: a row a day,
+are gone). Inside the box (the key along its foot) the week with **the pane** (MEALS PANE, her 2026-11-04 picture): the meal's picker, Shopping, How did it sit, or a day (tap its name: water, numbers,
+bars, Copy this day) slides out over the table, 400px, on the left when it would cover more than a third of its own cell. The table keeps its width. It stays open: ✕, Done, Esc, its own cell or leaving Meals close it, never a tap on the page; a repaint keeps its scroll and holds the add list still on the screen. Its name + ✕ and Done stay in view. **Table**: a row a day,
 Breakfast · Lunch · Dinner · Snacks · drinks · Supps · herbs (a day's kJ · P · C · F are the goals' ticks; the number columns went,
 MEALS GOALS). **Grid**: days across, a block a meal (had = solid teal), Snacks, Supplements (its Total row went the same way). **Try** (TRY A MEAL, her 2026-11-03 picks; `phMtry*`): a meal she builds
 to see its numbers before she eats it, nothing logged. Up to three tries as one joined bar (a tab names its first food; + Try); a
