@@ -11308,3 +11308,16 @@ and clear, so built with no popup.
 - **Not tested:** her own herbs with a real count of her prescriptions (the number is the classics' count either way), her phone, the Key2.
 - **Pages checked:** Guide › Herbs; the herb's card there is untouched, and the Inventory drawer's "How it's used" uses the same card, with
   no list. New words: "Most", "Fewest", the two hover lines.
+
+## 2026-11-04 · Healthy tongue: the places fitted to her photo
+Her word, with the picture: "this is a healthy normal tongue" (the photo she said she would supply, 228 × 204 px). Tried in the real
+page, the places (drawn for a stand-in) were off: **Lower** sat on the upper lip and the dark of the mouth. `phTngHealthyZonesSvg`
+now fits her photo: Lower y 28–54, Middle 58–92, Upper 96–126 as before, Sides 44–92 (of 133). Nothing else changes.
+- **The photo is not in the code:** her pick was "kept privately", and index.html is public. It goes in through her Add healthy photo
+  button (`PHARMACY.healthyTongue`, one per login, about 6 KB). The file is `refs/healthy-tongue-2026-11-04.png` (git-ignored). The
+  tile crops a wide photo to 3:4, so the tongue reaches both edges.
+- **Tested** (a copy of HEAD a3ae0c0c with this patch, port 8997, made-up "Mia Samplecase"): the icon; her real file through the real
+  Add healthy photo handler (saved, "Healthy photo saved"); Lower lit gold on the tongue and listed Root · Lower's 2 notes with Guide ›
+  doors. Pictures `shots/healthy-tongue-fit-2026-11-04.png`, `shots/healthy-tongue-her-photo-2026-11-04.jpg`.
+- **Not tested:** her own login, her phone, the Key2. Middle, Upper and Sides were checked by eye, not tapped.
+- **Pages checked:** Guide › Tongue map. No new words.
