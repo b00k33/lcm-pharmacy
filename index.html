@@ -31034,9 +31034,11 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
 #pharmacyPage .ph-hu-x:hover { background: var(--ph-herb-tint); }
 /* the drawer's section shows for a single herb only */
 #pharmacyPage #phHerbUseSec[hidden] { display: none; }
-/* the Guide's Herbs tab: the herbs as rows (most formulas first, the count beside), the card beside them */
+/* the Guide's Herbs tab: the herbs as rows (A–Z · Most · Fewest formulas, the count beside), the card beside them */
 #pharmacyPage .ph-gd-hu { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 18px; align-items: start; }
-#pharmacyPage .ph-gd-hu-list { display: flex; flex-direction: column; gap: 4px; max-height: 70vh; overflow-y: auto; position: sticky; top: 8px; }
+#pharmacyPage .ph-gd-hu-side { display: flex; flex-direction: column; gap: 8px; min-width: 0; position: sticky; top: 8px; }
+#pharmacyPage .ph-gd-hu-side > .ph-tng2-seg { align-self: flex-start; }
+#pharmacyPage .ph-gd-hu-list { display: flex; flex-direction: column; gap: 4px; max-height: 70vh; overflow-y: auto; }
 #pharmacyPage .ph-gd-hu-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex: 0 0 auto; min-height: 32px; padding: 0 10px; border: 0; border-radius: 6px; background: none; color: var(--ph-ink); font: inherit; font-size: var(--fs-13); text-align: left; cursor: pointer; }
 #pharmacyPage .ph-gd-hu-row small { color: var(--ph-faint); font-size: var(--fs-11); font-variant-numeric: tabular-nums; }
 #pharmacyPage .ph-gd-hu-row:hover { background: var(--ph-herb-tint); }
@@ -31052,7 +31054,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   #pharmacyPage .ph-hu-tbl td.f small.m { display: block; color: var(--ph-soft); font-weight: 400; font-size: var(--fs-11); }
   #pharmacyPage .ph-hu-tbl:not(.own) :is(th:last-child, td.u) { display: none; }
   #pharmacyPage .ph-gd-hu { grid-template-columns: 1fr; gap: 12px; }
-  #pharmacyPage .ph-gd-hu-list { max-height: 30vh; position: static; }
+  #pharmacyPage .ph-gd-hu-side { position: static; }
+  #pharmacyPage .ph-gd-hu-list { max-height: 30vh; }
   #pharmacyPage .ph-gd-hu-row { min-height: 28px; font-size: var(--fs-12-5); }
 }
 /* ==== Colour audit (her 2026-11-02 "audit all app pages and keep design to - black for text, 2-3 colours for ui, and other
@@ -34704,8 +34707,15 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     sec.hidden = !key;
     document.getElementById("phHerbUseBody").innerHTML = key ? phHuCardHtml(key) : "";
   }
-  // the Guide's Herbs tab: the herbs the classics hold (most formulas first), her own herbs too once she searches; the card beside
-  let phGdHerb = "";
+  // the Guide's Herbs tab: the herbs the classics hold, her own herbs too once she searches; the card beside. The order is hers (her
+  // 2026-11-04 "ascending descending order of frequency of formulas"): A–Z (the standing rule, the first open), Most or Fewest formulas,
+  // ties A–Z; remembered on this device
+  let phGdHerb = "", phGdHerbOrd = "";
+  const PH_GD_HERB_ORDERS = [["az", "A–Z", "A to Z"], ["most", "Most", "Most formulas first"], ["few", "Fewest", "Fewest formulas first"]];
+  const phGdHerbOrder = () => {
+    if (!phGdHerbOrd) { try { phGdHerbOrd = localStorage.getItem("lcm-gd-herb-order") || "az"; } catch (e) { phGdHerbOrd = "az"; } }
+    return phGdHerbOrd;
+  };
   function phGdHerbsHtml() {
     const ck = phHuClassicKeys();
     const q = phHuBase(phGdSearch);
@@ -34714,13 +34724,29 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       const own = new Set(PHARMACY.herbs.filter(h => !phIsFormula(h)).map(h => phHuKeys(h.name)[0]).filter(Boolean));
       keys = [...new Set([...keys, ...own])].filter(k => k.includes(q));
     }
-    keys.sort((a, b) => phAz(phHuTitle(a), phHuTitle(b)));   // A–Z (her 2026-11-02 rule; was most formulas first, the count still shows)
+    const ord = phGdHerbOrder(), nOf = k => ck.get(k) || 0;
+    keys.sort((a, b) => (ord === "most" ? nOf(b) - nOf(a) : ord === "few" ? nOf(a) - nOf(b) : 0) || phAz(phHuTitle(a), phHuTitle(b)));
     if (!keys.length) return `<p class="ph-hu-none">No match</p>`;
     const sel = keys.includes(phGdHerb) ? phGdHerb : keys[0];
     return `<div class="ph-gd-hu">
-      <div class="ph-gd-hu-list" role="listbox" aria-label="Herbs">${keys.map(k => `<button type="button" class="ph-gd-hu-row${k === sel ? " on" : ""}" data-gd-herb="${esc(k)}" role="option" aria-selected="${k === sel}"><span>${esc(phHuTitle(k))}</span>${ck.get(k) ? `<small>${ck.get(k)}</small>` : ""}</button>`).join("")}</div>
+      <div class="ph-gd-hu-side">
+        <div class="ph-tng2-seg" role="group" aria-label="Order of the herbs">${PH_GD_HERB_ORDERS.map(([k, lbl, tip]) => `<button type="button" class="ph-ltr-qual${k === ord ? " on" : ""}" data-gd-herb-order="${k}" aria-pressed="${k === ord}" title="${tip}">${lbl}</button>`).join("")}</div>
+        <div class="ph-gd-hu-list" role="listbox" aria-label="Herbs">${keys.map(k => `<button type="button" class="ph-gd-hu-row${k === sel ? " on" : ""}" data-gd-herb="${esc(k)}" role="option" aria-selected="${k === sel}"><span>${esc(phHuTitle(k))}</span>${ck.get(k) ? `<small>${ck.get(k)}</small>` : ""}</button>`).join("")}</div>
+      </div>
       <div class="ph-gd-hu-card"><h3>${esc(phHuTitle(sel))}</h3>${phHuCardHtml(sel)}</div>
     </div>`;
+  }
+  // a tap on an order: the list redraws from its top in place; the herb she is reading stays picked and its card stays open
+  function phGdHerbOrderSet(btn) {
+    const wrap = btn.closest(".ph-gd-hu");
+    if (!wrap) return;
+    const on = wrap.querySelector(".ph-gd-hu-row.on");
+    if (on) phGdHerb = on.dataset.gdHerb;
+    phGdHerbOrd = btn.dataset.gdHerbOrder;
+    try { localStorage.setItem("lcm-gd-herb-order", phGdHerbOrd); } catch (e) { /* this visit only */ }
+    const t = document.createElement("div");
+    t.innerHTML = phGdHerbsHtml();
+    wrap.querySelector(".ph-gd-hu-side").replaceWith(t.querySelector(".ph-gd-hu-side"));
   }
   // a tap on a herb's row: the card and the picked row change in place (the list keeps its scroll)
   function phGdHerbPick(btn) {
@@ -65227,6 +65253,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
       if (gdTabBtn) { phEgStop(); phGdTab = gdTabBtn.dataset.gdTab; phGdSearch = ""; renderPhGuidePage(); return; }
       const gdHerb = e.target.closest("[data-gd-herb]");   // the Herbs tab: a herb's row shows its card (2026-11-02)
       if (gdHerb) { phGdHerbPick(gdHerb); return; }
+      const gdHerbOrder = e.target.closest("[data-gd-herb-order]");
+      if (gdHerbOrder) { phGdHerbOrderSet(gdHerbOrder); return; }
       const gdBtEdit = e.target.closest("[data-gd-bt-edit]");
       if (gdBtEdit) { phGdOpenBt(gdBtEdit.dataset.gdBtEdit); return; }
       const gdFpEdit = e.target.closest("[data-gd-fp-edit]");

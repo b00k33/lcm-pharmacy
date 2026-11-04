@@ -135,7 +135,7 @@ dropdowns: A–Z. A new list is A–Z from its first build.
 - **Kept as they are:** a rank keeps its rank and uses A–Z for ties only (FBR fit, Quick assess, body charts, Dashboard urgency,
   a search: starts-with matches first, then A–Z); time lists keep time order (prescriptions recent first, timelines, a cycle's
   days, Cycle & IVF messages, a course like Active treatment → In remission → Past → Monitoring); a document's own order (a
-  letter's sections, a plan's phases, the Session grid, which is LOCKED); Stocktake opens in shelf order, A–Z is a view.
+  letter's sections, a plan's phases, the Session grid, which is LOCKED); Stocktake opens in shelf order, A–Z is a view; the Guide's Herbs list opens A–Z with Most · Fewest formulas as her own view (her 2026-11-04 word).
 - **How:** `phAz(a, b)` (Intl.Collator "en", base, numeric; skips a leading emoji or mark; đ → d) and `phAzBy(f)`; herbs
   `phByName`; foods `phFoodAz` (name, then size). Sort a copy (`.slice().sort(…)`), never a shared constant whose order means
   something (PH_SUPP_KINDS: first match wins). The audit that applied this, with every list changed and kept: BUILD-NOTES "A–Z lists".
