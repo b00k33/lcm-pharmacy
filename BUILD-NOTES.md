@@ -11431,3 +11431,41 @@ Her words, with a picture of the throat close-up: "looks good, make the lump cen
 - **Not tested:** her own devices, the Key2.
 - **Pages checked:** Guide › Families (Ban Xia Hou Po Tang); the Plum-pit pattern picture mounted on a test copy.
 - **Not live:** it goes with her next "push live".
+
+## One face across the app (2026-11-05)
+
+Her words, with a picture of the Gui Zhi Tang card on Settled showing "Fever: feels feverish" on a flat face: "good draft. build. do an audit of all facial animations and make the visuals consistent."
+
+**The audit found about 10 face styles.** The sketch face on the patterns and films; the plain `FACE` on clinical figures; a flat `face()` with hair on Bell's, Ramsay Hunt and Stroke; a flat Face plate on 41 signs and Fever, with all 20 Eyes signs sharing one picture; flat lips close-ups; cartoon heads on Perimenopause, Insomnia, Headache, Neck, Anxiety and Immune; line-art poses with hair on the facial score; the prescription figure's own eyes and lips at old positions; formula marks at old positions on the face; a tint oval that did not fit the head.
+
+**Now one face,** `FACE_KIT` (`PH_BODY_GEOM.face`), replacing `FACE` and `FACE_SKETCH`:
+- **Conditions:** Bell's, Ramsay Hunt, Stroke, Headache, Insomnia, Anxiety, Perimenopause and Immune all draw it; the moving ones through `face.live` (lids, brows, smile, folds, pucker). Neck is a bare head from behind.
+- **Signs:** the Face plate is the face at 3.1 x, only what is lit is drawn. The Eyes signs have their own close-up (`phK2Eyes`): almond, round, big, downturned, bright, red, dark sockets, puffy, blurred, floaters, light-sensitive, blinking every 5.4 s. Lips, Complexion and Fever close up on it too (`phK2FaceOn`). The line weights thin as a frame zooms in (`lw`).
+- **Facial score:** the 7 poses are the face itself (`phFpPoseSvg`).
+- **Formulas:** Huang Lian Jie Du's nose and eyes, Yin Chen Hao's eyes, mouth circles, dry dots and head glows now sit on the face's features. The head tint in `PH_FP` is the head's own shape.
+- **Prescription figure:** eyes, brows, nose and lips from the kit; the tint and its ring are the head's own shape; every head mark moved to the feature it names (eyes, lips, nose, ears, cheeks, forehead, throat).
+- **Man:** the same face with a wider jaw, heavier brows, no lashes, thinner lips, his head on his own outline's numbers.
+
+**A build no longer stretches a face.** A build widens the body and hardly the head (`w` under y 64), but the face sat in the body's scale, so a heavy or thin formula film showed two head outlines. The face now takes the head's own width (`faceO` in `svg`, `headQ` and `headG` in `phRenFigureParts`, `head` in `PH_FP`'s `body`). Pictures on a measured patient's build gain from this too.
+
+**Signs that went to the wrong picture.** Ears: tinnitus, Teeth: grinding and Diagnosis: papilledema all lit the eyes and sinuses (no match on the Face plate, so its base). `phKsDesc` now takes the first plate that names the sign (ears go to the ear plate); the Face plate gained a jaw muscle part; papilledema lights the eyes.
+
+**Judgment calls, for her to overrule:**
+- "good draft" covers the card she showed: `PH_FS_READ` takes the Draft pill off Gui Zhi Tang only. The other 30 keep it.
+- Cut-aways with no face were left: mouth, brain, ear, neck bones, thyroid.
+- Small figures (patient figure, pain map, Compass, MSK) keep the plain version of the features with no paper or blur, because a page can hold many. The positions are the same.
+- A complexion close-up washes the usual skin tone under the graphite so that "from usual to the sign" still reads.
+
+**Tested** on a test copy of the real page, the made-up record, nothing saved to her data:
+- All 676 signs, 49 condition and pattern pictures, and 31 formula scenes mount and step with no errors. All-cards headless check, both normal and reduced motion: 41 cards built.
+- By eye, before and after on the same sheets: 9 condition pictures, 9 signs, 7 poses, 3 prescription figures, 3 film heads. Patterns, man and woman, plain and sketch, back and side views, thin and heavy builds, close-ups.
+- The real path at desktop and at 375 wide: Guide › Families › Gui Zhi › Gui Zhi Tang › Settled, the Fever tile on the new face, no sideways scroll. `PH_FS_READ`: no pill on Gui Zhi Tang, a pill on Xiao Chai Hu Tang, Huang Lian Jie Du Tang and Wu Ling San.
+- The all-cards check also lists 5 repeats ("settled repeats an eased sign", Xiao Jian Zhong Tang and Wai Tai Fu Ling Yin) and 4 herb chips with no label on the picture. The same 9 are on the saved page before this work: not from it, and not fixed here.
+
+**Not tested:** her own devices, the Key2, the installed desktop app; Bell's and Stroke were seen moving in stills 3 s apart, the mouth corner dropping; Ramsay Hunt in one still; none watched through a whole cycle. The Compass, pain map and MSK figures were seen only through the same drawing function, not on their own pages.
+
+**eggs.html needs no refresh:** `eggs-body.svg` already wears this sketch (39 of the face's 47 paths match to the decimal; the other 8 are brows and lashes redrawn from the same numbers).
+
+**Pages checked:** Guide › Families and Guide › Iron on a test copy; the Meals body and every picture above on a contact sheet of the real functions.
+
+**BUILT, not live:** it goes with her next "push live".

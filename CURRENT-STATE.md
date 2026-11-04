@@ -847,7 +847,7 @@ Since 2026-10-29 (her audit pick: opened for 2 patients) Patterns · Diagnosis s
 **Concept pictures** are drawn from the body (a natural hand, a real stomach / throat / kidney, vessel walls with cells). Her
 rule: this anatomical model is the model for every picture; the rest move over in batches. Yin deficiency and Heat are drawn on
 the body chart itself (organs at true size, `anat` in `PH_PP`, a 300 x 200 frame) [Concept pictures on the anatomical body]. The
-Her build person (its pale organs and its face, `FACE` in `PH_BODY_GEOM.svg` on every front view, the patient's measured build) is
+Her build person (its pale organs and the one face, `PH_BODY_GEOM.face`, on every front view, the patient's measured build) is
 the universal person for the whole app; Yang deficiency, Qi deficiency and the formula pictures draw it [The Her build person is
 the universal person].
 **Story tabs on the condition pictures:** a picture can carry story tabs after Balanced | the condition (`PH_PP_TABS`,
@@ -866,8 +866,7 @@ pattern on the Journey card; and as a still (`phPpStillJpg`) in the Food letter,
 **Formula pictures (`PH_FP`) [Formula pictures]:** every formula in the Fang Bing Ren list (39 scenes by 2026-11-01, Ban Xia Hou Po Tang, Huang
 Lian Jie Du Tang, Xiao Chai Hu Tang, Wen Dan Tang and Wu Ling San among them) has a moving picture of the body (three burners,
 trouble, herbs at work, tongue + pulse inset), three stops Trouble / Formula at work / Settled, tap-a-herb chips. The person shows
-to mid-thigh (340 x 240), drawn at .88 (`ZK`, labels follow through `ZP`), with a pencil-sketch face (`FACE_SKETCH`,
-`face: "sketch"`; her picks: slim face, pointed chin, closed lips; no hair, her 2026-11-04 "remove hair of figure", on every figure that wears it). The tongue
+to mid-thigh (340 x 240), drawn at .88 (`ZK`, labels follow through `ZP`), with the one face (`face: "sketch"`; her picks: slim face, pointed chin, closed lips; no hair, her 2026-11-04 "remove hair of figure", on every figure that wears it). The tongue
 inset's shape follows its trouble words (`tngFeat` / `tngD`: swollen = wide, round tip, scalloped teeth marks; wet = shine; red
 tip; dry = cracks). It replaces the pattern picture on the Guide card for those formulas and also shows on Dispense (end of the
 right column) and the Care Plan formula cell. Same runner as the pattern pictures. A new formula = one `PH_FP.SC[id]` scene +
@@ -899,7 +898,8 @@ Details and tests: [Guide Families].
 - **Plays once, then holds;** a tile, herb or pair chip holds that picture, a second tap lets it go on; the round button holds or plays again. Under reduced motion it rests, and stops and chips still work.
 - The Conditions line under a formula's chips = its Diagnosis rows, A–Z (they stay out of the film). Cover Signs blurs the film's words too. Each person has their own build: their Ren build row, else `PH_FS_BLD_WORDS` from her person line.
 - **Gui Zhi Tang has its own story** (her 2026-11-04 "ok, build it and push"): `SC.guizhitang` in `PH_FP`, reached by one chip on Gui Zhi's card, Gui Zhi | Gui Zhi Tang (`PH_FS_FORMULA`, `phFsCardHtml`, `phFsWhoTap`; `phFsView` keeps the choice while the card repaints and when she comes back to the card). Gui Zhi itself stays the person, no pathology. It has no `PH_FORMULAS` entry, so Fang Bing Ren scoring and the families list are untouched: it reads Gui Zhi's rows through `PH_FS_SIGNS_OF`, its name comes from `PH_FP_NAME`. A prescription named Gui Zhi Tang, with or without additions, now gets this picture on Dispense and Care Plan through `phFpIdFor`; Gui Zhi Jia Long Gu Mu Li Tang still gets its own.
-- `PH_FS_WORK`, `PH_FS_PAIRW` and `PH_FS_ALLW` are Claude's DRAFT for her to read (a Draft pill on the row); the pairs come from the classics' table, itself Draft.
+- `PH_FS_WORK`, `PH_FS_PAIRW` and `PH_FS_ALLW` are Claude's DRAFT for her to read (a Draft pill on the row); the pairs come from the classics' table, itself Draft. A formula she has read joins `PH_FS_READ` and loses the pill: Gui Zhi Tang so far (her 2026-11-05 "good draft"); the other 30 keep it.
+- **The one face** (her 2026-11-05 "do an audit of all facial animations and make the visuals consistent"): every face the app draws comes from `PH_BODY_GEOM.face` (`FACE_KIT`), her graphite sketch face. `art(o)` the whole drawing; `plain(male)` the same features with no paper or blur, for small figures; `live(g, o)` a face that moves (lids, brows, smile, folds, pucker); `plainEye`, `plainBrow`, `plainNose`, `plainLips`, `headD` to build on. It has a woman and a man, no hair. A close-up is this face in a frame (`phK2FaceOn`: lips, eyes, complexion, fever), the Face plate is this face with what is lit on it, a condition picture sits on `person`. A build widens the body and hardly the head, so the face and what sits on it keep the head's width (`faceO` in `svg`, `headQ` in `phRenFigureParts`, `head` in `PH_FP`'s `body`). Never draw a face of its own. Cut-aways with no face stay as they are (mouth, brain, ear, neck bones, thyroid).
 
 
 ## Guide — Tongue map, Pulse, Abdomen (linked to the record's own pages, 2026-11-03; LIVE build 20261103-233500)

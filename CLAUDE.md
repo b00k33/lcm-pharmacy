@@ -1339,6 +1339,10 @@ not repeated here.
   plays only the person, never pathology; a formula plays Person → Trouble →
   Formula at work → Settled (CURRENT-STATE, "The card's picture"). Her like did
   not sign off the words: `PH_FS_WORK`, `PH_FS_PAIRW`, `PH_FS_ALLW` stay DRAFT.
+- One face, her graphite sketch (her "make the visuals consistent", 2026-11-05):
+  every face comes from `PH_BODY_GEOM.face` (`art`, `plain`, `live`; woman and
+  man, no hair). Never draw a face of its own, never colour or flat vector
+  (CURRENT-STATE, "The one face").
 - Never reintroduce the 44px minimum-tap-target rule (it made every phone
   control too large; explicitly retired). Chips and buttons are 32px (6px corners); a few
   phone Dispense chips are 40px on purpose (`.ph-days-opt` / `.ph-pm-opt`).
