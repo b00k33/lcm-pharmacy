@@ -1335,6 +1335,10 @@ what's on the "never" side. Rules already stated above (the ★ rules, Theme,
 Fit the screen, Motion, NEVER break these, Deploy & git, and CURRENT-STATE.md) are
 not repeated here.
 
+- Guide family cards tell one story (her "i like it", 2026-11-04): a herb family
+  plays only the person, never pathology; a formula plays Person → Trouble →
+  Formula at work → Settled (CURRENT-STATE, "The card's picture"). Her like did
+  not sign off the words: `PH_FS_WORK`, `PH_FS_PAIRW`, `PH_FS_ALLW` stay DRAFT.
 - Never reintroduce the 44px minimum-tap-target rule (it made every phone
   control too large; explicitly retired). Chips and buttons are 32px (6px corners); a few
   phone Dispense chips are 40px on purpose (`.ph-days-opt` / `.ph-pm-opt`).
