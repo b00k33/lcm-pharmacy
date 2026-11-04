@@ -11414,6 +11414,8 @@ Her words, with a picture of the Ban Xia Hou Po Tang card: "i like the qi knot a
   - By tap in the app and eggs.html at 1280 wide and at 360 x 469 (Key2 size): no video before the tap, the right shape, sound on, scenes stop, no sideways scroll at phone width.
   - By script: a scene tab pauses, Close stops, a redraw kept 40.7 s and paused, no internet brings back the strip with its note, the offline store holds only the picture.
 - **Not tested:** real phones, her Key2, an iPhone; the sound by ear (levels measured only).
+- **On the real site:** eggs.html opened, Play pressed: the wide film started in under a second on a repeat open (the first open just after the publish took several seconds), a jump to 0:54 worked, no console errors, and the site answers range requests. This computer's connection downloads the film at about 4 Mbps against its 2.9, and it waited twice in its first 12 s. A smaller copy is the fix if that shows on her phone or a patient's.
+- **LIVE in build 20261105-011700** on her "when done building, push" (commit 7cfe70af, publish dad14bd5), with the qi knot close-up from another session (4b1ab967). Her devices need the gold Update; eggs.html is live for patients at once.
 
 ## Guide: the lump centred on the neck (2026-11-04)
 
