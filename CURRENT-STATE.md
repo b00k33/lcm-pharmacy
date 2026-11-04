@@ -1000,7 +1000,7 @@ State is `phIr` (view state, never saved).
 The figure is `PH_BODY_GEOM` with the sketch face and `phRenAnatomyHtml`'s organs; the pregnant womb carries PH_PP's baby
 (`phIrBabySvg`). Its foods include beef liver, mussels, oysters and black sesame, added to the food list for it [Iron teaching page].
 
-## Guide — Eggs (a teaching page)
+## Guide — Eggs (a teaching page; LIVE build 20261104-111100)
 The Eggs tab (her 2026-11-03 ask with her chart of mitochondria per cell, her 8 picks + 3 on mock QVR4nKWeydZGUQuswXRuY2, BUILD-NOTES
 "Eggs teaching page") shows a patient how oxygen, red cells and the uterus feed egg quality. It stands on the Iron page's band and parts
 (`.ph-ir`): one scene at a time, the picture left, its numbered lines right, a Draft tag, the source line under the band.
@@ -1031,7 +1031,7 @@ each tile has one-tap type / shot chips and a date button. **Records → Photos*
 rings the next unlabelled photo (a tap never moves the page: it rings one already on screen or none; only the keys scroll to it);
 Select + one label for many. Tongue shots rank natural → unlabelled → side → sublingual → flash (`PH_TONGUE_SHOT_RANK`). The
 Tongue page: today's photo beside the last (the Sublingual tab flips the pair), the Flash pair under them in the same column, past
-photos at the bottom. **Healthy tongue (her picks 2026-11-03; built, NOT live yet):** a small tongue icon in Today's head (Sublingual
+photos at the bottom. **Healthy tongue (her picks 2026-11-03; LIVE build 20261104-111100):** a small tongue icon in Today's head (Sublingual
 too) opens the clinic's healthy tongue photo beside today's (Healthy | Today, in place of Last; ✕ or the icon closes it); Upper ·
 Middle · Lower · Sides drawn over it, a tap lists that place's Guide notes under the pair, each a Guide › door. She adds it there
 ("Add healthy photo", "✎ Change"); it is kept small in the clinic's synced data (`PHARMACY.healthyTongue`, one per login), never the
