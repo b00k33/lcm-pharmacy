@@ -872,7 +872,7 @@ signs; the Care Plan Diagnosis = its pictures; the Patterns page = every pattern
 (`--px-h`), so nothing moves; a sign's name is said once, in the header with its Ren / Bing marks and weight dots.
 
 ## Guide — Families (study + edit)
-The Guide is **[Families] [Compare] [Tongue map] [Pulse] [Abdomen] [Herbs] [Blood tests] [Iron] [Eggs]**: a herb card is the body type with its formulas under it, notes-only formulas are
+The Guide is **[Families] [Compare] [Tongue map] [Pulse] [Abdomen] [Herbs] [Blood tests] [Iron] [Eggs] [Eating eggs]**: a herb card is the body type with its formulas under it, notes-only formulas are
 dashed tiles, a study card sits on the right (in Study, the concept picture of the pattern(s) the family counts for, under the
 pearl). **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): her edits live in `PHARMACY.fbrEdits[id]` (+
 `fbrEditsAt`), and `phFbrEditsApply()` rebuilds `.ren/.bing/.or/.core` in place from `phFbrPristine`; `phFbrEditsSync()` (top of
@@ -1033,6 +1033,9 @@ Code: `phEgFilmHtml`, `phEgFilmDraw`.
 
 **Doors:** the tab; **Eggs ›** at the end of Iron step 3's zoom key; **Eggs · Guide** on the cycle day card's Between periods head,
 every day (her pick).
+
+## Guide — Eating eggs (a teaching page; BUILT, not live until her next push)
+Her word 2026-11-04, adding 2 eggs to a lunch on Meals: "make an animation for how eggs choline and protein enriches the body"; her 8 picks; mock `mocks/eating-eggs-mock-2026-11-04.html`; BUILD-NOTES "Guide › Eating eggs"; code "EATING EGGS", `phEe*`, `PH_EE_*`, `.ph-ee`, `.ee-*`. Eggs the food; egg cells are Guide › Eggs. Stands on the Iron page's band, boxes and source line and on the Meals body (`phMbdSvg`, `phMbdLook`, the routes, the Short | Enough line). **The screen:** the body left, a close-up beside it, a thin line joining the place to its close-up. **The play** (Eat, and on first sight; 28.7 s): egg → stomach → small bowel → liver → brain → muscles → baby: choline first, then protein, then both to the baby. Each stop alone from the stop bar. **After it:** the line opens Short | Enough (the baby: Some | Plenty), the rings say what these eggs cover (two eggs, pregnant: 67% of choline, 21% of protein). **Bars:** Eggs 1 · 2 · 3, Body | TCM (the Meals body's own, `lcm-mbd-view`), Not pregnant | Pregnant (the app opens on Pregnant, no womb and the Meals goals when not), Copy link. TCM for choline is Jing → Marrow → Brain (her call). Numbers: `PH_FOOD.egg`, 440 mg and 60 g in pregnancy, the source line under the box says which were not re-read. Words DRAFT, the Draft tag stays until she reads them. Nothing saved but Body | TCM. Off under reduced motion (the end looks only). **The door:** one chip under the eggs' amount on Meals' Try table (`data-ee-open`, `phEeOpen`), which opens the tab and plays; Grid's side panel has none. **The link:** `eating-eggs.html`, MADE by `.github/scripts/make-eating-eggs-page.pl` (no patient data, no sign-in, nothing saved, noindex; no Draft tag, no Copy link; opens on Not pregnant, so a pregnant body is never a fertility patient's first sight). `phMbdTick` ends when the figure is this page's: it runs its own loop.
 
 ## Photos
 **The patient's Photos page** opens on the Comparison table (a row per type, a date column each, **oldest left, newest right**; **All dates | Pair** above it once there are two dates: the Pair's two heads are the pickers, BEFORE ▾ ⇄ AFTER ▾, opening on first ↔ latest, ⇄ swaps, remembered for the session only, `phRenGalPairOf`; a phone opens on the Pair, two columns fitting the screen; her 2026-11-02 picks, BUILD-NOTES "Photos increment 2"); By visit / By type a tap away; the page's chips are the standard 32px chips, the shot row one joined bar; **with no photo on file it opens on its first action** (her 2026-10-31 pick, idea 4 of the 29 Oct audit): the camera tile (the phone’s own sheet, the computer’s chooser; then a kind per photo, the drop flow) beside the drop zone, the kinds under them, no Add tap and no "Or pick the type first" line; with photos the same block sits behind + Add (`presPhotosSectionInnerHtml`, `.ph-photos-first`, `.ph-photos-cam`); a phone shows the tile alone;
@@ -1277,7 +1280,7 @@ BEFORE (still, pale) on its left and AFTER on its right, "BEFORE 3/8 · AFTER 6/
 anywhere on the body (← → on its ‹› circle); a place a number on the table builds turns grey as that number falls short; a changed
 amount keeps the line where she left it. The Iron page's step 2 draws this same body (no line there). Eat · Body | TCM (TCM: Stomach → Spleen → the Zang that governs the tissue, in its element's colour;
 the view stays on this device) · All ▾ (follow one number). Names on hover only. It plays when the Try tab opens and on Eat; a changed
-amount sets the looks at once; reduced motion: the end looks only. Phone: above the table. Its words (`PH_MBD_FLOW`, `PH_MBD_ORG`)
+amount sets the looks at once; reduced motion: the end looks only. Phone: above the table. Protein also reaches the baby (`PH_MBD_FLOW.p.baby`) and every other dot of choline goes by the lymph (`PH_MBD_FLOW.ch.also`, `phMbdRoute`'s lane), so this body and Guide › Eating eggs agree. Its words (`PH_MBD_FLOW`, `PH_MBD_ORG`)
 are DRAFT.
 **The Body tab** (MEALS BODY FORECAST; her words: "make an animated person of me based on high and weight and body fat percentage to
 show me how my food intake is impacting my health"; her picks; `phMbf*`, `PH_MBF_*`), her own Meals only: the Meals body (`phMbdSvg`
