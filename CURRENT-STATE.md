@@ -1255,7 +1255,7 @@ Patterns (`diet_cool` / `diet_warm`, source Diet, DRAFT wording); Fang Bing Ren 
 2026-11-01, "a table format for meal planning and recording ... clean, like the appointments page"; her picks on
 meals-table-mock-2026-11-01.html, then "include interactive animations and workflow elements"). A computer (MEALS WEEK BOX, her 2026-11-03 picks): **the goals** first,
 then the week as ONE box, its bar on top in the record's light tint, pinned under the name band while the week scrolls (two rows
-when its words do not fit one): the bar (‹ span › · Today · **Day · 3 days · Week** (her 2026-11-04 ask; this device's `lcm-mpl-days`; 3 days = that day + the next 2, ‹ › by the view's own span; Day: the goals follow the day; none on Try) · the tabs **Grid · Table · Numbers · Photos · Try**, the open one white, this device's `lcm-mpl-view`, Table first · the steps **Plan n/7 · Shop n to buy · Eat <the next meal> ·
+when its words do not fit one): the bar (‹ span › · Today · **Day · 3 days · Week** (her 2026-11-04 ask; this device's `lcm-mpl-days`; 3 days = that day + the next 2, ‹ › by the view's own span; Day: the goals follow the day; none on Try or Body) · the tabs **Grid · Table · Numbers · Photos · Try · Body**, the open one white, this device's `lcm-mpl-view`, Table first · the steps **Plan n/7 · Shop n to buy · Eat <the next meal> ·
 Check n to answer** (Eat names today's next meal and its time, "Dinner 6:30 pm", ✓ once all had, a dinner the fast covers left out;
 MEALS GOALS, her pick 7), the first not done filled, each a door: next week · Shopping in the column (made when there is none) · today's
 next meal · How did it sit for each meal she had 1½ h ago not yet answered · **More ▾** = Copy last week, Recipes, Targets (the
@@ -1286,7 +1286,20 @@ anywhere on the body (← → on its ‹› circle); a place a number on the tab
 amount keeps the line where she left it. The Iron page's step 2 draws this same body (no line there). Eat · Body | TCM (TCM: Stomach → Spleen → the Zang that governs the tissue, in its element's colour;
 the view stays on this device) · All ▾ (follow one number). Names on hover only. It plays when the Try tab opens and on Eat; a changed
 amount sets the looks at once; reduced motion: the end looks only. Phone: above the table. Its words (`PH_MBD_FLOW`, `PH_MBD_ORG`)
-are DRAFT. A meal
+are DRAFT.
+**The Body tab** (MEALS BODY FORECAST; her words: "make an animated person of me based on high and weight and body fat percentage to
+show me how my food intake is impacting my health"; her picks; `phMbf*`, `PH_MBF_*`), her own Meals only: the Meals body (`phMbdSvg`
+with a `build`, so it is the one body) drawn at her height, weight and body fat, changing shape over the weeks ahead as she eats what
+three sliders say, **Carbs · Protein · Fat** a day. They open on this week's average (Numbers' Average row, `phMbfWeekOf`), a tick
+for the week and one for her goal, **This week · My goal** set them back. Under them Eat against Burn, **Play** (once when the tab
+opens; reduced motion: the end only), **4 weeks · 12 weeks · 1 year** (opens on 12), a bar to drag through the weeks, the weight line
+over the BMI 18.5 to 25 band, four tiles (Weight · Fat · Muscle + lean · Liver store + water) and flags (BMI, Energy for hormones,
+Muscle, the week the model stops). Today stays as a dashed outline. Four places change on the body: fat stores, muscle, the liver's
+store, ovaries and womb (grey as the energy left for hormones falls); not pregnant, no ketones, no bones (her picks). **You**: the
+Height · Weight · Body fat boxes save today's reading on her record (`phBodyWrite`); until all three are there it reads "Needs height
+· body fat". Light · Moderate · Active is this device's `lcm-mbf-act`, Moderate first. Phone: the body beside the sliders, the rest
+under. The model (`phMbfSim`; its figures in BUILD-NOTES) and every word are DRAFT, and a line on the tab says so. BUILT, not live.
+A meal
 **dragged** onto another day's same meal is copied there (what she had, else its plan; Undo in the toast; a meal she had there
 stays). Phone: the goals (the dial, then Reach and Stay under; the fast's goal on Your fasts ›), the steps (counts only; Eat its time), a day at a time. A cell = its meal's time (a day's own bold) + its things one per
 line (a small ↻ = it repeats, bold = that day only, ✓ + the time she had it); no ✎ Usual (MEAL REPEATS). A tap opens the picker in
