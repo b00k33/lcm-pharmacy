@@ -11679,7 +11679,7 @@ Her word, with a picture of the egg's moment: "give option to click on one to pl
 - **Worth knowing:** a hidden test pane barely draws frames, so the clock crawls there; on a test copy, set `window.requestAnimationFrame` to a 16 ms timer to run it through.
 - **Not tested:** a real phone, the Key2, her own devices.
 - **Pages checked:** Guide › Eggs (the stage, the six scenes), eggs.html, the printed sheet.
-- **BUILT, not live:** it goes with her next "push live".
+- **LIVE in build 20261105-141700** (her "push" on Meals › Body, told beforehand that this goes with it; commit 34846180, publish 16bfd925). Her devices need the gold Update.
 
 ## Meals › Body: bolder fat and muscle, Muscle up, and Over time with her tape and photos (2026-11-05)
 
@@ -11701,4 +11701,4 @@ Her words, three asks in a row on the Body tab: "include my physical circumferen
 - **Not tested:** her real record, week and Fitness log; her devices and the Key2 itself; the phone's camera and gallery (the picker was not opened, the save was driven with files); the phone relay carrying a body photo to her computer (the test copy has no sign-in; the path is the meal photos' own); reduced motion on a real device; a year of real tape readings.
 - **To tell her:** body photos taken on the phone travel by the same private relay as her tongue and meal photos. Update the computer and the phone before the first one, so both file it as a body photo.
 - **Pictures:** `shots/meals-body-muscle-up-2026-11-05.jpg`, `meals-body-over-time-2026-11-05.jpg`, `meals-body-muscle-up-phone-2026-11-05.jpg`, `meals-body-over-time-phone-2026-11-05.jpg`.
-- **BUILT, not live:** it goes with her next "push live". Every word and figure is DRAFT until she has read it.
+- **LIVE in build 20261105-141700** (her "push"; commit 3b5b51eb, publish 16bfd925). The live page was read back: it serves this build and the new code. Her devices need the gold Update, the computer and the phone both before the first body photo from the phone. Every word and figure is DRAFT until she has read it.

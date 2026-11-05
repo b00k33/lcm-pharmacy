@@ -1300,7 +1300,7 @@ Height · Weight · Body fat boxes save today's reading on her record (`phBodyWr
 · body fat". Light · Moderate · Active is this device's `lcm-mbf-act`, Moderate first. Phone: the body beside the sliders, the rest
 under. The model (`phMbfSim`; its figures in BUILD-NOTES) and every word are DRAFT, and a line on the tab says so. LIVE in build 20261105-131600.
 **Two views** (her 2026-11-05 picks; one switch at the tab's top, this device's `lcm-mbf-view`): **Forecast** (the above) · **Over
-time** (`phMbt*`, `PH_MBT_*`). BUILT, not live, all of this paragraph:
+time** (`phMbt*`, `PH_MBT_*`). LIVE in build 20261105-141700, all of this paragraph:
 - *Forecast, the look* (her "make the subcutaneous fat more 3d and textured and dramatic looking", picks Bolder · Fibres): the fat is
   a lobed layer under the skin with deep shadow and shine (`phMbdFatBand`, patterns in `phMbdDefs`), the muscles fibred spindles,
   shoulders and forearms with the arms, thighs and calves. `PH_MBD_BOLD`: the Meals figures only (so Try's body has it too); the
