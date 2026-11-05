@@ -11548,7 +11548,7 @@ Her word: "push", for the centred lump, then "Push both" with One face. After pu
 - **Tested** (a test copy of the real page, made-up data, nothing saved to her data): a real tap on a chip, the same herb stays picked, the focus stays on the chip; the choice survives a reload; Shi Gao with both on shows "All hidden" and its classics still draw; a herb with no recipes has no bar; the plain card has no bar and no marks, 34 rows; at 360x469 the bar and the marks wrap with no sideways scroll, marks line up with the name; no console errors.
 - **Not tested:** her real formulas and jars; her own devices, the Key2.
 - **Pages checked:** Guide › Herbs (wide + phone).
-- **Not live** until her word.
+- **LIVE in build 20261105-110700** (her "push live"; commit 44336e18, publish 78d1906f, with the Eggs brain cell row). Her devices need the gold Update.
 
 ## Guide › Eggs: brain cells on the mitochondria chart (2026-11-05)
 
@@ -11565,4 +11565,4 @@ Her words, with a picture of the chart: "include brain cells is 2 million".
 - **Worth knowing:** in a narrow window with the side rail open (800 wide) the track is short and the scale's words crowd. The same three words sat on the same short track before this row. Not changed.
 - **Not tested:** her own devices, the Key2.
 - **Pages checked:** Guide › Eggs (Mitochondria), eggs.html.
-- **BUILT, not live:** it goes with her next "push live".
+- **LIVE in build 20261105-110700** (her "push live"; commit 6bbd4ba0, publish 78d1906f, with Guide › Herbs' Hide bar). Her devices need the gold Update.
