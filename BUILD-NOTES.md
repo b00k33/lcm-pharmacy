@@ -11582,7 +11582,7 @@ Her words, with a picture of the chart: "include brain cells is 2 million".
 - **Tested** (a test copy of the real page, made-up data): in all four Hide states every herb's number equals its rows under Your formula, none differ; 187 rows, one each for Ge Gen, Bei Huang Qi, Huang Bai, Fen Fang Ji, no formula among them; Most starts Gan Cao 34, Fu Ling 23; Fewest runs low to high with the books' herbs last; hiding Temporarily stopping gives Gan Cao 20 and the list re-sorts, the same herb stays picked and in sight; under A–Z the list keeps its scroll; search finds Ma Huang, Dan Shen and "Ge Gen - Kudzu"; Compare's Fang Ji Huang Qi Tang has grams on the book's rows; about 1,000 prescriptions in memory: 24 ms a draw; 360x469 no sideways scroll; no console errors.
 - **Not tested:** the new build on her real data on screen; her own devices, the Key2.
 - **Pages checked:** Guide › Herbs (wide + phone), Guide › Compare's rows.
-- **Not live** until her word.
+- **LIVE in build 20261105-131600** (her "push"; commit f8a00af5, publish 5ce1236d). Her devices need the gold Update.
 
 ## Guide › Eggs: the 2 million has its source (2026-11-05)
 
@@ -11599,7 +11599,7 @@ Her message: the picture of her chart, no words, after I asked her for the sourc
 - **Worth knowing:** in an 800-wide window with the side rail open, the scale's words still crowd (noted above). Not changed.
 - **Not tested:** her own devices, the Key2.
 - **Pages checked:** Guide › Eggs (Mitochondria), eggs.html.
-- **BUILT, not live:** it goes with her next "push live". Until then the live page still says "original study not found".
+- **LIVE in build 20261105-131600** (her "push"; commit 55772cfa, publish 5ce1236d). Her devices need the gold Update; eggs.html has it at once.
 
 ## Guide › Eggs: Average cell on the mitochondria chart (2026-11-05)
 
@@ -11615,7 +11615,7 @@ Her word: "yes", to adding her chart's "Average cell, 100", with its source trac
 - **Worth knowing:** a timing check in a hidden pane reads the bars as 0, because the page draws no frames. Take a screenshot to force them. In an 800-wide window with the side rail open, the scale's words overlap (noted above). Not changed.
 - **Not tested:** her own devices, the Key2.
 - **Pages checked:** Guide › Eggs (Mitochondria), eggs.html.
-- **BUILT, not live:** it goes with her next "push live", with the substantia nigra correction.
+- **LIVE in build 20261105-131600** (her "push"; commit f525e8af, publish 5ce1236d). Her devices need the gold Update; eggs.html has it at once.
 
 ## Guide cards: the film plays like a video; Ninety Days wide only (2026-11-05)
 - **Her words:** a picture of the Gui Zhi Tang card on Trouble, "i like the animations. can you make it more video like?" On the moving mock (private artifact, kit in `mocks/gui-zhi-tang-film-2026-11-05/`) her picks: camera "Glides in", words "On the body", pace "Calm", form "Live drawing". Build word: "All 31 formulas". Then "i want you to store some videos locally so it doesnt overwhelm the site. i dont show videos on my phone anyways": "All 31", "Just the files", "Remove the tall copy".
@@ -11628,7 +11628,7 @@ Her word: "yes", to adding her chart's "Average cell, 100", with its source trac
 - **Worth knowing:** on the phone width, Wen Jing Tang's and Zhi Gan Cao's longest labels touch the tongue and pulse block by a few units (at desktop only one, by one unit); the labels' words are Draft, so they are left for when she reads them. On the phone the band grows a line on 9 of the 41 films' longest words.
 - **Not tested:** the frame rate with a real graphics card, her own devices, the Key2, Full screen itself (a test browser cannot start it without a real tap), the bar dragged with a real finger (the same code as a mouse; only the arrow key was driven).
 - **Pages checked:** Guide › Families (formula and person cards), Gui Zhi | Gui Zhi Tang, Guide › Eggs, eggs.html, the big picture sheet.
-- **BUILT, not live:** it goes with her next "push live".
+- **LIVE in build 20261105-131600** (her "push"; commit d6d3a3c7, publish 5ce1236d). Her devices need the gold Update. The site no longer serves the tall film: a device on an older build, in portrait, finds no film until its Update.
 
 ## Meals › Body: an animated person of her, moved by what she eats (2026-11-05)
 
@@ -11649,7 +11649,7 @@ Her word: "yes", to adding her chart's "Average cell, 100", with its source trac
 - **Tested** in a test copy with a made-up record (nothing of hers touched), 1280 wide and 360 × 469: the waiting state; typing Height and Body fat saves today's reading and the forecast appears; each slider, both presets and their ticks; the three activity chips (kept on the device); 4 weeks · 12 weeks · 1 year (a year stops at week 25 on 4,061 kJ); the bar; Play to Week 12; the dashed today; about 7 ms a frame; no sideways scroll; Grid, Table, Numbers, Try still open; no errors. On 58 kg · 160 cm · 28% eating 4,061 kJ (P 54 · C 83 · F 46): −8.7 kg at 12 weeks, 3.4 kg of it lean, energy for hormones low.
 - **Not tested:** her real record and week; her devices and the Key2 itself; a reading kept across a reload (the test copy has no sign-in, so it keeps no records; the save is `phBodyWrite`'s own); reduced motion on a real device; a week with no food logged was seen only as "My goal".
 - **Pictures:** `shots/meals-body-week-2026-11-05.jpg`, `meals-body-more-2026-11-05.jpg`, `meals-body-phone-2026-11-05.jpg`.
-- **BUILT, not live:** it goes with her next "push live". Every word on the tab is DRAFT until she has read it.
+- **LIVE in build 20261105-131600** (saved after her "push", so asked: her "Send both"; commits 9fd9bac7, 1310f715, b44a8678, publish 5ce1236d). Her devices need the gold Update. Every word on the tab is DRAFT until she has read it.
 - **Meals › Body, tablet width (same day, after the first save):** between the phone and a wide screen the four tiles were squeezed to 52 px each. The figure's column is now at most 36% of the tab and the tiles wrap two by two when they do not fit. Checked at 820, 1280 and 360 wide. BUILT, not live.
 - **Meals › Body, the model's figures checked against their papers (same day):** every figure holds; three names were wrong and are corrected in the code's note and the Draft line's hover. Resting = 370 + 21.6 × lean kg is **Cunningham 1991** (Am J Clin Nutr 54:963; "Katch-McArdle" is its popular name). Digesting: Westerterp 2004 (fat 0 to 3%, carbs 5 to 10%, protein 20 to 30%; the app uses 2, 8, 25). Lean share = 2 / (2 + fat kg) is **Chow and Hall 2008** (PLoS Comput Biol 4:e1000045), from Forbes' 10.4 in Hall 2007; not "Hall 2011". Fat 39.5 and lean 7.6 MJ a kg: Hall 2008 (Int J Obes 32:573). Water with the store, 2.7 g a gram: **Hall 2010** (Am J Physiol 298:E449), under the usual "3 to 4". Hormones: Loucks and Thuma 2003, LH pulses unaffected at 30 kcal a kg of lean a day and slowed under it; 45 was their control, called balance by later reviews; sedentary women over 5 days. The tenth: an upper figure (Rosenbaum and Leibel 2010 say 10 to 15% of the total; resting-only studies find about 3 to 8%, some near none). Protein: Wycherley 2012 (about a quarter less lean lost at about 1.25 g a kg), Pasiakos 2013 (about half at 1.6); the table sits between them, its 0.4 g end is mine. Most were read as abstracts only; Westerterp 2004, Chow and Hall 2008, Hall 2007, 2008, 2010 in full. BUILT, not live.
 
@@ -11666,4 +11666,4 @@ Her words: "make the animations of the cells with mitochondria more dramatic and
 - **Worth knowing:** a hidden test pane draws no frames, so its clock stands still: seek instead, and take a screenshot to force a paint.
 - **Not tested:** the frame rate on a real phone or the Key2, her own devices, a real printer (PDF only). Its worst case is the Key2: 2 million marks at the end of the scene.
 - **Pages checked:** Guide › Eggs (all six), eggs.html, the printed sheet. The film's own bars are inside the video and were not changed.
-- **BUILT, not live:** her "push" covers this.
+- **LIVE in build 20261105-131600** (her "push", with Meals › Body on her "Send both"; commit b8387900, publish 5ce1236d). eggs.html checked on the real site, drawing and playing, no Draft tags. Her devices need the gold Update; eggs.html has it at once.
