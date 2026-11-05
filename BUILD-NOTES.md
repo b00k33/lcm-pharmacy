@@ -11738,7 +11738,7 @@ Her word, with a picture of the Da Huang card at "Cold & heat: dreads heat, pref
 - **Tested** on test copies, nothing saved to her data: all 15 Da Huang pictures looked at, before and after; each new one at its sign, mid-ease and settled; the whole Da Huang film stepped through every 0.35 s and looked at on five shots; Da Cheng Qi Tang's film at Da Huang's turn and the whole-formula four (the bowel and the pressed belly easing); a sweep of all 100 signs that reach these scenes, big and small, five times and four strengths each: none failed, none empty; reduced motion: none of the nine moves between two clock times; 360 by 469: the card, no sideways scroll; no console errors.
 - **Not tested:** a real phone, the Key2, her devices; Full screen; the frame rate on her computer; the Fang Bing Ren board and Compare were not opened (same mount, `phKsSvgHtml`).
 - **Pages checked:** Guide › Families: Da Huang and Da Cheng Qi Tang cards (film, tiles).
-- **BUILT, not live:** it goes with her next "push live".
+- **LIVE in build 20261105-153300** (her yes by popup, in the same update as the Appointments toolbar; commit 6ca52b53, publish 305df401).
 
 ## Appointments: her toolbar and Body panel (2026-11-05)
 
@@ -11759,3 +11759,4 @@ Her words, on a picture of the rail (gold ring 2, leaf 2, person 4): "i dont lik
 - **Not tested:** her real record (read-only earlier: only one weight on it, so the ratios wait for her numbers); her own computer and the Key2 itself (360 and 375 were an iframe on a test page); the List view has no toolbar, as before.
 - **Pages checked:** Appointments (Grid, Next card, block card, panel, small lists), Meals › Body (Over time door), the layout at 900 px and under.
 - **Pictures:** `shots/appointments-toolbar-2026-11-05.png`, `appointments-toolbar-body-`, `-body-needs-`, `-next-`, `-checkin-`, `-950-`.
+- **LIVE in build 20261105-153300** (her "push", and her yes by popup to the two fixes and the Da Huang pictures; commit c9774b79, publish 305df401). The live page was read back: it serves this build and the new code, and the same taps, typing and check-in ran on the site's own copy (comments stripped) with a made-up person and no errors. Her devices need the gold Update.
