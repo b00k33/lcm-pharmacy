@@ -103522,7 +103522,13 @@ or changing anything in Cliniko.
     return "glow";
   }
   // the hand-drawn scenes (the mock's), by sign; a twin reads its pair's
-  const PH_KS_HAND = { sweats_easy: "sweat", spont_sweat: "sweat", cold_sens: "cold", cold_feel: "cold", wind_averse_tend: "wind", wind_averse: "wind", palp_tend: "palp", palp: "palp", feverish: "fever", throat_lump: "throat", throat_lump_tend: "throat", throat_cant_clear_now: "throat", throat_cant_clear_tend: "throat", throat_emotional_now: "throat", throat_emotional_tend: "throat" };
+  const PH_KS_HAND = { sweats_easy: "sweat", spont_sweat: "sweat", cold_sens: "cold", cold_feel: "cold", wind_averse_tend: "wind", wind_averse: "wind", palp_tend: "palp", palp: "palp", feverish: "fever", throat_lump: "throat", throat_lump_tend: "throat", throat_cant_clear_now: "throat", throat_cant_clear_tend: "throat", throat_emotional_now: "throat", throat_emotional_tend: "throat",
+    // FU ZI'S SIGNS (her 2026-11-05 "improve animations for fu zi", then "make it more dramatic and medically accurate"): each sign of the Fu Zi family (Fu Zi, Shen Qi
+    // Wan, Si Ni Tang, Zhen Wu Tang) that fell back to the plain body or to another sign's plate has a scene of its own (PH_KS_SC below). The two with no picture at all,
+    // "desire to lie down and curl up" and "listless, dispirited", now have one, so they play in the films. A sign is drawn once: the scene shows on every card that has it.
+    cold_extrem: "coldlimbs", cold_limbs: "coldlimbs", cold_limbs_post_fever: "coldlimbs", cold_lower_body_tend: "coldlegs", cold_lower_body: "coldlegs", back_knee_weak_ache_tend: "backknee", legs_knees_weak_now: "kneeweak", legs_knees_weak_tend: "kneeweak",
+    cold_pain_tend: "coldpain", debilitated_tend: "debility", chills_tend: "chills", chills_now: "chills", edema_tend: "edema", edema_surf: "edema", limbs_stiff_cramp_tend: "cramp", limbs_stiff_cramp: "cramp",
+    body_heavy_tend: "heavy", body_heavy: "heavy", limbs_heavy_painful_tend: "heavy", limbs_heavy_painful: "heavy", stool_watery_tend: "waterystool", desire_lie_curl_tend: "liecurl", desire_lie_curl: "liecurl", listless_tend: "listless", listless: "listless" };
   const phKsSubj = lab => { const m = String(lab).match(/^([^:]+):/); return m ? m[1] : ""; };
   // a tongue sign with no chart chip of its own: its words as the chart's chips
   function phKsTngWords(low, subj) {
@@ -104309,6 +104315,546 @@ or changing anything in Cliniko.
       let last = 0;
       return (t, a = 1) => { P.k = a; if (!tight) svg.setAttribute("viewBox", `${(62 + 44 * a).toFixed(1)} 8 176 110`); P.step(last ? Math.max(0, Math.min(.05, t - last)) : 0, t); last = t; };
     }
+  };
+  // ---- FU ZI'S SIGN SCENES (her 2026-11-05 "improve animations for fu zi", then "make it more dramatic and medically accurate"): a drawn scene of
+  // its own for each sign the Fu Zi films play, on her own figure or her own close-ups, moving by the physiology (which vessel, which tissue, which
+  // way the blood or the fluid goes). Contract as the scenes above: setup once, paint a pure function of (t, a); a = 1 the sign in full, a = 0 the
+  // same anatomy settled. Sources for each are in BUILD-NOTES. Labels and every claim DRAFT until she has read them. ----
+  const phFzCl = (x, lo = 0, hi = 1) => Math.max(lo, Math.min(hi, x));
+  const phFzSm = (x, x0, x1) => { const k = phFzCl((x - x0) / (x1 - x0)); return k * k * (3 - 2 * k); };
+  // points along a path, measured once: at(f) gives [x, y, angle in degrees] at the fraction f of its length
+  function phFzAlong(path, n) {
+    const L = path.getTotalLength(), N = n || 64, P = []; for (let i = 0; i <= N; i++) { const p = path.getPointAtLength(L * i / N); P.push([p.x, p.y]); }
+    return f => { const x = phFzCl(f) * N, i = Math.min(N - 1, Math.floor(x)), k = x - i, a = P[i], b = P[i + 1]; return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k, Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI]; };
+  }
+  // a label in the plates' form (hidden on a still tile): dot on the part, words at (tx, ty)
+  function phFzLb(svg, x, y, tx, ty, word, anchor) {
+    const g = phKsEl("g", { class: "lb" }, svg), p = phKsEl("path", { class: "lbl-l", d: `M${x},${y} L${tx},${ty}` }, g), c = phKsEl("circle", { class: "lbl-d", cx: x, cy: y, r: 1.8 }, g);
+    phKsEl("text", { class: "lbl-t", x: tx + (anchor === "end" ? -2 : anchor === "middle" ? 0 : 2), y: ty + (ty < y ? -2 : 7), "text-anchor": anchor || "start" }, g).textContent = word;
+    return { g, p, c, tx, ty };
+  }
+  // a window onto her own figure (front view, no organs), placed in the scene: returns the nested svg and its clipped layer (figure units)
+  function phFzCrop(svg, vb, x, y, w, h, o) {
+    const uid = "ksz" + (++phKsUid), b = phKsFrag(PH_BODY_GEOM.svg("f", (o && o.view) || "front", { uid, shade: true, details: true, hl: "", overlay: "", face: o && o.face ? "sketch" : false, viewBox: vb }));
+    if (!b) return null;
+    b.setAttribute("x", x); b.setAttribute("y", y); b.setAttribute("width", w); b.setAttribute("height", h); ((o && o.parent) || svg).appendChild(b);
+    return { b, uid, hl: b.querySelector(".bg-hl"), defs: b.querySelector("defs") };
+  }
+  // a vertical gradient in figure units whose stops the paint moves: stops = [[offset, colour, opacity], ...]
+  function phFzGrad(defs, id, y0, y1, stops) {
+    const g = phKsEl("linearGradient", { id, gradientUnits: "userSpaceOnUse", x1: 0, x2: 0, y1: y0, y2: y1 }, defs);
+    return stops.map(([o, c, op]) => phKsEl("stop", { offset: o, "stop-color": c, "stop-opacity": op }, g));
+  }
+  // one limb window's cold: warm skin, a cold front (pale; dusky only at the fingers / toes), and its arteries. The named trunk arteries (arts) stay
+  // open and red to the wrist / ankle at every amount: below the front they only run a little narrower and slower, so the pulse is still there. The
+  // small arteries of the hand / foot (ends) and of the fingers / toes (twigs) are the ones that clamp: full above the front, a thread below it.
+  // C = a phFzCrop; y0..y1 the window in figure units; dig = where the fingers / toes start; returns paint(t, a, F) with F the front's y
+  function phFzLimb(C, y0, y1, arts, twigs, rich, cut, ends, dig) {
+    const id = C.uid, E = ends || [], dg = phFzCl(((dig || y1) - y0) / (y1 - y0)); phKsEl("rect", { x: 0, y: y0, width: 220, height: y1 - y0, fill: "#F0B79A", opacity: .42 }, C.hl);
+    const sk = phFzGrad(C.defs, id + "k", y0, y1, [[0, "#EAE5E2", 0], [.5, "#EAE5E2", .92], [dg, "#EAE5E2", .92], [1, "#A9B1CB", .96]]);
+    const lu = phFzGrad(C.defs, id + "l", y0, y1, [[0, "#C24A44", 1], [.5, "#C24A44", 1], [.6, "#C24A44", 0]]);
+    const fl = phFzGrad(C.defs, id + "f", y0, y1, [[0, "#F8D2C8", 1], [.5, "#F8D2C8", 1], [.6, "#F8D2C8", 0]]);
+    const sl = phFzGrad(C.defs, id + "s", y0, y1, [[0, "#F8D2C8", 0], [.5, "#F8D2C8", 0], [.6, "#F8D2C8", .6]]);
+    const cold = phKsEl("rect", { x: 0, y: y0, width: 220, height: y1 - y0, fill: `url(#${id}k)` }, C.hl);
+    const g = phKsEl("g", { fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" }, C.hl), AD = arts.join(" "), small = twigs.concat(E).join(" ");
+    if (small) phKsEl("path", { d: small, stroke: "#9A6470", "stroke-width": .7, opacity: .75 }, g);                        // the clamped thread that is left
+    phKsEl("path", { d: AD, stroke: "#C24A44", "stroke-width": 2.3, opacity: .4 }, g);                                       // a trunk below the front: wall
+    const thin = phKsEl("path", { d: AD, stroke: "#C24A44", "stroke-width": 1.4 }, g);                                       // and its narrower stream
+    const slow = rich ? phKsEl("path", { d: AD, stroke: `url(#${id}s)`, "stroke-width": .8, "stroke-dasharray": "2 17" }, g) : null;
+    phKsEl("path", { d: arts.concat(E).join(" "), stroke: `url(#${id}l)`, "stroke-width": 3, opacity: .45 }, g);             // above the front: wall
+    const lum = phKsEl("path", { d: AD, stroke: `url(#${id}l)`, "stroke-width": 2.1 }, g);
+    if (E.length) phKsEl("path", { d: E.join(" "), stroke: `url(#${id}l)`, "stroke-width": 1.7 }, g);
+    if (twigs.length) phKsEl("path", { d: twigs.join(" "), stroke: `url(#${id}l)`, "stroke-width": 1.2 }, g);
+    const flow = rich ? phKsEl("path", { d: arts.concat(E).join(" "), stroke: `url(#${id}f)`, "stroke-width": 1.1, "stroke-dasharray": "2.6 10" }, g) : null;
+    return (t, a, F) => {
+      const o = (F - y0) / (y1 - y0), ov = o - (cut || .09), beat = Math.max(0, Math.sin(t * 6.9));
+      sk[0].setAttribute("offset", phFzCl(o - .13).toFixed(3)); sk[1].setAttribute("offset", phFzCl(o + .03).toFixed(3)); sk[2].setAttribute("offset", Math.max(dg, phFzCl(o + .03)).toFixed(3));
+      [lu, fl, sl].forEach(S => { S[1].setAttribute("offset", phFzCl(ov - .1).toFixed(3)); S[2].setAttribute("offset", phFzCl(ov + .02).toFixed(3)); });
+      phKsOp(cold, a); lum.setAttribute("stroke-width", (2.1 + .3 * (1 - .6 * a) * beat).toFixed(2)); thin.setAttribute("stroke-width", (1.4 + .14 * beat).toFixed(2));
+      if (flow) flow.setAttribute("stroke-dashoffset", (-t * 24).toFixed(1)); if (slow) slow.setAttribute("stroke-dashoffset", (-t * 10).toFixed(1));
+    };
+  }
+  const phFzMir = s => s.replace(/(-?[\d.]+),(-?[\d.]+)/g, (m, x, y) => (220 - x).toFixed(1) + "," + y);
+  // the leg's arteries (her right leg; phFzMir gives the left): the one artery behind the knee divides below the joint into the two of the shin, which
+  // run to the ankle; then the foot's arteries and the toes'
+  const PH_FZ_SHIN = ["M92.6,342 C91.4,352 88.8,362 88.7,374 C88.6,388 89,406 90.5,428", "M92.6,342 C93.8,352 96.2,362 96.4,374 C96.6,388 97,406 96.8,428"];
+  const PH_FZ_FOOT = ["M90.5,428 C90.2,438 89,446 87.5,452", "M96.8,428 C97.2,438 96.4,446 95,452"];
+  const PH_FZ_TOES = ["M88.5,446 C86,449 84.5,452 84,455", "M90.5,446 C91,450 91.2,453 91,456", "M96,446 C97.4,450 98,453 98,456"];
+  // "Hands & feet: cold": the small arteries of the hand and foot clamp, the blood is kept for the trunk, and the cold climbs from the tips toward
+  // the elbow and the knee. Her own forearm and lower legs; the skin pales and only the fingers and toes go dusky. The wrist's artery stays open.
+  PH_KS_SC.coldlimbs = function (svg, d, rich) {
+    svg.setAttribute("viewBox", "0 0 240 150");
+    const air = phKsEl("g", {}, svg), gl = [phKsGlow(air, svg, "#8EC0E8", { cx: 42, cy: 114, rx: 46, ry: 46 }), phKsGlow(air, svg, "#8EC0E8", { cx: 183, cy: 126, rx: 62, ry: 40 })];
+    const cid = "ksq" + (++phKsUid), cp = phKsEl("clipPath", { id: cid }, phKsEl("defs", {}, svg)), S = 146 / 114;
+    phKsEl("path", { d: "M20,170 L71,170 L66,196 L62,213 L60.6,232 L61.7,245 L62.8,260 L63.3,292 L20,292Z", transform: `translate(${(6 - 20 * S).toFixed(2)} ${(2 - 176 * S).toFixed(2)}) scale(${S.toFixed(4)})` }, cp);
+    const A = phFzCrop(svg, "20 176 54 114", 6, 2, 54 * S, 146, { parent: phKsEl("g", { "clip-path": `url(#${cid})` }, svg) }), L = phFzCrop(svg, "64 330 92 132", 132, 2, 101.8, 146); if (!A || !L) return () => {};
+    const arm = phFzLimb(A, 176, 290, ["M52.5,176 C51,196 48.5,220 46.5,240", "M63.6,176 C61.5,198 59,222 56.5,240"],
+      ["M46.3,244 C43,252 41,260 40,270", "M48,256 C46,264 45,272 44.6,280", "M51,258.5 C50.4,266 50,274 49.8,282", "M54,258 C54.6,266 54.8,274 54.6,282", "M56.5,254 C58,262 58.8,270 58.8,278"], rich, 0,
+      ["M46.5,240 C46,250 48.5,258 52.5,258.5", "M56.5,240 C57.5,250 56,257 52.5,258.5"], 262);
+    const sh = ["M92.6,330 L92.6,342"].concat(PH_FZ_SHIN);
+    const leg = phFzLimb(L, 330, 462, sh.concat(sh.map(phFzMir)), PH_FZ_TOES.concat(PH_FZ_TOES.map(phFzMir)), rich, 0, PH_FZ_FOOT.concat(PH_FZ_FOOT.map(phFzMir)), 444);
+    if (rich) { phFzLb(svg, 44.6, 41, 82, 26, "Radial artery"); phFzLb(svg, 159.6, 66, 126, 92, "Tibial artery", "end"); }
+    const front = (t, a, y1, lo, hi, ph) => (y1 + 26) - phKsEase(a) * ((y1 + 26) - (lo + (hi - lo) * phKsEase(.5 - .5 * Math.cos((t - .35 + ph) * 2 * Math.PI / 5.2))));
+    return (t, a = 1) => {
+      arm(t, a, front(t, a, 290, 240, 188, 0)); leg(t, a, front(t, a, 462, 424, 346, .5));
+      const k = .5 + .5 * Math.sin(t * 1.2); gl.forEach(e => phKsOp(e, a * (.5 + .4 * k)));
+    };
+  };
+  // "Legs: cold from the knees down": her two legs laid across the picture, warm to the knee and cold below it. The artery behind the knee carries
+  // its warm blood on into the shin, but narrower and slower; the foot's small arteries clamp, so the warmth stops at the knee and the cold deepens
+  // toward the toes.
+  PH_KS_SC.coldlegs = function (svg, d, rich) {
+    svg.setAttribute("viewBox", "0 0 240 150");
+    const air = phKsEl("g", {}, svg), gl = phKsGlow(air, svg, "#8EC0E8", { cx: 164, cy: 76, rx: 104, ry: 70 }), s = 1.17;
+    const C = phFzCrop(svg, "66 262 88 200", 0, 0, 88, 200, { parent: phKsEl("g", { transform: `translate(3 126.5) rotate(-90) scale(${s})` }, svg) }); if (!C) return () => {};
+    const one = ["M97,262 C96,284 93.8,304 92.9,320 C92.6,328 92.6,335 92.6,342"].concat(PH_FZ_SHIN);
+    const leg = phFzLimb(C, 262, 462, one.concat(one.map(phFzMir)), PH_FZ_TOES.concat(PH_FZ_TOES.map(phFzMir)), rich, .02, PH_FZ_FOOT.concat(PH_FZ_FOOT.map(phFzMir)), 444);
+    if (rich) { phFzLb(svg, 3 + s * (318 - 262), 126.5 - s * (88 - 66), 44, 136, "Kneecap", "middle"); phFzLb(svg, 3 + s * (331 - 262), 126.5 - s * (127.4 - 66), 30, 10, "Artery behind the knee"); phFzLb(svg, 3 + s * (392 - 262), 126.5 - s * (131.3 - 66), 190, 10, "Shin arteries", "middle"); }
+    return (t, a = 1) => {
+      const w = Math.sin((t - .35) * 2 * Math.PI / 4.4);
+      leg(t, a, 492 - phKsEase(a) * (492 - (326 + 5 * w)));
+      phKsOp(gl, a * (.62 + .3 * w));
+    };
+  };
+  // "Cold & heat: chills": a body making heat and guarding it. A nerve signal reaches the small muscle on the hair root, the muscle shortens and
+  // pulls the hair upright (the goose bump), the skin's vessel clamps and the skin pales, and the shiver comes in short bursts. On her skin plate,
+  // with the hair turned so that it leans toward its muscle, as a real one does: the hair's mouth stays where it is and its root swings to the muscle.
+  PH_KS_SC.chills = function (svg, d, rich) {
+    phKsPlateFill(svg, "skin_hair", ["follicle", "epidermis", "dermis", "sebaceous"]); svg.querySelectorAll(".lb").forEach(e => e.remove());
+    const fol = svg.querySelector('[data-s="follicle"]'), seb = svg.querySelector('[data-s="sebaceous"]'), epi = svg.querySelector('[data-s="epidermis"] path');
+    [fol, seb].forEach(e => { if (e) { e.style.transformBox = "view-box"; e.style.transformOrigin = "104px 52px"; } });
+    const id = "ksh" + (++phKsUid), defs = phKsEl("defs", {}, svg), ag = phKsEl("linearGradient", { id: id + "a", x1: 0, x2: 0, y1: 0, y2: 1 }, defs);
+    phKsEl("stop", { offset: 0, "stop-color": "#8EC0E8", "stop-opacity": .7 }, ag); phKsEl("stop", { offset: 1, "stop-color": "#8EC0E8", "stop-opacity": 0 }, ag);
+    const air = phKsEl("rect", { x: 0, y: -4, width: 240, height: 50, fill: `url(#${id}a)` }, svg); svg.insertBefore(air, svg.firstChild);
+    const g = phKsEl("g", { fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" }, svg);
+    const pale = epi ? phKsEl("path", { d: epi.getAttribute("d"), fill: "#E4E3E9" }, g) : null;
+    // the skin's vessel: an arteriole up to a loop under the surface, a venule back down
+    const VA = "M26,152 C26,116 38,92 50,76", VV = "M50,76 C62,92 72,116 72,152", TW = "M50,76 C48,72 44,70 40,70 M50,76 C52,72 56,70 60,70";
+    phKsEl("path", { d: VV, stroke: "#5E86AE", "stroke-width": 1.5, opacity: .85 }, g);
+    const va = phKsEl("path", { d: VA + " " + TW, stroke: "#A3262A", "stroke-width": 3.2, opacity: .5 }, g), vl = phKsEl("path", { d: VA + " " + TW, stroke: "#C24A44", "stroke-width": 2.3 }, g);
+    const vf = rich ? phKsEl("path", { d: VA, stroke: "#F8D2C8", "stroke-width": 1, "stroke-dasharray": "2.4 8" }, g) : null;
+    // the hair's muscle: from the follicle below the oil gland, under the gland, up to the skin's underside, on the side the hair leans toward
+    const mus = phKsEl("path", { d: "", fill: "#B5543C", stroke: "#8E4A3E", "stroke-width": .6 }, g), fib = phKsEl("path", { d: "", stroke: "#8E4A3E", "stroke-width": .5, opacity: .7 }, g);
+    const nv = phKsEl("path", { d: "M186,152 C176,134 162,112 147,97", stroke: "#E2B93B", "stroke-width": 1.5 }, g), NV = phFzAlong(nv, 32);
+    const beads = [0, 1, 2].map(() => phKsEl("circle", { r: 2.1, fill: "#F2C14E", stroke: "#B48A1E", "stroke-width": .4 }, g));
+    const bump = phKsEl("path", { d: "", fill: "#F2D3BE", stroke: "#B98A70", "stroke-width": .8 }, g);
+    const L = rich ? [phFzLb(svg, 150, 92, 232, 104, "Hair muscle", "end"), phFzLb(svg, 31, 114, 6, 140, "Skin vessel"), phFzLb(svg, 106, 33, 150, 12, "Goose bump")] : [];
+    const P = 3.4;
+    return (t, a = 1) => {
+      const u = (t + .95) % P, k = u < .5 ? 0 : u < 1 ? phKsEase((u - .5) / .5) : u < 2.4 ? 1 : 1 - phKsEase((u - 2.4) / 1), K = a * (.25 + .75 * k), c = a * (.7 + .3 * k);
+      const rot = 21 - 10.5 * K; [fol, seb].forEach(e => { if (e) e.style.transform = `rotate(${rot.toFixed(2)}deg)`; });
+      // muscle: root end rides with the hair, skin end fixed; shorter and thicker as it pulls
+      const r = rot * Math.PI / 180, rx = 104 + 21.5 * Math.cos(r) - 61 * Math.sin(r), ry = 52 + 21.5 * Math.sin(r) + 61 * Math.cos(r), ex = 176, ey = 67;
+      const dx = ex - rx, dy = ey - ry, len = Math.hypot(dx, dy), nx = -dy / len, ny = dx / len, w = 2.2 + 5 * K, mx = (rx + ex) / 2, my = (ry + ey) / 2;
+      mus.setAttribute("d", `M${rx.toFixed(1)},${ry.toFixed(1)} Q${(mx + nx * w).toFixed(1)},${(my + ny * w).toFixed(1)} ${ex},${ey} Q${(mx - nx * w).toFixed(1)},${(my - ny * w).toFixed(1)} ${rx.toFixed(1)},${ry.toFixed(1)}Z`);
+      mus.setAttribute("fill", phK2Mix("#B5543C", "#8E2F26", K));
+      fib.setAttribute("d", [-.45, 0, .45].map(o => `M${(rx + dx * .1 + nx * w * o).toFixed(1)},${(ry + dy * .1 + ny * w * o).toFixed(1)} L${(rx + dx * .9 + nx * w * o * .6).toFixed(1)},${(ry + dy * .9 + ny * w * o * .6).toFixed(1)}`).join(" "));
+      // the goose bump: the skin heaped up round the hair where it leaves the surface
+      const hx = 105, h = 7.5 * K; bump.setAttribute("d", `M${(hx - 19).toFixed(1)},41.5 C${(hx - 9).toFixed(1)},41.5 ${(hx - 8).toFixed(1)},${(39 - h).toFixed(1)} ${hx.toFixed(1)},${(39 - h).toFixed(1)} C${(hx + 8).toFixed(1)},${(39 - h).toFixed(1)} ${(hx + 9).toFixed(1)},41.5 ${(hx + 19).toFixed(1)},41.5Z`); phKsOp(bump, Math.min(1, K * 3)); if (L[2]) phKsOp(L[2].g, K * 3);
+      // vessel clamps, skin pales, cold air on it
+      vl.setAttribute("stroke-width", (2.3 - 1.6 * c).toFixed(2)); va.setAttribute("stroke-width", (3.2 - 1.9 * c).toFixed(2)); if (pale) phKsOp(pale, .62 * c); phKsOp(air, a * (.6 + .4 * k));
+      if (vf) { vf.setAttribute("stroke-dashoffset", (-t * 20).toFixed(1)); phKsOp(vf, 1 - .85 * c); }
+      // the signal: beads run up the nerve to the muscle just before and while it pulls
+      const fire = a * (u > .15 && u < 2.4 ? 1 : 0);
+      beads.forEach((b, i) => { const f = ((t * 1.5) + i / 3) % 1, p = NV(f); b.setAttribute("cx", p[0].toFixed(1)); b.setAttribute("cy", p[1].toFixed(1)); phKsOp(b, fire * Math.sin(f * Math.PI)); });
+      // the shiver: two short bursts while the muscle holds
+      const sh = a > .3 && !phTpReduceMotion() && ((u > 1.1 && u < 1.5) || (u > 1.85 && u < 2.25)) ? Math.sin(t * 66) * .8 * a : 0;
+      svg.setAttribute("viewBox", `${sh.toFixed(2)} 0 240 150`);
+      if (L[0]) { L[0].c.setAttribute("cx", (mx).toFixed(1)); L[0].c.setAttribute("cy", (my).toFixed(1)); L[0].p.setAttribute("d", `M${mx.toFixed(1)},${my.toFixed(1)} L232,104`); }
+    };
+  };
+  // "Swelling: especially of the feet and lower legs": fluid leaves the small vessels faster than the lymph carries it off and settles, by its
+  // weight, at the ankle. The leg's outline fills out and loses its shape; a press leaves a pit that fills back slowly. On her lower-leg plate.
+  PH_KS_SC.edema = function (svg, d, rich) {
+    phKsPlateFill(svg, "legveins", ["lymph"]); svg.querySelectorAll(".lb").forEach(e => e.remove()); svg.setAttribute("viewBox", "0 56 240 150");
+    const own = svg.querySelector('[data-s="edema"]'); if (own) own.setAttribute("display", "none");
+    const skin = svg.querySelector("path.ctx"), id = "kse" + (++phKsUid), defs = phKsEl("defs", {}, svg);
+    const fg = phKsEl("linearGradient", { id: id + "f", gradientUnits: "userSpaceOnUse", x1: 0, x2: 0, y1: 96, y2: 200 }, defs);
+    phKsEl("stop", { offset: 0, "stop-color": "#9CC3E6", "stop-opacity": 0 }, fg); phKsEl("stop", { offset: .55, "stop-color": "#9CC3E6", "stop-opacity": .42 }, fg); phKsEl("stop", { offset: 1, "stop-color": "#8DB6DE", "stop-opacity": .7 }, fg);
+    const sil = phKsEl("path", { d: "", fill: "#F3EEE8" }), fluid = phKsEl("path", { d: "", fill: `url(#${id}f)` }), edge = phKsEl("path", { d: "", fill: "none", stroke: "#5A463B", "stroke-width": 1, "stroke-linejoin": "round", "stroke-linecap": "round" });
+    svg.insertBefore(sil, svg.firstChild); if (skin && skin.nextSibling) svg.insertBefore(fluid, skin.nextSibling); else svg.appendChild(fluid); svg.appendChild(edge);
+    const g = phKsEl("g", { fill: "none", "stroke-linecap": "round" }, svg);
+    // two small vessels low in the leg: what leaks, leaks from here
+    phKsEl("path", { d: "M80,100 C86,112 84,124 90,132 C96,140 102,132 100,122 M150,112 C144,122 146,134 140,140 C134,146 130,138 132,130", stroke: "#C24A44", "stroke-width": 1.3 }, g);
+    const SRC = [[82, 104, 86, 180], [86, 118, 96, 192], [90, 131, 104, 184], [97, 136, 112, 195], [100, 124, 122, 188], [148, 116, 146, 184], [144, 130, 136, 194], [139, 141, 128, 181], [132, 132, 118, 176]];
+    const drops = SRC.map(() => phKsEl("circle", { r: 2.1, fill: "#9CC3E6", stroke: "#5E86AE", "stroke-width": .45 }, g));
+    // the lymph: beads carried up the plate's own lymph vessels
+    const LY = ["M104,200 C100,140 94,60 96,0", "M124,200 C126,140 128,70 130,0"].map(dd => phKsEl("path", { d: dd, stroke: "none" }, g)), LA = LY.map(p => phFzAlong(p, 48));
+    const lym = [0, 1, 2, 3, 4, 5].map(() => phKsEl("circle", { r: 1.8, fill: "#A9CC7A", stroke: "#5F8A3A", "stroke-width": .45 }, g));
+    const pg = phKsEl("g", {}, svg), probe = phKsEl("path", { d: "", fill: "#F1D2BD", stroke: "#8A5A4A", "stroke-width": .8, "stroke-linejoin": "round" }, pg), nail = phKsEl("rect", { y: 160.2, width: 7.5, height: 3.2, rx: 1.4, fill: "#F9E9E0", stroke: "#8A5A4A", "stroke-width": .5 }, pg);
+    const L = rich ? [phFzLb(svg, 70, 165, 6, 196, "Pitting swelling"), phFzLb(svg, 96, 96, 6, 78, "Lymph vessels"), phFzLb(svg, 150, 188, 234, 178, "Tissue fluid", "end")] : [];
+    const P = 4.6, f1 = n => n.toFixed(1);
+    return (t, a = 1) => {
+      const u = (t + 1) % P, sw = 13 * a;
+      const press = u < .4 ? phKsEase(u / .4) : u < 1 ? 1 : u < 1.3 ? 1 - phKsEase((u - 1) / .3) : 0;                 // the presser in and out
+      const dent = a * 8.5 * (u < .4 ? phKsEase(u / .4) : u < 1.3 ? 1 : u < 4.1 ? Math.pow(1 - (u - 1.3) / 2.8, 1.7) : 0);   // the pit: in fast, back slowly
+      const Ax = 76.5 - .74 * sw, Dx = 82 - .98 * sw + dent, Bx = 87 - sw, Ex = 96 - sw;
+      const left = `M62,90 C64,112 ${f1(72 - .6 * sw)},138 ${f1(Ax)},152 C${f1(Ax + .6)},158 ${f1(Dx)},159 ${f1(Dx)},165 C${f1(Dx)},171 ${f1(Bx - .8)},172 ${f1(Bx)},178 L${f1(Ex)},200`;
+      const right = `M176,90 C${f1(172 + .4 * sw)},130 ${f1(156 + .95 * sw)},170 ${f1(146 + sw)},200`;
+      const body = left + ` L${f1(146 + sw)},200 C${f1(156 + .95 * sw)},170 ${f1(172 + .4 * sw)},130 176,90Z`;
+      sil.setAttribute("d", body); fluid.setAttribute("d", body); phKsOp(fluid, a); edge.setAttribute("d", "M64,0 C60,30 58,60 62,90 " + left.slice(6) + " " + right + " M176,90 C180,60 178,30 174,0"); phKsOp(edge, Math.min(1, a * 4));
+      if (skin) skin.setAttribute("stroke-opacity", (1 - .72 * a).toFixed(2));
+      drops.forEach((c, i) => { const s = SRC[i], f = ((t * .3) + i * .37) % 1; c.setAttribute("cx", f1(s[0] + (s[2] - s[0]) * f)); c.setAttribute("cy", f1(s[1] + (s[3] - s[1]) * Math.pow(f, 1.5))); phKsOp(c, a * Math.pow(Math.sin(f * Math.PI), .5)); });
+      lym.forEach((c, i) => { const j = i % 2, f = ((t * .16) + i * .31) % 1, p = LA[j](f * .72); c.setAttribute("cx", f1(p[0])); c.setAttribute("cy", f1(p[1])); phKsOp(c, Math.sin(f * Math.PI)); });
+      const px = Dx - 3.5 - 16 * (1 - press) - (a < .05 ? 30 : 0); probe.setAttribute("d", `M-12,159.4 L${f1(px - 4)},159.4 C${f1(px + 1.6)},159.4 ${f1(px + 3.4)},162 ${f1(px + 3.4)},165 C${f1(px + 3.4)},168 ${f1(px + 1.6)},170.6 ${f1(px - 4)},170.6 L-12,170.6Z`); nail.setAttribute("x", f1(px - 6.5)); phKsOp(pg, a * Math.min(1, press * 3 + (u < .4 || (u > 1 && u < 1.3) ? .6 : 0)));
+      if (L[0]) { L[0].c.setAttribute("cx", f1(Dx + 1.5)); L[0].p.setAttribute("d", `M${f1(Dx + 1.5)},165 L6,196`); phKsOp(L[0].g, a * 4); }
+    };
+  };
+  // "Bowels: thin, watery or unformed stools": in health the large bowel draws the water out as the content moves along, and it firms; here the
+  // water stays in and the content runs through quickly, still liquid at the rectum. On her bowel plate.
+  PH_KS_SC.waterystool = function (svg, d, rich) {
+    phKsPlateFill(svg, "bowel", ["colon", "rectum"]); svg.querySelectorAll(".lb").forEach(e => e.remove()); svg.setAttribute("viewBox", "-40 2 320 200");
+    const D = "M62,160 C52,130 50,80 56,44 C60,32 72,30 84,36 C110,50 140,48 168,36 C182,30 194,34 194,48 C196,90 196,130 192,150 C188,170 162,164 150,172 C140,178 128,180 124,188 L124,201";
+    const g = phKsEl("g", { fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" }, svg), path = phKsEl("path", { d: D, stroke: "none" }, g), AL = phFzAlong(path, 72);
+    // the settled bowel: separate lumps that darken and firm as they go; water leaves through the wall on the way
+    const firm = phKsEl("g", {}, g), N = rich ? 11 : 7, lumps = Array.from({ length: N }, () => phKsEl("ellipse", { rx: 5, ry: 4, stroke: "#6E5236", "stroke-width": .5 }, firm));
+    const SITE = (rich ? [.06, .13, .2, .27, .34, .41, .48, .55] : []).map((s, i) => { const p = AL(s), r = p[2] * Math.PI / 180, sd = i % 2 ? 1 : -1; return [p[0], p[1], -Math.sin(r) * sd, Math.cos(r) * sd]; });
+    const wd = SITE.map(() => phKsEl("circle", { r: 1.7, fill: "#9CC3E6", stroke: "#5E86AE", "stroke-width": .4 }, firm));
+    // the sign: one unbroken watery stream, quick, the whole way round
+    const wet = phKsEl("g", {}, g); phKsEl("path", { d: D, stroke: "#A9CBE8", "stroke-width": 9, opacity: .85 }, wet);
+    const run = phKsEl("path", { d: D, stroke: "#C9A56A", "stroke-width": 5.4, "stroke-dasharray": "13 7", opacity: .8 }, wet), shine = phKsEl("path", { d: D, stroke: "#EAF3FB", "stroke-width": 1.6, "stroke-dasharray": "5 21", opacity: .9 }, wet);
+    if (rich) { phFzLb(svg, 50, 100, -34, 84, "Large bowel"); phFzLb(svg, 130, 195, 176, 188, "Rectum"); }
+    return (t, a = 1) => {
+      phKsOp(wet, a); phKsOp(firm, 1 - a);
+      run.setAttribute("stroke-dashoffset", (-t * 62).toFixed(1)); shine.setAttribute("stroke-dashoffset", (-t * 62 - 4).toFixed(1));
+      lumps.forEach((e, i) => {
+        const s = ((t * .045) + i / N) % 1, p = AL(s), k = phFzSm(s, .08, .72);
+        e.setAttribute("transform", `translate(${p[0].toFixed(1)} ${p[1].toFixed(1)}) rotate(${p[2].toFixed(0)})`);
+        e.setAttribute("rx", (6.6 - 2 * k).toFixed(1)); e.setAttribute("ry", (4.6 - .9 * k).toFixed(1)); e.setAttribute("fill", phK2Mix("#D8C08A", "#8A6540", k)); phKsOp(e, Math.min(1, s * 14, (1 - s) * 14) * (.75 + .25 * k));
+      });
+      wd.forEach((c, i) => { const S = SITE[i], f = ((t * .5) + i * .29) % 1; c.setAttribute("cx", (S[0] + S[2] * (2 + 9 * f)).toFixed(1)); c.setAttribute("cy", (S[1] + S[3] * (2 + 9 * f)).toFixed(1)); phKsOp(c, Math.sin(f * Math.PI)); });
+    };
+  };
+  // "Pain: cold-type" (worse in the cold, better with warmth): a joint cut open inside its skin. Cold reaches the skin, the small arteries clamp, the
+  // pink drains from the joint lining, the capsule draws taut and a nerve ending in the lining starts to fire; warmth comes back and each lets go in
+  // the same order. The cartilage and the fluid never change: they cannot hurt. On her joint plate, with skin, an artery and a nerve added.
+  PH_KS_SC.coldpain = function (svg, d, rich) {
+    phKsPlateFill(svg, "joint", ["synovium", "capsule"]); svg.querySelectorAll(".lb").forEach(e => e.remove()); svg.setAttribute("viewBox", "-20 22.5 280 175");
+    const id = "ksj" + (++phKsUid), defs = phKsEl("defs", {}, svg), wg = phKsEl("linearGradient", { id: id + "w", x1: 0, x2: 1, y1: 0, y2: 0 }, defs);
+    phKsEl("stop", { offset: 0, "stop-color": "#8EC0E8", "stop-opacity": 1 }, wg); phKsEl("stop", { offset: 1, "stop-color": "#8EC0E8", "stop-opacity": 0 }, wg);
+    const syn = [...svg.querySelectorAll('[data-s="synovium"] path')], cap = svg.querySelector('[data-s="capsule"] path');
+    const under = phKsEl("g", {}, svg); svg.insertBefore(under, svg.firstChild); const over = phKsEl("g", { fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" }, svg);
+    const side = flip => {
+      const tf = flip ? { transform: "translate(240 0) scale(-1 1)" } : {}, U = phKsEl("g", tf, under), O = phKsEl("g", tf, over);
+      const cold = phKsEl("path", { d: "M-20,22 L3,22 C-2,75 -2,145 3,198 L-20,198Z", fill: "#5FA3DA" }, U), warm = phKsEl("path", { d: "M-20,22 L3,22 C-2,75 -2,145 3,198 L-20,198Z", fill: "#E07A3A" }, U);
+      phKsEl("path", { d: "M12,22 C7,75 7,145 12,198 L46,198 L46,190 C36,140 36,90 44,40 L44,22Z", fill: "#FBEBC8", opacity: .55 }, U);
+      const skin = phKsEl("path", { d: "M3,22 C-2,75 -2,145 3,198 L12,198 C7,145 7,75 12,22Z", fill: "#F2D3BE" }, U); phKsEl("path", { d: "M3,22 C-2,75 -2,145 3,198", fill: "none", stroke: "#6f6053", "stroke-width": .9 }, U);
+      const wash = phKsEl("rect", { x: -20, y: 22, width: 30, height: 176, fill: `url(#${id}w)` }, O);
+      const AD = "M27,22 C19,75 19,145 27,198", wall = phKsEl("path", { d: AD, stroke: "#A3262A", "stroke-width": 5.2 }, O), lum = phKsEl("path", { d: AD, stroke: "#C24A44", "stroke-width": 4 }, O);
+      const cells = rich ? phKsEl("path", { d: AD, stroke: "#F8D2C8", "stroke-width": 1.3, "stroke-dasharray": "2.6 11" }, O) : null;
+      const twig = rich ? phKsEl("path", { d: "M22.6,58 C18,57 14,58 10.5,60 M10.5,60 L8.6,57.4 M10.5,60 L8.6,62.8 M21,104 C17,103 13,104 9.6,106 M9.6,106 L7.8,103.4 M9.6,106 L7.8,108.8 M22.6,160 C18,159 14,160 10.5,162 M10.5,162 L8.6,159.4 M10.5,162 L8.6,164.8", stroke: "#C24A44", "stroke-width": 1.1 }, O) : null;
+      const br = rich ? phKsEl("path", { d: "M22,84 C30,82 40,88 51,90 M51,90 L56,85 M51,90 L57,91 M51,90 L55.5,96 M23,150 C30,152 42,148 54,142 M54,142 L57,136 M54,142 L58.5,141 M54,142 L56,147.5", stroke: "#C24A44", "stroke-width": 1.3 }, O) : null;
+      return { cold, warm, skin, wash, wall, lum, cells, twig, br };
+    };
+    const S = [side(false), side(true)];
+    const nv = rich ? phKsEl("path", { d: "M52,112 C46,96 37,87 31,78 C26,66 27,48 30,22", stroke: "#E2B93B", "stroke-width": 1.6 }, over) : null, NA = nv ? phFzAlong(nv, 48) : null;
+    if (rich) phKsEl("path", { d: "M52,112 L56,104 M52,112 L57.5,111 M52,112 L55.5,118", stroke: "#E2B93B", "stroke-width": 1 }, over);
+    const beads = nv ? [0, 1, 2, 3].map(() => phKsEl("circle", { r: 2, fill: "#D9534F" }, over)) : [];
+    const glow = phKsGlow(svg, svg, "#D9534F", { cx: 53, cy: 110, rx: 26, ry: 28 }), ring = phKsEl("ellipse", { cx: 53, cy: 110, fill: "none", stroke: "#D9534F", "stroke-width": 1.2 }, svg);
+    if (rich) { phFzLb(svg, 20.6, 132, -16, 150, "Artery"); phFzLb(svg, 53, 112, 84, 150, "Nerve ending"); phFzLb(svg, 235, 152, 256, 178, "Skin", "end"); }
+    const P = 4.8, st = (u, a0, a1, b0, b1) => 1 - phFzSm(u, a0, a1) + phFzSm(u, b0, b1);
+    return (t, a = 1) => {
+      const u = t % P, Ka = a * st(u, 1, 1.3, 3, 3.3), Ks = a * st(u, 1.05, 1.55, 3.1, 3.7), Kv = a * st(u, 1.25, 1.9, 3.3, 4), Kl = a * st(u, 1.5, 2.3, 3.6, 4.4), Kc = a * st(u, 1.6, 2.4, 3.7, 4.5), Kn = a * st(u, 1.3, 2.2, 4, 4.75);
+      const pain = phFzCl((Kn - .25) / .75), X = 3 + 59 * (.25 * Ks + .35 * Kv + .4 * Kl);
+      S.forEach(s => {
+        phKsOp(s.cold, .46 * Ka); phKsOp(s.warm, .16 * (1 - Ka)); s.skin.setAttribute("fill", phK2Mix("#F2D3BE", "#E6E1E1", Ks));
+        s.wash.setAttribute("width", (X + 20).toFixed(1)); phKsOp(s.wash, .34 * Math.max(.5 * Ka, Ks));
+        const w = 4 - 2.7 * Kv + .35 * (1 - Kv) * Math.max(0, Math.sin(t * 7)); s.lum.setAttribute("stroke-width", w.toFixed(2)); s.wall.setAttribute("stroke-width", (w + 1.2).toFixed(2));
+        if (s.cells) { s.cells.setAttribute("stroke-dashoffset", (-t * 26).toFixed(1)); phKsOp(s.cells, 1 - .9 * Kv); }
+        if (s.twig) phKsOp(s.twig, 1 - .88 * Ks); if (s.br) { phKsOp(s.br, 1 - .85 * Kl); s.br.setAttribute("stroke-width", (1.3 - .7 * Kl).toFixed(2)); }
+      });
+      if (syn[0]) syn[0].setAttribute("stroke", phK2Mix("#E39B9B", "#D3CDD0", Kl)); if (syn[1]) syn[1].setAttribute("stroke", phK2Mix("#C97A7A", "#B2A7AB", Kl));
+      if (cap) { cap.setAttribute("stroke", phK2Mix("#C9BBA0", "#AEB3B7", Kc)); const b = 5 * Kc; cap.setAttribute("d", `M52,58 C${(38 + b).toFixed(1)},90 ${(38 + b).toFixed(1)},130 52,158 M188,58 C${(202 - b).toFixed(1)},90 ${(202 - b).toFixed(1)},130 188,158`); }
+      const th = .5 + .5 * Math.cos(2 * Math.PI * (t - .35) / 1.2), f = (((t - .35) / 1.2 + .45) % 1 + 1) % 1;
+      phKsOp(glow, pain * (.62 + .38 * th)); ring.setAttribute("rx", (12 + 26 * f).toFixed(1)); ring.setAttribute("ry", (13 + 28 * f).toFixed(1)); phKsOp(ring, .7 * pain * (1 - f));
+      beads.forEach((b, i) => { const q = ((t * .9) + i / 4) % 1, p = NA(q); b.setAttribute("cx", p[0].toFixed(1)); b.setAttribute("cy", p[1].toFixed(1)); phKsOp(b, pain > .22 * i ? Math.min(1, 1.5 * pain) * Math.sin(q * Math.PI) : 0); });
+    };
+  };
+  // the arteries of her front figure from the heart outward (figure units): arch, both arms to the hands, the neck, the trunk and both legs to the feet
+  const PH_FZ_TREE = ["M116,122 C116,108 112,102 110,104 C108,112 109,150 110,198", "M110,198 C105,210 99,226 96,244 C93,290 92,330 92,360 C91,400 91,425 92,446", "M110,198 C115,210 121,226 124,244 C127,290 128,330 128,360 C129,400 129,425 128,446",
+    "M111,104 C100,98 88,98 78,104 C70,120 64,150 60,172 C56,200 52,230 49,262", "M111,104 C122,98 134,98 142,104 C150,120 156,150 160,172 C164,200 168,230 171,262", "M108,102 C106,92 105,82 105,72", "M113,102 C114,92 115,82 115,72"];
+  // "Constitution: weak or debilitated": everything turned down. A small weak heartbeat whose pulse thins toward the limbs (the blood still gets there, faint), shallow breath, a
+  // little heat at the core and none to spare for the surface. Settled: a full beat that reaches the hands, deep breath, warmth through the body.
+  PH_KS_SC.debility = function (svg, d, rich) {
+    svg.setAttribute("viewBox", "0 0 240 150");
+    const S = 146 / 332, C = phFzCrop(svg, "0 -2 220 332", 120 - 110 * S, 2, 220 * S, 146, { face: true }); if (!C) return () => {};
+    const id = C.uid, hl = C.hl;
+    const warm = phKsEl("rect", { x: 0, y: 0, width: 220, height: 340, fill: "#F0B79A" }, hl), pale = phKsEl("rect", { x: 0, y: 0, width: 220, height: 340, fill: "#D9DDE2" }, hl);
+    const rg = (k, col) => { const g = phKsEl("radialGradient", { id: id + k, gradientUnits: "userSpaceOnUse", cx: 113, cy: 128, r: 80 }, C.defs); return [phKsEl("stop", { offset: 0, "stop-color": col, "stop-opacity": 1 }, g), phKsEl("stop", { offset: .72, "stop-color": col, "stop-opacity": 1 }, g), phKsEl("stop", { offset: 1, "stop-color": col, "stop-opacity": .42 }, g), g][3]; };
+    const gl = rg("l", "#C24A44"), gf = rg("f", "#F8D2C8"), gh = phKsEl("radialGradient", { id: id + "h", gradientUnits: "userSpaceOnUse", cx: 110, cy: 150, r: 60 }, C.defs);
+    phKsEl("stop", { offset: 0, "stop-color": "#E8703A", "stop-opacity": .85 }, gh); phKsEl("stop", { offset: .5, "stop-color": "#E8873A", "stop-opacity": .45 }, gh); phKsEl("stop", { offset: 1, "stop-color": "#E8873A", "stop-opacity": 0 }, gh);
+    const heat = phKsEl("ellipse", { cx: 110, cy: 150, rx: 60, ry: 60, fill: `url(#${id}h)` }, hl);
+    const lungs = [96, 125].map(x => phKsEl("ellipse", { cx: x, cy: 128, rx: 12, ry: 24, fill: "#F4D1CF", stroke: "#D9928F", "stroke-width": .8, opacity: .9 }, hl));
+    const g = phKsEl("g", { fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" }, hl), D = PH_FZ_TREE.join(" ");
+    phKsEl("path", { d: D, stroke: "#9A6470", "stroke-width": .8, opacity: .6 }, g);
+    const lum = phKsEl("path", { d: D, stroke: `url(#${id}l)`, "stroke-width": 2.6 }, g), flow = rich ? phKsEl("path", { d: D, stroke: `url(#${id}f)`, "stroke-width": 1.3, "stroke-dasharray": "3 13" }, g) : null;
+    const heart = phKsEl("path", { d: "M113,117 C108,111 99,115 101,124 C102,131 109,136 114,141 C120,136 127,131 127,123 C128,114 118,111 113,117Z", fill: "#B5403C", stroke: "#7E2A2A", "stroke-width": .8 }, hl);
+    heart.style.transformBox = "view-box"; heart.style.transformOrigin = "114px 126px";
+    lungs.forEach((e, i) => { e.style.transformBox = "view-box"; e.style.transformOrigin = (i ? 125 : 96) + "px 106px"; });
+    if (rich) { const fx = x => 120 + (x - 110) * S, fy = y => 2 + (y + 2) * S; phFzLb(svg, fx(121), fy(126), 196, 40, "Heart"); phFzLb(svg, fx(92), fy(120), 44, 34, "Lung", "end"); phFzLb(svg, fx(58), fy(186), 40, 96, "Artery", "end"); }
+    return (t, a = 1) => {
+      const e = 1 - a, b = (t * 1.15) % 1, beat = b < .28 ? Math.sin(b / .28 * Math.PI) : 0, br = .5 - .5 * Math.cos(t * 2 * Math.PI / 4.4);
+      phKsOp(warm, .14 + .34 * e); phKsOp(pale, .62 * a);
+      const R = 62 + 330 * phKsEase(e) + 10 * beat * (1 - .5 * a); gl.setAttribute("r", R.toFixed(1)); gf.setAttribute("r", R.toFixed(1));
+      lum.setAttribute("stroke-width", (1.5 + 1.3 * e + (.25 + .5 * e) * beat).toFixed(2)); if (flow) { flow.setAttribute("stroke-dashoffset", (-t * 30).toFixed(1)); phKsOp(flow, .35 + .65 * e); }
+      heart.style.transform = `scale(${(.74 + .26 * e + (.035 + .14 * e) * beat).toFixed(3)})`; heart.setAttribute("fill", phK2Mix("#B5403C", "#A88088", .75 * a));
+      lungs.forEach(l => { l.style.transform = `scale(${(.9 + .1 * e + (.025 + .13 * e) * br).toFixed(3)})`; phKsOp(l, .5 + .4 * e); });
+      const hr = 20 + 190 * phKsEase(e) + 3 * br; heat.setAttribute("rx", (hr * .62).toFixed(1)); heat.setAttribute("ry", hr.toFixed(1)); phKsOp(heat, .5 + .22 * e + .1 * beat * a);
+    };
+  };
+  // "Body: heavy-feeling" / "Limbs: heavy, painful": water held in the tissues settles, by its weight, into the legs and the hands; they fill and drag
+  // and the body sinks under it. Settled: the fluid has drained and she stands light.
+  PH_KS_SC.heavy = function (svg, d, rich) {
+    svg.setAttribute("viewBox", "0 0 240 150");
+    const S = 144 / 468, X0 = 120 - 110 * S, wrap = phKsEl("g", {}, svg);
+    phKsEl("path", { d: "M70,147.2 L170,147.2", stroke: "#B8AE98", "stroke-width": 1.1, "stroke-linecap": "round", fill: "none" }, svg);
+    const C = phFzCrop(svg, "0 -2 220 468", X0, 3, 220 * S, 144, { face: true, parent: wrap }); if (!C) return () => {};
+    const id = C.uid, hl = C.hl, out = (C.b.querySelector("clipPath path") || { getAttribute: () => "" }).getAttribute("d");
+    const st = phFzGrad(C.defs, id + "w", 0, 466, [[0, "#8DB6DE", 0], [.3, "#8DB6DE", 0], [.62, "#8DB6DE", .5], [1, "#6F9FCF", .9]]);
+    const sg = phFzGrad(C.defs, id + "o", 0, 466, [[0, "#8DB6DE", 0], [.4, "#8DB6DE", 0], [.7, "#8DB6DE", .8], [1, "#7FA9D6", 1]]);
+    const halo = phKsEl("path", { d: out, fill: "none", stroke: `url(#${id}o)`, "stroke-width": 9, "stroke-linejoin": "round" }); C.b.insertBefore(halo, C.b.querySelector("clipPath"));
+    const water = phKsEl("rect", { x: 0, y: 0, width: 220, height: 466, fill: `url(#${id}w)` }, hl);
+    const hands = [48, 172].map(x => phKsGlow(hl, C.b, "#7FA9D6", { cx: x, cy: 266, rx: 20, ry: 30 }));
+    const SRC = [[100, 150, 92], [120, 160, 128], [104, 210, 93], [116, 205, 127], [96, 250, 91], [124, 255, 129], [108, 120, 94], [112, 180, 126], [72, 150, 52], [148, 150, 168], [66, 190, 50], [154, 190, 170]];
+    const drops = (rich ? SRC : SRC.slice(0, 6)).map(() => phKsEl("circle", { r: 3.2, fill: "#9CC3E6", stroke: "#5E86AE", "stroke-width": .8 }, hl));
+    if (rich) { const fx = x => X0 + x * S, fy = y => 3 + (y + 2) * S; phFzLb(svg, fx(128), fy(400), 156, 112, "Tissue fluid"); }
+    return (t, a = 1) => {
+      const k = .5 - .5 * Math.cos((t - .35) * 2 * Math.PI / 4.6), lvl = phKsEase(a) * (.82 + .18 * k);
+      st[1].setAttribute("offset", (.62 - .34 * lvl).toFixed(3)); st[2].setAttribute("offset", (.92 - .32 * lvl).toFixed(3)); phKsOp(water, a);
+      sg[1].setAttribute("offset", (.7 - .3 * lvl).toFixed(3)); sg[2].setAttribute("offset", (.96 - .28 * lvl).toFixed(3)); phKsOp(halo, .75 * a); halo.setAttribute("stroke-width", (4 + 7 * lvl).toFixed(1));
+      hands.forEach(h => phKsOp(h, .8 * a * (.7 + .3 * k)));
+      drops.forEach((c, i) => { const s = SRC[i], f = ((t * .22) + i * .19) % 1, lim = i > 7; c.setAttribute("cx", (s[0] + (s[2] - s[0]) * Math.min(1, f * 1.6)).toFixed(1)); c.setAttribute("cy", (s[1] + ((lim ? 262 : 430) - s[1]) * Math.pow(f, 1.4)).toFixed(1)); phKsOp(c, a * Math.pow(Math.sin(f * Math.PI), .6)); });
+      const sag = a * (.6 + .4 * k); wrap.setAttribute("transform", `translate(0 ${(147 * .02 * sag).toFixed(2)}) scale(1 ${(1 - .02 * sag).toFixed(4)})`);
+    };
+  };
+  // a window onto her side figure (facing right, so her back is on the left); returns the nested svg and its layer clipped to the body (figure units)
+  function phFzSide(svg, vb, x, y, w, h, o) {
+    const uid = "ksz" + (++phKsUid), b = phKsFrag(PH_BODY_GEOM.sideSvg("f", Object.assign({ uid, viewBox: vb }, (o && o.opts) || {})));
+    if (!b) return null;
+    b.setAttribute("x", x); b.setAttribute("y", y); b.setAttribute("width", w); b.setAttribute("height", h); ((o && o.parent) || svg).appendChild(b);
+    return { b, uid, hl: b.querySelector("#" + uid + "-hlb"), defs: b.querySelector("defs") };
+  }
+  const PH_FZ_BONE = { fill: "#EFE8DA", stroke: "#A3967F", "stroke-width": .6 };
+  // "Limbs: stiff, cramping or painful": a cramp is a muscle that locks. Her lower leg from the side, lying: the calf muscle locks hard: it bulges and
+  // darkens, its fibres bunch and quiver, the heel tendon is drawn taut (a tendon hardly stretches, so the belly barely travels), it will not let go,
+  // then it does.
+  PH_KS_SC.cramp = function (svg, d, rich) {
+    svg.setAttribute("viewBox", "0 0 240 150");
+    const s = 1.38, C = phFzSide(svg, "0 300 112 166", 0, 0, 112, 166, { parent: phKsEl("g", { transform: `translate(5 150) rotate(-90) scale(${s})` }, svg), opts: { arm: false } }); if (!C || !C.hl) return () => {};
+    const hl = C.hl, g = phKsEl("g", { fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" }, hl);
+    phKsEl("path", { d: "M51,318 C49,360 43,400 40,434", stroke: "#A3967F", "stroke-width": 8.6, opacity: .7 }, g); phKsEl("path", { d: "M51,318 C49,360 43,400 40,434", stroke: "#EFE8DA", "stroke-width": 7.4, opacity: .9 }, g);
+    const tw = phKsEl("path", { d: "", stroke: "#A3967F", "stroke-width": 4.4 }, g), tn = phKsEl("path", { d: "", stroke: "#EDE4D0", "stroke-width": 3.2 }, g);
+    const belly = phKsEl("path", { d: "", fill: "#B5543C", stroke: "#8E4A3E", "stroke-width": .7 }, g), fib = phKsEl("path", { d: "", stroke: "#5E1F1A", "stroke-width": .55, opacity: .8 }, g);
+    const glow = phKsGlow(hl, C.b, "#D9534F", { cx: 33, cy: 350, rx: 22, ry: 32 }), ring = phKsEl("ellipse", { cx: 33, cy: 350, fill: "none", stroke: "#D9534F", "stroke-width": 1 }, hl);
+    const fx = y => 5 + s * (y - 300), fy = x => 150 - s * x, L = rich ? [phFzLb(svg, fx(352), fy(31), 62, 139, "Calf muscle", "middle"), phFzLb(svg, fx(424), fy(31.5), 196, 139, "Achilles tendon", "middle")] : [];
+    const P = 4.4, f1 = n => n.toFixed(1);
+    return (t, a = 1) => {
+      const u = (t + 1.6) % P, k = u < .6 ? 0 : u < 1.4 ? phKsEase((u - .6) / .8) : u < 3.2 ? 1 : u < 4 ? 1 - phKsEase((u - 3.2) / .8) : 0, K = a * k;
+      const jy = 398 - 5 * K, m = (319 + jy) / 2, fr = 41 + 6.5 * K, bk = 23 - 3 * K, j = K > .5 && !phTpReduceMotion() ? Math.sin(t * 58) * .5 * K : 0;
+      belly.setAttribute("d", `M31,319 C${f1(bk)},${f1(m - 12)} ${f1(bk)},${f1(m + 14)} 29,${f1(jy - 10)} C30,${f1(jy - 5)} 32,${f1(jy - 1)} 34,${f1(jy)} C${f1(fr - 2)},${f1(jy - 10)} ${f1(fr)},${f1(m + 12)} ${f1(fr)},${f1(m)} C${f1(fr)},${f1(m - 16)} 40,326 38,319Z`);
+      belly.setAttribute("fill", phK2Mix("#B5543C", "#8E2F26", K));
+      fib.setAttribute("d", [-1.5, -.5, .5, 1.5].map(o => `M${f1(34.5 + o * 1.7)},321 Q${f1(33 + o * (4.2 + 3 * K) + j)},${f1(m + o * 2 * K)} ${f1(34 + o * .5)},${f1(jy - 3)}`).join(" ")); fib.setAttribute("stroke-width", (.55 + .8 * K).toFixed(2));
+      const td = `M34,${f1(jy)} C${f1(33.6 - .6 * K)},${f1(jy + 20)} ${f1(31 + .4 * K)},430 29.5,449`; tw.setAttribute("d", td); tn.setAttribute("d", td); tn.setAttribute("stroke-width", (3.2 - .7 * K).toFixed(2));
+      const th = .5 + .5 * Math.cos(2 * Math.PI * (t - .35) / 1.1), f = (((t - .35) / 1.1 + .4) % 1 + 1) % 1, pain = Math.pow(K, 1.5);
+      glow.setAttribute("cy", f1(m)); phKsOp(glow, pain * (.6 + .4 * th)); ring.setAttribute("cy", f1(m)); ring.setAttribute("rx", f1(8 + 16 * f)); ring.setAttribute("ry", f1(12 + 24 * f)); phKsOp(ring, .7 * pain * (1 - f));
+      if (L[0]) { L[0].c.setAttribute("cx", f1(fx(m))); L[0].p.setAttribute("d", `M${f1(fx(m))},${f1(fy(31))} L62,139`); }
+    };
+  };
+  // the four curves of a tired muscle giving and being caught (one 4 s loop; t = .35 is the bottom of the sag): sag, drain, ache, tremor
+  function phFzTire(t, lag) {
+    const u = (((t + 1.95 - (lag || 0)) % 4) + 4) % 4, e = phKsEase;
+    return {
+      S: u < 1.5 ? .15 * u / 1.5 : u < 2.3 ? .15 + .85 * Math.pow((u - 1.5) / .8, 2) : u < 2.55 ? 1 - .18 * e((u - 2.3) / .25) : .82 * (1 - e((u - 2.55) / 1.45)),
+      D: u < 1.5 ? .55 + .3 * u / 1.5 : u < 2.3 ? .85 + .15 * (u - 1.5) / .8 : u < 2.8 ? 1 : 1 - .45 * (u - 2.8) / 1.2,
+      A: u < 1.5 ? .3 : u < 2.5 ? .3 + .7 * e(u - 1.5) : u < 3.9 ? 1 - .7 * e((u - 2.5) / 1.4) : .3,
+      Q: u < 1.5 ? .2 + .4 * u / 1.5 : u < 2.3 ? .6 - .2 * (u - 1.5) / .8 : u < 2.4 ? .4 + .6 * (u - 2.3) / .1 : u < 2.8 ? 1 : 1 - .8 * (u - 2.8) / 1.2
+    };
+  }
+  const phFzShake = t => phTpReduceMotion() ? 0 : Math.sin(2 * Math.PI * 9 * t) + .4 * Math.sin(2 * Math.PI * 11.3 * t + 1);
+  // "Back & knees: weak, aching": the two muscles that hold her up against gravity run out. Her side figure: the back muscle column beside the lumbar
+  // spine and the thigh muscle above the kneecap pale and thin as they hold, tremble, give a little and are caught; a dull ache swells in each.
+  PH_KS_SC.backknee = function (svg, d, rich) {
+    svg.setAttribute("viewBox", "0 0 240 150");
+    const s = 146 / 112, gB = phKsEl("g", {}, svg), gK = phKsEl("g", {}, svg);
+    const B = phFzSide(svg, "0 136 84 140", 8, 2 - 14 * s, 84 * s, 140 * s, { parent: gB, opts: { arm: false } }), K = phFzSide(svg, "8 262 84 112", 124, 2, 84 * s, 146, { parent: gK, opts: { arm: false } }); if (!B || !K || !B.hl || !K.hl) return () => {};
+    // the lumbar spine: five vertebrae on the sacrum, each with its spine behind (its tip under the skin) and its disc below; the muscle column lies beside the spines, so from the side it covers them
+    const V = [[44, 158, -14], [48, 170, -9], [51, 182, -3], [51.5, 194, 5], [49, 206, 14]];
+    phKsEl("path", Object.assign({ d: "M43.5,211 L55,214.5 C52,226 42,237 30,241 C29,233 35,221 43.5,211Z" }, PH_FZ_BONE), B.hl);
+    V.forEach(([x, y, r]) => { const v = phKsEl("g", { transform: `translate(${x} ${y}) rotate(${r})` }, B.hl); phKsEl("rect", Object.assign({ x: -21, y: -1.5, width: 16, height: 3, rx: 1 }, PH_FZ_BONE), v); phKsEl("rect", Object.assign({ x: -5.5, y: -4.2, width: 11, height: 8.4, rx: 1.7 }, PH_FZ_BONE), v); phKsEl("rect", { x: -5, y: 4.5, width: 10, height: 2.7, rx: 1.2, fill: "#9CC3E6", stroke: "#5E86AE", "stroke-width": .4 }, v); });
+    const BD = "M24.5,146 C25,158 28.5,168 31.8,180 C33.8,188 33.4,198 30.8,208 C28.4,216 25.4,223 23.6,232";
+    const bm = phKsEl("path", { d: BD, fill: "none", stroke: "#B5543C", "stroke-width": 8, "stroke-linecap": "round", opacity: .88 }, B.hl), bf = phKsEl("path", { d: BD, fill: "none", stroke: "#8E4A3E", "stroke-width": 4.4, "stroke-dasharray": ".5 2.2", opacity: .55 }, B.hl);
+    const ba = phKsGlow(B.hl, B.b, "#D9534F", { cx: 32, cy: 192, rx: 17, ry: 27 }); ba.style.mixBlendMode = "multiply";
+    // the knee: thigh bone on shin bone, the kneecap in the thigh muscle's tendon, the muscle on the front of the thigh
+    const kb = phKsEl("g", { fill: "none", "stroke-linecap": "round" }, K.hl);
+    [["M43,250 C44,285 44,305 43.6,317", 9.6, 8.4], ["M47.4,335 C48,352 47,366 46,382", 9, 7.8]].forEach(([dd, w1, w2]) => { phKsEl("path", { d: dd, stroke: "#A3967F", "stroke-width": w1 }, kb); phKsEl("path", { d: dd, stroke: "#EFE8DA", "stroke-width": w2 }, kb); });
+    phKsEl("ellipse", Object.assign({ cx: 43.4, cy: 321.5, rx: 8.6, ry: 7 }, PH_FZ_BONE), K.hl); phKsEl("ellipse", Object.assign({ cx: 43.4, cy: 333, rx: 9, ry: 3.6 }, PH_FZ_BONE), K.hl);
+    phKsEl("path", { d: "M55.4,328 C55,333 54.4,338 53.4,343", fill: "none", stroke: "#E6DCC6", "stroke-width": 3.2, "stroke-linecap": "round" }, K.hl);
+    const km = phKsEl("path", { d: "", fill: "#B5543C", stroke: "#8E4A3E", "stroke-width": .6 }, K.hl), kf = phKsEl("path", { d: "", fill: "none", stroke: "#8E4A3E", "stroke-width": .5, opacity: .7 }, K.hl);
+    phKsEl("ellipse", Object.assign({ cx: 55.4, cy: 321.8, rx: 3.1, ry: 6.6 }, PH_FZ_BONE), K.hl);
+    const ka = phKsGlow(K.hl, K.b, "#D9534F", { cx: 54, cy: 317, rx: 15, ry: 22 }); ka.style.mixBlendMode = "multiply";
+    if (rich) { phFzLb(svg, 8 + s * 31, 2 + s * (176 - 150), 60, 12, "Back muscles"); phFzLb(svg, 124 + s * (56 - 8), 2 + s * (286 - 262), 230, 16, "Thigh muscle", "end"); phFzLb(svg, 124 + s * (56.5 - 8), 2 + s * (322 - 262), 234, 108, "Kneecap", "end"); }
+    const f1 = n => n.toFixed(1);
+    return (t, a = 1) => {
+      const c = phFzTire(t), c2 = phFzTire(t, .2), q = phFzShake(t) * a * a, D = a * c.D, sag = a * c.S;
+      bm.setAttribute("stroke", phK2Mix("#B5543C", "#C9D2D5", .8 * D)); bm.setAttribute("stroke-width", (8 * (1 - .12 * a - .2 * sag)).toFixed(2)); phKsOp(bf, .55 - .3 * D);
+      phKsOp(ba, .66 * a * c.A); ba.setAttribute("ry", f1(27 * (.9 + .2 * c.A)));
+      gB.setAttribute("transform", `rotate(${(a * (1 + 3.4 * c.S) + .35 * q * c.Q).toFixed(2)} 62 150)`);
+      const w = 1 - .14 * a - .2 * a * c2.S, bx = 60 - 12 * w, jx = .45 * q * c2.Q;
+      km.setAttribute("d", `M${f1(bx + jx)},250 L60.4,250 C61.4,278 60.4,298 57.4,309 C56.4,312 55.8,314 55.5,315.6 C${f1(54 - 2 * w)},310 ${f1(bx + 1 + jx)},300 ${f1(bx + jx)},284Z`); km.setAttribute("fill", phK2Mix("#B5543C", "#C9D2D5", .8 * a * c2.D));
+      kf.setAttribute("d", [.25, .5, .75].map(o => `M${f1(bx + (60 - bx) * o + jx)},252 C${f1(bx + (60.6 - bx) * o + jx)},280 ${f1(55 + 2.6 * (o - .5))},300 55.5,313`).join(" "));
+      phKsOp(ka, .66 * a * c2.A); gK.setAttribute("transform", `translate(${(1.1 * a * c2.S).toFixed(2)} ${(2.6 * a * c2.S + .3 * q * c2.Q).toFixed(2)})`);
+    };
+  };
+  // "Legs & knees: weak, sore": the same story on both legs, from the front: the thigh muscles pale and thin as they hold, the knees tremble and
+  // give a little, never in step with each other, and a dull soreness sits over each kneecap and up the lower thigh.
+  PH_KS_SC.kneeweak = function (svg, d, rich) {
+    svg.setAttribute("viewBox", rich ? "0 0 240 150" : "40 25 160 100");
+    const s = 146 / 104, X0 = 120 - 44 * s, wrap = phKsEl("g", {}, svg), C = phFzCrop(svg, "66 268 88 104", X0, 2, 88 * s, 146, { parent: wrap }); if (!C) return () => {};
+    const leg = (cx, lag) => {
+      phKsEl("path", { d: `M${cx},325 L${cx},339`, fill: "none", stroke: "#E6DCC6", "stroke-width": 3.4, "stroke-linecap": "round" }, C.hl);
+      const m = phKsEl("path", { d: "", fill: "#B5543C", stroke: "#8E4A3E", "stroke-width": .6 }, C.hl), f = phKsEl("path", { d: "", fill: "none", stroke: "#8E4A3E", "stroke-width": .5, opacity: .7 }, C.hl);
+      phKsEl("path", Object.assign({ d: `M${cx - 4.6},313 C${cx - 3},311.4 ${cx + 3},311.4 ${cx + 4.6},313 C${cx + 5.6},318 ${cx + 3},324.6 ${cx},325.6 C${cx - 3},324.6 ${cx - 5.6},318 ${cx - 4.6},313Z` }, PH_FZ_BONE), C.hl);
+      const ache = phKsGlow(C.hl, C.b, "#D9534F", { cx, cy: 311, rx: 14, ry: 26 }); ache.style.mixBlendMode = "multiply";
+      return (t, a) => {
+        const c = phFzTire(t, lag), w = 10.5 * (1 - .14 * a - .2 * a * c.S), j = .5 * phFzShake(t + lag) * a * a * c.Q, x = cx + j, f1 = n => n.toFixed(1);
+        m.setAttribute("d", `M${f1(x - w)},262 C${f1(x - w - 1.5)},284 ${f1(x - w * .55)},303 ${f1(cx - 3.4)},311.6 L${f1(cx + 3.4)},311.6 C${f1(x + w * .55)},303 ${f1(x + w + 1.5)},284 ${f1(x + w)},262Z`); m.setAttribute("fill", phK2Mix("#B5543C", "#C9D2D5", .8 * a * c.D));
+        f.setAttribute("d", [-.6, -.2, .2, .6].map(o => `M${f1(x + w * o)},264 C${f1(x + w * o * 1.1)},286 ${f1(cx + 2.6 * o)},302 ${f1(cx + 1.8 * o)},310`).join(" "));
+        phKsOp(ache, .64 * a * c.A); return c.S;
+      };
+    };
+    const R = leg(92, 0), Lf = leg(128, .3);
+    if (rich) { const fx = x => X0 + (x - 66) * s, fy = y => 2 + (y - 268) * s; phFzLb(svg, fx(130), fy(286), 216, 30, "Thigh muscle", "end"); phFzLb(svg, fx(92), fy(319), 26, 110, "Kneecap"); }
+    return (t, a = 1) => { const s1 = R(t, a), s2 = Lf(t, a); wrap.setAttribute("transform", `translate(0 ${(1.6 * a * (s1 + s2)).toFixed(2)})`); };
+  };
+  // her side figure, curled up. It is the figure's own outline: its points are turned about the neck, waist, hip and knee (body) and about the
+  // shoulder, elbow and wrist (arm), each joint blended over a short span so the outline stays one smooth line. [x, y, half-span, degrees] in the
+  // side figure's units; + = clockwise on screen. Returns the outlines (whole, and each limb part, which is drawn over what it lies on), the
+  // detail lines by part, the posed limb axes [from, to, share of the limb's length from, to] and the box it fills.
+  const PH_FZ_CURL = { neck: [44, 72, 10, 18], waist: [42, 196, 44, 30], hip: [42, 226, 18, -118], knee: [44, 322, 14, 148], sho: [45, 100, 10, -65], elb: [46, 165, 10, -150], wri: [51, 234, 8, -20] };
+  function phFzCurl() {
+    const J = PH_FZ_CURL, S = PH_BODY_GEOM.SIDE.f, D = PH_BODY_GEOM.SIDE_DET || { both: [], arm: [], f: [] }, cr = PH_BODY_GEOM.crPath;
+    const R = (p, j, k) => { const r = j[3] * k * Math.PI / 180, cs = Math.cos(r), sn = Math.sin(r), dx = p[0] - j[0], dy = p[1] - j[1]; return [j[0] + dx * cs - dy * sn, j[1] + dx * sn + dy * cs, p[2]]; };
+    const up = (j, y) => 1 - phFzSm(y, j[1] - j[2], j[1] + j[2]), dn = (j, y) => phFzSm(y, j[1] - j[2], j[1] + j[2]);
+    const body = p => { const y = p[1]; return R(R(R(R(p, J.neck, up(J.neck, y)), J.waist, up(J.waist, y)), J.knee, dn(J.knee, y)), J.hip, dn(J.hip, y)); };
+    const arm = p => { const y = p[1]; return R(R(R(R(p, J.wri, dn(J.wri, y)), J.elb, dn(J.elb, y)), J.sho, dn(J.sho, y)), J.waist, 1); };
+    const B = S.body.map(body), A = S.arm.map(arm), all = B.concat(A), xs = all.map(p => p[0]), ys = all.map(p => p[1]);
+    const part = (f, src, test) => cr(src.filter(test).map(f), true);
+    const lines = (f, list, test) => list.filter(e => test(e[0].reduce((s, p) => s + p[1], 0) / e[0].length)).map(([pts, op, w]) => [cr(pts.map(f), false), op, w || .6]);
+    const leg = p => R(R(p, J.knee, 1), J.hip, 1), fore = p => R(R(R(p, J.elb, 1), J.sho, 1), J.waist, 1), BD = D.both.concat(D.f || []);
+    const K = R([44, 322], J.hip, 1), El = R(R([46, 165], J.sho, 1), J.waist, 1), Wr = fore([51, 234]);
+    return { body, x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys), H: J.hip, K, El,
+      bodyD: cr(B, true), thighD: part(body, S.body, p => p[1] >= 222 && p[1] <= 330), shinD: part(body, S.body, p => p[1] >= 314),
+      armD: cr(A, true), upperD: part(arm, S.arm, p => p[1] <= 172), foreD: part(arm, S.arm, p => p[1] >= 158),
+      det: [lines(body, BD, y => y < 232), lines(body, BD, y => y >= 232 && y < 322), lines(body, BD, y => y >= 322)], adet: [lines(arm, D.arm, y => y < 165), lines(arm, D.arm, y => y >= 165)],
+      core: [[46, 108, 26], [46, 129, 29], [46, 150, 30], [45, 171, 30], [45, 192, 29], [43, 212, 28]].map(([x, y, r]) => body([x, y]).slice(0, 2).concat(r)),
+      thighS: [[J.hip, K, 0, .45]], shinS: [[K, leg([41, 430]), .45, .9], [leg([34, 447]), leg([86, 456]), .92, 1]],
+      upperS: [[R([45, 102], J.waist, 1), El, 0, .36]], foreS: [[El, Wr, .36, .72], [Wr, fore(R([52, 281], J.wri, 1)), .72, 1]] };
+  }
+  // "Body: desire to lie down and curl up": she lies on her side, curled: knees drawn up, back rounded, head tucked, arms folded in, small and still.
+  // That shape keeps the least skin to the air. What warmth there is is drawn in to the trunk; the arms and legs cool from their ends. Seen from
+  // above, on a mat with her head on a pillow. Settled: she is up, warm to the hands and feet.
+  PH_KS_SC.liecurl = function (svg, d, rich) {
+    svg.setAttribute("viewBox", "0 0 240 150");
+    const id = "ksl" + (++phKsUid), W = "#E07A3A", Cc = "#5FA3DA", Vv = "#5E86AE", BASE = "#EFE8DF", INK = "#6f6053", G = 118, C = phFzCurl(), f1 = n => n.toFixed(1);
+    const s = Math.min(200 / (C.y1 - C.y0), 96 / (C.x1 - C.x0)), ex = 120 - s * (C.y0 + C.y1) / 2, ey = 82 + s * (C.x0 + C.x1) / 2, X = p => ex + s * p[1], Y = p => ey - s * p[0];
+    const M = (dx, dy) => `matrix(0 ${(-s).toFixed(4)} ${s.toFixed(4)} 0 ${(ex + dx).toFixed(2)} ${(ey + dy).toFixed(2)})`;
+    const mat = phKsEl("g", {}, svg), hd = C.body([43, 34]), hx = X(hd), hy = Y(hd);
+    phKsEl("rect", { x: 7, y: 24, width: 226, height: 122, rx: 9, fill: "#EFE9DD", stroke: "#D9D0BD", "stroke-width": .8 }, mat);
+    phKsEl("rect", { x: f1(hx - 30), y: f1(hy - 31), width: 58, height: 62, rx: 11, fill: "#F9F6EF", stroke: "#D9D0BD", "stroke-width": .8 }, mat);
+    phKsEl("path", { d: `M${f1(hx - 24)},${f1(hy - 20)} C${f1(hx - 19)},${f1(hy - 8)} ${f1(hx - 19)},${f1(hy + 8)} ${f1(hx - 24)},${f1(hy + 20)}`, fill: "none", stroke: "#E4DCCB", "stroke-width": .8, "stroke-linecap": "round" }, mat);
+    phKsEl("path", { d: C.bodyD + " " + C.armD, transform: M(1.5, 2.4), fill: "#5a4636", opacity: .17 }, mat);     // her shadow on the mat
+    const air = phKsGlow(svg, svg, "#8EC0E8", { cx: 120, cy: 82, rx: 118, ry: 62 });
+    const gnd = phKsEl("path", { d: `M56,${G} L184,${G}`, fill: "none", stroke: "#B8AE98", "stroke-width": 1.2, "stroke-linecap": "round" }, svg);
+    const g = phKsEl("g", { transform: M(0, 0) }, svg), defs = phKsEl("defs", {}, g);
+    const rg = phKsEl("radialGradient", { id: id + "w" }, defs); [[0, .8], [.6, .45], [1, 0]].forEach(([o, op]) => phKsEl("stop", { offset: o, "stop-color": W, "stop-opacity": op }, rg));
+    const clip = (k, dd) => { phKsEl("path", { d: dd }, phKsEl("clipPath", { id: id + k }, defs)); return `url(#${id}${k})`; };
+    // everything but a disc round each joint: a part's outline stops there, where it runs into the part it hangs from
+    const but = (k, discs) => { phKsEl("path", { "clip-rule": "evenodd", d: "M-900,-900H1500V1500H-900Z " + discs.map(([c, r]) => `M${f1(c[0] - r)},${f1(c[1])} a${r},${r} 0 1,0 ${2 * r},0 a${r},${r} 0 1,0 ${-2 * r},0Z`).join(" ") }, phKsEl("clipPath", { id: id + k }, defs)); return `url(#${id}${k})`; };
+    // a part drawn over what it lies on: its outline (the outer half shows), its skin, then its warmth along its own axis
+    const part = (dd, k, noLine, segs) => {
+      if (noLine) phKsEl("path", { d: dd, fill: "none", stroke: INK, "stroke-width": 2.1, "stroke-linejoin": "round", "clip-path": noLine }, g);
+      phKsEl("path", { d: dd, fill: BASE }, g); const par = phKsEl("g", { "clip-path": clip(k, dd) }, g);
+      return segs.map(([p0, p1, q0, q1], i) => {
+        const lg = phKsEl("linearGradient", { id: id + k + "g" + i, gradientUnits: "userSpaceOnUse", x1: f1(p0[0]), y1: f1(p0[1]), x2: f1(p1[0]), y2: f1(p1[1]) }, defs), st = [0, .25, .5, .75, 1].map(o => phKsEl("stop", { offset: o, "stop-color": BASE }, lg));
+        const L = Math.hypot(p1[0] - p0[0], p1[1] - p0[1]) || 1, ux = (p1[0] - p0[0]) / L, uy = (p1[1] - p0[1]) / L, P = (p, along, side) => f1(p[0] + ux * along - uy * side) + "," + f1(p[1] + uy * along + ux * side);
+        phKsEl("path", { d: `M${P(p0, -40, 46)} L${P(p1, 30, 46)} L${P(p1, 30, -46)} L${P(p0, -40, -46)}Z`, fill: `url(#${id}${k}g${i})` }, par); return { st, q0, q1 };
+      });
+    };
+    const lines = list => { const q = phKsEl("g", { fill: "none", stroke: INK, "stroke-linecap": "round" }, g); list.forEach(([dd, op, w]) => phKsEl("path", { d: dd, "stroke-width": w, "stroke-opacity": op }, q)); };
+    const glow = (c, r, par, op) => phKsEl("circle", { cx: f1(c[0]), cy: f1(c[1]), r, fill: `url(#${id}w)`, opacity: op || 1 }, par);
+    // trunk and head, with the core's warmth; then the thigh over the belly, the lower leg against the thigh; then the arm over all of it
+    phKsEl("path", { d: C.bodyD, fill: BASE, stroke: INK, "stroke-width": 2.1, "stroke-linejoin": "round", "paint-order": "stroke" }, g);
+    const cb = clip("b", C.bodyD), hb = phKsEl("g", { "clip-path": cb }, g), core = C.core.map(c => glow(c, c[2], hb, .6)); glow(hd, 27, hb, .32); lines(C.det[0]);
+    const LG = part(C.thighD, "t", but("xt", [[C.H, 30], [C.K, 19]]), C.thighS); core.push(glow(C.H, 30, phKsEl("g", { "clip-path": cb }, g), .75)); lines(C.det[1]);
+    LG.push(...part(C.shinD, "n", but("xn", [[C.K, 19]]), C.shinS)); lines(C.det[2]);
+    phKsEl("path", { d: C.armD, fill: BASE, stroke: INK, "stroke-width": 2.1, "stroke-linejoin": "round", "paint-order": "stroke" }, g);
+    const AR = part(C.upperD, "u", "", C.upperS); lines(C.adet[0]); AR.push(...part(C.foreD, "f", but("xf", [[C.El, 13]]), C.foreS)); lines(C.adet[1]);
+    const R0 = C.core.map(c => c[2]).concat(30);
+    // the same figure up on her feet, warm all through: it comes in as the lying one goes
+    const tint = `<rect x="0" y="0" width="112" height="466" fill="#F0B79A" opacity=".5"/>`, k = 110 / 466;
+    const up = phFzSide(svg, "0 0 112 466", 120 - 44 * k, G - 110, 112 * k, 110, { opts: { hlb: tint, hl: tint } });
+    const cp = C.body([33, 152]), lb = rich ? phFzLb(svg, +f1(X(cp)), +f1(Y(cp)), +f1(X(cp)), 135, "Body core", "middle") : null;
+    // the colour at a share q of a limb's length when its cold line stands at f: warm, then plain skin, then cool, then dusky at the end
+    const col = (q, f) => { const far = phFzCl((q - f - .1) / Math.max(.02, .9 - f));
+      return q < f - .1 ? phK2Mix(BASE, W, q < f - .3 ? .5 - .2 * q / Math.max(.02, f - .3) : 1.5 * (f - .1 - q)) : q < f + .1 ? phK2Mix(BASE, Cc, 2.5 * (q - f + .1)) : phK2Mix(BASE, phK2Mix(Cc, Vv, far), .5 + .32 * far); };
+    const at = new Map(), paint = (L, f) => { const n = Math.round(f * 300); if (at.get(L) === n) return; at.set(L, n); L.forEach(sg => sg.st.forEach((e, i) => e.setAttribute("stop-color", col(sg.q0 + (sg.q1 - sg.q0) * i / 4, n / 300)))); };
+    return (t, a = 1) => {
+      const br = .5 - .5 * Math.cos(t * 2 * Math.PI / 5), e = a * (.5 + .5 * phKsEase(.5 - .5 * Math.cos((t - .35) * 2 * Math.PI / 6.4))), lie = phFzSm(a, .2, .7);
+      phKsOp(g, lie); phKsOp(mat, lie); phKsOp(gnd, 1 - lie); if (up) phKsOp(up.b, 1 - phFzSm(a, .3, .8));
+      paint(LG, 1.02 - .62 * e); paint(AR, 1.02 - .6 * e);
+      core.forEach((c, i) => c.setAttribute("r", (R0[i] * (1.12 - .22 * e + .04 * br)).toFixed(1)));
+      phKsOp(air, .5 * a); if (lb) phKsOp(lb.g, lie > .9 ? 1 : 0);
+    };
+  };
+  // "Energy: listless, dispirited": the brain is awake but under-driven. The wake-up drive that climbs from the upper brainstem through the thalamus
+  // to the cortex runs thin: most volleys stop at the thalamus, which passes few of them on (the ones it passes arrive whole), the frontal cortex is
+  // nearly silent and its blood flow is a little low; the rest of the brain keeps its colour and the arteries keep their pulse. Settled: the same
+  // pathway streams bright and steady and the cortex is evenly lit. Conventions: a bead is a volley of signals, bead spacing the firing rate, the
+  // cortex tint its blood flow as a scan would shade it. On her brain plate (seen from the side, facing left); deep parts are seen through it.
+  PH_KS_SC.listless = function (svg, d, rich) {
+    phKsPlateFill(svg, "brain", []); svg.querySelectorAll(".lb").forEach(e => e.remove()); svg.querySelectorAll(".st").forEach(e => e.classList.remove("st"));
+    svg.setAttribute("viewBox", rich ? "-22 5 300 187.5" : "12 12 236 147.5");
+    const z = rich ? 1 : 1.6, id = "ksn" + (++phKsUid), defs = phKsEl("defs", {}, svg), GOLD = "#D9AE47";
+    const mg = phKsEl("radialGradient", { id: id + "m" }, defs); phKsEl("stop", { offset: .6, "stop-color": "#fff" }, mg); phKsEl("stop", { offset: 1, "stop-color": "#000" }, mg);
+    const mk = phKsEl("mask", { id: id + "k", maskUnits: "userSpaceOnUse", x: -30, y: 0, width: 320, height: 200 }, defs), mc = phKsEl("circle", { cx: 133, cy: 115, r: 40, fill: `url(#${id}m)` }, mk);
+    // pallor over the cerebrum, deepest over the frontal lobe (under the stem, hypothalamus and arteries)
+    const occ = svg.querySelector('[data-s="occipital"]'), put = e => { if (occ && occ.parentNode === svg) svg.insertBefore(e, occ.nextSibling); else svg.appendChild(e); return e; };
+    const pf = put(phKsEl("path", { d: "M40,108 C32,66 66,24 118,20 L128,22 C122,40 132,56 124,74 C118,88 126,100 120,112 C104,104 86,104 70,112 C56,116 46,116 40,108Z", fill: "#C9C0C6" }));
+    const pc = put(phKsEl("path", { d: "M40,108 C32,66 66,24 118,20 C166,16 206,46 208,90 C210,114 200,130 186,136 C172,140 160,134 150,138 C138,142 128,138 118,134 C104,140 84,140 68,134 C52,128 42,120 40,108Z", fill: "#D8CDCD" }));
+    const art = svg.querySelectorAll('[data-s="vessels"] path')[1], AD = art ? art.getAttribute("d") : "";
+    const g = phKsEl("g", { fill: "none", "stroke-linecap": "round", "stroke-linejoin": "round" }, svg);
+    const ao = AD ? phKsEl("path", { d: AD, stroke: "#C24A44", "stroke-width": 1 }, g) : null, af = AD && rich ? phKsEl("path", { d: AD, stroke: "#F0B4A8", "stroke-width": .9, "stroke-dasharray": "2 9" }, g) : null;
+    // added anatomy: the thalamus on top of the midbrain, the arousal nuclei in the upper stem, the fibres up to the cortex
+    const th = phKsEl("g", { transform: "rotate(-10 133 115)" }, g); phKsEl("ellipse", { cx: 133, cy: 115, rx: 14, ry: 8, fill: "#E6CBC0", stroke: "#A0727A", "stroke-width": .9 }, th); phKsEl("path", { d: "M122,115 C128,112 138,112 144,115", stroke: "#A0727A", "stroke-width": .5, opacity: .7 }, th);
+    [[139, 146, 1.6], [140, 152, 1.8], [138, 158, 1.5], [128, 140, 1.6]].forEach(([x, y, r]) => phKsEl("circle", { cx: x, cy: y, r: r * z, fill: "#B48A3A" }, g));
+    const TR = ["M139,156 C137,146 135,134 133,122", "M124,111 C106,100 76,96 50,88", "M129,107 C118,84 96,58 70,46", "M131,106 C124,84 110,54 98,33", "M135,106 C136,84 140,54 141,28", "M145,109 C162,96 182,84 196,70"].concat(rich ? ["M131,138 C124,132 120,128 116,126 C108,122 100,118 92,114 C82,110 74,107 66,104"] : []);
+    const tr = TR.map(dd => phKsEl("path", { d: dd, stroke: "#A8916A", "stroke-width": .9 * z, opacity: .5 }, g)), AL = tr.map(p => phFzAlong(p, 48));
+    const strunk = phKsEl("path", { d: TR[0], stroke: GOLD }, g), sfan = phKsEl("g", { mask: `url(#${id}k)` }, g), sf = TR.slice(1).map(dd => phKsEl("path", { d: dd, stroke: GOLD }, sfan)), SP = [strunk].concat(sf);
+    const glow = (x, y, r) => phKsGlow(svg, svg, "#F2C14E", { cx: x, cy: y, rx: r, ry: r });
+    const gStem = glow(138, 151, 13 * z), gTh = glow(133, 115, 15 * z), SITE = [[50, 88, 0], [70, 48, 0], [98, 33, 0], [141, 28, .12], [196, 70, .12], [66, 104, 0]].slice(0, rich ? 6 : 3), gs = SITE.map(([x, y]) => glow(x, y, 10 * z));
+    const SPK = rich ? [[54, 72], [76, 60], [86, 42], [108, 40], [112, 60], [88, 90], [52, 104], [106, 92]] : [], sp = SPK.map(([x, y]) => phKsEl("circle", { cx: x, cy: y, r: 1.7, fill: "#F2C14E" }, svg));
+    // the loop's own signals: [fibre, start, end, how far it gets, size from, to, brightness from, to]. Three volleys climb to the thalamus; it passes one on
+    const BD = [[0, 0, .9, 1, 2.6, 2.6, .9, .9], [0, .75, 1.65, 1, 2.6, 2.6, .9, .9], [0, 1.5, 2.4, 1, 2.6, 2.6, .9, .9], [3, 2.4, 3.2, 1, 1.9, 1.9, .8, .8]].concat(rich ? [[6, .9, 2.5, 1, 1.7, 1.7, .7, .7]] : []);
+    const bd = BD.map(() => phKsEl("circle", { r: 2, fill: "#F2C14E", stroke: "#B48A1E", "stroke-width": .4 }, svg));
+    if (rich) { phFzLb(svg, 132, 170, 92, 184, "Brainstem", "end"); phFzLb(svg, 142, 117, 236, 128, "Thalamus"); phFzLb(svg, 58, 66, -6, 30, "Frontal lobe"); }
+    const bump = (x, x0, x1) => x > x0 && x < x1 ? Math.sin((x - x0) / (x1 - x0) * Math.PI) : 0;
+    return (t, a = 1) => {
+      const q = t % 4, e = 1 - a, w = .5 - .5 * Math.cos(2 * Math.PI * (q - 1.75) / 4);
+      phKsOp(pc, a * (.24 + .05 * w)); phKsOp(pf, a * (.5 + .08 * w));
+      if (art) phKsOp(art, 1 - .2 * a); if (ao) { ao.setAttribute("stroke-width", (1 + 1.4 * e + (.14 + .2 * e) * Math.max(0, Math.sin(t * 6.9))).toFixed(2)); phKsOp(ao, .8 + .2 * e); } if (af) { af.setAttribute("stroke-dashoffset", (-t * 22).toFixed(1)); phKsOp(af, .5 + .4 * e); }
+      // the steady stream of the settled brain
+      const so = Math.pow(e, .8), sw = ((1 + 1.6 * e) * z).toFixed(2), da = `${(2 + 3 * e).toFixed(1)} ${(34 - 21 * Math.pow(e, .7)).toFixed(1)}`;
+      SP.forEach((p, i) => { p.setAttribute("stroke-width", sw); p.setAttribute("stroke-dasharray", da); p.setAttribute("stroke-dashoffset", (-(t * 46) + i * 7).toFixed(1)); }); phKsOp(strunk, so); phKsOp(sfan, so);
+      mc.setAttribute("r", (34 + 146 * Math.pow(e, 1.2)).toFixed(1));
+      // the signals that set out and fade
+      const on = Math.min(1, 2 * a);
+      bd.forEach((c, i) => { const B = BD[i], x = (q - B[1]) / (B[2] - B[1]), live = x >= 0 && x <= 1, reach = B[3] + (1 - B[3]) * e, f = Math.max(0, Math.min(1, x)) * reach, p = AL[B[0]](f);
+        c.setAttribute("cx", p[0].toFixed(1)); c.setAttribute("cy", p[1].toFixed(1)); c.setAttribute("r", ((B[4] + (B[5] - B[4]) * x) * z).toFixed(2)); phKsOp(c, live ? on * (B[6] + (B[7] - B[6]) * Math.pow(x, 1.6)) * Math.min(1, x * 12) : 0); });
+      const arrive = a * .3 * bump(q, 3.2, 3.7), es = Math.pow(e, 1.3);
+      gs.forEach((s, i) => phKsOp(s, es * (.55 + .15 * Math.sin(1.7 * t + i * 1.9)) + a * SITE[i][2] * (.85 + .15 * Math.sin(.9 * t + i)) + (i === 2 ? arrive : i === 5 ? a * .2 * bump(q, 2.5, 2.95) : 0)));
+      phKsOp(gStem, .14 + .61 * e + .08 * e * Math.sin(t * 3.1) + a * .4 * (bump(q, 0, .4) + bump(q, .75, 1.15) + bump(q, 1.5, 1.9))); phKsOp(gTh, .12 + .63 * e + .08 * e * Math.sin(t * 3.1 + 1) + a * (.17 * bump(q, .85, 1.2) + .17 * bump(q, 1.6, 1.95) + .36 * bump(q, 2.35, 2.75)));
+      sp.forEach((s, i) => phKsOp(s, e * (.45 + .45 * Math.sin(2.6 * t + i * 2.3)) + a * (i === 2 ? .5 * bump(q, 3.22, 3.4) : i === 3 ? .35 * bump(q, 3.35, 3.58) : 0)));
+    };
   };
   // mounted by the runner (phPpMount): a small one is built once (the next copy is cloned from it) and keeps that frame; a big one moves
   const PH_KS_T0 = .35;
@@ -105628,15 +106174,19 @@ or changing anything in Cliniko.
     const W = PH_FS_WHOLE[pl]; return W ? [PH_BODY_GEOM.CX + W[0], W[1], 0, 0] : null;
   }
   const phFsWholePl = pl => !!PH_FS_WHOLE[pl];
+  // where the film looks for a sign whose picture is of another place than its row on her body chart: "listless" is drawn in the brain
+  const PH_FS_PLOF = { listless_tend: "headmind", listless: "headmind" };
   function phFsStory(id) {
-    const pl = g => g.pl || (g.pl = phFbbPlaceOf(g.keys[0], phSignLabel(g.keys[0]))), ord = g => PH_FS_PL_ORD[pl(g)] == null ? 99 : PH_FS_PL_ORD[pl(g)], fam = PH_FS_SIGNS_OF[id] || id, G = phKsFamGroups(fam);
+    const pl = g => g.pl || (g.pl = PH_FS_PLOF[g.keys[0]] || phFbbPlaceOf(g.keys[0], phSignLabel(g.keys[0]))), ord = g => PH_FS_PL_ORD[pl(g)] == null ? 99 : PH_FS_PL_ORD[pl(g)], fam = PH_FS_SIGNS_OF[id] || id, G = phKsFamGroups(fam);
     const isBuild = g => /^Build:/.test(phSignLabel(g.keys[0])) ? 1 : 0, chart = g => pl(g) === "tongue" || pl(g) === "wrist" ? 1 : 0;   // the tongue and pulse have their own corner on the picture: their turn comes last
     // the Ren rows are the person (the build first, then what is theirs alone), the Bing rows the condition; a sign with both marks is on both lists
     const P = G.filter(g => g.sd.has("r")).sort((a, b) => (isBuild(b) - isBuild(a)) || (chart(a) - chart(b)) || (b.sd.has("b") ? 0 : 1) - (a.sd.has("b") ? 0 : 1) || (b.w - a.w) || (ord(a) - ord(b)));
     const isDx = g => /^Diagnosis:/.test(phSignLabel(g.keys[0])) ? 1 : 0, T = G.filter(g => g.sd.has("b")).sort((a, b) => (isDx(a) - isDx(b)) || (chart(a) - chart(b)) || (b.w - a.w) || (ord(a) - ord(b)));
     if (PH_FS_PEOPLE.has(id)) {   // a person: their own rows, the tongue and pulse last and kept in
       const once = L => { const n = {}; return L.filter(g => { n[g.pl] = (n[g.pl] || 0) + 1; return n[g.pl] === 1 || (n[g.pl] === 2 && g.w >= 5); }); };
-      return { P, T: [], fP: once(P.filter(g => !chart(g))).slice(0, 8).concat(once(P.filter(chart)).slice(0, 2)), fT: [], dx: [] };
+      // the tongue and the pulse, one of each when the person has both (Fu Zi had two pulses and no tongue)
+      const C = P.filter(chart), tw = ["wrist", "tongue"].map(p => C.find(g => g.pl === p)).filter(Boolean).sort((a, b) => C.indexOf(a) - C.indexOf(b));
+      return { P, T: [], fP: once(P.filter(g => !chart(g))).slice(0, 8).concat(tw.length === 2 ? tw : once(C).slice(0, 2)), fT: [], dx: [] };
     }
     // the film shows at most two pictures of a place, and a picture once; a tile reaches the rest. What a herb answers comes first: the story has to show it before the herb answers it
     const W = new Set(Object.values(PH_FS_WORK[id] || {}).concat(Object.values(PH_FS_PAIRW[id] || {}).map(p => p[0]))), must = g => g.keys.some(k => W.has(k));
@@ -125599,7 +126149,7 @@ or changing anything in Cliniko.
       </svg>`;
     }
 
-    return { svg, sideSvg, outline, crPath, detailSvg, face: FACE_KIT, CX, W, H, SIDE_W: SIDE.W, SIDE_X: SIDE.X, SHAPES, SIDE };
+    return { svg, sideSvg, outline, crPath, detailSvg, face: FACE_KIT, CX, W, H, SIDE_W: SIDE.W, SIDE_X: SIDE.X, SHAPES, SIDE, SIDE_DET };
   })();
 
   /* Pain regions anchored to BodyGeom coordinates. Shapes are [dx, y, rx, ry, rotDeg] with dx measured
