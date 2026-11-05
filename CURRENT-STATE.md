@@ -798,6 +798,7 @@ drawn.
 
 ## Fang Bing Ren, Find the Ren & Patterns
 **Key guard:** every sign a family weighs must be a row of its pool; `phFbrKeyCheck()` lists any that is not, once after load, in the console (the Ren row "Cold & heat: whole body feels hot" had dropped out on 2026-11-02 and is back).
+**The growing triangle** tops the page (her 2026-11-05 picks; BUILD-NOTES "The growing triangle"): a dark stage above the card, this patient's ticks and lead read through `phTriEffective` + `phFbrRank` (`phFtgRefresh`, called by `phTriRefresh`), nothing stored but the fold. It grows from three embers as signs come in, its Fang is `ranked[0]` (the gold tile), a new lead flashes, it rests still. The person is the patient's own sex and build. The chip "Triangle" in the card's tools folds it and it stays folded (`lcm-ftg-fold`; a phone opens folded and builds nothing until opened); Story opens the film; past its height it is a sticky 96px band under the name band (from 641px).
 **Fang Bing Ren** (the Triangle) is the one place constitutional-family scoring happens: one merged header (verdict + Quick
 assess); signs in ten shared areas; ONE "Looking at" line, on the Fang Bing Ren page only (Everything · her complaints · the tile
 she tapped; a complaint lifts its signs and fades the rest, nothing hidden, view state only), which Quick assess follows
@@ -873,7 +874,7 @@ signs; the Care Plan Diagnosis = its pictures; the Patterns page = every pattern
 (`--px-h`), so nothing moves; a sign's name is said once, in the header with its Ren / Bing marks and weight dots.
 
 ## Guide — Families (study + edit)
-The Guide is **[Families] [Compare] [Tongue map] [Pulse] [Abdomen] [Herbs] [Blood tests] [Iron] [Eggs] [Eating eggs]**: a herb card is the body type with its formulas under it, notes-only formulas are
+The Guide is **[Families] [Triangle] [Compare] [Tongue map] [Pulse] [Abdomen] [Herbs] [Blood tests] [Iron] [Eggs] [Eating eggs]**: a herb card is the body type with its formulas under it, notes-only formulas are
 dashed tiles, a study card sits on the right (in Study, the concept picture of the pattern(s) the family counts for, under the
 pearl). **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): her edits live in `PHARMACY.fbrEdits[id]` (+
 `fbrEditsAt`), and `phFbrEditsApply()` rebuilds `.ren/.bing/.or/.core` in place from `phFbrPristine`; `phFbrEditsSync()` (top of
@@ -915,6 +916,9 @@ note line (`phPulseKbLineHtml`, the visit panel too) has its own "Guide ›". **
 removed while the Guide draws one (`phGdStripHidden`, on paint and on each Guide tap via the capture listener `phGdClaim`, which
 also sets `presHxScreenName`); `renderHxScreen` and `phAbdRepaint` take the open Guide's host first; abdomen taps resolve the
 record with `phAbdName` (the Guide's record, else `phPfwName`). Details and tests: BUILD-NOTES "The Guide and the record's pages".
+
+## Guide — Triangle (a teaching page)
+Her word 2026-11-05: "include this page in the guide section"; BUILD-NOTES "The growing triangle". The Fang Bing Ren page's stage with no patient (`phFtgGuideHtml`, `phFtgGuideMount`): the count, Tick for me (Sweats easily · Robust: one sign every 1.5 s, a tap or leaving the tab cancels it), Clear, Search, then the Bing and Ren signs A–Z. Picks stay in memory (`phFtgG`), never saved. Story opens the 88 s film (`phFtgFilmMake`, built on the first tap; its scores are `phFbrRank`, its words DRAFT). `phFtgStop` on a tab change.
 
 ## Guide — Compare (formulas side by side)
 The Compare tab (her 2026-11-02 picks, BUILD-NOTES "Compare formulas") holds **one picked set of formulas** (`phCmp.ids`, view state,
