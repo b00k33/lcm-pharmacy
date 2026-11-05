@@ -11533,6 +11533,8 @@ Her word: "push", for the centred lump, then "Push both" with One face. After pu
 - **Worth knowing:** the catch in `phKsMake` means a check that mounts every sign and looks for errors cannot see a missing scene. Look for an empty picture too.
 - **Not tested:** her own devices, the Key2.
 - **Pages checked:** Guide › Families (Ban Xia Hou Po Tang).
+- **LIVE in build 20261105-100900** (commit b0ef8f2f, publish 64bdf2d0), the only change in it. Her devices need the gold Update. Checked on the live page: the build stamp and the close-up's frame in the served code.
+- **The deploy took three tries, none of it the app's fault.** GitHub's Pages step timed out on "updating_pages". Re-running that run failed with `Multiple artifacts named "github-pages"`, because a re-run keeps the first attempt's artifact. A fresh run of the same commit worked: `gh workflow run pages.yml --ref main`, which deploys main as it stands, so nothing still on session-a goes with it.
 
 ## Guide: hide formulas no longer stocked, or temporarily stopping (2026-11-05)
 
