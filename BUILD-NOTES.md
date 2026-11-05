@@ -11774,4 +11774,4 @@ After the Da Huang pictures were saved (6ca52b53, LIVE in build 20261105-153300)
 - **Not tested:** a real phone, the Key2, her devices, Full screen, the Fang Bing Ren board and Compare by hand (they mount the same picture).
 - **Left for her word:** thick, sticky phlegm is drawn yellow although that row names no colour; "dry lips" still has no lips picture of its own (it lights the throat, as before this work).
 - **Pages checked:** Guide › Families: Da Huang, Da Cheng Qi Tang, Xiao Chai Hu Tang, Xiao Qing Long Tang (the signs' pictures).
-- **SAVED, not live:** it goes with her next "push live".
+- **LIVE in build 20261105-170300** (her "push live"; commit 7853cd02, publish d0e70020). Only this change and a notes commit went up; the list was compared under the publish lock before the push. The live page was read back: it serves this build and each of the nine fixes is in it. Her devices need the gold Update.
