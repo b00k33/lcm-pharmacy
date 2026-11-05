@@ -797,6 +797,7 @@ point and caution words are hers (her yes, all as written, 2026-10-28). **Not bu
 drawn.
 
 ## Fang Bing Ren, Find the Ren & Patterns
+**Key guard (saved 2026-11-05, not live yet):** every sign a family weighs must be a row of its pool; `phFbrKeyCheck()` lists any that is not, once after load, in the console (the Ren row "Cold & heat: whole body feels hot" had dropped out on 2026-11-02 and is back).
 **Fang Bing Ren** (the Triangle) is the one place constitutional-family scoring happens: one merged header (verdict + Quick
 assess); signs in ten shared areas; ONE "Looking at" line, on the Fang Bing Ren page only (Everything · her complaints · the tile
 she tapped; a complaint lifts its signs and fades the rest, nothing hidden, view state only), which Quick assess follows
@@ -1478,7 +1479,7 @@ Fine (`e.fine`) leaves no mark; closed = `e.ckx`; unanswered goes quietly at the
 
 ## Trips (her travel)
 Her work trips live in LCM; Nanjing is the first. Data in her Me row, entry by entry, both logins (`d.trips`, `d.tplan` plan rows,
-`d.tnotes` day notes). Trip to-dos = Me to-dos with `trip` + `g` (area) + `due` (days before she flies), day worked out on read
+`d.tnotes` day notes). **A long note is never cut without a word** (her pick; saved 2026-11-05, not live yet): one limit, 20,000 characters (`PH_ME_NOTE_MAX`), for a day's note, a session's note and the Week page's day note; over it nothing is saved short, the kept note stays, the save banner tells her and her typing stays in the box (`phMeNoteFits`). Trip to-dos = Me to-dos with `trip` + `g` (area) + `due` (days before she flies), day worked out on read
 (`phTripTdDay`). Passport and policy numbers sync, hidden until Show numbers.
 - **Her file**: a step per trip in her Life group, ONE joined tab bar: Prepare (six area tiles + the to-do table; while away
   "Today": day n, a gold-ringed **Next / Then** card (the next travel strip or session, its venue in Chinese and that venue's
@@ -1674,6 +1675,7 @@ Fitness + Exercises), the rest in Life.
   `hubset.fitIn` in `PH_HUB_MAPS` (shapes in the code comment). Code: "FITNESS + EXERCISES" (`phFit*`, `phDn*`, `phMu*`).
 
 ## One Me (her record joined up)
+**In the backup file** (her pick; saved 2026-11-05, not live yet): the Me store's data rides in the backup file as a sibling key `me`; Restore shows "Your own things" as its own row, which only ever adds what the device lacks (`phMeMerge`), never replaces anything newer, and alone needs no reload. The on-device snapshots still hold the pharmacy pair only.
 **Only on her own record** (`phFastIsMe`); every patient's record is unchanged.
 - **Me chip in every page's top bar** (`phTitlebarMerge`: `.ph-tbm-me`, the count of today's open things; phone ☰ · title ·
   primary · Me · ⋯, computer Me · ⋯ · primary; Appointments keeps its own toolbar chip). The drawer sits under whichever top bar

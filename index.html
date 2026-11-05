@@ -44165,6 +44165,27 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     phMePushSoon();
     return true;
   }
+  // her long notes kept here (a trip day's note, a session's note, a day's note on her Week page) share one limit. Her pick
+  // 2026-11-05 ("no longer cuts off at 4,000 characters without telling you"): a note over it is never cut and never
+  // saved short over the kept one. The kept text stays as it was and she is told with the save banner, which stays up
+  // until she taps OK. While she types that is once, then again only after the note has been back under the limit (the
+  // save runs on every pause in her typing). Leaving the box still over it tells her again only when she has closed the
+  // banner, so a quiet box never reads as saved; a banner still up is left alone, because her tap on its OK is itself a
+  // leaving of the box and a banner redrawn under that tap would not close.
+  // Her typing over the limit is held for its box (phMeNoteDraft, this page only, gone when the page closes): the boxes
+  // are redrawn from the kept note on most taps, and without this the next tap would throw away the very words the
+  // banner asks her to move.
+  const PH_ME_NOTE_MAX = 20000;
+  const phMeNoteTold = {}, phMeNoteDraft = {};
+  function phMeNoteFits(key, txt, typing, where) {
+    if (String(txt || "").length <= PH_ME_NOTE_MAX) { delete phMeNoteTold[key]; delete phMeNoteDraft[key]; return true; }
+    phMeNoteDraft[key] = String(txt);
+    if (!phMeNoteTold[key] || (!typing && !document.getElementById("phSaveError"))) phShowSaveError(`This note is over ${PH_ME_NOTE_MAX.toLocaleString("en-AU")} characters, so the newest typing is not saved yet. Move part of it to ${where || "another day's note"}.`);
+    phMeNoteTold[key] = 1;
+    return false;
+  }
+  // what a note's box shows: her typing over the limit while there is some (phMeNoteFits), else the kept note
+  const phMeNoteShown = (key, kept) => key in phMeNoteDraft ? phMeNoteDraft[key] : kept;
   const phMeNewer = (x, y) => !x ? y : !y ? x : (y.up || 0) > (x.up || 0) ? y : x;
   function phMeMerge(a, b) {
     const out = phMeBlank();
@@ -53095,7 +53116,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const note = cx && cx.n ? String(cx.n) : jn && !jn.del ? jn.t || "" : "";
     return `<tr class="jr"><td colspan="${phHubWkCols}"><div class="ph-hub-jn">
       <div class="ph-hub-tl">${row.length ? row.map(([m, c, w]) => `<div class="tli"><span class="t">${m == null ? "" : phHubClk(m)}</span><i class="p" style="--c:${c}"></i><div class="w">${w}</div></div>`).join("") : `<div class="ph-fast-empty">Nothing on this day</div>`}</div>
-      <label class="ph-hub-note"><span class="ph-hub-lab">${esc(phHubDl(D.k))} · note</span><textarea data-hub-jn="${D.k}" rows="3"${meRec ? ` maxlength="140"` : ""} aria-label="Note for ${esc(phHubDl(D.k))}">${esc(note)}</textarea></label>
+      <label class="ph-hub-note"><span class="ph-hub-lab">${esc(phHubDl(D.k))} · note</span><textarea data-hub-jn="${D.k}" rows="3"${meRec ? ` maxlength="140"` : ""} aria-label="Note for ${esc(phHubDl(D.k))}">${esc(meRec ? note : phMeNoteShown("j|" + D.k, note))}</textarea></label>
     </div></td></tr>`;
   }
   function phHubTodoHtml(W) {
@@ -56735,11 +56756,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   const phHubFocus = sel => { const i = document.querySelector("#pharmacyPage " + sel); if (i) i.focus(); };
   // ---- saves ----
   let phHubJnT = 0;
-  function phHubJnSave(k, v) {
+  function phHubJnSave(k, v, typing) {
     clearTimeout(phHubJnT);
     const meN = phMeProfile();
     if (meN && phPatientPeek(meN)) { phCxTypeSave({ name: meN, kind: "note", key: "main", day: k, value: v }); return; }   // her record: Today's visit's note for that day (one line, both places; her pick 2026-10-29)
-    const t = String(v || "").slice(0, 4000), cur = (phMeD().jn || {})[k];
+    const t = String(v || ""), cur = (phMeD().jn || {})[k];
+    if (!phMeNoteFits("j|" + k, t, typing)) return;   // over the limit: never cut, the kept note stays and she is told (her pick 2026-11-05)
     if ((cur && !cur.del ? cur.t || "" : "") === t) return;
     phMeSave((d, now) => { d.jn[k] = { id: k, t, up: now }; });
   }
@@ -56821,7 +56843,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (!T || !T.matches || !T.matches("[data-hub-jn]")) return;
     clearTimeout(phHubJnT);
     const k = T.dataset.hubJn, v = T.value;
-    phHubJnT = setTimeout(() => phHubJnSave(k, v), 900);   // kept as she types; nothing repaints
+    phHubJnT = setTimeout(() => phHubJnSave(k, v, true), 900);   // kept as she types; nothing repaints
   });
   document.addEventListener("keydown", e => {
     const T = e.target;
@@ -57121,7 +57143,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   function phTripPlanSet(pid, k, raw) {
     const x = (phMeD().tplan || {})[pid];
     if (!x || x.del || !PH_TRIP_PLAN_KEYS.includes(k)) return;
-    let v = String(raw == null ? "" : raw).trim().slice(0, k === "note" ? 4000 : 300);
+    let v = String(raw == null ? "" : raw).trim();
+    // a row's note is never cut: over the limit it is not saved, the kept note stays and she is told (phMeNoteFits; her pick 2026-11-05)
+    if (k === "note") { if (!phMeNoteFits("p|" + pid, v, false, "the day's note")) return; } else v = v.slice(0, 300);
     if (k === "s" || k === "e") v = phTripHm(v);
     if ((k === "w" || k === "day") && !v) return;
     if (k === "day") { const t = phTripGet(x.trip); if (!t || !phTripDays(t).includes(v)) return; }
@@ -57137,7 +57161,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   let phTripNoteT = 0;
   function phTripNoteSave(id, day, txt, now) {
     clearTimeout(phTripNoteT);
-    const go = () => { const v = String(txt || "").slice(0, 4000); if (v === phTripNote(id, day)) return; phTripWrite((d, n) => { d.tnotes[id + "|" + day] = { id: id + "|" + day, txt: v, up: n }; }, "", null, true); };
+    // over the limit: nothing is cut and nothing is saved over the kept note; she is told (phMeNoteFits; her pick 2026-11-05)
+    const go = () => { const v = String(txt || ""); if (!phMeNoteFits("t|" + id + "|" + day, v, !now)) return; if (v === phTripNote(id, day)) return; phTripWrite((d, n) => { d.tnotes[id + "|" + day] = { id: id + "|" + day, txt: v, up: n }; }, "", null, true); };
     if (now) go(); else phTripNoteT = setTimeout(go, 700);
   }
   // photos: picked, shrunk, kept on her own record (the one photo store), then shown on the trip
@@ -57331,7 +57356,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         if (!day || !dk) return;
         let any = false;
         (day.items || []).forEach((it, i) => { if (!it || !String(it.what || "").trim()) return; const pid = `c5-p-${dk}-${i}`; d.tplan[pid] = Object.assign({ id: pid, trip: id, day: dk, w: String(it.what).slice(0, 300), at0: now + i, up: n }, phTripHm(it.time) ? { s: phTripHm(it.time) } : {}); any = true; });
-        if (String(day.note || "").trim()) { d.tnotes[id + "|" + dk] = { id: id + "|" + dk, txt: String(day.note).slice(0, 4000), up: n }; any = true; }
+        // a one-time copy from the old app, which is read and never written: a longer note is kept up to the limit here, and all of it stays there
+        if (String(day.note || "").trim()) { d.tnotes[id + "|" + dk] = { id: id + "|" + dk, txt: String(day.note).slice(0, PH_ME_NOTE_MAX), up: n }; any = true; }
         if (any) nDay++;
       });
     });
@@ -57730,7 +57756,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
           <span>Venue</span><div class="ven">${S("v", vens, "Venue")}${v && v.nz ? `<span class="zh" lang="zh">${esc(v.nz)}</span><button type="button" class="ph-trip-btn" data-trip-drv="${esc(v.id)}">${phTripIc("car")}Driver card</button>` : ""}</div>
           ${leg ? `<span>Getting there</span><div class="der">${phTripIc(leg.ic)}${esc(leg.w)} · leave ${esc(leg.tm)}</div>` : ""}
           ${r.length ? `<span>Rules</span><div class="rules">${r.map(x => `<span class="ph-trip-rule" title="Program notes">${phTripIc(phTripRuleIc(x))}${esc(x.t)}</span>`).join("")}</div>` : ""}`}
-          <span>Note</span><div><textarea class="ph-trip-fld" data-trip-plan="${pid}" data-trip-plank="note" data-trip-fk="${esc(id + "|p." + p.id + ".note")}" rows="2" aria-label="Note">${esc(p.note || "")}</textarea></div>
+          <span>Note</span><div><textarea class="ph-trip-fld" data-trip-plan="${pid}" data-trip-plank="note" data-trip-fk="${esc(id + "|p." + p.id + ".note")}" rows="2" aria-label="Note">${esc(phMeNoteShown("p|" + p.id, p.note || ""))}</textarea></div>
           <span>Photos</span><div>${phTripPicsHtml(t, "", p.day, p.id)}</div>
         </div>
       </div>`;
@@ -57742,7 +57768,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         <div class="hd"><b>Day ${dn} · ${esc(phTripDl(k))}</b>${phTripTzOf(t) != null && k > t.from ? `<span class="sub">${esc(phTripCity(t))} time</span>` : ""}<span class="end"><button type="button" class="ph-trip-x" data-trip-selx="1" title="Close" aria-label="Close">${phTripIc("x")}</button></span></div>
         <div class="ph-trip-kv">
           <span>Add</span><div><input type="text" class="ph-trip-fld wide" data-trip-new="plan" data-trip-id="${esc(t.id)}" data-trip-day="${k}" data-trip-fk="${esc(t.id + "|pnew")}" placeholder="Add to day ${dn}" aria-label="Add to day ${dn}" autocomplete="off" enterkeyhint="done"><button type="button" class="ph-trip-btn" data-trip-planadd="1">Add</button></div>
-          <span>Note</span><div><textarea class="ph-trip-fld" data-trip-note="${esc(t.id)}" data-trip-noteday="${k}" data-trip-fk="${esc(t.id + "|note." + k)}" rows="3" aria-label="Note for day ${dn}">${esc(phTripNote(t.id, k))}</textarea></div>
+          <span>Note</span><div><textarea class="ph-trip-fld" data-trip-note="${esc(t.id)}" data-trip-noteday="${k}" data-trip-fk="${esc(t.id + "|note." + k)}" rows="3" aria-label="Note for day ${dn}">${esc(phMeNoteShown("t|" + t.id + "|" + k, phTripNote(t.id, k)))}</textarea></div>
           <span>Photos</span><div>${phTripPicsHtml(t, "", k)}</div>
         </div>
       </div>`;
@@ -57797,7 +57823,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         <div class="ph-trip-ch sm"><h4>Day ${dn} · ${esc(phTripDl(day))}</h4>${phTripTzOf(t) != null && day > t.from ? `<span>${esc(phTripCity(t))} time</span>` : ""}</div>
         ${rows ? `<div class="ph-trip-tl">${rows}</div>` : `<div class="ph-trip-none">Nothing planned</div>`}
         <div class="ph-trip-add"><input type="text" class="ph-trip-fld wide" data-trip-new="plan" data-trip-id="${esc(t.id)}" data-trip-day="${day}" data-trip-fk="${esc(t.id + "|pnew")}" placeholder="Add to day ${dn}" aria-label="Add to day ${dn}" autocomplete="off" enterkeyhint="done"><button type="button" class="ph-trip-btn" data-trip-planadd="1">Add</button></div>
-        <label class="ph-trip-note"><textarea class="ph-trip-fld" data-trip-note="${esc(t.id)}" data-trip-noteday="${day}" data-trip-fk="${esc(t.id + "|note." + day)}" rows="3" placeholder="Note" aria-label="Note for day ${dn}">${esc(phTripNote(t.id, day))}</textarea></label>
+        <label class="ph-trip-note"><textarea class="ph-trip-fld" data-trip-note="${esc(t.id)}" data-trip-noteday="${day}" data-trip-fk="${esc(t.id + "|note." + day)}" rows="3" placeholder="Note" aria-label="Note for day ${dn}">${esc(phMeNoteShown("t|" + t.id + "|" + day, phTripNote(t.id, day)))}</textarea></label>
         ${phTripPicsHtml(t, "", day)}
         ${phTripFoldsHtml(t)}
       </div>`;
@@ -114807,7 +114833,8 @@ or changing anything in Cliniko.
     // heat" reuses `dreads_heat`, "profuse sweating" reuses `sweats_easy`, "constipation" reuses
     // `constipation_tend` -- same tendencies already in the pool.
     ["irritable_restless_tend", "Mind & mood: irritable"], ["restless_tend", "Mind & mood: restless"], ["thirst_intense_tend", "Thirst: intense"],
-    ["tongue_very_dry_tend", "Tongue: dry"],   // her 2026-11-02 pick (run 21): "dry", as the chart's one Dry chip says; the key stays ["body_hot_tend", "Cold & heat: whole body feels hot"],
+    ["tongue_very_dry_tend", "Tongue: dry"],   // her 2026-11-02 pick (run 21): "dry", as the chart's one Dry chip says; the key stays
+    ["body_hot_tend", "Cold & heat: whole body feels hot"],   // a real row again 2026-11-05: it had slid into the comment above (2026-11-02), so five families weighed a sign nobody could tick
     ["pulse_large_flooding_tend", "Pulse: large, flooding"], ["pulse_float_slippery_tend", "Pulse: floating, slippery"],
     // Huang Lian (her passage, 2026-10-08).
     ["anxiety_tend", "Mind & mood: anxiety or agitation"],
@@ -115961,6 +115988,28 @@ or changing anything in Cliniko.
       phFbrEditsSig = sig;   // only once applied, so a call during boot (before the tables exist) is simply tried again
       phFbrEditsBust();
     } catch (er) { console.warn("fbrEdits sync", er); }
+  }
+  // Key guard (2026-11-05). On 2026-11-02 an edit left the Ren row body_hot_tend at the end of a // comment, so it fell out of PH_REN_SIGNS while
+  // five families still weighed it: nobody could tick it, and those families could never reach their full Ren share (phFbrMax still counted it).
+  // Nothing showed. phFbrKeyCheck() lists every weight in a family's ren / bing table that scoring can never reach, as "ren:key" / "bing:key".
+  // It finds a key the way phFbrRank does (phTriAll): a row of that side's pool, or a sign she made herself on the Guide ("a_" + its id).
+  // A weight of 0 is her "off" on the Guide and scores nothing either way, so it is not looked up. Reads only; runs once after load (with the
+  // other self-checks at the bottom of this script), warns in the console, never shows anything on screen and never throws.
+  function phFbrKeyCheck() {
+    const miss = [];
+    try {
+      const added = (PHARMACY.triLearn || {}).added || [];
+      [["ren", "p", PH_REN_SIGNS], ["bing", "d", PH_BING_SIGNS]].forEach(([tab, kind, pool]) => {
+        const ok = new Set(pool.map(r => r[0]));
+        added.forEach(a => { if (a.kind === kind && a.agreed) ok.add("a_" + a.id); });
+        Object.keys(PH_FORMULAS).forEach(id => {
+          const w = PH_FORMULAS[id][tab] || {};
+          Object.keys(w).forEach(k => { if (w[k] !== 0 && !ok.has(k) && !miss.includes(tab + ":" + k)) miss.push(tab + ":" + k); });
+        });
+      });
+      if (miss.length) console.warn(`Fang Bing Ren key check FAILED: ${miss.join(", ")}. A formula weighs each of these, but its sign pool has no such row, so it can never be ticked.`);
+    } catch (err) { console.warn("Fang Bing Ren key check errored:", err); }
+    return miss;
   }
   // Her ask (2026-10-09): colour each Bing/Ren CHIP by whichever family THAT sign itself weighs
   // highest -- not the one colour PH_FBR_ACTIVE/leading-family wash every row got before. A sign
@@ -153367,7 +153416,13 @@ Dosage: {dosage}
         dataUrl: await phRenBlobToDataUrl(r.blob),
       })));
     } catch (e) {}
-    const json = JSON.stringify({ app: "LCM - Linh Chinese Medicine", exported: new Date().toISOString(), data, renPhotos }, null, 1);
+    // her pick 2026-11-05 ("Your trips, trip notes and meals join the backup file"): her own things (the Me store, lcm-me)
+    // ride along too. It is not a daybook key, so until now no file carried them. A SIBLING key like the photos, for the
+    // same reason (a restore writes every key in `data` straight to localStorage); only the data, never this device's
+    // rev / who / dirty. Left out when there is nothing in it, it cannot be read, or this login is not one of hers (phMeOk)
+    let me = null;
+    try { if (phMeOk() && phMeAhead(phMeD(), phMeBlank())) me = phMeD(); } catch (e) {}
+    const json = JSON.stringify({ app: "LCM - Linh Chinese Medicine", exported: new Date().toISOString(), data, renPhotos, ...(me ? { me } : {}) }, null, 1);
     const fname = `LCM-pharmacy-${keyOf(new Date())}${suffix ? "-" + suffix : ""}.json`;
     try { localStorage.setItem(PH_EXPORT_AT_KEY, new Date().toISOString()); } catch (e) {}
     const dl = window.claude && window.claude.downloads;
@@ -153431,19 +153486,33 @@ Dosage: {dosage}
       return out;
     }
   };
-  let phPendingRestore = null;    // {norm, label, photos} awaiting her section choice in the panel
-  function phApplyRestoredData(data, sourceLabel, photos) {
+  let phPendingRestore = null;    // {norm, label, photos, me} awaiting her section choice in the panel
+  // her own things in a backup file (her pick 2026-11-05): does the file hold anything this device has not seen. The
+  // same ahead-check her sync uses, so a restore of them only ever adds; a part that cannot be read counts as nothing
+  const phRestMeAdds = me => { try { return !!me && phMeOk() && phMeAhead(me, phMeD()); } catch (e) { return false; } };
+  // ...and the write, through the Me store's own write: merged entry by entry (phMeMerge: the newest `up` stamp wins,
+  // this device on a tie), so nothing newer here is replaced and a removal stays removed. The fresh dirty stamp sends
+  // it to the cloud row. Gives back her things as they were. A write this device could not keep (phMeWrite false:
+  // the storage refused it) throws as the storage-full error phShowRestoreQuotaError knows, so she reads why
+  function phRestMeWrite(me) {
+    const S = phMeS();
+    if (!phMeWrite({ d: phMeMerge(S.d, me), rev: S.rev, who: S.who, dirty: Date.now() })) { const er = new Error("quota: lcm-me"); er.name = "QuotaExceededError"; throw er; }
+    return S;
+  }
+  function phApplyRestoredData(data, sourceLabel, photos, me) {
     // no more one-shot full overwrite behind a confirm() -- stage it, and let
     // the panel show WHAT changes per section before anything is touched
     const norm = {};
     Object.keys(data).forEach(k => { const v = data[k]; if (v != null) norm[k] = typeof v === "string" ? v : JSON.stringify(v); });
-    phPendingRestore = { norm, label: sourceLabel, photos: Array.isArray(photos) ? photos : [] };
+    // me = her own things from a backup file, every part given its maps (phMeNormData); an on-device backup carries none
+    phPendingRestore = { norm, label: sourceLabel, photos: Array.isArray(photos) ? photos : [], me: me && typeof me === "object" && !Array.isArray(me) ? phMeNormData(me) : null };
     phRenderRestorePanel();
   }
   function phRestoreChooserHtml() {
     if (!phPendingRestore) return "";
     const cur = { [PHARMACY_KEY]: localStorage.getItem(PHARMACY_KEY), [PRESC_KEY]: localStorage.getItem(PRESC_KEY) };
     const a = window.__lcmSections.counts(cur), b = window.__lcmSections.counts(phPendingRestore.norm);
+    const meAdds = phRestMeAdds(phPendingRestore.me);   // her own things: ticked only when the file holds something this device lacks
     const row = (id, label, now, bak) =>
       `<label class="ph-restore-row" style="gap:8px;cursor:pointer"><input type="checkbox" id="${id}" checked> <span style="flex:1">${label}</span><span style="color:var(--ph-soft);font-size:var(--fs-12)">${now == null ? "—" : now} now → ${bak == null ? "—" : bak} in backup</span></label>`;
     return `<div>
@@ -153453,6 +153522,7 @@ Dosage: {dosage}
       ${row("phRestSecInv", "Inventory, settings &amp; patient records", a.herbs == null ? null : `${a.herbs} herbs · ${a.patients} patient records`, b.herbs == null ? null : `${b.herbs} herbs · ${b.patients} patient records`)}
       ${row("phRestSecLog", "Dispense/stock log", a.log, b.log)}
       ${phPendingRestore.photos.length ? `<label class="ph-restore-row" style="gap:8px;cursor:pointer"><input type="checkbox" id="phRestSecPhotos" checked> <span style="flex:1">Patient photos</span><span style="color:var(--ph-soft);font-size:var(--fs-12)">${phPendingRestore.photos.length} in backup</span></label>` : ""}
+      ${phPendingRestore.me && phMeOk() ? `<label class="ph-restore-row" style="gap:8px;cursor:pointer"><input type="checkbox" id="phRestSecMe"${meAdds ? " checked" : ""}> <span style="flex:1">Your own things: trips, trip notes, meals, events</span><span style="color:var(--ph-soft);font-size:var(--fs-12)">${meAdds ? "adds what's missing · never replaces anything newer" : "nothing to add · this device has it all"}</span></label>` : ""}
       <div style="display:flex;gap:8px;margin-top:8px">
         <button type="button" id="phRestGo" class="ph-restore-close" style="flex:1">Restore ticked sections</button>
         <button type="button" id="phRestCancel" class="ph-restore-close" style="flex:1">Cancel</button>
@@ -153464,9 +153534,19 @@ Dosage: {dosage}
       inventory: !!(document.getElementById("phRestSecInv") || {}).checked,
       log: !!(document.getElementById("phRestSecLog") || {}).checked,
       photos: !!(document.getElementById("phRestSecPhotos") || {}).checked,
+      me: !!(document.getElementById("phRestSecMe") || {}).checked,
     };
     const pending = phPendingRestore; phPendingRestore = null;
-    if (!pending || (!ch.prescriptions && !ch.inventory && !ch.log && !ch.photos)) { phRenderRestorePanel(); return; }
+    if (!pending || (!ch.prescriptions && !ch.inventory && !ch.log && !ch.photos && !ch.me)) { phRenderRestorePanel(); return; }
+    // her own things (her pick 2026-11-05): a restore of them only ever adds. When the file holds nothing this device
+    // lacks, say so and never dress it up as a restore: with no other row ticked it stops here (no safety copy, no reload)
+    const meAdds = ch.me && phRestMeAdds(pending.me);
+    const meOnly = ch.me && !ch.prescriptions && !ch.inventory && !ch.log && !ch.photos;   // hers is the only row ticked
+    const meNone = "Nothing to add to your own things. This device already has everything in that file.";
+    if (ch.me && !meAdds) {
+      phFlashShow(meNone);
+      if (meOnly) { phRenderRestorePanel(); return; }
+    }
     // The safety copy is best-effort and must NEVER be able to block the
     // restore (2026-09-09). Measured live while putting her Acupreg clinic
     // back: phDownloadBackupFile() stopped resolving -- it awaits turning
@@ -153483,6 +153563,22 @@ Dosage: {dosage}
       new Promise(r => setTimeout(() => r("timeout"), 8000)),
     ]).then(res => { safetyOk = res === true; }).then(async () => {
       if (!safetyOk) phFlashShow("Couldn't download the safety copy first — restoring anyway. Use ⬇ Back up data afterwards.");
+      // her own things alone (her pick 2026-11-05): no pharmacy row is ticked, so nothing of the pharmacy is written.
+      // Everything below is for the pharmacy rows: its shrink window lets this device's prescriptions replace the
+      // cloud's copy whole, its compose rewrites both pharmacy keys, and it ends in a reload. Here only the Me write
+      // happens, sent by its own sync, and one plain line says what was done. Looked at again first: her sync may
+      // have brought the same things in while the safety copy downloaded
+      if (meOnly) {
+        if (!phRestMeAdds(pending.me)) phFlashShow(meNone);
+        else {
+          try { phRestMeWrite(pending.me); } catch (e) { phShowRestoreQuotaError(e); phRenderRestorePanel(); return; }
+          phMePushSoon();
+          phMeRepaint(false);
+          phFlashShow("Added what was missing to your own things.");
+        }
+        phRenderRestorePanel();
+        return;
+      }
       // her report 2026-08-15: this used to call localStorage.setItem() with
       // no try/catch at all. When the on-device auto-backup keys (below) had
       // quietly grown large enough to push this origin's storage near its
@@ -153496,7 +153592,10 @@ Dosage: {dosage}
       // honour the shrink too, or it reverts the restore before the flush
       // even runs. See the long note in mergeSections.
       window.__lcmAllowShrinkUntil = Date.now() + 20000;
+      let meWas = null;   // her own things as they were: put back if a write below fails, so "Nothing was changed" stays true
       try {
+        // her own things go first (phRestMeWrite above). A write this device could not keep stops the whole restore, loudly
+        if (meAdds && phMeOk()) meWas = phRestMeWrite(pending.me);
         if (ch.prescriptions && ch.inventory && ch.log) {
           // everything ticked = the old full restore, including any extra
           // daybook keys (column widths etc.) the backup carries
@@ -153508,10 +153607,12 @@ Dosage: {dosage}
           if (composed[PRESC_KEY] != null) localStorage.setItem(PRESC_KEY, composed[PRESC_KEY]);
         }
       } catch (e) {
+        if (meWas) phMeWrite(meWas);
         phShowRestoreQuotaError(e);
         phRenderRestorePanel();
         return;
       }
+      if (meWas) phMePushSoon();   // sent in a moment; if the reload below comes first, the dirty stamp sends it on the next sync
       // photos live in IndexedDB, entirely separate from the localStorage
       // writes above -- her spec's merge policy for phRenPhotoPut elsewhere
       // (e.g. patient merge, line ~52086) is upsert-by-id, so this reuses
@@ -153651,7 +153752,7 @@ Dosage: {dosage}
       if (!data || typeof data !== "object" || !Object.keys(data).some(k => k.startsWith("daybook"))) {
         return phFlashShow("That doesn't look like an LCM - Linh Chinese Medicine backup file.");
       }
-      phApplyRestoredData(data, `the file "${f.name}"`, Array.isArray(backup.renPhotos) ? backup.renPhotos : []);
+      phApplyRestoredData(data, `the file "${f.name}"`, Array.isArray(backup.renPhotos) ? backup.renPhotos : [], backup.me);
     });
   });
 
@@ -154642,6 +154743,9 @@ Dosage: {dosage}
   // End of day regression guard (her spec 2026-09-07 §6) -- same shape as
   // the search self-check above: runs once after load, warns in the console
   setTimeout(phEodSelfCheck, 600);
+  // Fang Bing Ren key guard (2026-11-05) -- same shape again: runs once after
+  // load, and a weight whose sign fell out of its pool warns in the console
+  setTimeout(phFbrKeyCheck, 600);
 
   // Self-check guard (her ask, 2026-08-17): typing an ambiguous herb/formula
   // name used to silently add whichever item happened to match first --
