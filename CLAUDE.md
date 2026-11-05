@@ -1305,6 +1305,8 @@ before touching an area that smells similar.
   before measuring.
 - Never reuse an existing class name for a new wrapper: one class with two
   jobs overlapped the Ren and Fang Bing Ren sign rows.
+- `#pharmacyPage .dn` is a bare global rule (10px, inline-block): a new `.dn` anywhere, a tspan too, inherits it. Grep a short class name before using it.
+- A sign picture's own step (`P.step`) rewrites its svg's class line: show or hide a picture by inline style, never a class. A `requestAnimationFrame` time can fall before the `performance.now()` taken in the tap that woke it: floor a step's dt at 0, or the motion runs backwards.
 - A write door with a whitelist (`phPmWrite`) silently drops a new field
   until the field is added to it.
 - `PH_INTAKE_FBR_P` (the intake form's Fang Bing Ren questions) must match
