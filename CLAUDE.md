@@ -688,6 +688,7 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   dispense with no formula typed is now named after the JAR, not the
   patient, so the ambiguity can't be created in the first place.
 - No white/light-mode regressions, no cut-off elements, no boxes-in-boxes.
+- **Fang Bing Ren key check** (`phFbrKeyCheck()` returns the weights whose sign is in no pool; warns in console on load. It must be `[]`: read it on the test copy after any edit to `PH_REN_SIGNS`, `PH_BING_SIGNS` or a family's table. A row left at the end of a `//` comment once dropped a sign for three days.)
 - **End of day self-check** (`phEodSelfCheck()` warns in console on load if
   broken): (1) before 16:00 the Dashboard's "Wrap up the day" row is absent,
   at/after 16:00 present; (2) the generated Cliniko prompt lists exactly as
