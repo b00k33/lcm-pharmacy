@@ -51,6 +51,7 @@ $css
 /* the patient's copy: no Draft tags, no Copy link, no door to the clinic's Iron page; the body pale with less blood flow */
 #pharmacyPage :is(.ir-draft, [data-eg-link], [data-ir-open]) { display: none !important; }
 #pharmacyPage .lens.body.pale svg { filter: saturate(.3) brightness(1.06); }
+#pharmacyPage { --eg-above: 188px; }   /* no app head above the stage here, so its fields keep their height longer */
 </style>
 </head>
 <body>
