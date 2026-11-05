@@ -919,7 +919,7 @@ record with `phAbdName` (the Guide's record, else `phPfwName`). Details and test
 The Compare tab (her 2026-11-02 picks, BUILD-NOTES "Compare formulas") holds **one picked set of formulas** (`phCmp.ids`, view state,
 never saved): Family ▾ loads a herb's whole family (`PH_REN_FAM_GROUPS`), and its first choice **Single herbs** loads the people on
 their own (`PH_FS_PEOPLE`, each the head of a family, A to Z) and opens on Ren (`data-cmp-ren`; her 2026-11-05 words, LIVE in build 20261105-185500; a set of only single herbs shows no Herbs table, on screen or in Copy: `phCmpPplOnly`,
-her 2026-11-05 "yes leave the herbs table out for single herbs", BUILT, not live), "Add a formula" adds any `PH_FORMULAS` entry, a chip's ✕ takes
+her 2026-11-05 "yes leave the herbs table out for single herbs", LIVE in build 20261105-191500), "Add a formula" adds any `PH_FORMULAS` entry, a chip's ✕ takes
 one out; a family head's Compare chip on Families and the study card's Compare with… select open the tab pre-loaded (the select no longer
 paints row badges). **Signs:** inside each sign category (the sign pool's order) one line per sign, A to Z; the sticky first column names
 the category once and each line's sign faintly; every column that weighs the sign shows its words with the Guide's dots in the formula's
