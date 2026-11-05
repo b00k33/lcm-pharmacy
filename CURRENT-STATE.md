@@ -1014,7 +1014,7 @@ The Eggs tab (her 2026-11-03 ask with her chart of mitochondria per cell, her 8 
 "Eggs teaching page") shows a patient how oxygen, red cells and the uterus feed egg quality. It stands on the Iron page's band and parts
 (`.ph-ir`): one scene at a time, the picture left, its numbered lines right, a Draft tag, the source line under the band.
 1. **Mitochondria:** a ladder, a row per cell on a ×10 scale, the bar solid to the low figure and pale to the high: sperm 50–75, liver
-   cell 1,000–2,000, heart muscle cell about 5,000, egg 100,000–600,000, brain cell about 2 million (her 2026-11-05 word; no original study found, and the source line says so). Her chart's sperm 5 was not used: it is too low. The key shows a mitochondrion with its iron (Iron's own drawing).
+   cell 1,000–2,000, heart muscle cell about 5,000, egg 100,000–600,000, brain cell of the substantia nigra about 2 million (her 2026-11-05 word and her chart's small print; calculated in Misgeld 2017, not counted). Her chart's sperm 5 was not used: it is too low. The key shows a mitochondrion with its iron (Iron's own drawing).
 2. **Why eggs:** Ripening (the egg fills with mitochondria), Ovulation (it leaves in its cloud of cells, every mitochondrion with it; no
    chromosome split or polar body, her 2026-11-04 "not relevant to the patient"), First week (the embryo divides and shares them out; the
    sperm's are not kept).
