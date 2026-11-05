@@ -817,7 +817,7 @@ always wins); today's cycle day log answers the Bing period rows (clots or dark 
 search box's "+ Add as complaint" adds the typed words as a secondary complaint through Came in for's own add. The same box
 ("Search signs or formulas") finds a formula by any word's start or its initials ("wen dan", "xcht"; `phFbrFormMatch`): its block
 wears a ring, the rest fade (never hidden), a Formulas chip row under the box (best fit first); a chip, Enter or its block looks at
-that formula and empties the box; words that find a formula and no sign leave the signs as they are (her ask, BUILT, not live).
+that formula and empties the box; words that find a formula and no sign leave the signs as they are (her ask, LIVE).
 A new formula or sign = **integrate33**.
 **Find the Ren**: look first, then two questions at a time. The look is one row at a time (her picks): the face photo with Eyes /
 Lips / Skin / Muscles spots she drags (saved on that photo, `rqZones`), six tabs that show her picks ("✓ Lips Red"), the open
@@ -1010,7 +1010,7 @@ State is `phIr` (view state, never saved).
 The figure is `PH_BODY_GEOM` with the sketch face and `phRenAnatomyHtml`'s organs; the pregnant womb carries PH_PP's baby
 (`phIrBabySvg`). Its foods include beef liver, mussels, oysters and black sesame, added to the food list for it [Iron teaching page].
 
-## Guide — Eggs (a teaching page; LIVE build 20261104-111100)
+## Guide — Eggs (a teaching page; LIVE, its dark stage since build 20261105-131600)
 The Eggs tab (her 2026-11-03 ask with her chart of mitochondria per cell, her 8 picks + 3 on mock QVR4nKWeydZGUQuswXRuY2, BUILD-NOTES
 "Eggs teaching page") shows a patient how oxygen, red cells and the uterus feed egg quality. It stands on the Iron page's band and parts
 (`.ph-ir`): one scene at a time, the picture left, its numbered lines right (scene 1: the stage full width, its lines under it), a Draft tag, the source line under the band.
@@ -1298,7 +1298,7 @@ Muscle, the week the model stops). Today stays as a dashed outline. Four places 
 store, ovaries and womb (grey as the energy left for hormones falls); not pregnant, no ketones, no bones (her picks). **You**: the
 Height · Weight · Body fat boxes save today's reading on her record (`phBodyWrite`); until all three are there it reads "Needs height
 · body fat". Light · Moderate · Active is this device's `lcm-mbf-act`, Moderate first. Phone: the body beside the sliders, the rest
-under. The model (`phMbfSim`; its figures in BUILD-NOTES) and every word are DRAFT, and a line on the tab says so. BUILT, not live.
+under. The model (`phMbfSim`; its figures in BUILD-NOTES) and every word are DRAFT, and a line on the tab says so. LIVE in build 20261105-131600.
 A meal
 **dragged** onto another day's same meal is copied there (what she had, else its plan; Undo in the toast; a meal she had there
 stays). Phone: the goals (the dial, then Reach and Stay under; the fast's goal on Your fasts ›), the steps (counts only; Eat its time), a day at a time. A cell = its meal's time (a day's own bold) + its things one per
