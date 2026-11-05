@@ -34616,10 +34616,10 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   const PH_HU_ALIAS = { "zhi gan cao": ["gan cao"], "shao yao": ["bai shao", "chi shao"], "gan di huang": ["sheng di"], "sheng di huang": ["sheng di"],
     "shu di huang": ["shu di"], "zhi fu zi": ["fu zi"], "pao fu zi": ["fu zi"], "hei shun pian": ["fu zi"], "ju pi": ["chen pi"], "gua lou gen": ["tian hua fen"],
     "mai men dong": ["mai dong"], "dan pi": ["mu dan pi"], "zhi qiao": ["zhi ke"], "ma ren": ["huo ma ren"], "ma zi ren": ["huo ma ren"], "shan yu rou": ["shan zhu yu"],
-    "jiao yi": ["yi tang"], "su ye": ["zi su ye"], "yin chen hao": ["yin chen"], "fa ban xia": ["ban xia"], "jiang ban xia": ["ban xia"], "qing ban xia": ["ban xia"],
-    "huai niu xi": ["niu xi"], "duan long gu": ["long gu"], "duan mu li": ["mu li"], "a jiao": ["e jiao"], "ku xing ren": ["xing ren"], "zhi huang qi": ["huang qi"], "hong zao": ["da zao"] };
-  // (a word with no plain letter goes too, garbled or Chinese: "Tao Ren 桃仁" is Tao Ren; "Bái" keeps its accent)
-  const phHuBase = name => String(name == null ? "" : name).split("/")[0].replace(/\([^)]*\)/g, " ").replace(/[#*]/g, " ").replace(/(^|\s)[^\x00-\x7F]+(?=\s|$)/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
+    "jiao yi": ["yi tang"], "su ye": ["zi su"], "zi su ye": ["zi su"], "yin chen hao": ["yin chen"], "fa ban xia": ["ban xia"], "jiang ban xia": ["ban xia"], "qing ban xia": ["ban xia"],
+    "huai niu xi": ["niu xi"], "duan long gu": ["long gu"], "duan mu li": ["mu li"], "a jiao": ["e jiao"], "ku xing ren": ["xing ren"], "huang qi": ["bei huang qi"], "zhi huang qi": ["bei huang qi"], "huang bo": ["huang bai"], "fang ji": ["fen fang ji"], "zhi da huang": ["da huang"], "hong zao": ["da zao"] };
+  // (a word with no plain letter goes too, garbled or Chinese: "Tao Ren 桃仁" is Tao Ren; "Bái" keeps its accent; "Ge Gen - Kudzu" is Ge Gen)
+  const phHuBase = name => String(name == null ? "" : name).split("/")[0].split(/\s[-–]\s/)[0].replace(/\([^)]*\)/g, " ").replace(/[#*]/g, " ").replace(/(^|\s)[^\x00-\x7F]+(?=\s|$)/g, " ").replace(/\s+/g, " ").trim().toLowerCase();
   const phHuKeys = name => { const b = phHuBase(name); return b ? (PH_HU_ALIAS[b] || [b]) : []; };
   const phHuTitle = key => String(key).replace(/\b\w/g, c => c.toUpperCase());
   let phHuData = null;
@@ -34632,12 +34632,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     });
     return phHuData;
   }
-  // every key the classics hold, with how many formulas use it (the Guide's Herbs list)
-  function phHuClassicKeys() {
-    const m = new Map();
-    phHuFormulas().forEach(f => new Set(f.hs.flatMap(h => h.keys)).forEach(k => m.set(k, (m.get(k) || 0) + 1)));
-    return m;
-  }
+  // every key the classics hold (they join the Guide's Herbs list; only her own herbs carry a number)
+  const phHuClassicKeys = () => new Set(phHuFormulas().flatMap(f => f.hs.flatMap(h => h.keys)));
   // the classical rows for one key: the herb's dose there, its partners (the formula's pairs that hold it, else the formula's
   // first herb), what the formula is for; the herb's place in the recipe orders the rows (the formulas it leads come first)
   function phHuClassicRows(key) {
@@ -34773,31 +34769,51 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     sec.hidden = !key;
     document.getElementById("phHerbUseBody").innerHTML = key ? phHuCardHtml(key) : "";
   }
-  // the Guide's Herbs tab: the herbs the classics hold, her own herbs too once she searches; the card beside. The order is hers (her
-  // 2026-11-04 "ascending descending order of frequency of formulas"): A–Z (the standing rule, the first open), Most or Fewest formulas,
-  // ties A–Z; remembered on this device
+  // the Guide's Herbs tab: her herbs and the herbs the classics hold; the card beside. The order is hers (her 2026-11-04 "ascending
+  // descending order of frequency of formulas"): A–Z (the standing rule, the first open), Most or Fewest formulas, ties A–Z, a herb only
+  // the books hold last; remembered on this device
   let phGdHerb = "", phGdHerbOrd = "";
   const PH_GD_HERB_ORDERS = [["az", "A–Z", "A to Z"], ["most", "Most", "Most formulas first"], ["few", "Fewest", "Fewest formulas first"]];
   const phGdHerbOrder = () => {
     if (!phGdHerbOrd) { try { phGdHerbOrd = localStorage.getItem("lcm-gd-herb-order") || "az"; } catch (e) { phGdHerbOrd = "az"; } }
     return phGdHerbOrd;
   };
+  // her 2026-11-05 "the numbers should be counting from my inventory and formulas, not classics": a herb's number = how many of her
+  // formula recipes hold it, the Hide chips applied, so it always equals the rows under Your formula. Every herb jar and every herb in
+  // a recipe has a number, 0 included. A jar is a herb here when the app doesn't call it a formula, its name isn't in capitals (how she
+  // writes a formula: ZHEN REN HUO MING YIN) and its name is pinyin (Bugs, Resolve EM: blends with no recipe on file)
+  const PH_HU_PINYIN = /^(?:(?:zh|ch|sh|[bcdfghjklmnpqrstwxyz])?[aeiou]+(?:ng|n|r)?)+$/;
+  function phHuHerbJar(h) {
+    if (phIsFormula(h)) return false;
+    const raw = String(h.name || "").split("/")[0];
+    return raw !== raw.toUpperCase() && phHuBase(raw).split(/[\s,]+/).every(w => PH_HU_PINYIN.test(w));
+  }
+  function phGdHerbCounts() {
+    const m = new Map(), hide = phGdHerbHide();
+    PHARMACY.herbs.forEach(h => { if (phHuHerbJar(h)) phHuKeys(h.name).forEach(k => { if (!m.has(k)) m.set(k, 0); }); });
+    const fj = PHARMACY.herbs.filter(phIsFormula), active = fj.filter(h => !h.stopped), stopped = fj.filter(h => h.stopped);
+    PRESC.items.forEach(t => {
+      if (!presIsFormula(t)) return;
+      const ks = new Set((Array.isArray(t.ingredients) ? t.ingredients : []).filter(i => !phAutoFormulaName(i.herb)).flatMap(i => phHuKeys(i.herb)));
+      if (!ks.size) return;
+      const off = phHuRecipeOff(t, active, stopped), add = off && hide[off[0]] ? 0 : 1;
+      ks.forEach(k => m.set(k, (m.get(k) || 0) + add));
+    });
+    return m;
+  }
   function phGdHerbsHtml() {
-    const ck = phHuClassicKeys();
-    const q = phHuBase(phGdSearch);
-    let keys = [...ck.keys()];
-    if (q) {
-      const own = new Set(PHARMACY.herbs.filter(h => !phIsFormula(h)).map(h => phHuKeys(h.name)[0]).filter(Boolean));
-      keys = [...new Set([...keys, ...own])].filter(k => k.includes(q));
-    }
-    const ord = phGdHerbOrder(), nOf = k => ck.get(k) || 0;
-    keys.sort((a, b) => (ord === "most" ? nOf(b) - nOf(a) : ord === "few" ? nOf(a) - nOf(b) : 0) || phAz(phHuTitle(a), phHuTitle(b)));
+    const own = phGdHerbCounts(), q = phHuBase(phGdSearch);
+    let keys = [...new Set([...phHuClassicKeys(), ...own.keys()])];
+    if (q) keys = keys.filter(k => k.includes(q));
+    const ord = phGdHerbOrder();
+    const rank = k => ord === "most" ? (own.has(k) ? -own.get(k) : Infinity) : ord === "few" ? (own.has(k) ? own.get(k) : Infinity) : 0;
+    keys.sort((a, b) => rank(a) - rank(b) || phAz(phHuTitle(a), phHuTitle(b)));
     if (!keys.length) return `<p class="ph-hu-none">No match</p>`;
     const sel = keys.includes(phGdHerb) ? phGdHerb : keys[0];
     return `<div class="ph-gd-hu">
       <div class="ph-gd-hu-side">
         <div class="ph-tng2-seg" role="group" aria-label="Order of the herbs">${PH_GD_HERB_ORDERS.map(([k, lbl, tip]) => `<button type="button" class="ph-ltr-qual${k === ord ? " on" : ""}" data-gd-herb-order="${k}" aria-pressed="${k === ord}" title="${tip}">${lbl}</button>`).join("")}</div>
-        <div class="ph-gd-hu-list" role="listbox" aria-label="Herbs">${keys.map(k => `<button type="button" class="ph-gd-hu-row${k === sel ? " on" : ""}" data-gd-herb="${esc(k)}" role="option" aria-selected="${k === sel}"><span>${esc(phHuTitle(k))}</span>${ck.get(k) ? `<small>${ck.get(k)}</small>` : ""}</button>`).join("")}</div>
+        <div class="ph-gd-hu-list" role="listbox" aria-label="Herbs">${keys.map(k => `<button type="button" class="ph-gd-hu-row${k === sel ? " on" : ""}" data-gd-herb="${esc(k)}" role="option" aria-selected="${k === sel}"><span>${esc(phHuTitle(k))}</span>${own.has(k) ? `<small>${own.get(k)}</small>` : ""}</button>`).join("")}</div>
       </div>
       <div class="ph-gd-hu-card"><h3>${esc(phHuTitle(sel))}</h3>${phHuCardHtml(sel, true)}</div>
     </div>`;
@@ -34822,15 +34838,22 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
     wrap.querySelectorAll(".ph-gd-hu-row").forEach(b => { const on = b === btn; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
     wrap.querySelector(".ph-gd-hu-card").innerHTML = `<h3>${esc(phHuTitle(phGdHerb))}</h3>${phHuCardHtml(phGdHerb, true)}`;
   }
-  // a tap on Hide: the card redraws in place; the list and its scroll stay
+  // a tap on Hide: the list's numbers and the card redraw in place; the same herb stays picked, the list keeps its scroll
   function phGdHerbHideSet(btn) {
     const hide = phGdHerbHide(), c = btn.dataset.gdHerbHide, wrap = btn.closest(".ph-gd-hu");
     if (hide[c]) delete hide[c]; else hide[c] = true;
     try { localStorage.setItem("lcm-gd-herb-hide", Object.keys(hide).join(",")); } catch (e) { /* this visit only */ }
     const on = wrap && wrap.querySelector(".ph-gd-hu-row.on");
     if (!on) return;
-    const key = on.dataset.gdHerb;
-    wrap.querySelector(".ph-gd-hu-card").innerHTML = `<h3>${esc(phHuTitle(key))}</h3>${phHuCardHtml(key, true)}`;
+    phGdHerb = on.dataset.gdHerb;
+    const top = wrap.querySelector(".ph-gd-hu-list").scrollTop, t = document.createElement("div");
+    t.innerHTML = phGdHerbsHtml();
+    wrap.querySelector(".ph-gd-hu-side").replaceWith(t.querySelector(".ph-gd-hu-side"));
+    wrap.querySelector(".ph-gd-hu-card").replaceWith(t.querySelector(".ph-gd-hu-card"));
+    const list = wrap.querySelector(".ph-gd-hu-list"), row = list.querySelector(".ph-gd-hu-row.on");
+    list.scrollTop = top;
+    // under Most or Fewest the picked herb can move: it stays in sight in the list
+    if (row && phGdHerbOrder() !== "az") { const r = row.getBoundingClientRect(), l = list.getBoundingClientRect(); if (r.top < l.top || r.bottom > l.bottom) list.scrollTop += r.top - l.top; }
     const b = wrap.querySelector(`[data-gd-herb-hide="${c}"]`); if (b) b.focus();
   }
   // ---- Dashboard 12-month usage & cover (her ask 2026-08-19) -- a separate,
