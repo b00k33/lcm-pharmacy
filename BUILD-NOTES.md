@@ -11836,3 +11836,13 @@ Her words, with a picture of the Guide's FU ZI group (Fu Zi, Shen Qi Wan, Si Ni 
 - **Not tested:** her devices, the Key2 itself, a real phone; the open menu was read by its options, not photographed (a native menu does not draw in a headless picture).
 - **Pages checked:** Guide › Compare.
 - **Pictures:** `shots/guide-compare-single-herbs-before-2026-11-05.png`, `shots/guide-compare-single-herbs-2026-11-05.png`.
+
+## Guide › Compare: no Herbs table for single herbs (2026-11-05)
+
+- **Her words** (her answer to my question "when only single herbs are compared, should the Herbs table underneath be left out?"): "yes leave the herbs table out for single herbs".
+- **Built:** when every picked column is a single herb (`phCmpPplOnly`: each id in `PH_FS_PEOPLE`), `phCmpHtml` leaves the Herbs table out (its Draft mark, "Missing only", "Can make now" and its key go with it), and `phCmpCopyText` copies the sign tables only. The Copy button's hint says "The table" when one sign table shows. This holds for one single herb alone, for the Single herbs choice, and for any hand-picked set of single herbs.
+- **Judgment call (mine, hers to change):** a set with any formula in it (a family, or a single herb beside a formula) keeps the Herbs table, and the single herb's column there is still its base formula (`PH_CMP_BASE`, her 2026-11-02 pick). I read her answer by the question it answered, which was about single herbs only.
+- **Tested 2026-11-05** on a test copy built from this commit's parent in the same run, no sign-in, nothing of hers touched, by real taps and change events: Ban Xia alone, the ten single herbs on Ren and on Both, and nine after a chip's ✕ each show no Herbs table and copy no herb lines; the Ban Xia family and Ban Xia beside Xiao Chai Hu Tang each keep the Herbs table and copy it; Clear leaves "No formulas"; no page errors. At 1024 wide and at 360 x 469 the page does not scroll sideways and the card ends cleanly after the key.
+- **Not tested:** her devices, the Key2 itself, a real phone.
+- **Pages checked:** Guide › Compare.
+- **Pictures:** `shots/guide-compare-single-no-herbs-2026-11-05.png`, `shots/guide-compare-banxia-alone-no-herbs-2026-11-05.png`.

@@ -90225,8 +90225,11 @@ or changing anything in Cliniko.
     const ids = phCmpIds(), hits = Object.keys(PH_FORMULAS).filter(id => ids.indexOf(id) < 0 && phGdfNorm(phGdfName(id)).indexOf(q) >= 0).sort((a, b) => (phGdfNorm(phGdfName(b)).indexOf(q) === 0) - (phGdfNorm(phGdfName(a)).indexOf(q) === 0) || phAz(phGdfName(a), phGdfName(b))).slice(0, 8);   // starts-with first, then A–Z (her A–Z lists rule, 2026-11-02)
     return hits.length ? hits.map(id => `<button type="button" class="ph-cmp-addi" data-cmp-add="${esc(id)}" style="${phGdfStyle(id)}"><span class="dot"></span>${esc(phGdfName(id))}</button>`).join("") : `<span class="ph-cmp-addi none">No match</span>`;
   }
+  // only single herbs picked (the people, PH_FS_PEOPLE): a person is compared by signs, so the Herbs table is left out, on screen and in Copy
+  // (her 2026-11-05 "yes leave the herbs table out for single herbs"). A set with any formula in it keeps the table, the head's column = its base formula
+  const phCmpPplOnly = ids => ids.length > 0 && ids.every(i => PH_FS_PEOPLE.has(i));
   function phCmpHtml() {
-    const ids = phCmpIds(), cols = ids.map(phCmpCol);
+    const ids = phCmpIds(), cols = ids.map(phCmpCol), ppl1 = phCmpPplOnly(ids);
     const fams = PH_REN_FAM_GROUPS.filter(g => g.formulas.length).slice().sort((a, b) => phAz(phGdfName(a.herb), phGdfName(b.herb)));   // A–Z (her A–Z lists rule, 2026-11-02)
     // the single herbs on their own (her 2026-11-05 "include option to just compare the single herb ren type. remember the single herb is a family for
     // formulas"): the people (PH_FS_PEOPLE), each the head of a family, side by side as Ren types. It leads the list; the families follow A–Z
@@ -90238,10 +90241,10 @@ or changing anything in Cliniko.
     if (!ids.length) return `<div class="ph-cmp">${pick}<p class="ph-cmp-none">No formulas</p></div>`;
     const sides = phCmp.side === "rb" ? ["r", "b"] : [phCmp.side];
     const cnt = {}; ["all", "key", "shared", "tells", "unique"].forEach(f => { cnt[f] = sides.reduce((s, sd) => s + phCmpSignFilter(phCmpSignRows(sd), f).length, 0); });
-    const bar = `<div class="ph-cmp-bar"><div class="gf-seg">${[["r", "Ren"], ["b", "Bing"], ["rb", "Both"]].map(([k, l]) => `<button type="button" data-cmp-side="${k}" class="${phCmp.side === k ? "on" : ""}">${l}</button>`).join("")}</div>${[["all", "All"], ["key", "Key"], ["shared", "Shared"], ["tells", "Tells"], ["unique", "Unique"]].map(([k, l]) => `<button type="button" class="gf-chip${phCmp.filter === k ? " on" : ""}" data-cmp-filter="${k}">${l} <em>${cnt[k]}</em></button>`).join("")}<span class="gf-sp"></span><button type="button" class="gf-btn" data-cmp-copy="1" title="Both tables as text, for a note or a spreadsheet">Copy</button></div>`;
+    const bar = `<div class="ph-cmp-bar"><div class="gf-seg">${[["r", "Ren"], ["b", "Bing"], ["rb", "Both"]].map(([k, l]) => `<button type="button" data-cmp-side="${k}" class="${phCmp.side === k ? "on" : ""}">${l}</button>`).join("")}</div>${[["all", "All"], ["key", "Key"], ["shared", "Shared"], ["tells", "Tells"], ["unique", "Unique"]].map(([k, l]) => `<button type="button" class="gf-chip${phCmp.filter === k ? " on" : ""}" data-cmp-filter="${k}">${l} <em>${cnt[k]}</em></button>`).join("")}<span class="gf-sp"></span><button type="button" class="gf-btn" data-cmp-copy="1" title="${ppl1 && phCmp.side !== "rb" ? "The table" : "Both tables"} as text, for a note or a spreadsheet">Copy</button></div>`;
     const shared = phCmp.filter === "tells" && ids.length > 1 ? sides.flatMap(sd => phCmpSignRows(sd).filter(r => r.w.every(x => x !== 0)).map(r => `<span>${esc(r.cat)}: ${esc(r.sg)} ${phCmpDots(Math.max(...r.w))}</span>`)) : [];
     const sh = shared.length ? `<div class="ph-cmp-shared"><b>Shared by all ${ids.length}</b>${shared.join("")}</div>` : "";
-    return `<div class="ph-cmp">${pick}${bar}${sh}${sides.map(sd => phCmpSignsTableHtml(sd, cols)).join("")}<div class="ph-cmp-lg"><span>●●●●● Key (bold) · ●●●●○ Strong · ●●●○○ Supports · ●○○○○ Weak · red = against · faint dots = not in this formula · ◯ both have it · ● only this one</span></div>${phCmpHerbsTableHtml(cols)}</div>`;
+    return `<div class="ph-cmp">${pick}${bar}${sh}${sides.map(sd => phCmpSignsTableHtml(sd, cols)).join("")}<div class="ph-cmp-lg"><span>●●●●● Key (bold) · ●●●●○ Strong · ●●●○○ Supports · ●○○○○ Weak · red = against · faint dots = not in this formula · ◯ both have it · ● only this one</span></div>${ppl1 ? "" : phCmpHerbsTableHtml(cols)}</div>`;
   }
   function phCmpCopyText() {
     const ids = phCmpIds(), cols = ids.map(phCmpCol), names = cols.map(c => c.name), lines = [];
@@ -90250,6 +90253,7 @@ or changing anything in Cliniko.
       const order = phCmpCatOrder(sd);
       phCmpSignFilter(phCmpSignRows(sd), phCmp.filter).sort((a, b) => ((a.cat in order) ? order[a.cat] : 999) - ((b.cat in order) ? order[b.cat] : 999) || a.sg.localeCompare(b.sg)).forEach(r => lines.push([r.cat + ": " + r.sg].concat(r.w.map(w => w ? String(w) : "")).join("\t")));
     });
+    if (phCmpPplOnly(ids)) return lines.join("\n");
     lines.push("");
     lines.push(["Herb"].concat(cols.map(c => c.name + (c.rec ? " · your recipe" : " · no recipe"))).join("\t"));
     phCmpHerbRows(cols).forEach(r => lines.push([r.names.join(" · ") + (r.jar ? ` (${r.jar.name}${r.jar.qty != null ? " " + phFmtG(r.jar.qty) + "g" : ""})` : " (not in inventory)")].concat(r.cells.map(c => c ? [c.dose || "", c.g > 0 ? `${c.sub ? c.sub + " " : ""}${c.g} g` : (c.dose ? "—" : "")].filter(Boolean).join(" | ") : "")).join("\t")));
