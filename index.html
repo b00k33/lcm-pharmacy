@@ -102677,7 +102677,7 @@ or changing anything in Cliniko.
   // the whole person with nothing marked and no motion of its own tells nothing (a job, a diagnosis with no place): no picture, the sign keeps its words
   const phKsNone = d => d.kind === "body" && d.verb === "glow" && !d.build && !PH_FBB_PLACE[d.place];
   // what a picture is, as one string: two signs with the same string draw the same thing
-  const phKsSigOf = d => JSON.stringify([d.kind, d.scene, d.sub, d.k, d.plate, d.lit, d.chips, d.words, d.place, d.build, d.depth, d.amp, d.shape, d.dash, d.rate, d.kind === "hand" || d.kind === "tng" || d.kind === "pulse" || d.kind === "k2" ? "" : d.verb]);
+  const phKsSigOf = d => JSON.stringify([d.kind, d.scene, d.sub, d.k, d.plate, d.lit, d.chips, d.words, d.place, d.build, d.depth, d.amp, d.shape, d.dash, d.rate, d.press, d.kind === "hand" || d.kind === "tng" || d.kind === "pulse" || d.kind === "k2" ? "" : d.verb]);
   // the motion a sign's words ask for (its description first, then the whole label); "colds" (catching colds) is not a feeling of cold
   const PH_KS_VERBS = [
     ["sweat", /sweat|perspir|clammy|moist flesh|moist skin/], ["cold", /\bcold\b|chill|\bcool|freez|icy/],
@@ -102739,7 +102739,7 @@ or changing anything in Cliniko.
       else if (subj === "Tongue" || subj === "Tongue coat") d = { kind: "tng", chips: phKsTngWords(low, subj) };
     }
     if (!d && subj === "Pulse") d = Object.assign({ kind: "pulse" }, phKsPulseOf(low));
-    if (!d) { const ab = phKsAbdWords(key) || (tw && phKsAbdWords(tw)); if (ab) d = { kind: "abd", words: ab }; }
+    if (!d) { const ab = phKsAbdWords(key) || (tw && phKsAbdWords(tw)); if (ab) d = { kind: "abd", words: ab, press: /\bon pressure\b/.test(low) }; }
     if (!d) { const k2 = phK2Of(subj, low); if (k2) d = Object.assign({ kind: "k2" }, k2); }
     if (!d && subj === "Build") d = { kind: "body", place: "", build: /thin|slim|delicate|slender|small|petite/.test(low) ? .84 : /robust|sturdy|heavy|large|overweight|obes|muscular|\bbig|solid|stocky|firm/.test(low) ? 1.16 : 1 };
     if (!d) {
@@ -102864,20 +102864,22 @@ or changing anything in Cliniko.
   }
   function phKsTngScene(svg, d) {
     const t = phTng2Blank(); new Set(d.chips).forEach(c => { const i = c.indexOf(":"); if (i > 0) phTng2Toggle(t, c.slice(0, i), c.slice(i + 1)); });
+    if (t.coatThick === "thick" && !t.coatColour) phTng2Toggle(t, "coatColour", "white");   // a thick coat with no colour named is drawn white, or its thickness would not show
     t.v2 = true; svg.setAttribute("viewBox", "0 0 240 150");
     const col = (PH_TNG_COLOURS.find(c => c[0] === t.colour) || [])[2] || (PH_TNG_COAT_COLOUR.find(c => c[0] === t.coatColour) || [])[1] || PH_KS_COL[d.verb] || PH_KS_COL.glow;
     const halo = phKsGlow(svg, svg, col === "#FFFFFF" ? "#AEB9BD" : col, { cx: 120, cy: 78, rx: 66, ry: 70 }), g = phKsEl("g", {}, svg);
     phKsNest(g, phTongueChartSvg(t, null, { ro: true }), [62, 4, 116, 144]);
+    const dry = t.coatQual && t.coatQual.dry ? phKsEl("path", { d: "M108,44 l4,7 l-3,6 l5,8 M130,60 l-3,8 l4,6 l-2,8 M114,90 l4,6 l-3,6 l3,6", fill: "none", stroke: "#A88A68", "stroke-width": 1.1, "stroke-linecap": "round", "stroke-linejoin": "round" }, g) : null;   // a dry coat cracks
     let calm = null;
     return (tt, a = 1) => {
       const k = .5 + .5 * Math.sin(tt * 1.4); g.setAttribute("transform", `translate(120 76) scale(${(1 + .03 * k).toFixed(4)}) translate(-120 -76)`); phKsOp(halo, (.2 + .45 * k) * a);
       if (a < .995 && !calm) { const h = phTng2Blank(); [["colour", "pink"], ["coatThick", "thin"], ["coatColour", "white"]].forEach(([x, y]) => phTng2Toggle(h, x, y)); h.v2 = true; calm = phKsEl("g", {}, g); phKsNest(calm, phTongueChartSvg(h, null, { ro: true }), [62, 4, 116, 144]); }
-      if (calm) phKsOp(calm, 1 - a); phKsOp(g.firstChild, a);
+      if (calm) phKsOp(calm, 1 - a); phKsOp(g.firstChild, a); if (dry) phKsOp(dry, a);
     };
   }
   // where a belly mark with no zone of its own is drawn
   const PH_KS_ABD_AT = { distended: ["umb"], bulging: ["umb"], sunken: ["umb"], flat: ["umb"], vispulse: ["epi"], cold: ["lower"], cool: ["lower"], warm: ["lower"], water: ["umb"], gas: ["umb"], tender: ["epi"], tighthypo: ["hypoR", "hypoL"], pulsation: ["umb"], tightrect: ["epi", "umb"], thinwall: ["umb", "lower"] };
-  function phKsAbdScene(svg, d) {
+  function phKsAbdScene(svg, d, rich) {
     const a = phAbd2Blank(), zs = new Set(), side = z => ({ iliac: "iliacR", hypo: "hypoR", flank: "flankR" })[z] || z;
     d.words.forEach(w => {
       const m = w.match(/^abd:tension:(\w+)/); if (m) { a.tension = m[1]; return; }
@@ -102889,11 +102891,23 @@ or changing anything in Cliniko.
     svg.setAttribute("viewBox", "0 0 240 150");
     const N = phKsNest(svg, phAbdChartSvg(a, null, { ro: true }), [56, 3, 128, 144]); if (!N) return () => {};
     const verb = d.verb === "glow" ? "beat" : d.verb;
-    const fx = [...zs].map(z => { const p = PH_ABD_ZPOS[z]; if (!p) return null; const G = phAbdZoneGeom(p[0], p[1]), [x, y] = N.map(G.cx, G.cy); return phKsFx(svg, verb, { x, y, rx: Math.max(10, G.w * N.s * .5), ry: Math.max(8, G.h * N.s * .45) }, 1); }).filter(Boolean);
+    const zc = [...zs].map(z => { const p = PH_ABD_ZPOS[z]; if (!p) return null; const G = phAbdZoneGeom(p[0], p[1]), [x, y] = N.map(G.cx, G.cy); return { x, y, rx: Math.max(10, G.w * N.s * .5), ry: Math.max(8, G.h * N.s * .45) }; }).filter(Boolean);
+    const fx = d.press ? [] : zc.map(R => phKsFx(svg, verb, R, 1));
+    // tender on pressure (her Da Huang pictures, 2026-11-05): a fingertip comes down on the place, the belly pushes it back, and the pain flares as it lands
+    let press = null;
+    if (d.press && zc.length) {
+      const R = zc[0], still = phK2Still(rich), pg = phKsEl("g", { class: "ksfx", "pointer-events": "none" }, svg), glow = phKsGlow(pg, svg, PH_KS_COL.pain, { cx: R.x, cy: R.y, rx: R.rx * 1.5, ry: R.ry * 1.5 }), ring = phKsEl("ellipse", { cx: R.x, cy: R.y, fill: "none", stroke: PH_KS_COL.pain, "stroke-width": 1.6 }, pg);
+      const fg = phKsEl("g", { "pointer-events": "none" }, svg); phKsEl("rect", { x: -5, y: -52, width: 10, height: 54, rx: 5, fill: "#F1D2BD", stroke: "#8A5A4A", "stroke-width": .8 }, fg); phKsEl("rect", { x: -3.2, y: -7.5, width: 6.4, height: 7.5, rx: 2.6, fill: "#FAEAE2", stroke: "#B98A70", "stroke-width": .5 }, fg); phKsEl("path", { d: "M-3.6,-22 q3.6,1.6 7.2,0 M-3.6,-37 q3.6,1.6 7.2,0", fill: "none", stroke: "#B98A70", "stroke-width": .6, "stroke-linecap": "round" }, fg);
+      press = { g: fg, step: t => {
+        const q = still ? .42 : (t % 2.8) / 2.8, dn = q < .28 ? phKsEase(q / .28) : q < .7 ? 1 : 1 - phKsEase((q - .7) / .3), bo = q > .28 && q < .7 ? Math.sin((q - .28) / .42 * Math.PI * 3) * Math.exp(-(q - .28) * 9) * 3.4 : 0, f = q > .28 ? Math.min(1, (q - .28) / .5) : 0;
+        fg.setAttribute("transform", `translate(${R.x.toFixed(1)} ${R.y.toFixed(1)}) rotate(32) translate(0 ${(-(1 - dn) * 16 - bo).toFixed(1)})`);
+        phKsOp(glow, q > .28 && q < .9 ? .95 * (1 - f * .6) : .12); ring.setAttribute("rx", (R.rx * (.5 + f * 1.3)).toFixed(1)); ring.setAttribute("ry", (R.ry * (.5 + f * 1.3)).toFixed(1)); phKsOp(ring, q > .28 ? .85 * (1 - f) : 0);
+      } };
+    }
     let calm = null;
     return (t, am = 1) => {
-      fx.forEach(f => f(t));
-      if (am < .995 && !calm) { const M = phKsNest(svg, phAbdChartSvg(phAbd2Blank(), null, { ro: true }), [56, 3, 128, 144]); calm = M && M.el; }
+      fx.forEach(f => f(t)); if (press) press.step(t);
+      if (am < .995 && !calm) { const M = phKsNest(svg, phAbdChartSvg(phAbd2Blank(), null, { ro: true }), [56, 3, 128, 144]); calm = M && M.el; if (calm && press) svg.insertBefore(calm, press.g); }
       if (calm) phKsOp(calm, 1 - am); phKsOp(N.el, am);
     };
   }
@@ -103057,7 +103071,8 @@ or changing anything in Cliniko.
   const PH_K2_STOM_D = "M126,46 C132,30 158,22 176,30 C196,40 204,66 200,96 C196,124 182,146 158,154 C136,160 112,156 96,146 C88,140 84,134 86,128 C92,126 100,130 110,132 C130,136 146,128 152,110 C156,92 150,70 140,58 C134,52 128,50 126,46Z";
   const PH_K2_STOM = {
     nausea: { fluid: "#D9C27A", lv: 96, amp: 5, up: "wave" }, nwater: { fluid: "#A9D3EC", lv: 96, amp: 5, up: "wave", drink: 1 }, vomit: { fluid: "#D1B663", lv: 92, amp: 7, up: "blob", col: "#C9A94E" },
-    vomitclear: { fluid: "#BFE0F2", lv: 92, amp: 7, up: "blob", col: "#8FC4E4" }, reflux: { fluid: "#C8CE55", lv: 100, amp: 3, up: "acid", col: "#B9C23C" }, belch: { fluid: "#D9C27A", lv: 112, amp: 2, up: "gas" }, slosh: { fluid: "#A9D3EC", lv: 104, amp: 12, up: "" }
+    vomitclear: { fluid: "#BFE0F2", lv: 92, amp: 7, up: "blob", col: "#8FC4E4" }, reflux: { fluid: "#C8CE55", lv: 100, amp: 3, up: "acid", col: "#B9C23C" }, belch: { fluid: "#D9C27A", lv: 112, amp: 2, up: "gas" }, slosh: { fluid: "#A9D3EC", lv: 104, amp: 12, up: "" },
+    hungry: { fluid: "#D9C27A", lv: 118, amp: 6, up: "food", col: "#B98A52" }   // a vigorous appetite: food keeps coming down and is gone almost as it lands, then the stomach growls for more
   };
   function phK2Stomach(svg, d, rich) {
     phKsPlateFill(svg, "stomach", ["oesoph", "stomach"]); svg.setAttribute("viewBox", "17 0 256 160");
@@ -103065,16 +103080,18 @@ or changing anything in Cliniko.
     const S = PH_K2_STOM[d.sub] || PH_K2_STOM.nausea, still = phK2Still(rich), clip = phK2Clip(svg, PH_K2_STOM_D), g = phKsEl("g", {}, svg);
     const liq = phKsEl("path", { d: "", fill: S.fluid, "fill-opacity": .78, "clip-path": clip }, g), bub = [0, 1, 2, 3].map(i => phKsEl("circle", { r: 2 + i % 2, fill: "#fff", "fill-opacity": .75, "clip-path": clip }, g));
     const oe = phKsEl("path", { d: "M126,46 C120,32 118,16 116,0", fill: "none", stroke: "none" }, g), oL = oe.getTotalLength(), up = phKsEl("g", {}, g);
-    const blobs = S.up === "blob" ? [0, 1, 2, 3].map(() => phKsEl("ellipse", { rx: 3.4, ry: 4.4, fill: S.col, stroke: "#fff", "stroke-width": .5 }, up)) : [], waves = S.up === "wave" ? [0, 1, 2].map(() => phKsEl("path", { d: "M-6,0 q3,-3 6,0 t6,0", fill: "none", stroke: "#7FA05A", "stroke-width": 1.6, "stroke-linecap": "round" }, up)) : [];
+    const blobs = S.up === "blob" || S.up === "food" ? [0, 1, 2, 3].map(() => phKsEl("ellipse", { rx: 3.4, ry: 4.4, fill: S.col, stroke: "#fff", "stroke-width": .5 }, up)) : [], waves = S.up === "wave" ? [0, 1, 2].map(() => phKsEl("path", { d: "M-6,0 q3,-3 6,0 t6,0", fill: "none", stroke: "#7FA05A", "stroke-width": 1.6, "stroke-linecap": "round" }, up)) : [];
     const gas = S.up === "gas" ? [0, 1, 2].map(() => phKsEl("circle", { r: 3.2, fill: "#fff", stroke: "#8FA3AB", "stroke-width": .8 }, up)) : [], acid = S.up === "acid" ? phKsEl("path", { d: "M126,46 C120,32 118,16 116,0", fill: "none", stroke: S.col, "stroke-width": 5.5, "stroke-linecap": "round" }, up) : null;
     const burn = S.up === "acid" ? phKsGlow(up, svg, "#E07A3A", { cx: 120, cy: 20, rx: 22, ry: 28 }) : null, sip = S.drink ? phK2Drop(up, "#8FC4E4", "#5E86AE") : null;
+    const growl = S.up === "food" ? [0, 1, 2].map(i => phKsEl("path", { d: `M${212 + i * 8},${86 - i * 4} q${7 + i},${13 + i * 4} 0,${26 + i * 8}`, fill: "none", stroke: "#B98A52", "stroke-width": 1.8, "stroke-linecap": "round" }, g)) : [];
     const draw = (t, a = 1) => {
-      const lv = 118 + (S.lv - 118) * a, amp = S.amp * a;
+      const hq = (t % 2.6) / 2.6, hl = hq < .3 ? 134 - 32 * phKsEase(hq / .3) : 102 + 32 * (hq - .3) / .7, lv = 118 + ((S.up === "food" ? hl : S.lv) - 118) * a, amp = S.amp * a;
+      growl.forEach((w, i) => phKsOp(w, a * Math.max(0, (hl - 116) / 18) * (.5 + .5 * Math.sin(t * 16 + i * 2))));
       let p = `M60,170 L60,${lv}`; for (let x = 60; x <= 220; x += 6) p += ` L${x},${(lv + Math.sin(x * .05 + t * 2.4) * amp * .35 + (x - 140) / 80 * Math.sin(t * 1.5) * amp).toFixed(1)}`; liq.setAttribute("d", p + " L220,170Z");
       bub.forEach((b, i) => { const f = ((t * .3) + i * .25) % 1; b.setAttribute("cx", 112 + i * 24); b.setAttribute("cy", (150 - f * 40).toFixed(1)); phKsOp(b, Math.sin(f * Math.PI) * (S.up === "gas" || S.amp >= 7 ? .9 : .35) * a); });
       phKsOp(up, a);
       const at = f => oe.getPointAtLength(oL * f);
-      blobs.forEach((b, i) => { const f = ((t * .55) + i * .25) % 1, pt = at(f); b.setAttribute("cx", pt.x.toFixed(1)); b.setAttribute("cy", pt.y.toFixed(1)); phKsOp(b, f < .08 ? f / .08 : 1); });
+      blobs.forEach((b, i) => { const f = ((t * .55) + i * .25) % 1, pt = at(S.up === "food" ? 1 - f : f); b.setAttribute("cx", pt.x.toFixed(1)); b.setAttribute("cy", pt.y.toFixed(1)); phKsOp(b, f < .08 ? f / .08 : 1); });
       waves.forEach((w, i) => { const f = ((t * .3) + i * .33) % 1, pt = at(f); w.setAttribute("transform", `translate(${(pt.x + 14 * Math.sin(t + i)).toFixed(1)} ${pt.y.toFixed(1)})`); phKsOp(w, Math.sin(f * Math.PI)); });
       gas.forEach((c, i) => { const f = ((t * .4) + i * .33) % 1, pt = at(f); c.setAttribute("cx", pt.x.toFixed(1)); c.setAttribute("cy", pt.y.toFixed(1)); c.setAttribute("r", (2 + f * 2.4).toFixed(1)); phKsOp(c, 1 - Math.pow(f, 3)); });
       if (acid) { const q = (t % 4) / 4, k = q < .55 ? phKsEase(q / .55) : q < .75 ? 1 : 1 - phKsEase((q - .75) / .25), e = oL * .92 * k; acid.setAttribute("stroke-dasharray", `${e.toFixed(1)} ${oL.toFixed(1)}`); phKsOp(burn, k * .85); }
@@ -103187,6 +103204,146 @@ or changing anything in Cliniko.
     return draw;
   }
 
+  // ---- the Da Huang person's pictures (her 2026-11-05 "improve the animations for da huang type"): each draws the sign itself, where the kit drew an
+  // organ with a gold glow ("dreads heat" drew as cold, blue). Same contract as the scenes above: fill the svg, set the 8:5 frame, return draw(t, a).
+  // A film shot shows a picture for about 3 s from t = 0, so each one tells its sign inside that ----
+  // a body that runs hot: warmth glowing from the trunk and face, heat rising off the body; then a cool draught crosses and the heat eases while it
+  // passes, the "prefers coolness" half. The mirror of the Gui Zhi cold scene
+  function phK2Hot(svg, d, rich) {
+    svg.setAttribute("viewBox", "-30 0 320 200");
+    const b = phKsFrag(phKsBody("ksb" + (++phKsUid), !!rich)); if (!b) return () => {};
+    b.setAttribute("x", 73); b.setAttribute("y", 2); b.setAttribute("width", 94); b.setAttribute("height", 196); svg.appendChild(b);
+    const id = "ksh" + (++phKsUid), defs = phKsEl("defs", {}, b), grad = (n, col, stops) => { const g = phKsEl("radialGradient", { id: id + n }, defs); stops.forEach(([o, op]) => phKsEl("stop", { offset: o, "stop-color": col, "stop-opacity": op }, g)); return `url(#${id}${n})`; };
+    const aura = phKsEl("ellipse", { cx: 110, cy: 231, rx: 112, ry: 240, fill: grad("a", "#F08A3C", [[.55, 0], [.86, .55], [1, 0]]) }, b);
+    const cf = grad("c", "#E2552E", [[0, .85], [.6, .4], [1, 0]]), core = [[110, 150, 62, 96], [110, 42, 30, 36]].map(([cx, cy, rx, ry]) => phKsEl("ellipse", { cx, cy, rx, ry, fill: cf, style: "mix-blend-mode:multiply" }, b));
+    const top = phKsEl("g", {}, svg), HX = [[80, 128], [92, 62], [108, 30], [132, 30], [148, 62], [160, 128]];
+    const heat = HX.map(() => phKsEl("path", { d: "", fill: "none", stroke: "#E0703A", "stroke-width": 2, "stroke-linecap": "round" }, top));
+    const cool = [52, 100, 148].map(y => phKsEl("path", { d: `M-50,${y} C10,${y - 9} 60,${y + 9} 120,${y} C180,${y - 9} 230,${y + 9} 300,${y}`, fill: "none", stroke: "#5FA3DA", "stroke-width": 2.2, "stroke-linecap": "round", "stroke-dasharray": "34 52" }, top));
+    const draw = (t, a = 1) => {
+      const q = t % 4.4, c = q < 1.5 ? 0 : q < 2 ? phKsEase((q - 1.5) / .5) : q < 3 ? 1 : 1 - phKsEase(Math.min(1, (q - 3) / .9)), h = (1 - .65 * c) * a, k = .5 + .5 * Math.sin(t * 2.2);
+      phKsOp(aura, (.55 + .45 * k) * h); core.forEach(e => phKsOp(e, (.7 + .3 * k) * h));
+      heat.forEach((p, i) => { const f = ((t * .45) + i * .19) % 1, y0 = HX[i][1] - f * 40; let dd = ""; for (let j = 0; j <= 9; j++) dd += (j ? " L" : "M") + (HX[i][0] + Math.sin(j * .9 + t * 6 + i) * 3).toFixed(1) + "," + (y0 - j * 3.2).toFixed(1); p.setAttribute("d", dd); phKsOp(p, Math.sin(f * Math.PI) * .85 * h); });
+      cool.forEach((s, i) => { s.setAttribute("stroke-dashoffset", (-(t * 120) - i * 30).toFixed(1)); phKsOp(s, .85 * c * Math.min(1, a * 2)); });
+    };
+    if (phK2Still(rich)) { draw(1.2); return (t, a = 1) => draw(1.2, a); }
+    return draw;
+  }
+  // constipation: dry, hard lumps packed in the last stretch of the large bowel, which widens round them; the squeeze comes down and cannot shift them.
+  // Settling, they soften and pass
+  const PH_K2_COLON = "M62,160 C52,130 50,80 56,44 C60,32 72,30 84,36 C110,50 140,48 168,36 C182,30 194,34 194,48 C196,90 196,130 192,150 C188,170 162,164 150,172 C140,178 128,180 124,188 L124,200";
+  function phK2Bowel(svg, d, rich) {
+    phKsPlateFill(svg, "bowel", ["colon"]); svg.setAttribute("viewBox", "-40 0 320 200");
+    svg.querySelectorAll(".wave, .lb").forEach(n => n.remove()); svg.classList.remove("has-lit");
+    const si = svg.querySelector('[data-s="smallint"]'); if (si) si.setAttribute("opacity", ".35");
+    const g = phKsEl("g", {}, svg), tr = phKsEl("path", { d: PH_K2_COLON, fill: "none", stroke: "none" }, g), L = tr.getTotalLength(), A = .6, B = .95, N = 7;
+    const wide = [["#C48E6E", 21], ["#E8C2A6", 17]].map(([stroke, w]) => phKsEl("path", { d: PH_K2_COLON, fill: "none", stroke, "stroke-width": w, "stroke-linecap": "round", "stroke-dasharray": `${(L * (B - A + .04)).toFixed(1)} ${(L * 2).toFixed(1)}`, "stroke-dashoffset": (-L * (A - .02)).toFixed(1) }, g));
+    const squeeze = phKsEl("path", { d: PH_K2_COLON, fill: "none", stroke: "#fff", "stroke-width": 5, "stroke-linecap": "round", "stroke-dasharray": `12 ${(L * 2).toFixed(1)}` }, g);
+    const lumps = [...Array(N)].map(() => phKsEl("ellipse", { rx: 5.4, ry: 4.6, fill: "#6B4A2E", stroke: "#3E2A1A", "stroke-width": .8 }, g));
+    const draw = (t, a = 1) => {
+      const stuck = a > .5, vis = Math.min(1, Math.abs(a - .5) * 4), q = (t % 3.2) / 3.2;
+      wide.forEach(w => phKsOp(w, stuck ? vis : 0));
+      // the squeeze runs down to the lumps and dies there; freed, it carries on to the end
+      squeeze.setAttribute("stroke-dashoffset", (-L * (.08 + q * (stuck ? A - .12 : .88))).toFixed(1)); phKsOp(squeeze, .8 * Math.max(0, Math.sin(q * (stuck ? 1.2 : 1) * Math.PI)));
+      const nudge = stuck && q > .72 ? Math.sin((q - .72) / .28 * Math.PI) * .014 : 0;
+      lumps.forEach((e, i) => {
+        const f = stuck ? A + (B - A) * i / (N - 1) + nudge * (1 - i / N) : .2 + ((t * .07 + i / N) % 1) * .8, p = tr.getPointAtLength(L * Math.min(1, f));
+        e.setAttribute("cx", p.x.toFixed(1)); e.setAttribute("cy", p.y.toFixed(1)); e.setAttribute("fill", stuck ? "#6B4A2E" : "#A9825A"); e.setAttribute("rx", stuck ? 5.4 : 6.4); e.setAttribute("ry", stuck ? 4.6 : 4);
+        phKsOp(e, vis * (stuck ? 1 : Math.min(1, (1 - f) * 12, (f - .2) * 12)));
+      });
+    };
+    if (phK2Still(rich)) { draw(2.9); return (t, a = 1) => draw(2.9, a); }
+    return draw;
+  }
+  // a dry mouth: the film of saliva on the tongue and palate thins to nothing, the drops dry before they spread, the tongue's surface cracks.
+  // Settling, the film and the drops are back
+  function phK2MouthDry(svg, d, rich) {
+    phKsPlateFill(svg, "mouth", ["oral", "tongue"]); svg.setAttribute("viewBox", "4 34 232 145");
+    svg.querySelectorAll(".lb").forEach(n => n.remove()); svg.classList.remove("has-lit");
+    const g = phKsEl("g", {}, svg), still = phK2Still(rich);
+    const dryT = phKsEl("path", { d: "M58,92 C66,82 92,78 116,80 C134,82 146,90 150,104 C154,120 148,134 134,140 C116,146 92,142 76,132 C66,124 60,110 58,100 C57,96 57,94 58,92Z", fill: "#B8674A", style: "mix-blend-mode:multiply" }, g);
+    const film = [["M61,90 C70,82 93,78.5 116,80.5 C133,82.5 144,90 148.5,102", 3.6], ["M62,75.5 C82,72.5 108,72.5 128,74.5", 2.6]].map(([dd, w]) => phKsEl("path", { d: dd, fill: "none", stroke: "#8FC8EC", "stroke-width": w, "stroke-linecap": "round" }, g));
+    const cracks = phKsEl("path", { d: "M80,88 l3,5 l-2.4,4 l3.4,5 M100,84 l2,6 l-3,4 l3,6 M120,86 l2.6,5 l-2,4.4 l3,5 M136,96 l1.6,5 l-2.6,4", fill: "none", stroke: "#7A2F2A", "stroke-width": 1, "stroke-linecap": "round", "stroke-linejoin": "round" }, g);
+    const drops = [[66, 97, 14, 2], [92, 76, 6, 10], [112, 76, 8, 9], [128, 86, 6, 8]].map(([x, y, dx, dy]) => [phK2Drop(g, "#BFE0F2", "#5E86AE"), x, y, dx, dy]);
+    return (t, a = 1) => {
+      if (still) t = 1.2;   // a tile, or reduced motion: one frame
+      const k = a < .995 ? a : still ? 1 : phK2Hold(t, 7);
+      phKsOp(dryT, .3 * k); film.forEach(f => phKsOp(f, .9 * (1 - k))); phKsOp(cracks, k);
+      drops.forEach(([e, x, y, dx, dy], i) => { const f = ((t * .45) + i * .25) % 1, sc = (1 - k) * (.7 + .3 * Math.sin(f * Math.PI)) + k * Math.max(0, .7 - f * 2.4); e.setAttribute("transform", `translate(${(x + dx * f).toFixed(1)} ${(y + dy * f).toFixed(1)}) scale(${sc.toFixed(2)})`); phKsOp(e, sc > .05 ? Math.min(1, f * 8) * (f > .85 ? (1 - f) / .15 : 1) : 0); });
+    };
+  }
+  // phlegm in the windpipe and its two branches: thick and sticky clings to the wall, strings out and barely climbs; copious fills the tube; thin and
+  // clear runs. Settling, it clears
+  const PH_K2_PHLEGM = { sticky: { c: "#C7B040", e: "#8A7622", n: 6, r: 4.8, sp: 0, str: 1 }, copious: { c: "#DCD3A2", e: "#A39A68", n: 10, r: 4.4, sp: .12 }, clear: { c: "#CFE6F2", e: "#8FB7CC", n: 6, r: 3, sp: .3 }, some: { c: "#DCD3A2", e: "#A39A68", n: 4, r: 3.8, sp: .12 } };
+  function phK2Phlegm(svg, d, rich) {
+    phKsPlateFill(svg, "airways", ["trachea", "bronchi"]); svg.setAttribute("viewBox", "24 0 192 120");
+    svg.querySelectorAll(".lb").forEach(n => n.remove()); svg.classList.remove("has-lit");
+    const S = PH_K2_PHLEGM[d.sub] || PH_K2_PHLEGM.some, g = phKsEl("g", {}, svg);
+    const tr = ["M92,92 C100,82 108,74 116,66 L118,54 L118,6", "M158,92 C146,82 134,74 124,66 L122,54 L122,6"].map(dd => { const p = phKsEl("path", { d: dd, fill: "none", stroke: "none" }, g); return [p, p.getTotalLength()]; });
+    const bl = [...Array(S.n)].map((_, i) => ({ s: S.str ? phKsEl("path", { d: "", fill: "none", stroke: S.c, "stroke-width": 1.8, "stroke-linecap": "round" }, g) : null, e: phKsEl("ellipse", { fill: S.c, stroke: S.e, "stroke-width": .7 }, g), k: i % 2, b: (i + .5) / S.n }));
+    const draw = (t, a = 1) => {
+      phKsOp(g, a);
+      bl.forEach((o, i) => {
+        const [p, L] = tr[o.k], f = S.str ? .1 + o.b * .72 + .035 * Math.sin(t * .9 + i * 1.7) : (o.b + t * S.sp) % 1, pt = p.getPointAtLength(L * f), wob = 1 + .12 * Math.sin(t * 2 + i);
+        o.e.setAttribute("cx", pt.x.toFixed(1)); o.e.setAttribute("cy", pt.y.toFixed(1)); o.e.setAttribute("rx", (S.r * wob).toFixed(2)); o.e.setAttribute("ry", (S.r * (S.str ? .8 : .9) / wob).toFixed(2));
+        phKsOp(o.e, S.str ? .95 : Math.min(1, f * 10, (1 - f) * 8));
+        if (o.s) { const q = p.getPointAtLength(L * Math.min(1, f + .09 + .03 * Math.sin(t * .9 + i))); o.s.setAttribute("d", `M${pt.x.toFixed(1)},${pt.y.toFixed(1)} Q${((pt.x + q.x) / 2 + (o.k ? 3 : -3)).toFixed(1)},${((pt.y + q.y) / 2).toFixed(1)} ${(q.x + (o.k ? -3.5 : 3.5)).toFixed(1)},${q.y.toFixed(1)}`); }
+      });
+    };
+    if (phK2Still(rich)) { draw(1.2); return (t, a = 1) => draw(1.2, a); }
+    return draw;
+  }
+  // dizziness: the room turns round the head, the eyes half shut and the head swaying with it; settling, the turning fades and the head is still
+  function phK2Dizzy(svg, d, rich) {
+    const F = phK2FaceOn(svg, { move: true }); if (!F) return () => {};
+    const col = "#6F7FB8", OD = "M34,58 a86,21 0 1,0 172,0 a86,21 0 1,0 -172,0", C = 2 * Math.PI * Math.sqrt((86 * 86 + 21 * 21) / 2), still = phK2Still(rich);
+    const mk = g => [phKsEl("path", { d: OD, fill: "none", stroke: col, "stroke-width": 1.2, "stroke-dasharray": "2 5", opacity: .5 }, g), phKsEl("path", { d: OD, fill: "none", stroke: col, "stroke-width": 3.2, "stroke-linecap": "round", "stroke-dasharray": `${(C * .09).toFixed(1)} ${(C * .2433).toFixed(1)}` }, g), g];
+    // the far half of the turn passes behind the head, the near half in front of it
+    const bg = phKsEl("g", { transform: "rotate(-10 120 58)" }); svg.insertBefore(bg, F.b);
+    const back = mk(bg), front = mk(phKsEl("g", { transform: "rotate(-10 120 58)" }, phKsEl("g", { "clip-path": phK2Clip(svg, "M-20,82.7 L260,33.3 L260,170 L-20,170Z") }, svg)));
+    const draw = (t, a = 1) => {
+      const off = (-(t * C * .32)).toFixed(1), sw = still ? 0 : a;
+      [back, front].forEach(([tk, cm, g]) => { cm.setAttribute("stroke-dashoffset", off); phKsOp(g, a); });
+      F.b.setAttribute("x", (Math.sin(t * 1.3) * 3.2 * sw).toFixed(2)); F.b.setAttribute("y", (Math.sin(t * 2.6 + 1) * 1.2 * sw).toFixed(2));
+      const lid = 1 - a * (.42 + .1 * Math.sin(t * 1.3 + .6)); F.upd({ lidL: lid, lidR: lid, browL: .5 * a, browR: .5 * a });
+    };
+    if (still) { draw(1.2); return (t, a = 1) => draw(1.2, a); }
+    return draw;
+  }
+  // a headache: the pain throbs at the temples and across the brow, the brows knit and the eyes narrow with each throb; a migraine sits on one side
+  function phK2Headache(svg, d, rich) {
+    const F = phK2FaceOn(svg, { move: true }); if (!F) return () => {};
+    const one = d.sub === "migraine", col = "#D9534F", still = phK2Still(rich);
+    const gl = (one ? [[127, 33, 8.5, 10.5], [120, 27, 10, 6]] : [[93, 33, 7.5, 9.5], [127, 33, 7.5, 9.5], [110, 25.5, 15, 5.5]]).map(([cx, cy, rx, ry]) => { const e = phKsGlow(F.g, svg, col, { cx, cy, rx, ry }); e.style.mixBlendMode = "multiply"; return e; });
+    const top = phKsEl("g", {}, svg), arcs = []; (one ? [1] : [-1, 1]).forEach(s => [0, 1].forEach(i => arcs.push([phKsEl("path", { d: "", fill: "none", stroke: col, "stroke-width": 1.8, "stroke-linecap": "round" }, top), s, i])));
+    const draw = (t, a = 1) => {
+      const q = t % 1, k = q < .14 ? q / .14 : q < .5 ? 1 - (q - .14) / .36 : 0;
+      gl.forEach(e => phKsOp(e, (.5 + .5 * k) * a));
+      arcs.forEach(([p, s, i]) => { const f = (t + i * .5) % 1, x = 120 + s * (41 + f * 24); p.setAttribute("d", `M${x.toFixed(1)},${(50 - f * 4).toFixed(1)} q${(s * (6 + f * 3)).toFixed(1)},${(11 + f * 4).toFixed(1)} 0,${(22 + f * 8).toFixed(1)}`); phKsOp(p, (1 - f) * .85 * a); });
+      const ow = 1 - a * (.3 + .14 * k), ex = one ? 1 - a * (.5 + .16 * k) : ow;
+      F.upd({ lidL: one ? 1 - a * .2 : ow, lidR: ex, browL: a * (one ? .4 : .9 + .5 * k), browR: a * (.9 + .5 * k), foldL: .35 * a, foldR: .35 * a });
+    };
+    if (still) { draw(.14); return (t, a = 1) => draw(.14, a); }
+    return draw;
+  }
+  // a stuffy chest: the lungs open only part of the way to a full breath (the dashed line), a weight pressing in on the breastbone; settling, the
+  // breath fills to the line
+  function phK2Chest(svg, d, rich) {
+    phKsPlateFill(svg, "airways", ["lung"]); svg.setAttribute("viewBox", "-40 0 320 200");
+    svg.querySelectorAll(".lb").forEach(n => n.remove()); svg.classList.remove("has-lit");
+    const parts = [...svg.querySelectorAll('[data-s="lung"], [data-s="apex"], [data-s="bronchi"]')], FULL = 1.13; parts.forEach(p => { p.style.transformBox = "view-box"; p.style.transformOrigin = "120px 96px"; });
+    const g = phKsEl("g", {}, svg);
+    ["M108,26 C82,22 54,44 44,82 C36,112 36,146 42,176 C70,186 98,182 112,172 C108,136 110,86 108,26Z", "M132,26 C158,22 186,44 196,82 C204,112 204,146 198,176 C176,184 152,182 142,174 C150,164 152,152 142,140 C134,130 132,112 134,96Z"].forEach(dd => phKsEl("path", { d: dd, fill: "none", style: "stroke:var(--ph-good)", "stroke-width": 1.4, "stroke-dasharray": "4 3", opacity: .8, transform: `translate(120 96) scale(${FULL}) translate(-120 -96)` }, g));
+    const wt = phKsGlow(g, svg, "#7B5EA7", { cx: 120, cy: 100, rx: 40, ry: 58 }), ar = [-1, 1].map(s => [phKsEl("path", { d: "M-7,-6 L0,0 L-7,6 M-7,0 L-19,0", fill: "none", stroke: "#7B5EA7", "stroke-width": 2.4, "stroke-linecap": "round", "stroke-linejoin": "round" }, g), s]);
+    const draw = (t, a = 1) => {
+      const br = .5 - .5 * Math.cos(t * 2 * Math.PI / 3.4), s = 1 + (FULL - 1) * br * (1 - .72 * a);
+      parts.forEach(p => { p.style.transform = `scale(${s.toFixed(4)})`; });
+      phKsOp(wt, (.5 + .35 * br) * a);
+      ar.forEach(([p, sd]) => { p.setAttribute("transform", `translate(${(120 - sd * (106 - 9 * br)).toFixed(1)} 100) scale(${sd} 1)`); phKsOp(p, (.45 + .55 * br) * a); });
+    };
+    if (phK2Still(rich)) { draw(1.7); return (t, a = 1) => draw(1.7, a); }
+    return draw;
+  }
+
   // a build: the usual person small beside this one, drawn to scale
   function phK2Build(svg, d, rich) {
     svg.setAttribute("viewBox", "0 0 240 150");
@@ -103195,7 +103352,7 @@ or changing anything in Cliniko.
     phK2Tx(svg, 72, 146, "Usual", { "text-anchor": "middle" });
     return () => {};
   }
-  const PH_K2_SC = { night: phK2Night, mood: phK2Mood, urine: phK2Urine, stomach: phK2Stomach, lips: phK2Lips, eyes: phK2Eyes, complexion: phK2Complexion, skin: phK2Skin, rush: phK2Rush, build: phK2Build };
+  const PH_K2_SC = { night: phK2Night, mood: phK2Mood, urine: phK2Urine, stomach: phK2Stomach, lips: phK2Lips, eyes: phK2Eyes, complexion: phK2Complexion, skin: phK2Skin, rush: phK2Rush, build: phK2Build, hot: phK2Hot, bowel: phK2Bowel, mouthdry: phK2MouthDry, phlegm: phK2Phlegm, dizzy: phK2Dizzy, headache: phK2Headache, chest: phK2Chest };
   // which scene a sign's own words ask for; null keeps the kit
   function phK2Of(subj, low) {
     const w = low.replace(/^[^:]*:\s*/, ""), has = rx => rx.test(w);
@@ -103212,6 +103369,14 @@ or changing anything in Cliniko.
     if (subj === "Complexion") { const sub = has(/green/) ? "green" : has(/dark yellow/) ? "darkyellow" : has(/yellow|sallow/) ? "sallow" : has(/slightly dark/) ? "sdark" : has(/dark/) ? "dark" : has(/red|flush/) ? "red" : has(/pale/) ? "pale" : has(/luster/) ? "dull" : has(/oily|greasy/) ? "oily" : has(/puffy/) ? "puffy" : ""; return sub ? { scene: "complexion", sub } : null; }
     if (subj === "Skin") { const sub = has(/fair/) ? "fair" : has(/fine/) ? "fine" : has(/moist/) ? "moist" : has(/\bdry/) ? "dry" : has(/eczema/) ? "eczema" : has(/jaundice/) ? "jaundice" : has(/pale|white/) ? "pale" : has(/redness/) ? "red" : has(/weep/) ? "weepy" : has(/itch/) ? "itchy" : has(/rash|spots/) ? "rash" : ""; return sub ? { scene: "skin", sub } : null; }
     if (subj === "Sensation" && has(/rush/)) return { scene: "rush", sub: "" };
+    if (subj === "Cold & heat" && has(/dreads heat|averse to heat/)) return { scene: "hot", sub: "" };
+    if (subj === "Bowels" && has(/constipat/)) return { scene: "bowel", sub: "stuck" };
+    if (subj === "Appetite" && has(/vigorous|excessive/)) return { scene: "stomach", sub: "hungry" };
+    if (subj === "Mouth & throat" && has(/\bdry/)) return { scene: "mouthdry", sub: "" };
+    if (subj === "Phlegm") return { scene: "phlegm", sub: has(/watery|clear/) ? "clear" : has(/thick|sticky/) ? "sticky" : has(/copious/) ? "copious" : "some" };
+    if (subj === "Head" && has(/dizz|vertigo/)) return { scene: "dizzy", sub: "" };
+    if (subj === "Head" && has(/headache|migraine/)) return { scene: "headache", sub: has(/migraine/) ? "migraine" : "" };
+    if (subj === "Chest & ribs" && has(/stuff|oppress/)) return { scene: "chest", sub: "" };
     if (subj === "Build") { const k = /thin|slim|delicate|slender|small|petite|emaciat/.test(w) ? .84 : /robust|sturdy|heavy|large|overweight|obes|muscular|\bbig|solid|stocky|firm|full-figured/.test(w) ? 1.16 : 0; return k ? { scene: "build", k } : null; }
     return null;
   }
@@ -103325,7 +103490,7 @@ or changing anything in Cliniko.
     if (c) { svg.setAttribute("viewBox", c[0]); svg.setAttribute("class", c[1]); svg.innerHTML = c[2]; S.step = () => {}; S.still = true; return; }
     const d = phKsDesc(key); svg.innerHTML = ""; svg.setAttribute("class", "ph-ks-svg");
     let draw;
-    try { draw = d.kind === "hand" ? PH_KS_SC[d.scene](svg, d, !small) : d.kind === "k2" ? PH_K2_SC[d.scene](svg, d, !small) : d.kind === "plate" ? phKsPlateScene(svg, d) : d.kind === "tng" ? phKsTngScene(svg, d) : d.kind === "abd" ? phKsAbdScene(svg, d) : d.kind === "pulse" ? phKsPulseScene(svg, d) : phKsBodyScene(svg, d, !small); } catch (e) { draw = () => {}; }
+    try { draw = d.kind === "hand" ? PH_KS_SC[d.scene](svg, d, !small) : d.kind === "k2" ? PH_K2_SC[d.scene](svg, d, !small) : d.kind === "plate" ? phKsPlateScene(svg, d) : d.kind === "tng" ? phKsTngScene(svg, d) : d.kind === "abd" ? phKsAbdScene(svg, d, !small) : d.kind === "pulse" ? phKsPulseScene(svg, d) : phKsBodyScene(svg, d, !small); } catch (e) { draw = () => {}; }
     S.amt = 1; S.amtTo = 1; S.amtK = 1; S.c = 0;
     const paint = t => { draw(t, S.amt); if (svg.__a !== S.amt) { svg.__a = S.amt; svg.querySelectorAll(":scope > .ksfx").forEach(g => phKsOp(g, S.amt)); if (d.kind === "plate" || d.kind === "hand") svg.classList.toggle("has-lit", S.amt > .5); } };
     S.redraw = () => { try { paint(PH_KS_T0 + S.c); } catch (e) { /* keep the last frame */ } };
