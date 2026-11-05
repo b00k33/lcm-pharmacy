@@ -1291,7 +1291,7 @@ are DRAFT.
 show me how my food intake is impacting my health"; her picks; `phMbf*`, `PH_MBF_*`), her own Meals only: the Meals body (`phMbdSvg`
 with a `build`, so it is the one body) drawn at her height, weight and body fat, changing shape over the weeks ahead as she eats what
 three sliders say, **Carbs · Protein · Fat** a day. They open on this week's average (Numbers' Average row, `phMbfWeekOf`), a tick
-for the week and one for her goal, **This week · My goal** set them back. Under them Eat against Burn, **Play** (once when the tab
+for the week and one for her goal, **This week · My goal · Muscle up** set them. Under them Eat against Burn, **Play** (once when the tab
 opens; reduced motion: the end only), **4 weeks · 12 weeks · 1 year** (opens on 12), a bar to drag through the weeks, the weight line
 over the BMI 18.5 to 25 band, four tiles (Weight · Fat · Muscle + lean · Liver store + water) and flags (BMI, Energy for hormones,
 Muscle, the week the model stops). Today stays as a dashed outline. Four places change on the body: fat stores, muscle, the liver's
@@ -1299,6 +1299,30 @@ store, ovaries and womb (grey as the energy left for hormones falls); not pregna
 Height · Weight · Body fat boxes save today's reading on her record (`phBodyWrite`); until all three are there it reads "Needs height
 · body fat". Light · Moderate · Active is this device's `lcm-mbf-act`, Moderate first. Phone: the body beside the sliders, the rest
 under. The model (`phMbfSim`; its figures in BUILD-NOTES) and every word are DRAFT, and a line on the tab says so. LIVE in build 20261105-131600.
+**Two views** (her 2026-11-05 picks; one switch at the tab's top, this device's `lcm-mbf-view`): **Forecast** (the above) · **Over
+time** (`phMbt*`, `PH_MBT_*`). BUILT, not live, all of this paragraph:
+- *Forecast, the look* (her "make the subcutaneous fat more 3d and textured and dramatic looking", picks Bolder · Fibres): the fat is
+  a lobed layer under the skin with deep shadow and shine (`phMbdFatBand`, patterns in `phMbdDefs`), the muscles fibred spindles,
+  shoulders and forearms with the arms, thighs and calves. `PH_MBD_BOLD`: the Meals figures only (so Try's body has it too); the
+  Guide's Iron and Eggs pages keep their quiet drawing, identical to before.
+- *Forecast, training and the goal* (her "the goal is for the animation to shape me into growing muscle and shrinking fat"):
+  **Strength a week 0 · 1 · 2 · 3 · 4+** opens on her Fitness log (the last 4 weeks, `phMbfStLog`, "from your log"); a chip is a
+  what-if. **Muscle up** sets the sliders to the eating that grows muscle and shrinks fat (protein 1.8 g a kg, a tenth under her
+  burn while her body fat is 24% or over, fat 30% of the kJ, strength at 3; `phMbfUp`) and plays the figure into that body.
+- *Over time* (her "include my physical circumference and physical body images similar to tongue pictures so i can view overtime",
+  her 8 picks). Left, **Tape**: Waist · Hips · Bust · Thigh · Upper arm, each a cm box (today's reading on her record,
+  `body.tape`, `phTapeWrite`; an older day is never edited), a small line through her readings, the change since the first; under
+  them Waist to height · Waist to hip. Right, **Photos**: Front · Side · Back; Last (or the Past one picked from the strip)
+  beside Today, the strip of earlier dates, **Play** flips through the dates, **Show / Cover** (covered with a blur each time the
+  tab opens; a first tap on a covered photo uncovers it). A photo opens big: ‹ ›, its date (hers to change), Delete with the
+  usual Undo; Escape closes it and nothing behind it. Body photos are kinds `shapeFront | shapeSide | shapeBack` in her own
+  record's photo store; like meal photos they show here only (`phMbtIsShape` keeps them out of her Photos pages and Records), and
+  a phone sends them on by the photo relay. A photo from the gallery keeps the day it was taken.
+- *Her figure follows her tape*: a woman's newest waist and hips bend the figure at the waist and hips (`phBodyBuild`'s `tf`; the
+  forecast holds today's bend through the weeks).
+- *Due every 4 weeks* from her newest tape reading or body photo (`phMbtDue`): a gold dot on Over time and "Tape due" as the Meals
+  row's small line in her menu; nothing is due before a first reading.
+- DRAFT: the training figures, Muscle up's rule, the tape's reference figure, every word.
 A meal
 **dragged** onto another day's same meal is copied there (what she had, else its plan; Undo in the toast; a meal she had there
 stays). Phone: the goals (the dial, then Reach and Stay under; the fast's goal on Your fasts ›), the steps (counts only; Eat its time), a day at a time. A cell = its meal's time (a day's own bold) + its things one per
