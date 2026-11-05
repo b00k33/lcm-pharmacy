@@ -917,7 +917,7 @@ removed while the Guide draws one (`phGdStripHidden`, on paint and on each Guide
 also sets `presHxScreenName`); `renderHxScreen` and `phAbdRepaint` take the open Guide's host first; abdomen taps resolve the
 record with `phAbdName` (the Guide's record, else `phPfwName`). Details and tests: BUILD-NOTES "The Guide and the record's pages".
 
-## Guide — Triangle (a teaching page)
+## Guide — Triangle (a teaching page; LIVE in build 20261105-202200)
 Her word 2026-11-05: "include this page in the guide section"; BUILD-NOTES "The growing triangle". The Fang Bing Ren page's stage with no patient (`phFtgGuideHtml`, `phFtgGuideMount`): the count, Tick for me (Sweats easily · Robust: one sign every 1.5 s, a tap or leaving the tab cancels it), Clear, Search, then the Bing and Ren signs A–Z. Picks stay in memory (`phFtgG`), never saved. Story opens the 88 s film (`phFtgFilmMake`, built on the first tap; its scores are `phFbrRank`, its words DRAFT). `phFtgStop` on a tab change.
 
 ## Guide — Compare (formulas side by side)
