@@ -11583,3 +11583,20 @@ Her words, with a picture of the chart: "include brain cells is 2 million".
 - **Not tested:** the new build on her real data on screen; her own devices, the Key2.
 - **Pages checked:** Guide › Herbs (wide + phone), Guide › Compare's rows.
 - **Not live** until her word.
+
+## Guide › Eggs: the 2 million has its source (2026-11-05)
+
+Her message: the picture of her chart, no words, after I asked her for the source. Its small print under the brain says "(Substantia nigra)". I had not used that on 2026-11-03 or earlier today.
+
+- **The source:** Misgeld and Schwarz, Neuron 2017;96:651-666 (PMC5687842), read in its full text. It is calculated, not counted: one human substantia nigra neuron forms 1 to 2 million striatal synapses (Bolam and Pissadaki 2012, PMC3504389, scaled up from rats), with mitochondria at almost half of them and through several metres of axon. They call 2 million per cell reasonable. Reviews since cite it for this (Lee 2020, Kodavati 2020, Curtis 2022, Basak 2026).
+- **This corrects** "no source found" (2026-11-03) and "original study not found" (the row's note above, and the source line in build 20261105-110700).
+- **The row:** still "Brain cell", about 2 million, with "substantia nigra" in small print under the name, as on her chart. The figure belongs to that one unusual cell, not to brain cells in general. Bolam and Pissadaki call its axon's structure unique.
+- **The source line:** "substantia nigra brain cell about 2 million, calculated rather than counted (Misgeld 2017)".
+- **Why the earlier searches missed it:** they were web searches for a brain cell or neuron. A full-text search of Europe PMC for the exact words "2 million mitochondria" found it at once.
+- **Not changed:** the bars, the scale, the words beside the chart, the film. Her chart's Average cell 100 is still not on the chart, and its sperm 5 stays 50-75.
+- **eggs.html:** remade by the script from a scratch copy. On the saved page the script reproduced the saved eggs.html exactly first.
+- **Tested** on test copies, nothing saved to her data: eggs.html at desktop, 375 wide and 360 by 469, Guide › Eggs in the app. Five rows in order, the small print on its own line, name and number clear of each other, no errors, no sideways scroll.
+- **Worth knowing:** in an 800-wide window with the side rail open, the scale's words still crowd (noted above). Not changed.
+- **Not tested:** her own devices, the Key2.
+- **Pages checked:** Guide › Eggs (Mitochondria), eggs.html.
+- **BUILT, not live:** it goes with her next "push live". Until then the live page still says "original study not found".
