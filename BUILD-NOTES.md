@@ -11650,3 +11650,4 @@ Her word: "yes", to adding her chart's "Average cell, 100", with its source trac
 - **Not tested:** her real record and week; her devices and the Key2 itself; a reading kept across a reload (the test copy has no sign-in, so it keeps no records; the save is `phBodyWrite`'s own); reduced motion on a real device; a week with no food logged was seen only as "My goal".
 - **Pictures:** `shots/meals-body-week-2026-11-05.jpg`, `meals-body-more-2026-11-05.jpg`, `meals-body-phone-2026-11-05.jpg`.
 - **BUILT, not live:** it goes with her next "push live". Every word on the tab is DRAFT until she has read it.
+- **Meals › Body, tablet width (same day, after the first save):** between the phone and a wide screen the four tiles were squeezed to 52 px each. The figure's column is now at most 36% of the tab and the tiles wrap two by two when they do not fit. Checked at 820, 1280 and 360 wide. BUILT, not live.
