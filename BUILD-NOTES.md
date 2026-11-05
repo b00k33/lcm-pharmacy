@@ -11600,3 +11600,19 @@ Her message: the picture of her chart, no words, after I asked her for the sourc
 - **Not tested:** her own devices, the Key2.
 - **Pages checked:** Guide › Eggs (Mitochondria), eggs.html.
 - **BUILT, not live:** it goes with her next "push live". Until then the live page still says "original study not found".
+
+## Guide › Eggs: Average cell on the mitochondria chart (2026-11-05)
+
+Her word: "yes", to adding her chart's "Average cell, 100", with its source traced first.
+
+- **The row:** Average cell, about 100, second, because a scale ascends. A small round cell icon (`PH_EG_IC.average`).
+- **The source, said plainly:** no paper I read measures one average for human cells. They give ranges: "~50 to hundreds" (He, Nature 2010;464:610, PMC3176451), tens to hundreds (Averbeck 2021), 100 to 1000 (Tian 2021), hundreds to thousands (Bergamini 2023). He 2010 cites Legros 2004, whose abstract counts nucleoids, not mitochondria. I read only that abstract. So 100 is a fair round figure, low in those ranges, not a measurement.
+- **The source line:** "average cell about 100, within the 50 to hundreds reported for typical human cells (He 2010)". Patients see it on the link too. For her to overrule.
+- **The timing:** the new row pushes the egg's bar later, so scene 1's second line ("Your egg has more of them...") moved from 2200 to 2900 ms to still light as the egg's bar starts, and the scene rests at 5700 ms, not 4300, so the last bar finishes first.
+- **Not changed:** the words beside the chart, the film. Sperm stays 50-75, not her chart's 5.
+- **eggs.html:** remade by the script from a scratch copy. On the saved page the script reproduced the saved eggs.html exactly first.
+- **Tested** on test copies, nothing saved to her data: eggs.html at desktop, 375 wide and 360 by 469, Guide › Eggs in the app. Six rows in order, bars at 29, 31, 51, 57, 89 and 97%, every number finishes before the scene rests, it still moves on to scene 2, no errors, no sideways scroll, no name over its number.
+- **Worth knowing:** a timing check in a hidden pane reads the bars as 0, because the page draws no frames. Take a screenshot to force them. In an 800-wide window with the side rail open, the scale's words overlap (noted above). Not changed.
+- **Not tested:** her own devices, the Key2.
+- **Pages checked:** Guide › Eggs (Mitochondria), eggs.html.
+- **BUILT, not live:** it goes with her next "push live", with the substantia nigra correction.
