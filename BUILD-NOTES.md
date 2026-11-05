@@ -11806,4 +11806,4 @@ Her word 2026-11-04, adding 2 eggs to a lunch on Meals: "make an animation for h
 - **Not tested:** her real phone and the Key2; a real signed-in account; the live URL until it goes live.
 - **Pages checked:** Guide › Eating eggs, Guide › Iron, Meals › Try, the Appointments toolbar's panel, `eating-eggs.html`.
 - **Pictures:** `shots/eating-eggs-2026-11-05.png`, `eating-eggs-play-2026-11-05.png`, `eating-eggs-phone-2026-11-05.png`, `eating-eggs-link-2026-11-05.png`, `eating-eggs-chip-2026-11-05.png`.
-- **BUILT, not live:** it goes with her next "push live".
+- **LIVE in build 20261105-175200** (her "Yes, push it live", by popup in this session, after another session passed on her "push"; commit dc3d62b2, publish d22fdccc). The live page and the live `eating-eggs.html` were read back: the link page is byte for byte the saved one, and the same test ran on the site's own copies with a made-up person and no errors. Her devices need the gold Update.
