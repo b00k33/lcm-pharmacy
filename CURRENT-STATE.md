@@ -958,8 +958,8 @@ lines, its body place's close-up (`PH_FBBP`) or the body figure, moving by its w
 board shows the big one beside a row she points at; Compass sign rows and Ask her answers carry a small still one (none on a
 phone). One picture moves at a time; all still under reduced motion. Only Gui Zhi's Key signs and the throat signs are hand-drawn so far [Key sign
 pictures].
-**Herbs (how a herb is used; her 2026-11-02 picks: both, all three places, a table):** a list of the herbs the classics hold
-(A–Z · Most · Fewest formulas, her pick kept on this device, ties A–Z: `phGdHerbOrder`; the count of formulas beside; her own herbs join once she searches) and the picked herb's card beside it (`phGdHerbsHtml`,
+**Herbs (how a herb is used; her 2026-11-02 picks: both, all three places, a table):** a list of her herbs and the herbs the classics hold
+(A–Z · Most · Fewest formulas, her pick kept on this device, ties A–Z, a herb only the books hold last: `phGdHerbOrder`; beside each, how many of HER formula recipes hold it, the Hide chips applied, 0 included, no number on a herb only the books hold: `phGdHerbCounts`, her 2026-11-05 "counting from my inventory and formulas, not classics") and the picked herb's card beside it (`phGdHerbsHtml`,
 `phGdHerbPick` updates in place). The card (`phHuCardHtml`, one card for all three places) is **In your prescriptions** (times used,
 usual grams, most-often partners and her recipes, worked out from `PRESC.items` when drawn, never stored: `phHuOwn`) over **In the
 classics** (Formula · Dose · With · Does; 52 formulas in `PH_HU_SRC`, marked Draft until she checks them; the book's "Shao Yao"
