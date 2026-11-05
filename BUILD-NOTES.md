@@ -11789,4 +11789,4 @@ Her words, answering my question after the toolbar went live (a block's tap stil
 - **Not tested:** her real week; her own computer and the Key2 itself; a birthday, a stack, the other clinic's booking and a cycle-day card (same code path, not in the made-up week).
 - **Pages checked:** Appointments (Grid: block card, Next card, event card, day card, panel), the layout at 900 px and under.
 - **Pictures:** `shots/appointments-card-over-2026-11-05.png`, `appointments-card-over-right-2026-11-05.png`.
-- **BUILT, not live:** it goes with her next "push live".
+- **LIVE in build 20261105-171800** (her "push"; commit 100142f2, publish 6d0c88b8). The live page was read back: it serves this build and the new code, and the card test and the toolbar script ran on the site's own copy with a made-up person and no errors. Her devices need the gold Update.
