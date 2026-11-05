@@ -1151,7 +1151,7 @@ read its section there in full. When a build changes a part, rewrite that part's
   and the sw.js SHELL list.
 - GitHub Pages (`b00k33/lcm-pharmacy`) publishes only index.html,
   intake.html, chart.html, chart.webmanifest, manifest.json, sw.js, icons/,
-  screenshots/, foods-au.json, eggs.html and the film's three files, ninety-days-* (`.github/workflows/pages.yml`). The .md files, mocks and
+  screenshots/, foods-au.json, eggs.html and the film's two files, ninety-days-wide.mp4 and ninety-days-poster.jpg (`.github/workflows/pages.yml`). The .md files, mocks and
   backups are never published. Never Netlify.
 - **eggs.html is made, never edited:** after any change to the EGGS code (or the Iron parts it borrows) run
   `perl .github/scripts/make-eggs-page.pl` from the repo root and commit eggs.html with it. If the Meals body's drawing changes,
@@ -1339,6 +1339,9 @@ not repeated here.
   plays only the person, never pathology; a formula plays Person → Trouble →
   Formula at work → Settled (CURRENT-STATE, "The card's picture"). Her like did
   not sign off the words: `PH_FS_WORK`, `PH_FS_PAIRW`, `PH_FS_ALLW` stay DRAFT.
+- The formula film is a live drawing on the card, never a video on the site (her picks, 2026-11-05): the camera glides, labels stay on the body, the Calm pace. Real
+  videos are local files only: `refs/films/`, wide, never committed or published (her "store some videos locally so it doesnt overwhelm the site").
+  The site carries one film file, the wide Ninety Days; the tall copy is off it.
 - One face, her graphite sketch (her "make the visuals consistent", 2026-11-05):
   every face comes from `PH_BODY_GEOM.face` (`art`, `plain`, `live`; woman and
   man, no hair). Never draw a face of its own, never colour or flat vector
