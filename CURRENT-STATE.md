@@ -1430,6 +1430,13 @@ she points at; a phone: at the end of each of today's rows, not a dinner the fas
 (`data-mph-add`, the + Photo's own door). Code: "MEALS GOALS" (`phMplGoals*`, `phMplGl*`, `phMplTick*`, `phMplRun`) and "MICROS" (`phMacIs`,
 `phMacN`, `phMacRd`, `phMacNm`, `phMacU`; `phMplFatHtml` gone). LIVE build 20261103-102500.
 **Macros against her goal** (her picks: the Macros row AND today's rings) [Meals macros against goal]: energy, protein, carbs, fat.
+**kcal beside kJ** (her 2026-11-06 "put kj with calories as well", then "yes i want kcal" for the rest of Meals; `phKcal`, 4.184 kJ a
+kcal; BUILD-NOTES "Meals: kcal beside every kJ"; SAVED, not live yet). The goals' kJ row: the goal in kcal beside the name (`.nw .kc`,
+follows the box as she types), the state's small words ("833 left · 199 kcal", `.kh`; hidden from 641 to 1100px, and on a phone for a
+day to come, so the bar and the name keep their room). Numbers: a kJ cell is three lines (kJ, kcal, how far under or over in kJ), so
+the five columns stay equal under their week bars; the head and the hovers say both. In words too: `phNutLine` (a patient's Diet
+sheet shares it), a meal photo's foods line, Recipes (on a phone its numbers take their own line), the Food share hover (its card
+380px), the day hover's total, the Body panel's kJ ring hover. kJ alone: the menu rail, the ring's own label, the Try table and its try line, the boxes.
 **Goals** (`phDietGoal`): kJ 8000 (her word 2026-10-28, "daily energy goal is 8000kj"), hers to change; water 2000 ml (C22's 8
 glasses; a target typed in glasses reads × 250); protein 50 g and carbs 50 g are hers (her word: "set carbs to 50g a day"); fat is hers,
 else the rest of her kJ goal after protein and carbs (FSANZ: 17 kJ a gram of protein or carbs, 37 of fat; her grams win over a
