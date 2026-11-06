@@ -38197,9 +38197,30 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       if (note) note.hidden = !scrollable;
     });
   }
+  // ---- one answer for the page-wide watchers: "was that only a film, a moving picture or a rolling number drawing its own next frame?" ----
+  // (her 2026-11-06 "when i play the video on my desktop the app feels laggy": each frame of a drawn film woke every watcher below, and
+  // each one walked the whole page.) own = the element whose children changed sits inside a film player (.fs-player, .ph-ftgf) or a picture
+  // the one runner mounts (svg[data-pp], svg[data-fp], svg[data-ks]). A player or a picture that is itself put on the page changes its
+  // PARENT, which is outside, so it is still seen once. text: "roll" also skips a rolling number's own text ([data-roll], phMoPaint); "any"
+  // also skips every record that only swaps text nodes (el.textContent = ...). Anything else, and any other record type, is a real page
+  // change. All or nothing: one real change in the batch and the watcher runs as before. A picture added INSIDE a player must be mounted
+  // by the code that adds it (phFsLensOf and the triangle film do).
+  function phMutOwn(recs, text) {
+    for (let i = 0; i < recs.length; i++) {
+      const r = recs[i], t = r.target;
+      if (r.type !== "childList" || !t || t.nodeType !== 1) return false;
+      if (t.closest(".fs-player, .ph-ftgf, svg[data-pp], svg[data-fp], svg[data-ks]")) continue;
+      if (!text || (text === "roll" && !t.hasAttribute("data-roll"))) return false;
+      const a = r.addedNodes, d = r.removedNodes;
+      for (let j = 0; j < a.length; j++) if (a[j].nodeType === 1) return false;
+      for (let j = 0; j < d.length; j++) if (d[j].nodeType === 1) return false;
+    }
+    return true;
+  }
   let phScrollMarkTimer = null;
   const phScrollMarkSoon = () => { clearTimeout(phScrollMarkTimer); phScrollMarkTimer = setTimeout(phMarkScrollableTables, 150); };
   new MutationObserver(muts => {
+    if (phMutOwn(muts)) return;   // a film or a moving picture drawing its own frame never changes a table
     // our own note insertions must not re-trigger the pass (childList only is
     // observed, so the class/hidden toggles above never reach here at all)
     const onlyNotes = muts.every(m => !m.removedNodes.length &&
@@ -39598,6 +39619,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       const page0 = document.getElementById("pharmacyPage");
       let tbmHeal = false;
       if (page0) new MutationObserver(muts => {
+        if (phMutOwn(muts, "any")) return;   // a film, a moving picture or a swap of words never adds or removes a title bar
         // a repaint that wiped the cluster (a page rebuilt its own bar with innerHTML: Appointments' grid refit, a
         // search keystroke, a Dashboard zone) gets it back in this same task, before the frame paints (2026-11-01):
         // the 40 ms wait below is what made the disc blink out and back. Only a removed slot takes this path -- a page
@@ -48822,7 +48844,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     });
     if (gone) [...phMoSeen.keys()].forEach(k => { if (!document.querySelector(`#pharmacyPage [data-${{ r: "roll", o: "mo-once", a: "arc", w: "barw" }[k[0]]}="${CSS.escape(k.slice(2))}"]`)) phMoSeen.delete(k); });
   }
-  (() => { const root = document.getElementById("pharmacyPage"); try { if (root) new MutationObserver(recs => { try { phMoScan(recs); } catch (e) { /* motion only: never in her way */ } }).observe(root, { childList: true, subtree: true }); } catch (e) { /* no motion: the numbers just show */ } })();
+  (() => { const root = document.getElementById("pharmacyPage"); try { if (root) new MutationObserver(recs => { try { if (!phMutOwn(recs, "any")) phMoScan(recs); } catch (e) { /* motion only: never in her way */ } }).observe(root, { childList: true, subtree: true }); } catch (e) { /* no motion: the numbers just show */ } })();
   /* ============================================================
      MEALS PLANNER (her synth22 2026-10-26 evening: "change diet to Meals. merge Meals page and Intermittent fasting together
      and mock a table format that i can use to map out/plan my meals"; her picks 1 to 6 on meals-fitness-plan-2026-10-26.html,
@@ -95507,7 +95529,7 @@ or changing anything in Cliniko.
     const p = on ? presPanelEl() : null;
     if (phPsObs && phPsObsEl !== p) { phPsObs.disconnect(); phPsObs = null; phPsObsEl = null; }
     if (on && p && !phPsObs) {
-      phPsObs = new MutationObserver(function () { clearTimeout(phPsTimer); phPsTimer = setTimeout(phPsApply, 70); });
+      phPsObs = new MutationObserver(function (recs) { if (phMutOwn(recs)) return; clearTimeout(phPsTimer); phPsTimer = setTimeout(phPsApply, 70); });
       phPsObs.observe(p, { childList: true, subtree: true });
       phPsObsEl = p;
     }
@@ -101806,7 +101828,7 @@ or changing anything in Cliniko.
       }
     });
   }
-  try { new MutationObserver(() => { if (!phCsFitT) phCsFitT = setTimeout(phCsFit, 0); }).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) { /* no observer: the bars stay on one line */ }
+  try { new MutationObserver(recs => { if (phMutOwn(recs, "roll")) return; if (!phCsFitT) phCsFitT = setTimeout(phCsFit, 0); }).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) { /* no observer: the bars stay on one line */ }
   window.addEventListener("resize", () => { clearTimeout(phCsFitT); phCsFitT = setTimeout(phCsFit, 120); });
   // ---- her 2026-10-03 day-log redesign: what the ribbon, the four summary
   // lines and the past-cycles columns say is all worked out HERE, from the
@@ -103832,7 +103854,7 @@ or changing anything in Cliniko.
   // pictures' runner moves them (svg[data-ks], phPpMount); a small one (the tiles, the rows) stands still on one frame. ----
   const PH_KS_NS = "http://www.w3.org/2000/svg";
   const phKsEl = (tag, a, p) => { const e = document.createElementNS(PH_KS_NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
-  const phKsOp = (e, v) => e.setAttribute("opacity", Math.max(0, Math.min(1, v)).toFixed(3));
+  const phKsOp = (e, v) => { const s = Math.max(0, Math.min(1, v)).toFixed(3); if (e.getAttribute("opacity") !== s) e.setAttribute("opacity", s); };   // written only when it changed
   const phKsEase = x => x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2;
   const phKsFrag = s => { const d = document.createElement("div"); d.innerHTML = String(s || "").trim(); return d.firstElementChild; };
   const phKsDescMemo = new Map(), phKsStillCache = new Map();
@@ -105286,7 +105308,7 @@ or changing anything in Cliniko.
     const now = Date.now();
     boxes.forEach(b => {
       const st = phKsCur.get(b.dataset.ksFam), n = +b.dataset.ksN || 1; if (!st || st.pin || st.hold || n < 2 || now - st.at < PH_KS_TURN) return;
-      const r = b.getBoundingClientRect(); if (r.bottom < 0 || r.top > innerHeight) { st.at = now; return; }
+      const r = b.getBoundingClientRect(); if (!r.width || r.bottom < 0 || r.top > innerHeight) { st.at = now; return; }   // off screen, or in a tab she has left (no size): it waits
       phKsShow(b, (st.i + 1) % n, true);
     });
   }
@@ -105453,7 +105475,7 @@ or changing anything in Cliniko.
       if (x != null) { [x, y] = ZP(FX(x), FY(FYH(y))); rec.els.push(mk("path", { d: `M${x},${y} L${tx},${ty}`, class: "lbl-l" }, g), mk("circle", { cx: x, cy: y, r: 1.8, class: "lbl-d" }, g)); }
       const t = mk("text", { x: tx + (an === "start" ? 2 : an === "end" ? -2 : 0), y: ty + 3, "text-anchor": an || "middle", class: "lbl-t" + (cls ? " " + cls : "") }, g); t.textContent = text; rec.els.push(t); return t;
     };
-    const op = (e, v) => e.setAttribute("opacity", cl(v, 0, 1).toFixed(2));
+    const op = (e, v) => { const s = cl(v, 0, 1).toFixed(2); if (e.getAttribute("opacity") !== s) e.setAttribute("opacity", s); };   // most marks rest most of the time: written only when it changed
     // the three stops as amounts: T = how much trouble is left, H = how hard the herbs work, S = how settled
     // k -1 = the Person stop (the Guide card's story): no trouble yet
     const TH = k => { const a = cl(k, 0, 1), b = cl(k - 1, 0, 1); return { T: cl(k + 1, 0, 1) * (1 - b), H: a * (1 - b), S: b }; };
@@ -106710,7 +106732,7 @@ or changing anything in Cliniko.
   function phFsMount(S, svg) {
     const id = svg.dataset.fp, box = svg.closest(".gf-fs"), F = phFsFilm(id, svg), RM = phTpReduceMotion();
     PH_FP.story(S, svg, phFsPersonItems(F.St));
-    svg.querySelectorAll("text.cap").forEach(t => { if (/^(UPPER|MIDDLE|LOWER)$/.test(t.textContent)) t.classList.add("fs-burner"); });
+    const burn = [...svg.querySelectorAll("text.cap")].filter(t => /^(UPPER|MIDDLE|LOWER)$/.test(t.textContent)); burn.forEach(t => t.classList.add("fs-burner"));
     const paper = svg.querySelector("rect"); if (paper && paper.getAttribute("width") === "340") { paper.setAttribute("x", -22); paper.setAttribute("width", 384); }   // the scene's paper reaches the stage's edges
     const bld = phFsBuild(id), { Sh, CH, END } = phFsShots(id, svg, F, bld ? bld.sxm : 1), old = phFsCur.get(id), fade = k => RM ? (k > 0 ? 1 : 0) : phFsSs(k);
     const st = { id, box, svg, S, F, Sh, END, T: old ? old.T : 0, on: old ? old.on : !RM, done: old ? old.done : false, i: 0, cur: -1, over: null, hold: null, liveC: 0, lenses: new Map(), raf: 0, last: 0 };
@@ -106773,13 +106795,17 @@ or changing anything in Cliniko.
       tag.style.opacity = (sh.kind === "open" ? fade(u / .4) * fade(rest / .5) : 0).toFixed(3);   // a chapter title, then out of the picture's way
       if (cover < .999) {
         const c = camNow(sh, u), w = c[2], h = w / 1.6;
-        svg.setAttribute("viewBox", `${(c[0] - w / 2).toFixed(2)} ${(c[1] - h / 2).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`);
+        const vb = `${(c[0] - w / 2).toFixed(2)} ${(c[1] - h / 2).toFixed(2)} ${w.toFixed(2)} ${h.toFixed(2)}`; if (vb !== st.wVb) { st.wVb = vb; svg.setAttribute("viewBox", vb); }
         S.step(dt, st.T + hc);
         if (S.fsCam) S.fsCam(w);
-        svg.style.setProperty("--cap-o", phFsSs((w - 280) / 104).toFixed(3)); svg.style.setProperty("--lab-o", phFsSs((w - 240) / 80).toFixed(3));   // close up, the words on the body step aside
+        const co = phFsSs((w - 280) / 104).toFixed(3), lo = phFsSs((w - 240) / 80).toFixed(3);   // close up, the words on the body step aside
+        if (co !== st.wCo) { st.wCo = co; burn.forEach(t => t.style.setProperty("--cap-o", co)); }   // on the three words that read it: on the picture's root it made the browser re-style every mark in it, each frame
+        if (lo !== st.wLo) { st.wLo = lo; svg.style.setProperty("--lab-o", lo); }
       }
-      const p = (st.T / END * 100).toFixed(2) + "%"; fill.style.width = p; head.style.left = p; now.textContent = phFsFmt(st.T);
-      scrub.setAttribute("aria-valuenow", Math.round(st.T)); scrub.setAttribute("aria-valuetext", phFsFmt(st.T) + ", " + CH[sh.ch][1]);
+      const p = (st.T / END * 100).toFixed(2) + "%", tm = phFsFmt(st.T), vn = Math.round(st.T), tk = tm + sh.ch + "|" + vn; fill.style.width = p; head.style.left = p;
+      if (tk !== st.tm) {   // the clock's words change once a second (its rounded second, for a screen reader, twice): written then, not every frame (a write a frame woke every watcher the page has)
+        st.tm = tk; now.textContent = tm; scrub.setAttribute("aria-valuenow", vn); scrub.setAttribute("aria-valuetext", tm + ", " + CH[sh.ch][1]);
+      }
     };
     let frames = 0, vis = true;
     const loop = t => {
@@ -106796,7 +106822,7 @@ or changing anything in Cliniko.
       st.raf = requestAnimationFrame(loop);
     };
     st.wake = () => { if (!st.raf) { st.last = 0; st.raf = requestAnimationFrame(loop); } phFsPlayBtn(st); };
-    st.seek = t => { st.T = Math.max(0, Math.min(END, t)); st.cur = -1; st.done = st.T >= END; if (st.done) st.on = false; draw(1 / 30); };
+    st.seek = (t, same) => { st.T = Math.max(0, Math.min(END, t)); if (!same) st.cur = -1; st.done = st.T >= END; if (st.done) st.on = false; draw(1 / 30); };   // same: a drag in progress, a shot is entered again only when it changes
     st.chapAt = stop => chapAt[Math.max(0, CH.findIndex(c => c[0] === stop))];
     const segs = box.querySelector(".fs-segs"); segs.innerHTML = CH.map((c, i) => `<i style="flex:${((i + 1 < CH.length ? chapAt[i + 1] : END) - chapAt[i]).toFixed(1)} 0 0"></i>`).join("");
     box.querySelector(".fs-time .e").textContent = phFsFmt(END); scrub.setAttribute("aria-valuemax", Math.round(END));
@@ -106847,7 +106873,7 @@ or changing anything in Cliniko.
     try { el.setPointerCapture(e.pointerId); } catch (x) { /* it still follows without capture */ }
     st.seek(phFsScrubT(e, phFsDrag)); phFsPlayBtn(st);
   });
-  document.addEventListener("pointermove", e => { if (phFsDrag) phFsDrag.st.seek(phFsScrubT(e, phFsDrag)); });
+  document.addEventListener("pointermove", e => { if (phFsDrag) phFsDrag.st.seek(phFsScrubT(e, phFsDrag), true); });
   ["pointerup", "pointercancel"].forEach(k => document.addEventListener(k, () => { const d = phFsDrag; if (!d) return; phFsDrag = null; if (d.on && !d.st.done) d.st.on = true; d.st.wake(); }));
   document.addEventListener("keydown", e => { const el = e.target && e.target.closest && e.target.closest("#pharmacyPage .fs-scrub"), d = e.key === "ArrowRight" ? 5 : e.key === "ArrowLeft" ? -5 : 0, st = el && d && phFsCur.get(el.closest(".gf-fs").dataset.fs); if (st) { e.preventDefault(); st.seek(st.T + d); phFsPlayBtn(st); } });
   function phFsBarHtml(id) {
@@ -107436,7 +107462,7 @@ or changing anything in Cliniko.
     phPpScan();
     setTimeout(() => { if (Math.abs(S.k - S.target) > .05) { S.k = S.target; phPpWarm(S); } }, 1100);   // a hidden tab barely runs rAF: land it anyway
   }
-  try { new MutationObserver(() => { if (!phPpScanT) phPpScanT = setTimeout(phPpScan, 0); }).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) { /* no observer: no pictures */ }
+  try { new MutationObserver(recs => { if (phMutOwn(recs, "any")) return; if (!phPpScanT) phPpScanT = setTimeout(phPpScan, 0); }).observe(document.documentElement, { childList: true, subtree: true }); } catch (e) { /* no observer: no pictures */ }
   document.addEventListener("click", e => {
     const t = e.target; if (!t || !t.closest || !t.closest("#pharmacyPage")) return;
     let el;
@@ -119256,6 +119282,11 @@ or changing anything in Cliniko.
     const cl = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k, ss = k => { k = cl(k, 0, 1); return k * k * (3 - 2 * k); }, ramp = (t, a, b) => ss((t - a) / (b - a));
     const hash = i => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
     const mk = (tag, a, p) => { const e = document.createElementNS(NS, tag); for (const k in a) e.setAttribute(k, a[k]); if (p) p.appendChild(e); return e; };
+    // a frame writes an attribute or a style only when its value changed (most marks rest for most of the film), and a mark at nothing
+    // is taken out of the drawing: the same picture, far less for the browser to work out again each frame
+    const setA = (e, k, v) => { v = "" + v; const c = e.__fa || (e.__fa = {}); if (c[k] !== v) { c[k] = v; e.setAttribute(k, v); } };
+    const setS = (e, k, v) => { v = "" + v; const c = e.__fs || (e.__fs = {}); if (c[k] !== v) { c[k] = v; e.style[k] = v; } };
+    const show = (e, o) => { setA(e, "opacity", o); setA(e, "display", +o > 0 ? "inline" : "none"); };
 
     // ---- the story: what is ticked, from her tables ----
     const BING = ["headache", "joint_ache", "joint_pain_now"];
@@ -119296,6 +119327,7 @@ or changing anything in Cliniko.
     const WIDE = [850, 530, 1800], SB = [1160, 770, 900], SR = [575, 770, 900], SF = [850, 270, 960];
     const CAM = [[T.bing, T.bing + 2, SB], [T.ren, T.ren + 2.5, SR], [T.fang, T.fang + 2.5, SF], [T.lock, T.lock + .9, WIDE], [T.other, T.other + 2.5, SR], [T.fang2, T.fang2 + 2.5, SF], [T.lock2, T.lock2 + .9, WIDE]];
     const stage = $(".t-stage"), bg = $(".t-bg"), fx = $(".t-fx"), lab = $(".t-lab"), lensBox = $(".t-lenses"), gBg = bg.getContext("2d"), gFx = fx.getContext("2d");
+    const mistC = document.createElement("canvas"), gMist = mistC.getContext("2d");
     let VW = 800, VH = 500, DPR = 1;
     let LBL = 14;   // the smallest a label's pixels go; the phone's narrow film takes a little less, so the words stay inside the frame
     function resize() { VW = Math.max(1, stage.clientWidth); VH = Math.max(1, stage.clientHeight); LBL = VW < 400 ? 11.5 : 14; DPR = Math.min(1.5, window.devicePixelRatio || 1); [bg, fx].forEach(c => { c.width = Math.round(VW * DPR); c.height = Math.round(VH * DPR); }); SR[0] = VW < 640 ? 590 : 575; SR[2] = VW < 640 ? 930 : 900; SB[0] = VW < 640 ? 1120 : 1160; SB[2] = VW < 640 ? 960 : 900; }
@@ -119324,6 +119356,7 @@ or changing anything in Cliniko.
       const svg = mk("svg", { "data-ks": k, viewBox: "0 0 240 150", preserveAspectRatio: "xMidYMid slice", "aria-hidden": "true" }, lB.querySelector(".in"));
       svg.style.opacity = 0;
       const P = { svg, vis: true }; try { phKsMake(P, svg); phPpWarm(P); } catch (e) { /* a picture that fails stays empty */ }
+      svg.__pp = P;   // the film runs this picture on its own clock: the page's runner (phPpScan) used to build it a second time and run that copy too
       svg.style.width = "100%"; svg.style.height = "100%"; svg.setAttribute("preserveAspectRatio", "xMidYMid slice");
       return { k, svg, P };
     });
@@ -119398,8 +119431,13 @@ or changing anything in Cliniko.
       g.globalCompositeOperation = "source-over"; g.globalAlpha = 1; g.fillStyle = "#071A22"; g.fillRect(0, 0, VW, VH);
       // the mist and the dust, a little slower than the camera
       g.globalCompositeOperation = "lighter";
-      const mist = glow("rgb(22,92,116)");
-      for (let i = 0; i < 7; i++) { const px = (hash(i) * 1700 + Math.sin(A * .05 + i) * 90 - cam.x) * cam.ppu * .55 + VW / 2, py = (hash(i + 9) * 1000 + Math.cos(A * .04 + i * 2) * 60 - cam.y) * cam.ppu * .55 + VH / 2, r = (260 + hash(i + 3) * 300) * cam.ppu * 1.2 + 80; g.globalAlpha = .16; g.drawImage(mist, px - r, py - r, r * 2, r * 2); }
+      // the mist is seven soft clouds, each wider than half the stage: drawn small (a quarter each way) and laid on once, the same haze for a sixteenth of the pixels
+      const mist = glow("rgb(22,92,116)"), mw = Math.ceil(VW / 4), mh = Math.ceil(VH / 4);
+      if (mistC.width !== mw || mistC.height !== mh) { mistC.width = mw; mistC.height = mh; }
+      gMist.setTransform(1, 0, 0, 1, 0, 0); gMist.globalCompositeOperation = "source-over"; gMist.clearRect(0, 0, mw, mh);
+      gMist.setTransform(.25, 0, 0, .25, 0, 0); gMist.globalCompositeOperation = "lighter"; gMist.globalAlpha = .16;
+      for (let i = 0; i < 7; i++) { const px = (hash(i) * 1700 + Math.sin(A * .05 + i) * 90 - cam.x) * cam.ppu * .55 + VW / 2, py = (hash(i + 9) * 1000 + Math.cos(A * .04 + i * 2) * 60 - cam.y) * cam.ppu * .55 + VH / 2, r = (260 + hash(i + 3) * 300) * cam.ppu * 1.2 + 80; gMist.drawImage(mist, px - r, py - r, r * 2, r * 2); }
+      g.globalAlpha = 1; g.drawImage(mistC, 0, 0, mw * 4, mh * 4);
       g.fillStyle = "#B8CFD2";
       for (let i = 0; i < 90; i++) { const px = ((hash(i + 200) * 1900 + A * (2 + hash(i) * 3)) % 1900 - cam.x + 100) * cam.ppu * .8 + VW / 2, py = ((hash(i + 300) * 1200 - A * (3 + hash(i + 1) * 5) % 1200 + 1200) % 1200 - cam.y) * cam.ppu * .8 + VH / 2; g.globalAlpha = .1 + hash(i + 7) * .28; g.fillRect(px, py, 1.4, 1.4); }
       g.globalAlpha = 1;
@@ -119451,7 +119489,12 @@ or changing anything in Cliniko.
       sparks.forEach(s => { if (!(s.hero || s.lead) || s.ab > .6) return; const al = sw * ramp(t, T.bing + 2, T.bing + 3.2) * (1 - fill * .9) * (1 - s.ab); if (al <= .01) return; ctx.globalAlpha = al; ctx.lineWidth = fsz * .26; ctx.strokeStyle = "#071A22"; ctx.strokeText(s.n, s.x, s.y - fsz * 1.05); ctx.fillStyle = s.lead ? "#F6DC91" : "#EEF4F4"; ctx.fillText(s.n, s.x, s.y - fsz * 1.05); });
       ctx.globalAlpha = 1; g.globalCompositeOperation = "source-over";
     }
+    let fxInk = true;   // something is on the effects layer
     function drawFx(t, cam) {
+      // the layer has something to draw for about a quarter of the film (the same windows the drawing below tests); the rest of the time it is left alone
+      const busy = RINGS.some(r => t >= r[0] && t <= r[0] + 1.4) || (t >= T.ren + 1.2 && t <= T.ren + 3) || (t >= T.other + 2.4 && t <= T.other + 4.2) || (t >= T.lock + 1.5 && t <= T.lock + 3.7) || (t >= T.lock2 + 1.5 && t <= T.lock2 + 3.7) || (t >= crack && t < crack + 1.4);
+      if (!busy && !fxInk) return;
+      fxInk = busy;
       const g = gFx; g.setTransform(DPR, 0, 0, DPR, 0, 0); g.clearRect(0, 0, VW, VH);
       g.setTransform(cam.ppu * DPR, 0, 0, cam.ppu * DPR, (VW / 2 - cam.x * cam.ppu) * DPR, (VH / 2 - cam.y * cam.ppu) * DPR);
       g.globalCompositeOperation = "lighter"; g.lineCap = "round";
@@ -119506,24 +119549,25 @@ or changing anything in Cliniko.
       setLens(lR, R, cam, ramp(t, T.ren + 1, T.ren + 2.4));
       setLens(lF, F, cam, ramp(t, T.fang + 1.6, T.fang + 3));
       // Bing: each sign's own picture in the lens, the last one stays
-      let live = -1; scenes.forEach((s, i) => { const on = ramp(t, bingS[i] - .8, bingS[i]) * (i < 2 ? 1 - ramp(t, bingS[i + 1] - .8, bingS[i + 1]) : 1); s.svg.style.opacity = on.toFixed(3); s.svg.style.display = on > .002 ? "" : "none"; if (on > .4) live = i; });
-      if (live >= 0 && cam.w < 1300 && scenes[live].P.step && dt > 0) { const P = scenes[live].P; P.amt = 1; P.amtTo = 1; try { P.step(dt); } catch (e) { /* keep the last frame */ } }
+      scenes.forEach((s, i) => { const on = ramp(t, bingS[i] - .8, bingS[i]) * (i < 2 ? 1 - ramp(t, bingS[i + 1] - .8, bingS[i + 1]) : 1); setS(s.svg, "opacity", on.toFixed(3)); setS(s.svg, "display", on > .002 ? "" : "none"); s.on = on > .002; });
+      // a sign's picture moves while the film plays and its lens is inside the frame (the page's runner used to do this, for a second copy of it); calm motion keeps it still
+      if (dt > 0 && !RM && Math.abs(B.x - cam.x) < VW / 2 / cam.ppu + B.r && Math.abs(B.y - cam.y) < VH / 2 / cam.ppu + B.r) scenes.forEach(s => { const P = s.P; if (!s.on || !P.step) return; P.amt = 1; P.amtTo = 1; try { P.step(dt); } catch (e) { /* keep the last frame */ } });
       // Ren: the person drawn by the scan; the second arrives over the first
       const swap = ramp(t, T.other + 2.4, T.other + 4.2), a = ramp(t, T.ren + 1.2, T.ren + 3);
-      people[0].svg.style.clipPath = `inset(0 0 ${((1 - a) * 100).toFixed(1)}% 0)`; people[0].svg.style.opacity = swap < 1 ? 1 : 0;
-      people[1].svg.style.clipPath = `inset(0 0 ${((1 - swap) * 100).toFixed(1)}% 0)`; people[1].svg.style.display = swap > 0 ? "" : "none";
+      setS(people[0].svg, "clipPath", `inset(0 0 ${((1 - a) * 100).toFixed(1)}% 0)`); setS(people[0].svg, "opacity", swap < 1 ? 1 : 0);
+      setS(people[1].svg, "clipPath", `inset(0 0 ${((1 - swap) * 100).toFixed(1)}% 0)`); setS(people[1].svg, "display", swap > 0 ? "" : "none");
       // Fang: the name that won
-      names[0].style.opacity = 1 - ramp(t, T.other, T.other + 1.4); names[1].style.opacity = ramp(t, T.fang2 + 1.6, T.fang2 + 3);
+      setS(names[0], "opacity", 1 - ramp(t, T.other, T.other + 1.4)); setS(names[1], "opacity", ramp(t, T.fang2 + 1.6, T.fang2 + 3));
       // the words on the picture
-      const capA = ramp(t, .9, 1.8); caps[0].g.setAttribute("opacity", ramp(t, 1, 1.8) * capA); caps[1].g.setAttribute("opacity", ramp(t, 2.1, 2.9)); caps[2].g.setAttribute("opacity", ramp(t, 3.2, 4));
-      const capFs = Math.max(cam.w < 1300 ? 44 : 46, 15 / cam.ppu); caps.forEach(c => c.g.setAttribute("font-size", capFs.toFixed(1)));
-      pinsGroup.setAttribute("font-size", Math.max(36, LBL / cam.ppu).toFixed(1));
-      const bOut = 1 - ramp(t, T.ren, T.ren + 1.2); bingRows.forEach(r => r.g.setAttribute("opacity", (ramp(t, r.t - .1, r.t + .5) * lerp(.55, 1, 1 - ramp(t, r.t + 3, r.t + 3.5) * 0) * bOut).toFixed(3)));
-      pinRows.forEach((rows, pi) => { const out = pi ? 1 - ramp(t, T.fang2, T.fang2 + 1.2) : 1 - ramp(t, T.fang, T.fang + 1.2), out2 = pi ? out : out * (1 - ramp(t, T.other, T.other + 1)); rows.forEach(r => { const on = ramp(t, r.t - .1, r.t + .4) * out2; r.g0.setAttribute("opacity", on.toFixed(3)); r.g.setAttribute("opacity", on.toFixed(3)); r.path.setAttribute("stroke-dasharray", r.len.toFixed(1)); r.path.setAttribute("stroke-dashoffset", (r.len * (1 - ramp(t, r.t, r.t + .5))).toFixed(1)); r.dot.setAttribute("r", (6 + 10 * Math.exp(-Math.max(0, t - r.t) * 3)).toFixed(1)); }); });
-      herbRows.forEach((rows, pi) => { const end = pi ? T.lock2 : T.lock; rows.forEach(h => { const k2 = ramp(t, h.t0, h.t0 + 1.1), out = 1 - ramp(t, end, end + .8); h.t.setAttribute("opacity", (k2 * out).toFixed(3)); if (k2 * out > .002) { const an = -1.57 + (h.i + .5) / h.n * 6.283 + (1 - k2) * 1.4, rd = lerp(620, F.r + 74, k2), x = F.x + Math.cos(an) * rd * 1.45, y = F.y + Math.sin(an) * rd * .92; h.t.setAttribute("x", x.toFixed(1)); h.t.setAttribute("y", (y + 10).toFixed(1)); } }); });
-      tOpen.setAttribute("opacity", fade(t, .6, 1.7, 4.8, 6)); tLockA.setAttribute("opacity", fade(t, T.lock + 1.7, T.lock + 2.6, crack - 3.6, crack - 2.8)); tLockB.setAttribute("opacity", ramp(t, T.lock2 + 1.7, T.lock2 + 2.6));
-      const ttlFs = Math.max(108, 30 / cam.ppu); [tOpen, tLockA, tLockB].forEach(g => g.setAttribute("font-size", ttlFs.toFixed(1)));
-      herbG.setAttribute("font-size", Math.max(30, 12 / cam.ppu).toFixed(1));
+      const capA = ramp(t, .9, 1.8); show(caps[0].g, ramp(t, 1, 1.8) * capA); show(caps[1].g, ramp(t, 2.1, 2.9)); show(caps[2].g, ramp(t, 3.2, 4));
+      const capFs = Math.max(cam.w < 1300 ? 44 : 46, 15 / cam.ppu); caps.forEach(c => setA(c.g, "font-size", capFs.toFixed(1)));
+      setA(pinsGroup, "font-size", Math.max(36, LBL / cam.ppu).toFixed(1));
+      const bOut = 1 - ramp(t, T.ren, T.ren + 1.2); bingRows.forEach(r => show(r.g, (ramp(t, r.t - .1, r.t + .5) * lerp(.55, 1, 1 - ramp(t, r.t + 3, r.t + 3.5) * 0) * bOut).toFixed(3)));
+      pinRows.forEach((rows, pi) => { const out = pi ? 1 - ramp(t, T.fang2, T.fang2 + 1.2) : 1 - ramp(t, T.fang, T.fang + 1.2), out2 = pi ? out : out * (1 - ramp(t, T.other, T.other + 1)); rows.forEach(r => { const on = ramp(t, r.t - .1, r.t + .4) * out2; show(r.g0, on.toFixed(3)); show(r.g, on.toFixed(3)); setA(r.path, "stroke-dasharray", r.len.toFixed(1)); setA(r.path, "stroke-dashoffset", (r.len * (1 - ramp(t, r.t, r.t + .5))).toFixed(1)); setA(r.dot, "r", (6 + 10 * Math.exp(-Math.max(0, t - r.t) * 3)).toFixed(1)); }); });
+      herbRows.forEach((rows, pi) => { const end = pi ? T.lock2 : T.lock; rows.forEach(h => { const k2 = ramp(t, h.t0, h.t0 + 1.1), out = 1 - ramp(t, end, end + .8); show(h.t, (k2 * out).toFixed(3)); if (k2 * out > .002) { const an = -1.57 + (h.i + .5) / h.n * 6.283 + (1 - k2) * 1.4, rd = lerp(620, F.r + 74, k2), x = F.x + Math.cos(an) * rd * 1.45, y = F.y + Math.sin(an) * rd * .92; setA(h.t, "x", x.toFixed(1)); setA(h.t, "y", (y + 10).toFixed(1)); } }); });
+      show(tOpen, fade(t, .6, 1.7, 4.8, 6)); show(tLockA, fade(t, T.lock + 1.7, T.lock + 2.6, crack - 3.6, crack - 2.8)); show(tLockB, ramp(t, T.lock2 + 1.7, T.lock2 + 2.6));
+      const ttlFs = Math.max(108, 30 / cam.ppu); [tOpen, tLockA, tLockB].forEach(g => setA(g, "font-size", ttlFs.toFixed(1)));
+      setA(herbG, "font-size", Math.max(30, 12 / cam.ppu).toFixed(1));
       drawFx(t, cam);
       words(t);
     }
@@ -119534,33 +119578,49 @@ or changing anything in Cliniko.
     const ICON = { play: "<svg class=icn aria-hidden=true><use href=#i-play></use></svg>", pause: "<svg class=icn aria-hidden=true><use href=#i-pause></use></svg>", again: "<svg class=icn aria-hidden=true><use href=#i-refresh></use></svg>" };
     chEl.innerHTML = CH.map(([n, t]) => `<button type="button" data-t="${t}">${n}</button>`).join("");
     const chBtns = [...chEl.children];
-    function bar() {
-      playBtn.innerHTML = playing ? ICON.pause : Ttime >= T.end ? ICON.again : ICON.play; playBtn.setAttribute("aria-label", playing ? "Pause" : Ttime >= T.end ? "Play again" : "Play");
-      scrub.value = Math.round(Ttime / T.end * 1000); timeEl.textContent = fmt(Ttime) + " / " + fmt(T.end);
+    let barIc = "", barTm = "", barAt = -1;
+    function bar() {   // written only when it changed: a write a frame woke every watcher the page has (her 2026-11-06 "the app feels laggy")
+      const ic = playing ? "pause" : Ttime >= T.end ? "again" : "play", tm = fmt(Ttime) + " / " + fmt(T.end), at = Math.round(Ttime / T.end * 1000);
+      if (ic !== barIc) { barIc = ic; playBtn.innerHTML = ICON[ic]; playBtn.setAttribute("aria-label", playing ? "Pause" : Ttime >= T.end ? "Play again" : "Play"); }
+      if (at !== barAt) { barAt = at; scrub.value = at; }
+      if (tm !== barTm) { barTm = tm; timeEl.textContent = tm; }
       let c = 0; CH.forEach((x, i) => { if (x[1] <= Ttime) c = i; }); chBtns.forEach((b, i) => { const on = i === c; if (b.classList.contains("on") !== on) { b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); } });
     }
     function seek(t) { Ttime = cl(t, 0, T.end); frame(Ttime, 0); bar(); }
-    function setPlaying(on) { if (on && Ttime >= T.end) Ttime = 0; playing = on; bar(); }
+    function setPlaying(on) { if (on && Ttime >= T.end) Ttime = 0; playing = on; bar(); wake(); }
     let last = 0;
     function tick(dt) {
       if (!RM) Amb += dt;
       if (playing) { Ttime += dt; if (Ttime >= T.end) { Ttime = T.end; playing = false; } }
       frame(Ttime, dt); bar();
     }
-    let alive = false;
-    function loop(now) { if (!stage.isConnected) { alive = false; playing = false; if (ro) ro.disconnect(); } if (!alive) return; const dt = Math.max(0, Math.min(.05, (now - last) / 1000 || 0)); last = now; tick(dt); requestAnimationFrame(loop); }
+    // Paused, ended or out of view it rests on its picture, like a video, and draws nothing (it used to redraw the whole stage 60 times a
+    // second for as long as the box was open). Playing it draws about 30 frames a second, the same as the app's other pictures.
+    let alive = false, raf = 0, seen = true;
+    function wake() { if (alive && playing && seen && !raf) { last = 0; raf = requestAnimationFrame(loop); } }
+    function loop(now) {
+      raf = 0;
+      if (gone() || !alive || !playing || !seen) return;
+      if (last && now - last < 30) { raf = requestAnimationFrame(loop); return; }
+      const dt = last ? Math.min(.1, (now - last) / 1000) : 1 / 30; last = now; tick(dt);
+      if (playing) raf = requestAnimationFrame(loop);
+    }
+    // a film whose page was repainted away lets go of its watchers (the loop used to notice; a resting film has no loop)
+    function gone() { if (stage.isConnected) return false; alive = false; playing = false; if (ro) ro.disconnect(); if (io) io.disconnect(); return true; }
+    // it rests only when no part of the player is on screen: with the picture scrolled off and the bar still showing, the bar goes on working
+    const io = window.IntersectionObserver ? new IntersectionObserver(es => { if (gone()) return; for (const e of es) seen = e.isIntersecting || document.fullscreenElement === stage; wake(); }) : null;
     playBtn.addEventListener("click", () => setPlaying(!playing));
     stage.addEventListener("click", () => setPlaying(!playing));
     scrub.addEventListener("input", () => { playing = false; seek(+scrub.value / 1000 * T.end); });
     chEl.addEventListener("click", e => { const b = e.target.closest("button"); if (b) { seek(+b.dataset.t); setPlaying(true); } });
     $(".t-full").addEventListener("click", () => { try { const q = document.fullscreenElement ? document.exitFullscreen() : stage.requestFullscreen(); if (q && q.catch) q.catch(() => {}); } catch (e) { /* this frame has no full screen */ } });
-    const ro = window.ResizeObserver ? new ResizeObserver(() => { resize(); frame(Ttime, 0); }) : null;
+    const ro = window.ResizeObserver ? new ResizeObserver(() => { if (gone()) return; resize(); frame(Ttime, 0); }) : null;
     resize();
     // calm-motion devices rest on the first lock; everyone else starts at the top and plays once
     return {
       seek, setPlaying, tick, T, ST, S_A, S_M, S_B, get t() { return Ttime; }, get playing() { return playing; },
-      start() { if (ro) ro.observe(stage); resize(); if (RM) { Ttime = 0; seek(T.lock + 3); } else { seek(0); setPlaying(true); } if (!alive) { alive = true; requestAnimationFrame(n => { last = n; loop(n); }); } },
-      stop() { alive = false; playing = false; if (ro) ro.disconnect(); }
+      start() { if (ro) ro.observe(stage); if (io) io.observe(box); resize(); alive = true; seen = true; if (RM) { Ttime = 0; seek(T.lock + 3); } else { seek(0); setPlaying(true); } },
+      stop() { alive = false; playing = false; if (ro) ro.disconnect(); if (io) io.disconnect(); }
     };
   }
   // ---- on the Fang Bing Ren page: this patient's own ticks and lead, read here and nowhere else (phTriEffective, phFbrRank); nothing is stored but the fold ----
@@ -131343,7 +131403,8 @@ or changing anything in Cliniko.
   // phase whose Remove? strip is open under its grid row (view state only)
   let phTpGridDelArm = null;
   const phTpHistSeen = new Map();   // planId -> Set of appointment ids (the history beside it)
-  const phTpReduceMotion = () => { try { return window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } };
+  let phTpRmQ = null;   // the one query, kept: its answer stays live, and a film's frame asks it dozens of times
+  const phTpReduceMotion = () => { try { return (phTpRmQ || (phTpRmQ = window.matchMedia("(prefers-reduced-motion: reduce)"))).matches; } catch (e) { return false; } };
   function phTpHeroRingSvg(cls, grow) {
     const M = cls.length, r = 42, cx = 50, cy = 50, seg = 360 / M;
     const pad = Math.min(3, seg * .12);
@@ -151379,7 +151440,8 @@ Dosage: {dosage}
     const page = document.getElementById("pharmacyPage");
     if (!page || typeof MutationObserver === "undefined") return;
     let raf = 0;
-    new MutationObserver(() => {
+    new MutationObserver(recs => {
+      if (phMutOwn(recs, "roll")) return;   // a film, a moving picture or a rolling number drawing its own frame is not a change to the page
       phPm3Sweep();
       presBandsSyncSoon();
       if (raf) return;

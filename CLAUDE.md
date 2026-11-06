@@ -594,6 +594,17 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   CSS and through `phTpReduceMotion()` in JS. Add it with the motion, not after.
 - Anything timed in a hidden tab needs a `setTimeout` way out
   (`requestAnimationFrame` barely fires there).
+- **A film or a moving picture writes only what changed, and rests** (her
+  2026-11-06 "when i play the video on my desktop the app feels laggy").
+  Never set `textContent` / `innerHTML` on every frame: the same words written
+  again still count as a change to the page, and each one wakes every
+  page-wide watcher. Keep the last value and compare (`setA` / `setS` in the
+  triangle film, `op`, `phKsOp`). About 30 frames a second; nothing drawn
+  while paused, ended or out of view. The page-wide watchers ask
+  `phMutOwn(recs, level)` first: a new self-animating region joins its one
+  selector, and a picture added inside a player is mounted by the code that
+  adds it. Measure frames and script time before and after (BUILD-NOTES
+  "Films: lighter on the page" says how).
 - Motion never costs her scroll position or an open edit (see "Navigation
   continuity" under lcm6).
 
