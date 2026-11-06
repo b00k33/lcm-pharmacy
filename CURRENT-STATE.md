@@ -1313,7 +1313,7 @@ under. The model (`phMbfSim`; its figures in BUILD-NOTES) and every word are DRA
   what-if. **Muscle up** sets the sliders to the eating that grows muscle and shrinks fat (protein 1.8 g a kg, a tenth under her
   burn while her body fat is 24% or over, fat 30% of the kJ, strength at 3; `phMbfUp`) and plays the figure into that body.
 - *Forecast, less height and kcal* (her 2026-11-06 "make the features on this page more space saving" and "put kj with calories
-  as well"; BUILD-NOTES "Body tab: the Forecast in less height, kcal beside kJ"; SAVED, not live yet). Every feature kept. You
+  as well"; BUILD-NOTES "Body tab: the Forecast in less height, kcal beside kJ"; LIVE in build 20261106-155300). Every feature kept. You
   and Strength a week share a row; Play, the weeks and the bar to drag share a row; the weight line is drawn at its own width
   (`phMbf.cw`, 96px tall, its type always 11px); from 761px the sliders are slimmer and their two marks are named once beside
   "Eat a day" (`.ph-mbf-tk`: goal above the track in teal, week below in grey), the weight sits beside its week, the figure's
