@@ -1317,7 +1317,7 @@ under. The model (`phMbfSim`; its figures in BUILD-NOTES) and every word are DRA
   and Strength a week share a row; Play, the weeks and the bar to drag share a row; the weight line is drawn at its own width
   (`phMbf.cw`, 96px tall, its type always 11px); from 761px the sliders are slimmer and their two marks are named once beside
   "Eat a day" (`.ph-mbf-tk`: goal above the track in teal, week below in grey), the weight sits beside its week, the figure's
-  column is 200px; the tiles are one line each and the flags share a line with the draft note. Eat, Burn and the gap read kJ and
+  column is 270px and the figure 250px, as before (her "make the width of the person wider"); the tiles are one line each and the flags share a line with the draft note. Eat, Burn and the gap read kJ and
   kcal ("7,600 kJ · 1,816 kcal"; 4.184 kJ a kcal). CSS "BODY FORECAST, SPACE SAVING", after the phone block on purpose.
 - *Over time* (her "include my physical circumference and physical body images similar to tongue pictures so i can view overtime",
   her 8 picks). Left, **Tape**: Waist · Hips · Bust · Thigh · Upper arm, each a cm box (today's reading on her record,
