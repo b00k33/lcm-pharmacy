@@ -68981,6 +68981,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       if (flowGo) {
         const wasPlan = presStage === "plan";
         presStage = "plan"; presTpMainTab = flowGo.dataset.flowGo;
+        phFlowOpenAPlan();
         phCcSeedOpen();
         if (!(wasPlan && presTpMainTabRefresh() && presFlowRailRefresh())) renderPresPanel();
         return;
@@ -96216,7 +96217,11 @@ or changing anything in Cliniko.
     if (!presTpInlineNew && !presTpInlineLoose) {
       const nm1 = presPatientFor(t) || "";
       const plans1 = nm1 ? phTpPlans(nm1) : [];
-      if (plans1.length > 1 && !(presTpInlinePlanId && phTpFindPlan(nm1, presTpInlinePlanId))) {
+      // her 2026-11-07 "my fang bing ren page doesnt open": one plan AND a prescription not on any plan fell between this rule (it asked for
+      // several plans) and the first landing above (it asked for nothing loose): no plan was open, so every rail step that is a page of a
+      // plan stayed on the plan list, with Treatment Care Plan lit. Those patients have the plan tabs too ("Not on a plan", "+ New"), so
+      // they open one as several plans do. One plan and nothing loose is left alone: "‹ All plans" is its door to the list and to + New
+      if ((plans1.length > 1 || (plans1.length === 1 && presTpLooseScripts(nm1).length)) && !(presTpInlinePlanId && phTpFindPlan(nm1, presTpInlinePlanId))) {
         const pick = phApptPlanFor(phApptNearestNow(nm1), plans1) || plans1.find(p => p.status === "active") || plans1.find(p => p.status === "paused") || plans1[plans1.length - 1];
         presTpInlinePlanId = pick.id; phTpScreenPatient = nm1; phTpScreenPlanId = pick.id;
       }
@@ -133969,8 +133974,18 @@ or changing anything in Cliniko.
   // (2026-10-10) -- used by data-flow-prof's PH_PLAN_TAB_IDS cases and
   // data-pat-go, which used to each hand-roll this same sequence (CLAUDE.md
   // "Integrative builds": one navigation decision, not several copies).
+  // a rail step is a page of a plan: from the "Not on a plan" list, the new-plan form or "‹ All plans", with a plan to open, it opens that
+  // plan's page (the tap did nothing she could see: the list or form stayed, under Treatment Care Plan). The same from an open patient letter,
+  // a read-only view the rail stayed stuck on. Several plans: the landing rule picks one. A patient with no plan yet keeps the form
+  function phFlowOpenAPlan() {
+    const t = PRESC.items.find(x => x.id === presOpenId), nm = t ? presPatientFor(t) : "", plans = nm ? (phTpPlans(nm) || []) : [];
+    if (!plans.length) return;
+    presTpInlineLoose = false; presTpInlineNew = false; phTpLetterOpen = false;
+    if (plans.length === 1 && !(presTpInlinePlanId && phTpFindPlan(nm, presTpInlinePlanId))) { presTpInlinePlanId = plans[0].id; phTpScreenPatient = nm; phTpScreenPlanId = plans[0].id; }
+  }
   function phFlowGoPlanTab(tabId) {
     presStage = "plan"; presTpMainTab = tabId;
+    phFlowOpenAPlan();
     if (!presTpMainTabRefresh()) renderPresPanel();
     presFlowRailRefresh();
   }
@@ -136677,7 +136692,7 @@ or changing anything in Cliniko.
       // her pick 2026-10-19 (decision 5): "Full screen ↗" retired as a DIFFERENT layout -- "View larger" now
       // just shows this same simplified page bigger (renderTpScreen trimmed to match, see its own comment)
       item(`data-tp-screen-open="${esc(name)}|${plan.id}"`, "View larger"),
-      (phTpPlans(name) || []).length > 1 ? "" : item(`data-tp-inline-back="1"`, "‹ All plans"),
+      (phTpPlans(name) || []).length > 1 || presTpLooseScripts(name).length ? "" : item(`data-tp-inline-back="1"`, "‹ All plans"),   // the plan tabs are the list then
     ].join("");
     return `${item(`data-cn-copy="menu"`, phCnMenuLabel)}${stItem}${item(`data-tp-phase-add="${plan.id}"`, "+ Add phase")}
       ${(plan.phases || []).length > 1 ? item(`data-tp-reorder-open="${plan.id}"`, "↕ Reorder phases") : ""}
