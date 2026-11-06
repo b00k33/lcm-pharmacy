@@ -1301,8 +1301,9 @@ store, ovaries and womb (grey as the energy left for hormones falls); not pregna
 Height · Weight · Body fat boxes save today's reading on her record (`phBodyWrite`); until all three are there it reads "Needs height
 · body fat". Light · Moderate · Active is this device's `lcm-mbf-act`, Moderate first. Phone: the body beside the sliders, the rest
 under. The model (`phMbfSim`; its figures in BUILD-NOTES) and every word are DRAFT, and a line on the tab says so. LIVE in build 20261105-131600.
-**Two views** (her 2026-11-05 picks; one switch at the tab's top, this device's `lcm-mbf-view`): **Forecast** (the above) · **Over
-time** (`phMbt*`, `PH_MBT_*`). LIVE in build 20261105-141700, all of this paragraph:
+**Three views** (one switch at the tab's top, this device's `lcm-mbf-view`): **Forecast** (the above) · **Over time** (`phMbt*`,
+`PH_MBT_*`; her 2026-11-05 picks) · **Composition** (`phMsc*`, `PH_MSC_*`; her 2026-11-06 ask, its bullet below, SAVED, not live
+yet). Forecast and Over time are LIVE in build 20261105-141700, all of this paragraph but that bullet:
 - *Forecast, the look* (her "make the subcutaneous fat more 3d and textured and dramatic looking", picks Bolder · Fibres): the fat is
   a lobed layer under the skin with deep shadow and shine (`phMbdFatBand`, patterns in `phMbdDefs`), the muscles fibred spindles,
   shoulders and forearms with the arms, thighs and calves. `PH_MBD_BOLD`: the Meals figures only (so Try's body has it too); the
@@ -1324,6 +1325,22 @@ time** (`phMbt*`, `PH_MBT_*`). LIVE in build 20261105-141700, all of this paragr
   forecast holds today's bend through the weeks).
 - *Due every 4 weeks* from her newest tape reading or body photo (`phMbtDue`): a gold dot on Over time and "Tape due" as the Meals
   row's small line in her menu; nothing is due before a first reading.
+- *Composition* (her 2026-11-06 "use these images to build my body composition page", her pictures: a body scan's result sheet;
+  BUILD-NOTES "Body composition: her scan as a page"). A **scan** is one day's numbers as the machine printed them, with the
+  machine's own ranges: `rec.body.comp = [{ d, v: { key: number }, r: { key: [low, high] } }]`, written only by `phMscWrite`
+  (`phMscSet` for one box), which also keeps **that day's reading** (`body.readings`: height, weight, body fat, muscle) in step, a number at a time,
+  so her figure, the Body panel's ratios, the Forecast and the Ren's build signs read the scan (newest reading wins, as before).
+  The page: **her own figure** (the one body, `phMbdSvg`, at that scan's numbers) with the **five parts** round it, a tag each
+  (Lean · Fat, a dot green inside the machine's range and amber outside; her right on the left, as every front view); under it
+  **Summary** (Weight · Height · BWI score · Bio age · BMR · TEE · Waist to hip); beside it **what her weight is made of** as one
+  bar (Subcutaneous fat · Visceral fat · Intracellular fluid · Extracellular fluid · Protein · Mineral) and **Composition** (13
+  rows). A row = the sheet's word, a box, the Blood tests' low–high bar (`phBldBarHtml`) with the range, the **change** since the
+  scan before. Every number is a box, saved when left and painted where it stands (`phMscPaint`). **+ Scan** opens a date and one
+  box for the sheet's numbers, a number a line ("Lean body mass 46.9 [40.2 - 49.1]", `phMscParse`; it counts what it can read and
+  takes the sheet's date); saved empty it opens a blank day to type in, with the ranges of the scan before. More than one scan:
+  a chip a date (a dropdown past six). **Remove** has the usual Undo and takes the scan's numbers back out of the day's reading (the rules: BUILD-NOTES).
+  The order is the sheet's own (a document's order), not A–Z. Left out: the sheet's food and supplement suggestions, its body
+  balance words. Nothing here is worked out by the app but the change and where a number sits on the machine's range.
 - DRAFT: the training figures, Muscle up's rule, the tape's reference figure, every word.
 A meal
 **dragged** onto another day's same meal is copied there (what she had, else its plan; Undo in the toast; a meal she had there
