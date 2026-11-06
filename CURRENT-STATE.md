@@ -1312,6 +1312,13 @@ under. The model (`phMbfSim`; its figures in BUILD-NOTES) and every word are DRA
   **Strength a week 0 · 1 · 2 · 3 · 4+** opens on her Fitness log (the last 4 weeks, `phMbfStLog`, "from your log"); a chip is a
   what-if. **Muscle up** sets the sliders to the eating that grows muscle and shrinks fat (protein 1.8 g a kg, a tenth under her
   burn while her body fat is 24% or over, fat 30% of the kJ, strength at 3; `phMbfUp`) and plays the figure into that body.
+- *Forecast, less height and kcal* (her 2026-11-06 "make the features on this page more space saving" and "put kj with calories
+  as well"; BUILD-NOTES "Body tab: the Forecast in less height, kcal beside kJ"; SAVED, not live yet). Every feature kept. You
+  and Strength a week share a row; Play, the weeks and the bar to drag share a row; the weight line is drawn at its own width
+  (`phMbf.cw`, 96px tall, its type always 11px); from 761px the sliders are slimmer and their two marks are named once beside
+  "Eat a day" (`.ph-mbf-tk`: goal above the track in teal, week below in grey), the weight sits beside its week, the figure's
+  column is 200px; the tiles are one line each and the flags share a line with the draft note. Eat, Burn and the gap read kJ and
+  kcal ("7,600 kJ · 1,816 kcal"; 4.184 kJ a kcal). CSS "BODY FORECAST, SPACE SAVING", after the phone block on purpose.
 - *Over time* (her "include my physical circumference and physical body images similar to tongue pictures so i can view overtime",
   her 8 picks). Left, **Tape**: Waist · Hips · Bust · Thigh · Upper arm, each a cm box (today's reading on her record,
   `body.tape`, `phTapeWrite`; an older day is never edited), a small line through her readings, the change since the first; under
@@ -1340,7 +1347,8 @@ under. The model (`phMbfSim`; its figures in BUILD-NOTES) and every word are DRA
   takes the sheet's date); saved empty it opens a blank day to type in, with the ranges of the scan before. More than one scan:
   a chip a date (a dropdown past six). **Remove** has the usual Undo and takes the scan's numbers back out of the day's reading (the rules: BUILD-NOTES).
   The order is the sheet's own (a document's order), not A–Z. Left out: the sheet's food and supplement suggestions, its body
-  balance words. Nothing here is worked out by the app but the change and where a number sits on the machine's range.
+  balance words. Nothing here is worked out by the app but the change, where a number sits on the machine's range, and BMR and
+  TEE in kJ beside the sheet's kcal (the row's third cell, `phMscBarHtml`; her "put kj with calories as well").
 - DRAFT: the training figures, Muscle up's rule, the tape's reference figure, every word.
 A meal
 **dragged** onto another day's same meal is copied there (what she had, else its plan; Undo in the toast; a meal she had there
