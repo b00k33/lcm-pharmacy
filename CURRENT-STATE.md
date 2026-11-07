@@ -27,6 +27,7 @@ within 10 s (`OPEN_HANG_MS`) then; never the sign-in wall for a sign-in that onl
 "online" event, a refreshed sign-in, or the first good reply) `resumeCloud()` pulls, merges and pushes behind her with no cover.
 The service worker keeps the app, the sign-in library and the PDF reader, so a new build works offline from its first open; the
 photo-text reader stays online-only. Code: `openLocalNow`, `bootFetch`, `netFail`, `openedLocal`, `resumeCloud` above `boot()`.
+**A device "holds the pharmacy" only once it has synced (audit 2026-11-06):** `localReady` needs the store AND the merge base. A copy with no base has never agreed with any cloud row (the app's seed, or a write after a clear), so signing in adopts the row whole and never pushes the seed or another clinic's copy into it. **The day moves by itself:** `phTodayRoll` moves `TODAY` in place past midnight, and repaints when she is not typing. **Sign out** stops if this device's changes could not be sent, and it signs out this device only (`scope: "local"`). A failed cloud write retries with backoff. Restore lists only this login's on-device backups (new ones carry the owner) and warns on a file from the other clinic.
 **Boot housekeeping waits for the cloud** (fixed 2026-10-31): the app's automatic writes (schedule sweep, migrations, made-formula
 prices) wait for "lcm-sync-caught-up". The "is sync on?" test now runs after DOMContentLoaded (`phAfterScripts`); a 0 ms
 timeout had fired before the sync's own `<script>` was parsed, so the housekeeping wrote 3 s into every boot, before any pull.
@@ -668,6 +669,7 @@ hover), short condition names (2 then +N), one 18px pill look, 44px rows. Her 9/
 round buttons. The phone keeps its chips and Scheduled line.
 
 ## Patient details & the patient file
+**Merge or rename keeps the whole record (audit 2026-11-06):** `phPatientMerge` handles its named stores by their own rules, then `phMergeFillGaps` brings over everything else (a blank takes the other's, two lists combine, nothing on the kept record is overwritten; an opt-out on either spelling stands; the newest period is the current one). The old key is tombstoned in `PHARMACY.deletedPatients` with the stamp of the copy folded in, so it never comes back from the cloud, while a copy edited since (an offline phone) stays as a duplicate rather than being lost; a restore outlives the tombstone. A new name-keyed store still joins `phPatientMerge` by hand.
 **Cliniko look on the patient pages (her synth22 picks 2026-11-01, stage 3):** the head (`.ph-pres-band`) is the light band of
 every page: "Name · age / Page" (`presBandPageSync` reads the rail's lit row), Book appt. (solid) · Text joined
 (`.ph-band-bar`; the phone keeps search + camera), a Gynae / MSK case as a 3px line under it. The rail keeps her visit order;
@@ -1757,7 +1759,7 @@ Fitness + Exercises), the rest in Life.
 
 ## Communications / messaging
 Tone and voice: code3 above. **One composer** on the patient's Messages page (a bubble + slim band, synced to the plan, its phase
-and her Fang Bing Ren answers); "Copy message" copies the message only [The Messages composer]. **Each send leaves one "sent today" mark** (her 2026-11-01 picks, idea 11 of the 29 Oct audit;
+and her Fang Bing Ren answers); "Copy message" copies the message only [The Messages composer]. **A send closes due and overdue rows only, never a check-in, review or follow-up not yet due (audit 2026-11-06). Each send leaves one "sent today" mark** (her 2026-11-01 picks, idea 11 of the 29 Oct audit;
 BUILD-NOTES "Messages: one sent mark"): the Text / Messages / Copy / Email tap writes one entry on the patient's contact log
 (`phMsgSentMark`), closes that patient's due and overdue rows on Communications → Due (the Dashboard count and the menu badge
 follow), leads the Messages band with "✓ Today · Sent · Review by Messages" (`phMsgLastSent`) and offers Undo in the one toast;

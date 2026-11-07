@@ -9,11 +9,12 @@ Also read ABOUT-ME.md before any work — build to this user's preferences.
 - **ABOUT-ME.md** = how she likes to work.
 DESIGN-CONVENTIONS.md was merged into this file on 2026-10-21; its stub went to the Recycle Bin on 2026-10-27 (git history keeps it).
 **The folder (tidy 2026-10-27):** the root holds the app (index.html, intake.html, chart.html, manifest.json,
-chart.webmanifest, sw.js, icons/, screenshots/, supabase/, foods-au.json), these docs, the September specs the code and memory point to
+chart.webmanifest, sw.js, icons/, screenshots/, supabase/, foods-au.json, eggs.html, eating-eggs.html, ninety-days-wide.mp4, ninety-days-poster.jpg), these docs, fang-bing-ren-questionnaire.html (kept on purpose, untracked), the September specs the code and memory point to
 (CLINIKO-LETTERS, FACIAL-PARALYSIS-SPEC, INTAKE-LINK-FROM-HISTORY-SPEC, PHASE-VISITS-SPEC, SCRIPT-NAME-REVIEW, VISIT-NOTE-SPEC),
 and only the mocks still being worked on. A mock, guide or audit named anywhere in these docs or the code lives in `mocks/`
 under the same name once its work is live (move it there then). Data snapshots and app exports go in `backups/`, screenshots
 in `shots/`, price lists and recordings in `refs/`. All four folders are local only (`.gitignore`; this repo is public).
+**Never a real patient in anything committed (audit 2026-11-06, after real names were found in comments, docs and pictures):** no patient name, phone, address or health detail in a code comment, a doc, a commit message, a mock or a picture that is tracked; write "a patient" and use made-up names ("Test Patient", "Zz ...") in examples. A picture of a real record stays in `shots/`. An install picture holds no patient at all.
 **When two lines disagree:** her newest word wins, then the ★ rules at the top of this file, then the rest of this file, then CURRENT-STATE.md, then STYLE-LCM.md, then BUILD-NOTES.md (history). When you find a disagreement, fix the losing line in the same commit.
 
 # ★★★ ONE APP, WELL INTEGRATED — standing rule (her 2026-10-10 "all builds and developments are integrative. the same information needs to present in all places that reference it ... i want this app to be integratively heavy"; restated in her 2026-10-21 audit ask)
@@ -667,7 +668,8 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   `openedLocal`). Test after any sync or boot change (BUILD-NOTES "Opens without internet"): the harness copy
   (`mocks/offline-open-harness.html` in the head of an index.html copy) in `?m=off`, `?m=lie` and `?m=late&after=5000`, with
   an expired and a fresh saved sign-in: in within 2 s, no sign-in wall after 30 s, and `late` reaches GET + POST settings with
-  no cover; a signed-out device online still shows sign-in.
+  no cover; a signed-out device online still shows sign-in. The test store must hold `lcm-sync-base`: since the 2026-11-06 audit a copy with no merge base has
+  never agreed with a cloud row (the app's seed, or something written after a clear), so it is "holds nothing" and adopts the row whole, never merges.
 - **The written-from-the-record summaries never read each other in a circle** (her 2026-10-27 freeze: "Loading your
   pharmacy..." then Chrome's "Page Unresponsive", on her real records only). The booking brief (`phApptBrief`), the Care
   Plan's auto diagnosis and goal (`phTpAutoDx`, `phTpAutoGoal`), the complaints (`phCxItems`, `phCcRibItems`, `phCcAuto`)
@@ -1245,11 +1247,8 @@ before touching an area that smells similar.
   boundary — use calendar-based `setDate` addition instead. A week-count
   using `Math.floor` on an hour-short ms span across a clock change
   under-counts — use `Math.round`.
-- A frozen "boot-time" date constant is right for almost every call site
-  but wrong for anything validating against "right now" on a long-lived
-  open tab — keep a separate live-now helper for the few sites that need
-  real freshness; don't touch the frozen constant everywhere else depends on.
-  The exact same class of bug separately hit an appointments "now-line".
+- `TODAY` is one Date object every page reads; `phTodayRoll` moves it to the real day in place past midnight (a minute's tick, or waking), and the repaint waits while she types or a
+  card is open (audit 2026-11-06). Never hold a copy of it in module state, and never store the object itself. A check that must be right this second still calls `phLiveToday()`.
 - A scoped-repaint fallback chain must explicitly cover every sub-tab it
   claims to serve — an unmatched sub-tab silently falls through to a full
   rebuild (which resets scroll).

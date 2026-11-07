@@ -4,7 +4,7 @@ Captured verbatim the moment she sent it, before any building, per her standing
 rule that confirmed wording goes to a file that turn. **Her words are the source
 of truth.** Nothing below is my paraphrase except where marked `[note]`.
 
-Prompted by a real patient — Nadia Joud, a facial paralysis case.
+Prompted by a real patient — a patient, a facial paralysis case.
 
 ---
 

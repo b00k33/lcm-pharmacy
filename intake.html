@@ -119,6 +119,7 @@
 (function () {
   "use strict";
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function localToday() { var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }   // the patient's own date (toISOString is UTC: yesterday until 11 am in Sydney)
   function titleCase(s) { return String(s == null ? "" : s).toLowerCase().replace(/(^|[^a-z0-9])([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); }); }
 
   var PH_HISTORY_GROUPS = [
@@ -199,6 +200,7 @@
   var PH_CYCLE_SYMPTOMS = [["cramping", "Cramping"], ["mood", "Mood changes"], ["breast", "Breast tenderness"], ["headache", "Headaches"], ["bloating", "Bloating"], ["fatigue", "Fatigue"], ["acne", "Acne"]];
   var PH_CYCLE_CONTRACEPTION = [["none", "None"], ["pill", "Pill"], ["iud_h", "IUD (hormonal)"], ["iud_c", "IUD (copper)"], ["implant", "Implant"], ["condoms", "Condoms"], ["recent", "Recently stopped"], ["other", "Other"]];
 
+  if (!window.supabase) { document.getElementById("app").innerHTML = '<div class="center"><h2>Couldn’t load this form</h2><p>Something went wrong loading this form. Please try again, or contact your practitioner.</p></div>'; return; }
   var sb = window.supabase.createClient("https://jkpfhqaxhsiwtijxxzql.supabase.co", "sb_publishable_td_6_5ACewMZq8fVEB3Gww_KB-EDlYY");
   var token = new URLSearchParams(location.search).get("t");
   var app = document.getElementById("app");
@@ -330,7 +332,7 @@
         '<div id="cycleSec" hidden>' +
           '<div class="section-h">Cycle & fertility details</div>' +
           '<div class="card">' +
-            '<div class="field"><label class="q" for="fLmp">When did your last period start?</label><input type="date" id="fLmp" max="' + new Date().toISOString().slice(0, 10) + '"></div>' +
+            '<div class="field"><label class="q" for="fLmp">When did your last period start?</label><input type="date" id="fLmp" max="' + localToday() + '"></div>' +
             '<div class="field"><span class="q">How long is your usual cycle?</span><div class="cq-inline"><input type="number" id="fCycleLen" min="14" max="60" placeholder=""> <span class="note" style="margin:0">days</span></div></div>' +
             '<div class="field"><span class="q">How many days do you bleed, and how heavy?</span><div class="cq-inline"><input type="number" id="fFlowDays" min="1" max="14" placeholder="">' + selHtml("fFlowIntensity", PH_CYCLE_FLOW, "moderate") + '</div></div>' +
             '<div class="field"><label class="q" for="fPain">Any period pain?</label>' + selHtml("fPain", PH_CYCLE_PAIN, "none") + '</div>' +
@@ -381,7 +383,7 @@
         if (!wasOn) btn.classList.add("on");
       });
     });
-    document.querySelectorAll(".chip:not(#ivfAddRow)").forEach(function (c) { c.addEventListener("click", function () { c.classList.toggle("on"); }); });
+    document.querySelectorAll(".chip:not(#ivfAddRow):not(#suppAdd)").forEach(function (c) { c.addEventListener("click", function () { c.classList.toggle("on"); }); });
     // scoped to #sexSeg only -- the IVF Yes/No toggle below reuses the same
     // .sexbtn look (a two-way seg control) and must not clear THIS state
     document.querySelectorAll("#sexSeg .sexbtn").forEach(function (b) {
@@ -524,7 +526,7 @@
       return '<div class="ivf-card" data-ivf-idx="' + i + '">' +
         '<button type="button" class="rm" data-ivf-rm="' + i + '" aria-label="Remove this cycle">×</button>' +
         '<div class="ivf-row2">' +
-          '<label><span class="mini">When (a month is fine)</span><input type="month" data-ivf-f="when" value="' + esc(r.when) + '" max="' + new Date().toISOString().slice(0, 7) + '"></label>' +
+          '<label><span class="mini">When (a month is fine)</span><input type="month" data-ivf-f="when" value="' + esc(r.when) + '" max="' + localToday().slice(0, 7) + '"></label>' +
           '<label><span class="mini">Clinic</span><input type="text" data-ivf-f="clinic" value="' + esc(r.clinic) + '" placeholder=""></label>' +
         '</div>' +
         '<div class="ivf-row2">' +
@@ -631,14 +633,14 @@
     var history = {};
     document.querySelectorAll("[data-hx-item]").forEach(function (row) {
       var on = row.querySelector(".hx-btn.on");
-      if (on) history[row.dataset.hxItem] = on.dataset.hxVal;
+      if (on && !row.closest("[hidden]")) history[row.dataset.hxItem] = on.dataset.hxVal;
     });
     // her 2026-10-26 picks: the details beside each Yes (history.notes = { key: text }), the supplement rows (history.supps = [{ name, dose }])
     // and the family box (history.fhNote). Plain keys on the same jsonb blob, like medNotes before them: no SQL change.
     var notes = {};
     document.querySelectorAll("[data-hx-note]").forEach(function (box) {
       var row = box.closest("[data-hx-item]"), v = box.value.trim();
-      if (v && row && row.querySelector('.hx-btn.on[data-hx-val="yes"]')) notes[box.dataset.hxNote] = v.slice(0, 1000);
+      if (v && row && !row.closest("[hidden]") && row.querySelector('.hx-btn.on[data-hx-val="yes"]')) notes[box.dataset.hxNote] = v.slice(0, 1000);
     });
     if (Object.keys(notes).length) history.notes = notes;
     if (history.taking_supplements === "yes") {
@@ -712,7 +714,7 @@
       errEl.textContent = "Something went wrong sending this — please try again.";
       errEl.hidden = false;
       submitting = false;
-      btn.textContent = "Submit";
+      btn.textContent = document.querySelector(".again") ? "Send again" : "Submit";
       refreshGate();
     });
   }

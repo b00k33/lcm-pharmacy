@@ -5,7 +5,7 @@
 > allow me to generate a sms to send patient link so they can fill out their
 > medical history
 
-Sent with a screenshot of Emma Lloyd's Medical History screen — "0 of 23
+Sent with a screenshot of a patient's Medical History screen — "0 of 23
 asked".
 
 ## What already existed (audited before building, not assumed)

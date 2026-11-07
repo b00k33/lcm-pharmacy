@@ -60,7 +60,7 @@ self.addEventListener("notificationclick", function (e) {
   e.waitUntil(self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
     for (var i = 0; i < list.length; i++) {
       var c = list[i];
-      if (c.url.indexOf(self.registration.scope) === 0 && "focus" in c) { c.postMessage(key ? { type: "RXCK_OPEN", key: key } : { type: "TRIP_OPEN", key: trip }); return c.focus(); }
+      if (c.url.indexOf(self.registration.scope) === 0 && /\/(index\.html)?([?#]|$)/.test(c.url) && "focus" in c) { c.postMessage(key ? { type: "RXCK_OPEN", key: key } : { type: "TRIP_OPEN", key: trip }); return c.focus(); }
     }
     return self.clients.openWindow("./index.html#" + (key ? "rxck=" + encodeURIComponent(key) : "trip=" + encodeURIComponent(trip)));
   }));
@@ -141,7 +141,7 @@ self.addEventListener("fetch", function (e) {
         // clone BEFORE returning: once the response is handed to the browser
         // its body is used up, and a clone taken later throws
         var copy = res.clone();
-        caches.open(CACHE_VERSION).then(function (c) { c.put(navKey, copy); });
+        if (res.ok) caches.open(CACHE_VERSION).then(function (c) { c.put(navKey, copy); });
         return res;
       }).catch(function () {
         // She is being served the OLD copy for this one open. Keep pulling the
@@ -159,7 +159,7 @@ self.addEventListener("fetch", function (e) {
             }).catch(function () {})
           );
         } catch (err) { /* event already settled -- never let this break the load */ }
-        return caches.match(req).then(function (c) { return c || caches.match("./"); });
+        return caches.match(navKey).then(function (c) { return c || caches.match(req); }).then(function (c) { return c || caches.match("./"); });
       })
     );
     return;
