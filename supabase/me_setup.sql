@@ -37,5 +37,5 @@ create trigger lcm_me_touch before update on public.lcm_me
   for each row execute function public.lcm_me_touch();
 
 insert into public.lcm_me (id, members)
-values ('linh', array['linhchinesemedicine28@gmail.com', 'linhdinh2026@gmail.com'])
+values ('linh', array['CLINIC_LOGIN_1', 'CLINIC_LOGIN_2'])
 on conflict (id) do nothing;
