@@ -209,6 +209,10 @@
   var SB_URL = "https://jkpfhqaxhsiwtijxxzql.supabase.co";
   var SB_KEY = "sb_publishable_td_6_5ACewMZq8fVEB3Gww_KB-EDlYY";
   var token = new URLSearchParams(location.search).get("c");
+  /* the installed app opens start_url (chart.webmanifest), which cannot carry her link: without this it opened the walk-through and her
+     entries stayed on this phone. The link is remembered the first time it is opened; a device that never had one still gets the walk-through. */
+  var linkInAddress = !!token;
+  try { if (!token) token = localStorage.getItem("daybook-chart-link"); } catch (e) {}
   var DEMO = !token;                 // no link = the walk-through she can tap
   var sb = null;
   try { if (!DEMO && window.supabase) sb = window.supabase.createClient(SB_URL, SB_KEY); } catch (e) {}
@@ -804,7 +808,7 @@
     bar.hidden = tab !== "today";
     document.body.style.paddingBottom = tab === "today" ? "148px" : "76px";
     var btn = document.getElementById("saveBtn");
-    btn.textContent = saving ? "Saving…" : dirty ? "Save today" : "✓ Saved for today";
+    btn.textContent = saving ? "Saving…" : dirty || !Store.days[TODAY] ? "Save today" : "✓ Saved for today";
     btn.className = "savebtn" + (dirty || saving ? "" : " saved");
     btn.disabled = saving || !dirty;
     [].forEach.call(document.querySelectorAll("nav.tabs button"), function (b) {
@@ -816,6 +820,14 @@
      Events
      ===================================================================== */
   function touch() { dirty = true; }
+
+  /* a phone resumes the page without reloading it: on a new day, keep anything unsaved under its own day, then open today */
+  function rollDay() {
+    if (document.hidden || saving || keyOf(new Date()) === TODAY) return;
+    (dirty ? saveNow() : Promise.resolve()).then(function () { if (!dirty) location.reload(); });
+  }
+  document.addEventListener("visibilitychange", rollDay);
+  window.addEventListener("online", rollDay);   // a phone that wakes before its network: the save failed, so try again the moment the network is back
 
   document.addEventListener("click", function (e) {
     var t = e.target.closest("button"), el;
@@ -870,6 +882,10 @@
   });
   document.addEventListener("input", function (e) {
     if (e.target.id === "tempIn") { draft.temp = parseTemp(e.target.value); touch(); updateSaveBtn(); }
+    else if (e.target.id === "tempTime") { draft.tempT = e.target.value; touch(); updateSaveBtn(); }
+    else if (e.target.id === "fWeight") { draft.weight = e.target.value === "" ? null : +e.target.value; touch(); updateSaveBtn(); }
+    else if (e.target.id === "fMeds") { draft.meds = e.target.value; touch(); updateSaveBtn(); }
+    else if (e.target.id === "fNote") { draft.note = e.target.value; touch(); updateSaveBtn(); }
   });
   document.addEventListener("toggle", function (e) {
     if (e.target.id === "moreBox") lsSet("moreOpen", e.target.open);
@@ -908,7 +924,7 @@
         }, 200);
       }
     } catch (err) {
-      saveErr = (err && err.message) || "Couldn’t save just now — check your connection and try again.";
+      saveErr = (err && /no longer active/.test(err.message || "") && err.message) || "Couldn’t save just now — check your connection and try again.";
       dirty = true;
     }
     saving = false; render();
@@ -935,6 +951,7 @@
           "<p>It may have been replaced, or the address may be incomplete. Please check the message from the clinic, or contact Linh.</p></div>";
         return;
       }
+      if (linkInAddress) { try { localStorage.setItem("daybook-chart-link", token); } catch (e) {} }   // only a link that really opened replaces the one she has
       if (Store.link.status === "paused") {
         app.innerHTML = '<div class="center"><h2>Charting is paused</h2><p>Linh has paused your chart for now. Everything you have entered is safe.</p></div>';
         return;
@@ -945,7 +962,7 @@
       render();
     } catch (err) {
       app.innerHTML = '<div class="center"><h2>Couldn’t open your chart</h2><p>' +
-        esc((err && err.message) || "Please check your connection and try again.") + "</p></div>";
+        esc("Please check your connection and try again.") + "</p></div>";
     }
   })();
 })();

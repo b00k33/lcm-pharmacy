@@ -76,8 +76,8 @@ Cerebral Circulation · Endo 1 · GallStone · Large Intestine · Migraines ·
 Miscarriage Prevent · Nasal Congestion · Phlegm, Bloating · Post Ovu ET · Post Surgery ·
 Reynauds · Uterine Prolapse · WarmBreakers/Softene
 
-Note `Post Surgery` is the template; `Serena Post Surgery` is a real patient using it —
-dispensed a week later as "Post Surgery Recovery". Keep Serena as she is.
+Note `Post Surgery` is the template; a real patient's name ends the same way using it —
+dispensed a week later as "Post Surgery Recovery". Keep that patient as they are.
 
 ## 5 · Admin (1)
 
@@ -89,11 +89,11 @@ dispensed a week later as "Post Surgery Recovery". Keep Serena as she is.
 
 | Name | Why it stays a patient |
 |---|---|
-| Jennifer Jennifer | **She is in your Cliniko patient export.** The first name was entered twice. |
-| David Linh | Sits in a run of seven Davids. "Linh" is a real surname. |
-| Astrid Husband | Astrid's husband, or the English surname Husband. Either way, a person. |
+| A patient | **In your Cliniko patient export.** The first name was entered twice. |
+| A patient | A real surname. |
+| A patient | Either way, a person. |
 
-Two more were double-checked and cleared: **Xin Yi Ng** and **Nian Ci Liong**. Both are real
+Two more were double-checked and cleared: two more patients. Both are real
 names. ("Ng" and "Liong" are not valid pinyin syllables, so neither can be a formula name.)
 
 ---

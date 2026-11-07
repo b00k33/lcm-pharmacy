@@ -4,7 +4,7 @@ Captured the turn she answered, before building, per her standing rule. **Her
 words are the source of truth.** Nothing below is paraphrase except where marked
 `[note]`.
 
-Prompted by Phoebe Saul's screen — an "Immune support — acute" plan whose
+Prompted by a patient's screen — an "Immune support — acute" plan whose
 `What happened · Visits` cell read `—`.
 
 ---
