@@ -12038,3 +12038,5 @@ Her five requests (a Guide / Compare symptom editor, Fitness decluttered with st
 - **Tested** (test copy, made-up to-dos, her records untouched): the tile and the panel with all four groups; add + Enter (cursor stays, badge count up); tick (toast + Undo, the fold counts it); fold open, tick put back; the Me item opens her record at 1280 and, in the phone drawer, at 360x469 (drawer closes, no sideways scroll); collapsed rail shows the icon; no page errors.
 - **Not tested:** her laptop and her real records; a real phone. **Not done:** a to-do's area on the panel (the Week page has areas); a day picker in the panel's add box.
 - **SAVED, not live:** it goes with her next "push live".
+
+**LIVE 2026-11-08, build 20261108-115700 (her "push live").** The audit, the tidy and her four picks went out together, with another session's commit (the Me door and the To-dos panel). Checked on the site: the old install pictures with named patients return 404, the two new ones serve, manifest.json lists only the new ones. Still open: she checks her GitHub plan, then the folder can go private; her gold Update button installs the build on each device.
