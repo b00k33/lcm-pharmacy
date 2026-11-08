@@ -12181,3 +12181,19 @@ its click handler. Nothing else touched.
 
 **SAVED, not live yet:** the switch is still live from this morning's push until her next
 "push live" carries this removal out.
+
+## Her 2026-11-08 correction: a fold for Guide's picture, not a motion switch
+
+"its not about reducing motion. its about collapsing the animation section" -- replaces the
+Reduce animations work (reverted, see above).
+
+- `phGdfCardHtml`: the picture block (`phFsCardHtml` film or the `phPpGdfHtml` fallback) now sits
+  inside a `.gf-picfold`, a small "Picture ▾/▸" header button (`data-gdf-pic-fold`) above it.
+  Closed, the picture is not rendered at all (not CSS-hidden) -- a drawn film's per-frame loop
+  genuinely stops. `phGdfPicOpen` (view state, defaults open, not saved) matches the existing
+  Cover/Group toggles on the same toolbar.
+- **Tested:** closing removes the picture's DOM node entirely (checked by element presence, not
+  just a visibility check); the signs table rises to sit right under the fold; reopening restores
+  it unchanged; both the formula-story film and the older concept-picture fallback fold the same
+  way; chevron and `aria-expanded` track the state.
+- **SAVED, not live:** goes with her next "push live".
