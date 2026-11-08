@@ -12837,3 +12837,26 @@ families at the list's 286px). Her picks: **B · Tint**, build and show first, t
 - **Not checked:** her own screen, the Key2, a real finger or mouse; whether a rename between 01:09 and this build saved
   capitalised words in her records (read her Guide's renamed symptoms to see).
 - **LIVE** on her "Push live" (this note's build).
+
+## Guide family card: the Ren/Bing table, number + dot only (2026-11-09)
+
+Her "improve this visual" (a screenshot of the Ren/Bing weights table). Asked what felt off, since this table has
+had several deliberate passes this week; she named it: "numbers + dots too cramped." Shown before/after, she
+picked dropping the count.
+
+- **The count moves to a tap/hover, nothing is lost.** Each cell was weight number + a coloured dot + a second,
+  small count number ("4 •2") squeezed into a fixed 52px column -- the count was the one genuinely crowding it, and
+  tapping the cell already opens the full "who else weighs this" list (`.gf-more`), so the inline count was only
+  ever a preview of something one tap away. `phGdfMergeCellHtml`'s `sim` is now just the dot, carrying the count in
+  its own `title` ("2 other formulas also weigh this"); the dot grew 6px -> 8px since it's no longer sharing the
+  badge with a number. `.gf-mc-sim`/`.gf-mc-n2` (the pill wrapper + count text) are gone, dead once nothing used
+  them.
+- **Shared by both edit and view mode** (`phGdfMergeCellHtml` draws both), so this reads the same whether she's
+  editing a family's weights or just looking.
+
+**Tested:** in the sandbox, by calling `phGdfMergedHtml` for a formula in both view and edit mode and injecting the
+real markup inside `.ph-gdf` -- confirmed by screenshot that the dot shows alone beside the number, and its title
+carries the count; edit mode still renders its dots/minus/remove controls. No console errors. **Not tested:** her
+own real family data, or tapping a dot to confirm the full breakdown panel still opens (that handler wasn't
+touched, but wasn't driven through a real click in this sandbox).
+**SAVED, not live:** goes out with her next "push live".
