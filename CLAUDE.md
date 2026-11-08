@@ -1407,6 +1407,12 @@ not repeated here.
 - Phase labels are identity keys (`msgWording`, `phaseKey`, group names such
   as "Subjective — how they feel"): change every use together, never one.
 - Sign labels read "Subject: descriptors" ("Sweat: easily").
+- **Shown with capitals, saved as written** (her 2026-11-09 "give symptoms words capitalised first letter except
+  conjunctions"): wherever a symptom's words are listed, `phSymCase` gives every word a capital and keeps a conjunction small
+  unless it leads ("Flushed or Red"; "Sensitive To Cold": only conjunctions stay small, her words). Draw a sign's words through
+  `phSignLabHtml` / `phSignDescHtml` / `phGdfLabHtml` / `phSymLab`, never `esc(label)`. Never capitalise the saved words or
+  the pool: the sign pictures, the places, a Diagnosis match, search and the same-wording guard read them as written; a
+  rename field opens on the saved words (`data-raw`), so an untouched rename saves nothing.
 - A "Diagnosis:" sign names the condition only (her 2026-10-21, "fatty liver is not related to
   diarrhoea"). Symptoms a source lists with it are their own signs, reused from the pool and
   weighted on the formula; a condition the pool already has is that one row, never a second one.

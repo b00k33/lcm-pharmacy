@@ -12735,3 +12735,41 @@ clipping, by screenshot. No console errors. **Not tested:** her own real Up next
 appointment data), a visit with no phone or email on file (the `.off` grey-out state wasn't exercised, only
 read in the markup).
 **SAVED, not live:** goes out with her next "push live".
+
+## Phone sizes on Tongue, Pulse and Abdomen; symptom words with capitals, 2026-11-09
+
+Her words, after the Guide tap audit: "yes fix those too, then push live, give symptoms words capitalised first letter except
+conjunctions". (The tap audit itself, 883d7791, went live inside another session's build 20261109-004000.)
+
+- **The phone's Tongue map, Pulse and Abdomen** (PHONE REDESIGN; the Guide's pages and the patient's exam pages draw the same
+  charts, so both changed): the chart tabs 6px corners (were pills; the Tongue's 22px at 12px, now 28px at 12.5px); the photo
+  buttons (Add today's, Flash) 28px chips with 6px corners at 12.5px (were 18-20px pills at 10.5px); the add-a-note fields 32px
+  with 6px corners on the tint (were 24-26px, square); the pulse sections 6px corners, the picked one solid (were 10px, tint); a
+  note's ✕ a 28px circle clear of the words (was 21x19); the pulse layer keys 12.5px (were 12px); the patient's exam pages' chip
+  bars 6px corners (were round or 10px; the Guide's already were).
+- **Found on the way:** Compare with two formulas picked: the key under the overlap bar (Only A · Shared · Only B) filters the
+  table but was 14px plain words; now chips (32px, the phone 28px), the picked one solid (her "every tap a chip"). The Triangle's
+  Try bar on the phone was 34px; its chips are 30px so the bar is 32px, as on a computer (the Guide and Fang Bing Ren).
+- **The size script's KEEP list** gained two chart parts: a table cell that taps (its row is the target) and Compare's overlap
+  bar. Both are the agreed kind (cells, chart marks), not new sizes.
+- **Symptom words with capitals** (`phSymCase`, `phSymLab`): every word starts with a capital and a conjunction stays small unless
+  it leads ("Flushed or Red", "Worse when Tired and Cold"). As she said it, only conjunctions stay small, so "Sensitive To Cold" and
+  "Strong Around The Navel". A word that starts with a digit or already has capitals is left alone ("LMP", "1-2 am"); am / pm and
+  units stay small; "hot/cold" reads "Hot/Cold". Where: the Guide's family card (Area and Importance, Study and Edit, the add
+  search, the quiz and weak spots), Compare (the row and each formula's column), Fang Bing Ren's rows and table (`phSignLabHtml`
+  / `phSignDescHtml`, which held her 2026-10-23 first-letter capital), the triangle's lists, a sign picture's caption.
+  **Display only:** the saved words and the pool are untouched, because the sign pictures, the places, a Diagnosis match, search
+  and the same-wording guard read them as written. The in-place rename opens on the saved words (`data-raw`), so opening it and
+  leaving changes nothing; her typed words save as typed. Hovers, sentences that quote a symptom, letters and notes keep the
+  words as written. The rule: CLAUDE.md "Shown with capitals, saved as written".
+- **Checked** on a test copy of the newest build: the phone at 360px, every Guide page (Families in all four states, Triangle,
+  Compare with two formulas, Tongue map, Pulse, Abdomen, Herbs, Blood tests, Iron, Eggs, Eating eggs) plus the patient's Tongue,
+  Pulse and Abdomen exam pages: nothing off (781 measured), no sideways scroll. A computer at 1220px: the same pages, nothing off
+  (851 + 56 measured); a tap on the Shared chip filters to the 7 shared rows and turns solid. Capitals on the card, Compare and the
+  helpers; opening a rename and leaving saved nothing; a typed rename saved as typed and showed with capitals. No page errors (the
+  test copy's one missing file is the egg film's poster). Appointments still opens.
+- **Not checked:** her own screen and records, the Key2, a real finger or mouse, the patient's pages opened through their own
+  menus (their charts were drawn on a test page with the same styles), a letter or note that quotes a symptom.
+- Pages checked for the integration rule: the Guide (every page), the patient's Tongue, Pulse and Abdomen pages, Fang Bing Ren's
+  rows by their shared helpers.
+- **LIVE** on her "push live" (this note's build).

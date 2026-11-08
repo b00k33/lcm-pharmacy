@@ -26,6 +26,7 @@
     "input[type=checkbox]", "input[type=radio]", "input[type=range]", "input[type=color]", "input[type=file]",
     "img", "video", "canvas", "svg", "label",
     ".ph-cal-day", ".ph-cp-day", ".ph-pulse-cell", ".ph-tp-sq",   // calendar days, pulse chart cells, session grid squares
+    "td", ".ph-cmp-ovl .bar button",                // a table cell that taps (its row is the target); Compare's overlap bar (a chart)
     "[data-keep-size]"                              // a control she agreed to keep at its own size: say which in the build note
   ].join(", ");
   const TAP = "button, select, a[href], input:not([type=hidden]), textarea, [role=button], [role=tab], [role=option]";
