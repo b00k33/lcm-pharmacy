@@ -12486,3 +12486,43 @@ centres itself (`margin: 0 auto`) instead of stretching to the panel's full widt
 number would have quietly dropped the sign rows along with the width. Checked at 1280px (centred, detail rows
 intact) and that it still folds into the phone's narrow layout below 640px as it already did.
 **SAVED, not live:** goes out with her next "push live".
+
+## Guide card: Edit laid out like Study (2026-11-08)
+
+Her words, on a screenshot of Chai Hu's card in Edit (the by-area table one column wide, each value 150px with its five dots and
+− × under them): "how to make the edit version same layout as study". Mock: `mocks/guide-edit-like-study-mock-2026-11-08.html`
+(private Artifact; Now · A · B on the real Chai Hu card). Her picks: **A · Tap a number** (B was the five dots in each cell with
+− × floating above it) and **build, show me first**.
+
+- **The table** (`phGdfMergedHtml`): Edit draws Study's own table: two columns, 52px Ren · Bing cells, the number and the other
+  formulas' dot + count (`phGdfMergeCellHtml(id, side, r, edit)`; `phGdfMergeCellEditHtml` and the 150px column width went, and
+  so did `.gf-mrg.edit`'s one column and the `.gf-mc-td.edit` / `.gf-mcell.edit` rules). Chai Hu's table at her 1220px window:
+  3,800px tall before, 1,297px now (Study's height). The Add to Ren · Add to Bing bar sits above the two columns, not inside the
+  first (`.gf-mrg-addbar` before `.gf-mrg`, its own 18px sides; 12px on the phone), so its search box keeps the full width.
+- **The box**: a tap on a value's number opens Study's own box (`.gf-more`) with a top row (`.gf-ed`): the five dots
+  (`phGdfDotsHtml`, `data-gdf-w`), − (`data-gdf-neg`) and × (`data-gdf-rm`), the same doors as before; the other formulas'
+  chips stay under it. One box at a time (`phGdfEdOpen`, its own state, so Study's open boxes are untouched); the same tap, a
+  click anywhere else or Esc closes it, in place (`phGdfEdClose`, no repaint, so a field she clicked keeps its focus). Opening
+  it puts the focus on its first dot (Esc reaches the Guide; Tab walks the dots, − and ×). A dot sets the importance, closes
+  the box and the number pops once (`phGdfPopW`, a transient `.pop`; off under reduced motion in CSS and through
+  `phTpReduceMotion()`); − keeps the box open (the number turns red, −4); × takes the value off and closes it. Toasts and Undo
+  as before (`phGdfDone`). Placement (`phGdfEdPlace`, also after every card repaint): under the number, above it when the
+  card's foot or the window's would cut it (`.up`), else the page scrolls to it.
+- **The card's top bar** (`.gf-tb`, found while checking): in Study at her 1220px window the bar's parts (902px) are wider than
+  the card (560px) and the Study · Edit switch, the one part with `overflow: hidden`, was squeezed to 2px; on the phone in both
+  modes. Each part now keeps its width (`.gf-tb > :not(.gf-sp) { flex: none; }`) and the row scrolls sideways as it already
+  did. Left as it was: the far end of the bar (Compare with…, Quiz me, Learned in Study; Learned in Edit) sits past the card's
+  edge, reached by scrolling the bar (no scrollbar shows).
+- **Not changed:** Study; Group = Importance (its Edit rows keep the dots, ✎, − and × in each row); the add search; Compare; the
+  Fang Bing Ren scoring and every write door.
+- **Checked** on a test copy (Guide › Families, Chai Hu, Edit, Group = Area) at 1220px: two columns, 52px cells, 66 rows as in
+  Study; a box opens with five dots, − × and the chips, inside the card; a tap inside it keeps it; a dot sets 2 (toast with
+  Undo, box closed, the pop, then gone; Undo back to 4); − turns it −4 red and back, box open; another number moves the box; the
+  same number closes it; a click in the pearl closes it and keeps the pearl's focus; Esc closes it; × takes the row off and
+  Undo brings it back; the last row's box opens upward near the window's foot; Study's boxes open and close as before with no
+  edit row; Importance's Edit unchanged; Add to Ren opens its search the bar's full width and finds signs; the Study · Edit
+  switch is whole (110px) in both modes and a tap on Edit opens Edit; no page errors. 360px: one column, no sideways scroll,
+  the box inside the screen, the bar's buttons in line with the table.
+- **Not checked:** her own screen and records, the Key2, a real mouse (taps were scripted clicks), reduced motion in a browser.
+  Pages checked for the integration rule: the Guide card only (the weights it edits are read by Fang Bing Ren and Compare,
+  which were not changed).

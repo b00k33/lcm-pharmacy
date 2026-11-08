@@ -888,6 +888,12 @@ snapshot → change → `phGdfDone` (tidy, stamp, save with rollback, sync, repa
 written as 0, and lists filter `w !== 0`. Cloud: `mergeFbrEdits` beside `mergeTemplateOverrides`. Notes-only rows: `gdNoteEdits`.
 A notes-only formula that has become a scoring family (Wen Jing Tang, 2026-10-28) leaves Notes only; its memory aid, distinction,
 conditions and source show on the family's card (`phGdfNoteIsFam`, `phGdfFamNoteId`).
+**The by-area table (Group = Area, `phGdfMergedHtml`):** each area one ruled table, its name and count in the head row beside Ren ·
+Bing, two columns, 52px value cells (the number + the other formulas' dot and count; a tap opens the box of those formulas).
+**Edit is the same table** (her 2026-11-08 pick A, `guide-edit-like-study-mock-2026-11-08.html`): Add to Ren · Add to Bing above the
+columns; a tap on a number opens the same box with the five dots, − and × on top (`phGdfEdOpen`, one at a time; a dot sets it and
+closes it, the number pops). The card's top bar keeps every part whole and scrolls sideways. BUILD-NOTES "Guide card: Edit laid out
+like Study".
 Details and tests: [Guide Families].
 **The card's picture (her picks 2026-11-04; LIVE build 20261105-003400; BUILD-NOTES "Guide cards: the person, and the formula's story"):** `phFsHtml`, the `phFs*` functions.
 - **A herb family is a person** (`PH_FS_PEOPLE`: Ban Xia, Chai Hu, Da Huang, Fu Zi, Gui Zhi, Huang Bo, Huang Lian, Huang Qi, Ma Huang, Shi Gao), her words "animations for gui zhi should only focus on the person, only the formulas show pathology". The card plays only its Ren rows: the body on its own build (`phFsBuild`), no burners (`PH_FP.person`), no stops, no herbs, no conditions, tiles for Ren rows only. Its rows of signs under the card stay as they are.
