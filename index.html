@@ -78141,7 +78141,7 @@ or changing anything in Cliniko.
     // or notes -- now across ANY of a patient's scripts (a herb only used
     // in an older one should still surface her), not just the current one.
     const rows = patients
-      .filter(p => !q || p.group.some(t => presWordStartMatch(t.name, q) || presWordStartMatch(t.formula, q) || presWordStartMatch(t.actualFormula, q) || presWordStartMatch(t.notes, q)))
+      .filter(p => !q || p.group.some(t => presWordStartMatch(t.name, q) || presWordStartMatch(t.formula, q) || presWordStartMatch(t.actualFormula, q) || presWordStartMatch(t.notes, q) || (t.ingredients || []).some(i => presWordStartMatch(i.herb || i.name, q))))
       .filter(p => (CHIP_PREDS[presFilterChip] || CHIP_PREDS.all)(p.current));
     const val = p => presSort.key === "grams" ? (p.current.totalGrams || 0)
       : presSort.key === "recent" ? lastMs(p.current)
@@ -97392,7 +97392,7 @@ or changing anything in Cliniko.
       </div>
       <div class="ph-build-top ph-row">
         <label class="ph-k ph-grams-label" for="presGrams">Grams</label>
-        <span class="ph-v"><input type="text" inputmode="decimal" id="presGrams" value="${t.totalGrams || ""}" aria-label="Grams prescribed"><span id="presGramsSegWrap">${presGramsSegHtml(t)}</span><span id="presDoseDurationWrap" class="ph-dose-duration">${presDoseDurationHtml(t)}</span></span>
+        <span class="ph-v"><input type="text" inputmode="decimal" id="presGrams" value="${t.totalGrams || ""}" aria-label="Grams prescribed"${(presPending[t.id] || []).length ? ` disabled title="Stock is already deducted at this amount — Undo deduct to change it"` : ""}><span id="presGramsSegWrap">${presGramsSegHtml(t)}</span><span id="presDoseDurationWrap" class="ph-dose-duration">${presDoseDurationHtml(t)}</span></span>
       </div>
       <div id="presGramsHintWrap">${presGramsHintHtml(t)}</div>
       <div class="ph-build-top ph-daysline ph-row">
@@ -152289,6 +152289,7 @@ Dosage: {dosage}
     // can fold it into the entry (keeping it undoable from the log).
     const deducted = [];
     const notes = [];
+    const subs = {};
     items.forEach(x => {
       if (!x.h || x.h.qty == null) return;
       // her rule (2026-08-06): dispense the FULL amount prescribed even if
@@ -152302,7 +152303,7 @@ Dosage: {dosage}
         const before = x.h.qty;
         x.h.qty = phRound2(x.h.qty - actual);
         deducted.push({ herbId: x.h.id, grams: actual });
-        if (x.subFor) notes.push(`↔ ${x.subFor.code ? esc(x.subFor.code) + " " : ""}${esc(x.subFor.name)} substituted with ${phHerbCode(x.h) ? esc(phHerbCode(x.h)) + " " : ""}${esc(x.h.name)} × ${phFmtG(actual)}g for this dispense only.`);
+        if (x.subFor) { notes.push(`↔ ${x.subFor.code ? esc(x.subFor.code) + " " : ""}${esc(x.subFor.name)} substituted with ${phHerbCode(x.h) ? esc(phHerbCode(x.h)) + " " : ""}${esc(x.h.name)} × ${phFmtG(actual)}g for this dispense only.`); subs[(x.subFor.code || "") + "|" + (x.subFor.name || "")] = { code: phHerbCode(x.h) || "", name: x.h.name || "", grams: actual }; }
         else if (x.h.qty < 0) notes.push(`⚠ ${phHerbCode(x.h) ? esc(phHerbCode(x.h)) + " " : ""}${esc(x.h.name)} dispensed at ${phFmtG(x.h.qty)}g (${phFmtG(before)}g in stock, ${phFmtG(actual)}g needed) — confirmed anyway.`);
       }
       phAfterQtyChange(x.h);
@@ -152323,6 +152324,7 @@ Dosage: {dosage}
     if (deducted.length) t.pendingDispensedAt = presPendingAt[t.id];   // nothing left the shelf: nothing is pending
     t.pendingDispensedItems = deducted;
     t.pendingDispensedNotes = notes;
+    t.pendingSubbed = Object.keys(subs).length ? subs : null;   // the label/Log follow what was actually poured, keyed by the original herb's code|name (her audit pick)
     // her report (2026-08-06): "i dont like that the label opens after i
     // dispense a formula" -- presLabelOpen only ever gets SET by 🧮 Calculate
     // and never reset by dispensing, so if she'd checked the label first, it
@@ -152347,6 +152349,7 @@ Dosage: {dosage}
       delete t.pendingDispensedAt;
       delete t.pendingDispensedItems;
       delete t.pendingDispensedNotes;
+      delete t.pendingSubbed;
       if (okPh) savePharmacy();   // the stock write landed but the script's own stamp didn't -- put the herbs back in storage too
       phFlash = "Nothing was deducted — the save failed, so the stock change was rolled back.";
       renderPharmacy();
@@ -152600,6 +152603,8 @@ Dosage: {dosage}
     const gp = parseFloat((document.getElementById("presGrams") || {}).value) || 0;
     if (!gp || !t.ingredients.length) return;
     const { items, cost, price, method } = presCalcNumbers(t, gp);
+    // the label and Log follow what was actually poured, not the original prescription (her audit pick)
+    if (t.pendingSubbed) items.forEach(x => { const s = t.pendingSubbed[(x.code || "") + "|" + (x.name || "")]; if (s) { x.code = s.code; x.name = s.name; x.grams = s.grams; } });
     const now = new Date();
     // patient-type templates store the patient's name in t.name, not a formula
     // name (see presPatientFor) — "what" must never just echo t.name for those,
@@ -152662,13 +152667,14 @@ Dosage: {dosage}
     // her data-integrity fix (2026-09-21): the durable twin of the three
     // lines above -- once logged, t.lastDispensedAt is the settled record,
     // so the "stock is out, not yet logged" stamp is retired the same way.
-    const prevPendingStamp = { at: t.pendingDispensedAt, items: t.pendingDispensedItems, notes: t.pendingDispensedNotes };
+    const prevPendingStamp = { at: t.pendingDispensedAt, items: t.pendingDispensedItems, notes: t.pendingDispensedNotes, subs: t.pendingSubbed };
     delete presPending[t.id];
     delete presPendingNotes[t.id];
     delete presPendingAt[t.id];
     delete t.pendingDispensedAt;
     delete t.pendingDispensedItems;
     delete t.pendingDispensedNotes;
+    delete t.pendingSubbed;
     PHARMACY.log.unshift(entry);
     // her ask (2026-08-04): a toast that fades is no proof anything happened --
     // these three fields ARE the permanent record, shown as a settled "✓
@@ -152689,6 +152695,7 @@ Dosage: {dosage}
       t.pendingDispensedAt = prevPendingStamp.at;
       t.pendingDispensedItems = prevPendingStamp.items;
       t.pendingDispensedNotes = prevPendingStamp.notes;
+      t.pendingSubbed = prevPendingStamp.subs;
       if (okPh) savePharmacy();   // the log write landed but the stamp didn't -- take the log entry back out of storage too
       phFlash = "NOT logged — the save failed, so nothing was recorded and nothing changed.";
       renderPharmacy();
