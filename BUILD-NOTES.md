@@ -12526,3 +12526,28 @@ Her words, on a screenshot of Chai Hu's card in Edit (the by-area table one colu
 - **Not checked:** her own screen and records, the Key2, a real mouse (taps were scripted clicks), reduced motion in a browser.
   Pages checked for the integration rule: the Guide card only (the weights it edits are read by Fang Bing Ren and Compare,
   which were not changed).
+
+## The growing triangle: collapsed by default (2026-11-08)
+
+Her "make the triangle collapsible - collapsed is default", straight after the width fix above.
+
+- **One shared fold, one shared default.** `phFtgFolded()`'s stored preference (`lcm-ftg-fold`) already existed for the
+  patient page's own "Triangle" pick in `.ph-fbr-tools`; its only change is the first-ever default -- `window.innerWidth
+  <= 640` (phone folded, desktop open) is now always `true` until she opens it once, on any device, on both places that
+  draw it.
+- **The Guide's Triangle tab never had a fold at all** (the patient page did): it now gets its own toggle row,
+  `<button class="ph-ftg-foldbar" data-ftg-fold="1">` with a chevron, in the same spot `.ph-ftg-mark`'s spacer used to
+  sit. `phFtgClick`'s existing `data-ftg-fold` branch already ran for anything with that attribute; `phFtgFoldToggle`
+  now acts on whichever of the two wraps exists (`phFtgWrapOf()` for the patient page, `.ph-ftgg .ph-ftg-wrap` for the
+  Guide tab) instead of assuming the patient page, and flips the chevron + `aria-expanded` on a bar as well as the old
+  button's `.on` + `aria-pressed`.
+- **Folded costs nothing**: `phFtgGuideMount()` only builds the canvas (`phFtgMake`, the body silhouette, the 40 sparks)
+  when the wrap isn't hidden -- new helper `phFtgGShow()` builds it the first time she opens it, or just resizes +
+  repaints if it's already built. The sign-ticking board below it (Bing/Ren buttons, Tick for me, Search) is a separate
+  block and keeps working while folded, same as before.
+
+**Tested:** the sandbox's Guide › Triangle tab with no stored preference -- opens folded, the board still ticks; tapping
+the fold bar builds the triangle fresh (no console errors) and the chevron flips to ▾; tapping it again hides it and
+flips back to ▸; the choice persists in `localStorage`. The patient page's own button and its `phFtgShow`/`phPatientPeek`
+path were not exercised (no signed-in patient in the sandbox) -- read only, logic unchanged there beyond the shared default.
+**SAVED, not live:** goes out with her next "push live".
