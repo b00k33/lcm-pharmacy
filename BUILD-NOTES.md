@@ -12110,3 +12110,15 @@ looking at Guide's body-type video).
 - **Not tested:** every animated surface individually -- same shared mechanism as OS
   reduced-motion, which already covered most of them; no surface was special-cased.
 - **SAVED, not live:** goes with her next "push live".
+
+## Her whole-app audit, Dispense (2026-11-08)
+
+Four more of the "31 wait for your word" questions, the Dispense group, her picks all the recommended options.
+
+- **The label and Log follow a substitution** (`t.pendingSubbed`, carried alongside `t.pendingDispensedItems` through every save/rollback/undo path a dispense already has): when 💊 Dispense Stock substitutes one herb for another, the label and the Log entry's structured `items` used to still show the originally-prescribed herb — only a prose stock note mentioned the swap. The label and the printed/copied record now show the herb actually poured, keyed back to the original by code + name so a mid-dispense edit to the ingredient list can't mismatch it. Her pick: follow the substitute.
+- **Usage follows it too, for free**: ordering and Overstock stats (`phUsageAll`) read the same Log `items` the label does, so fixing the label fixes the usage credit as well — no separate change needed. Her pick, confirmed: usage follows the substitute.
+- **Grams locks once stock is deducted** (the `presGrams` field): 💊 Dispense Stock and 💾 Save & Log each read Grams independently at the moment they're clicked, so editing it in between could deduct one amount and log another with nothing stopping or flagging it. The field now greys out the moment stock is deducted, with a title explaining why; ↩ Undo deduct (or Undo dispense from the ⋯ menu) unlocks it again. Her pick: lock Qty after Dispense Stock.
+- **Prescriptions search reaches the herbs** (`renderPresList`'s filter): the search box's own comment already said "by name, herb or notes", but the filter never actually checked a script's ingredients — only patient name, formula name and notes. It now also matches a herb or ingredient name in the script. Her pick: add herb names.
+
+**Tested:** the sandbox copy loads clean (no console errors, the four changed functions still defined) at `lcm-sandbox-3fbf`. A live substituted dispense, and real patient/herb search, not run — these are logic/data-flow fixes inside an existing screen, not a new one.
+**SAVED, not live:** goes out with her next "push live".
