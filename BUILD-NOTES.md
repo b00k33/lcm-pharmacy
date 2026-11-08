@@ -12303,3 +12303,14 @@ The first of her Files group's picks: three real values sat in `index.html`'s so
 **Integration check:** `phHubInc` (the day-by-day income calc), `phHubDues` (the bills-due list) and the Mine hub's Prices card all read the same two new fields fresh — no second copy.
 **Tested:** the sandbox copy loads clean (no console errors beyond the expected offline network ones); `phHubRate()` returns `p65: 65` and `phHubBiz()` returns `leaseContact: "David Dinh"` with nothing set yet, matching the old hardcoded values exactly, so this is a no-op until she types something different. The new input fields themselves and a real edit round-trip, not run — no sign-in or her own synced data in the sandbox.
 **SAVED, not live:** goes out with her next "push live".
+
+## Guide's Families list: collapsible, less text, one row (2026-11-08)
+
+Her live feedback on the Guide page, three small fixes.
+
+- **Each family card on the Families list is collapsible** (`phGdfFamOpenSet`, `phGdfMosaicHtml`'s `cardOf`): the title becomes a button with a chevron (▾ open, ▸ closed); tapping it toggles just that family. Her ask: "i want this to be collapsible." Default: only the family holding her current pick opens, everything else starts folded — the long Ban Xia / Chai Hu / Da Huang stack no longer fills the whole sidebar at once. The "Notes only" group at the bottom wasn't touched (it's a separate block, usually short, and not what she pointed at).
+- **The family/formula detail header is just the name now** (`phGdfCardHtml`'s `head`): the small-caps category eyebrow ("Body type · Cinnamon Twig") and the archetype summary sentence ("Thin, fair, delicate...") are gone. Her words: "minimise text - just gui zhi - summary not necessary. i dont look at it." Only the name and its pinyin stay.
+- **The detail toolbar (Study/Edit, Group, Cover, Compare with…, Quiz me, Learned) is one row, not two**: it now scrolls sideways instead of wrapping, same treatment as the Guide's own tab bar already uses. Her ask: "merge rows into 1 to improve space saving."
+
+**Tested:** the sandbox copy renders the mosaic and the detail card with no console errors; `phGdfMosaicHtml()` returns 10 cards with only the current pick's family (and the always-open Notes group) unfolded; simulating a fold-toggle click flips a card from folded to open; the detail header's HTML has no eyebrow or summary markup left; the toolbar's computed style reads `flex-wrap: nowrap` and `overflow-x: auto`. The real click path and how it looks on her own screen, not run — no sign-in in the sandbox.
+**SAVED, not live:** goes out with her next "push live".
