@@ -12443,3 +12443,37 @@ plays. Not tested: her own screen, the phone, reduced-motion (the `RM` branch wa
 **Pages checked:** the Fang Bing Ren page's own triangle and the Guide's Triangle tab both read `phFtgMake`, so both carry
 the fix. The story film was deliberately left as it was.
 **SAVED, not live:** goes out with her next "push live".
+
+## Fang Bing Ren: formulas as a left rail, symptoms as one table, 2026-11-08
+
+Her words, looking at the ranking page: "display this page similar to the guide page where th
+formulas and scores are a column on the left side and the symptoms are in table format similar to
+guide page" -- a mock first ("show me mock"), then "yes build it for real".
+
+- The family mosaic (the coloured score blocks) now sits in its own sticky rail down the left,
+  stacked one formula per row, same spirit as the Guide Families rail she picked earlier today --
+  a fold button beside it collapses the rail out of the DOM entirely and gives the width back
+  (`phFbrRailFold`, view state, never saved). Every tile keeps exactly what it already did: the
+  colour, the fit %, the lead ring, the red avoid ring, the search ring, tap-to-filter.
+- The nine regular areas (Energy & general through Skin, hair & build) now draw their signs as a
+  real bordered table -- one Symptom column, a Bing column and a Ren column -- instead of two
+  tinted boxes side by side. A twin pair (the same fact, today and usually) still shares one row:
+  its wording merges into the Symptom column (both sides' words when they genuinely differ, most
+  twins share the same words so it shows once), and the Bing/Ren cells beside it keep the exact
+  same tick, rule-out, points, auto-link and clash-warning controls as before -- just without
+  printing the label a second time (`phFbrMergeCellHtml`, a plain copy of the existing row control
+  minus its own label, screen readers still get the full name). A sign with no twin on the other
+  side gets its own row with a dash in the empty column, same as before.
+- **Left out on purpose, unchanged:** Tongue & pulse, where a Bing sign can reach across more than
+  one Ren row -- it keeps its older side-by-side layout (`phFbrTpAreaHtml`). Renaming a row's
+  wording was already not available here before today.
+- **Tested** on a test copy, patient "test me" seeded with a treatment plan and a handful of
+  Ren/Bing ticks so the real ranking page would render: the rail lists every family full-width with
+  working fit %, lead ring and tap-to-filter; folding it removes the list from the DOM and gives the
+  card the width back, unfolding restores it exactly; the signs board now shows real table grid
+  lines per area, a twin row's shared Symptom cell with working Bing/Ren ticks on each side, a
+  one-sided row's dash on the empty side, subject sub-headings as table rows, and the dashed divider
+  between the twin rows and the one-sided rows; ticking, ruling out, Undo, the family filter and the
+  "Looking at" search still work through the table exactly as they did before. Tongue & pulse area
+  unchanged. Boots clean.
+- **SAVED, not live:** goes out with her next "push live".
