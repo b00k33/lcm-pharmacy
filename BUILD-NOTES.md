@@ -12088,3 +12088,25 @@ Four more of the "31 wait for your word" questions, the Meals and Mine group, he
 
 **Tested:** the sandbox copy loads clean (no console errors, the four changed functions still defined) at `lcm-sandbox-3fbf`. Phone and real-data testing not run.
 **SAVED, not live:** goes out with her next "push live".
+
+## Her synth22 of 2026-11-08, item 1: a Reduce animations switch
+
+Her pick: a switch, not a one-time fix -- "give option to minimise the animations" (said while
+looking at Guide's body-type video).
+
+- **Settings > Device > Motion:** one switch, same `.ph-switch` shape as Label text's "plain
+  characters" toggle. `PHARMACY.reduceMotion` (default false); `phReduceMotionToggle`'s change
+  handler writes it, toggles `body.ph-motion-off` immediately and saves.
+- **`phTpReduceMotion()`** (line ~125426, 138 call sites) now also returns true when the setting
+  is on, same function every one of those sites already called for the OS preference -- no call
+  site changed.
+- **CSS:** one rule at the end of the main stylesheet (`body.ph-motion-off *`) collapses every
+  animation/transition duration to near-zero when the class is set -- covers the 171 existing
+  `prefers-reduced-motion` blocks AND any CSS motion that never checked it, in one rule, rather
+  than editing each of the 171 by hand.
+- `renderPharmacy()` sets the class every render, beside the existing `ph-loc-acupreg` toggle.
+- **Tested** (test copy): the switch persists, flips the class at once, a sampled CSS animation
+  and a sampled JS count-up both stop with it on and resume with it off.
+- **Not tested:** every animated surface individually -- same shared mechanism as OS
+  reduced-motion, which already covered most of them; no surface was special-cased.
+- **SAVED, not live:** goes with her next "push live".
