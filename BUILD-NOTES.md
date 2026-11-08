@@ -12167,3 +12167,17 @@ where the Settings switch (same day, earlier) wasn't visible to her.
 - **Tested:** the chip toggles, the Settings switch shows the same state on next open and vice
   versa, the video/figure motion actually stops and starts with it.
 - **SAVED, not live:** goes with her next "push live".
+
+## Revert, 2026-11-08: the Reduce animations switch wasn't the ask
+
+Her words: "its not about reducing motion. its about collapsing the animation section." Removes
+every bit of the morning's two commits (Settings > Device > Motion, the Guide toolbar chip):
+`PHARMACY.reduceMotion`, the `body.ph-motion-off` CSS kill-switch, `phTpReduceMotion()`'s override
+(back to the OS-only memoized read it was before today), the Settings card, and the Guide chip +
+its click handler. Nothing else touched.
+
+**Tested:** boots clean on a test copy; grepped for `reduceMotion`, `ph-motion-off`,
+`phReduceMotionToggle`, `data-gdf-motion` -- none left.
+
+**SAVED, not live yet:** the switch is still live from this morning's push until her next
+"push live" carries this removal out.
