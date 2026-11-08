@@ -12155,3 +12155,15 @@ Five more of the "31 wait for your word" questions, the Looks group, her picks a
 
 **Tested:** the sandbox copy loads clean (no console errors, `renderPhGuidePage` and the new dropdown state still defined) at `lcm-sandbox-3fbf`. The Guide dropdown's open/close and real IVF/pregnancy screens, not driven live — no sign-in or test data in the sandbox.
 **SAVED, not live:** goes out with her next "push live".
+
+## Her follow-up of 2026-11-08: a Reduce motion chip on the Guide page itself
+
+"i want the button to minimise the animations section" -- said on the Guide > Families page,
+where the Settings switch (same day, earlier) wasn't visible to her.
+
+- `phGdfCardHtml`'s toolbar (every Guide card) now carries a `.gf-chip` "Reduce motion" beside
+  Learned, `data-gdf-motion`, reading/writing the SAME `PHARMACY.reduceMotion` flag as Settings >
+  Device > Motion -- one fact, two doors, neither can go stale against the other.
+- **Tested:** the chip toggles, the Settings switch shows the same state on next open and vice
+  versa, the video/figure motion actually stops and starts with it.
+- **SAVED, not live:** goes with her next "push live".
