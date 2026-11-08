@@ -12412,3 +12412,34 @@ count lead the table's own head row (`th.ar`: ink capitals, the count beside it)
 line runs under that row (`.gf-mrg-tbl thead th`). One line less per area, study and edit alike. A narrow card (two columns of
 about 250px) wraps a long area name inside its cell, never cuts it. Checked on a test copy (Guide › Families, Ban Xia: the ten
 areas, the head row, the line, no page errors); not checked on her own screen or the phone.
+
+## The growing triangle: a calmer card (2026-11-08)
+
+Her screenshot of the triangle widget, "make this less dramatic." Asked which part: colour, motion, or both -- her pick, both.
+
+- **The stage is light now, not the near-black one from 2026-11-05** (`#pharmacyPage .ph-ftg-wrap`'s `--ftg-*` tokens): the
+  card background is `--ph-herb-tint`, panel `--ph-white`, hairline `--ph-line`, body text `--ph-ink`, the lead name/percent/
+  counts `--ph-gold` (her colour law already reserves gold for counts). The story film (`.ph-ftgf`, the "▷ Story" chip's player)
+  keeps its own dark stage for now -- a separate thing to ask her about once she's actually watched it; it was not touched.
+- **The glow sprites are rebuilt for a light surface** (`phFtgSoftGlow`/`phFtgSoftDot`, new, beside the unchanged `phFtgGlow`/
+  `phFtgDot` the film still uses): a soft halo that fades the family's own colour toward transparent, drawn with normal
+  blending, not a white-hot core added onto black (the old technique only reads on a dark stage). `phFtgColLight` gives the
+  40 family dots their plain card colour instead of `phFtgCol`'s brightened-for-black lift. The apex "lead name" circle
+  (`.ph-ftg .lf .in`) is now a teal gradient (`--ph-herb-card` → `--ph-herb` → `--ph-herb-deep`) instead of near-black; the
+  three lens vignettes are a soft ink ring instead of a black one.
+- **The motion is calmer too, her other pick**: `update()` no longer pushes mote/ring/burst/flash/shock effects onto an FX
+  layer when a sign ticks, a corner opens or the lead changes -- `drawFx`, the `FX`/`FXn` queue and the `.fx` canvas's content
+  are gone. What's left is the same eased glide every corner, edge and the gold fill already had (`V` easing toward `Tg`
+  over the `TAU` half-lives) plus the one calm pop the lead's own name already had (`.f.new`, `phFtgPop`, CSS only). Nothing
+  flies in from the side rows, nothing rings, no screen flash, no shockwave on a locked triangle. The mist clouds and the
+  46 twinkling star specks (ambient decoration, not data) are gone with them.
+- **Not changed:** the data itself (`phFtgRank`/`phTriEffective`), the body-figure reveal, the pins on it, the side Ren/Bing
+  lists, the fold/unfold and sticky-mini behaviour, the story film.
+
+**Tested:** the sandbox's Guide › Triangle tab, a made-up set of ticks (`phFtgGTry`-style) -- renders with no console errors;
+`toDataURL`/`getImageData` on the canvas shows real painted content (1000+ distinct colours sampled, not a blank fill);
+ticking a new sign updates the side list and corner glow with no FX/particle draw calls firing; the lead name's one pop still
+plays. Not tested: her own screen, the phone, reduced-motion (the `RM` branch was not touched, read only).
+**Pages checked:** the Fang Bing Ren page's own triangle and the Guide's Triangle tab both read `phFtgMake`, so both carry
+the fix. The story film was deliberately left as it was.
+**SAVED, not live:** goes out with her next "push live".
