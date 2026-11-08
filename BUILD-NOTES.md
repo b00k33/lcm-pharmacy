@@ -12222,3 +12222,13 @@ Three more of the "31 wait for your word" picks, the My Cycle (`chart.html`) hal
 **Integration check:** the goal-switch persistence feeds both My Cycle (reads `Store.link.goal`) and the practitioner-side `rec.chartGoal` the next commit's picker writes — the two stay separate fields on purpose (one on `chart_links.goal` written by the patient's own confirm, one on the same column written by her toggle), no third copy.
 **Tested:** read through each change against the live function bodies; `CE.cycles`/`CE.analyse` reasoned through by hand (a pre-period block with ≥10 temps analyses exactly like a real cycle). Not run — no sign-in or test data in the sandbox for a patient chart link.
 **SAVED, not live:** goes out with her next "push live".
+
+## Her whole-app audit, Patient pages — the goal picker (2026-11-08)
+
+The last of this batch's index.html picks: a chart link has always carried a goal (`rec.chartGoal`, read everywhere a chart link is created or reopened — `phChartEnsureLink`, the live-chart card), but nothing on her own screen ever let her set it to anything but the "ttc" default it's created with.
+
+- **A "Charting for" chip row beside the chart toggle** (`phChartSetGoal`, the Journey card's My Cycle charting row): TTC · IVF · Health · Pregnant, the same joined-chip component as the message-preference row above it (`.ph-msg-seg`/`.ph-msg-seg-opt`, no new chip shape). Only shows once a chart link exists. Writes `rec.chartGoal` and the cloud row's `goal` column directly (same pattern as `phChartSetStatus` — she's signed in, so this goes straight to the table, not through the patient-side anon RPC the last two commits added for her own browser).
+- **Integration check:** the picker and the patient's own in-app pregnancy-switch confirm (previous commit) write the same `chart_links.goal` column; My Cycle's "What you're charting for" line (`renderMe`) and the practitioner-side live-chart card both read it fresh, no second copy.
+
+**Tested:** the sandbox copy loads clean (no console errors beyond the expected offline network ones), `phChartSetGoal` is defined and callable. The chip row's visibility (only once a link exists) and its write-through, not run live — no sign-in or test data in the sandbox.
+**SAVED, not live:** goes out with her next "push live".
