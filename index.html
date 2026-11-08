@@ -118294,12 +118294,27 @@ or changing anything in Cliniko.
     try { phFbrCcDf = null; } catch (er) { /* */ }   // the search ranking counts labels per word
     try { phFbrEditsBust(); } catch (er) { /* */ }
   }
+  // her 2026-11-09 "capitalise all words of symptoms except conjunctions": only the descriptor after the Subject's colon is ever
+  // touched -- the Subject itself is what PH_FBR_SUBJ_AREA groups by, exact text, so its own case stays exactly as written. An
+  // ALL-CAPS word (a lab marker such as "LDH") is left alone, read as an acronym rather than a word to re-case.
+  const PH_TITLECASE_SMALL = new Set(["and", "or", "but", "nor", "so", "yet", "for", "when", "while", "if", "because", "though", "although", "than", "that", "as"]);
+  function phTitleCase(text) {
+    let first = true;
+    return String(text).replace(/[A-Za-z'-]+/g, word => {
+      const out = (word.length > 1 && word === word.toUpperCase()) ? word
+        : (!first && PH_TITLECASE_SMALL.has(word.toLowerCase())) ? word.toLowerCase()
+        : word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
+      first = false;
+      return out;
+    });
+  }
   function phFbrLabelsApply() {
     const w = phSignWords(); let moved = false;
     [PH_BING_SIGNS, PH_REN_SIGNS].forEach(pool => pool.forEach(r => {
       if (!PH_LAB0.has(r)) PH_LAB0.set(r, r[1]);
       const base = PH_LAB0.get(r), d = w[r[0]], i = base.indexOf(": ");
-      const lab = typeof d === "string" && d.trim() && i > 0 ? base.slice(0, i + 2) + d.trim() : base;
+      const descr = typeof d === "string" && d.trim() && i > 0 ? d.trim() : (i > 0 ? base.slice(i + 2) : base);
+      const lab = i > 0 ? base.slice(0, i + 2) + phTitleCase(descr) : phTitleCase(descr);
       if (r[1] !== lab) { r[1] = lab; moved = true; }
     }));
     if (moved) phSignLabelsBust();
@@ -122100,7 +122115,10 @@ or changing anything in Cliniko.
     if (!PH_SIGNLAB) { PH_SIGNLAB = {}; PH_BING_SIGNS.forEach(r => { PH_SIGNLAB[r[0]] = r[1]; }); PH_REN_SIGNS.forEach(r => { PH_SIGNLAB[r[0]] = r[1]; }); }
     if (PH_SIGNLAB[key]) return PH_SIGNLAB[key];
     if ((PH_FBR_KEY_MOVED || {})[key]) return phSignLabel([].concat(PH_FBR_KEY_MOVED[key])[0]);   // an old row that joined a plain row (2026-10-21) reads as that row
-    if (String(key).indexOf("a_") === 0) { const a = ((PHARMACY.triLearn || {}).added || []).find(x => "a_" + x.id === key); if (a) return a.label; }   // a symptom she made on the Guide
+    if (String(key).indexOf("a_") === 0) {   // a symptom she made on the Guide: same capitalising, display-only, her saved words untouched
+      const a = ((PHARMACY.triLearn || {}).added || []).find(x => "a_" + x.id === key);
+      if (a) { const i = String(a.label).indexOf(": "); return i > 0 ? a.label.slice(0, i + 2) + phTitleCase(a.label.slice(i + 2)) : phTitleCase(a.label); }
+    }
     return key;
   }
   // the signs a key excludes, as [{ key, link }]: same kind (the default), or the other kind (cross = true)
