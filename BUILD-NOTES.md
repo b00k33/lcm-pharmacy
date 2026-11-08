@@ -12142,3 +12142,16 @@ Her pick: "this feels redundant, find a way to integrate it into the whole syste
   notes), Edit / Delete / Add notes still work, a family card's stacked formula note (famNote)
   still renders both blocks.
 - **SAVED, not live:** goes with her next "push live".
+
+## Her whole-app audit, Looks (2026-11-08)
+
+Five more of the "31 wait for your word" questions, the Looks group, her picks all the recommended options.
+
+- **The pregnancy banner follows the colour law** (`.ph-preg-banner`): the only banner with its own full background and text colour outside teal/white/gold is now gold-tint with ink text, matching the pregnant condition badge it already echoes. Her pick: bring it to the colour law.
+- **Stocktake's Latin line stays** — Stocktake's small Latin line under the Pinyin heading is left exactly as it was: she's matching the physical jar's own label while counting, not reading screen text. Her pick: keep it, Stocktake only.
+- **IVF quick-start's sub-lines moved into the hover** (`PH_IVF_QUICK_MOMENTS`, `phIvfQuickBarHtml`): each button's "E2 · LH · P4 · follicle count"-style line is now a `title`/`aria-label` on the button, not a visible second line — her terse standing rule's usual treatment. Her pick: move into the hover.
+- **The Guide's 11 tabs are a dropdown** (`phGdTabsOpen`, `.ph-gd-tabddl` / `.ph-gd-tabdrop`): a "<current tab> ▾" button opens a list of all eleven; picking one closes it. Meals (6) and Trips (6) are left as chips — only one over her "more than 6 = dropdown" rule and already wrapping fine. Her pick: only Guide becomes a dropdown.
+- **The dead Herbs/Acupuncture tracking switches are retired** (`data-pres-acu-enable`, `data-pres-herbs-enable`): both click handlers had no matching control anywhere on screen — the switches themselves were removed at some point, leaving code neither she nor anyone could reach. Removed outright; a real herbs-only or acu-off switch would be a fresh, deliberate build if she wants one later. `data-pres-cycle-enable` sits in the same dead-code family but wasn't part of this question, so it's untouched. Her pick: retire the dead handlers.
+
+**Tested:** the sandbox copy loads clean (no console errors, `renderPhGuidePage` and the new dropdown state still defined) at `lcm-sandbox-3fbf`. The Guide dropdown's open/close and real IVF/pregnancy screens, not driven live — no sign-in or test data in the sandbox.
+**SAVED, not live:** goes out with her next "push live".
