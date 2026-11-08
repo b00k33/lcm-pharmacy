@@ -12232,3 +12232,14 @@ The last of this batch's index.html picks: a chart link has always carried a goa
 
 **Tested:** the sandbox copy loads clean (no console errors beyond the expected offline network ones), `phChartSetGoal` is defined and callable. The chip row's visibility (only once a link exists) and its write-through, not run live — no sign-in or test data in the sandbox.
 **SAVED, not live:** goes out with her next "push live".
+
+## Her whole-app audit, Patient pages — colour and font law (2026-11-08)
+
+Her last Patient pages pick: My Cycle (`chart.html`) and the intake form (`intake.html`) are patient-facing pages built as their own standalone files, and had drifted onto a different look entirely — a green palette and a second font, Cormorant Garamond, neither of which belongs to the app's standing teal/white/gold law or its one-font-on-screen rule.
+
+- **Teal, not green:** each file's root colour tokens (`--green-deep`/`--green`/`--green-press` and `--ph-green-deep`/`--ph-green`/`--ph-green-press`, plus their pale tints) now carry the same hues as the main app's `--ph-herb-deep`/`--ph-herb`/`--ph-herb-press`/`--ph-herb-tint`, and each `<meta name="theme-color">` matches. Her pick: teal.
+- **One font: Inter.** Both files' `--serif`/`--font-serif` tokens (used only for the big temperature number, a couple of headings) now point at the same Inter stack as the body font, so nothing on either page renders in Cormorant Garamond any more. Her pick: drop the second font.
+- **Deliberately left alone, to keep this a small, clean pass:** the Chapter 6 phase colours in chart.html (`--period`/`--foll`/`--ov`/`--luteal`, already marked "verbatim" in the file's own comment — a legend system, not the UI's own palette) and the near-neutral `--line`/`--soft`/`--ink`/`--paper`/`--negative` tokens in both files, which were already close enough to the main app's equivalents not to read as a colour-law breach. The Google Fonts `<link>` in each file still imports Cormorant Garamond's font files — nothing on screen uses them any more, but removing the unused import itself is a further line-count this pass didn't have room for; flagging rather than leaving it unsaid.
+
+**Tested:** the sandbox copies of both pages load clean (no console errors beyond the expected offline network ones); `getComputedStyle` on each page's root confirms `--green-deep`/`--ph-green-deep` read the new teal hex and `--serif`/`--font-serif` read the Inter stack. Visual read of the temperature screen and the intake form's headings, not run — no sign-in or test data in the sandbox.
+**SAVED, not live:** goes out with her next "push live". This closes the Patient pages group of the whole-app audit (eight picks, five commits across this session).
