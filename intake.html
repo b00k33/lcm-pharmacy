@@ -121,6 +121,7 @@
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function localToday() { var d = new Date(); return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0"); }   // the patient's own date (toISOString is UTC: yesterday until 11 am in Sydney)
   function titleCase(s) { return String(s == null ? "" : s).toLowerCase().replace(/(^|[^a-z0-9])([a-z])/g, function (m, a, b) { return a + b.toUpperCase(); }); }
+  function isOld90(createdAt) { if (!createdAt) return false; var ms = Date.now() - new Date(createdAt).getTime(); return ms > 90 * 24 * 60 * 60 * 1000; }
 
   var PH_HISTORY_GROUPS = [
     { g: "Cycle & bleeding", items: [
@@ -301,7 +302,7 @@
   }
 
   // again = { at } when the patient reopens a form she already sent (her 2026-10-26 pick "Same link reopens"): her own answers are back on it
-  function renderForm(name, prefill, again) {
+  function renderForm(name, prefill, again, createdAt) {
     var groupsAll = questionsFrom(prefill);
     var alwaysGroups = groupsAll.filter(function (gr) { return !gr.fem; });
     var femaleGroups = groupsAll.filter(function (gr) { return gr.fem; });
@@ -310,6 +311,7 @@
         '<p class="lead">Hi ' + esc(titleCase(name)) + ' — a few questions before your visit.</p>' +
         '<p class="note">This takes about 5 minutes. Your answers go straight to your practitioner’s private review — nothing else on this device is shared, and there’s nothing else to see here. Every question in Your details and Medical history needs an answer before you can send it — pick Yes or No for each one. The last two lists are optional: tap Yes for anything that fits you.</p>' +
         '<p class="note" id="pfNote" hidden>Some answers are already filled in from your file. Please check them and change anything that is out of date.</p>' +
+        (isOld90(createdAt) ? '<p class="note">This link is over 90 days old — ask your practitioner for a fresh one.</p>' : '') +
       '</div>' +
       (again ? '<div class="card again"><p class="lead">These are the answers you sent' + (again.at ? ' on ' + esc(longDate(again.at)) : '') + '.</p><p class="note">Change anything that is out of date, then send again.</p></div>' : '') +
       '<form id="intakeForm">' +
@@ -333,7 +335,7 @@
           '<div class="section-h">Cycle & fertility details</div>' +
           '<div class="card">' +
             '<div class="field"><label class="q" for="fLmp">When did your last period start?</label><input type="date" id="fLmp" max="' + localToday() + '"></div>' +
-            '<div class="field"><span class="q">How long is your usual cycle?</span><div class="cq-inline"><input type="number" id="fCycleLen" min="14" max="60" placeholder=""> <span class="note" style="margin:0">days</span></div></div>' +
+            '<div class="field"><span class="q">How long is your usual cycle?</span><div class="cq-inline"><input type="number" id="fCycleLen" min="14" max="90" placeholder=""> <span class="note" style="margin:0">days</span></div></div>' +
             '<div class="field"><span class="q">How many days do you bleed, and how heavy?</span><div class="cq-inline"><input type="number" id="fFlowDays" min="1" max="14" placeholder="">' + selHtml("fFlowIntensity", PH_CYCLE_FLOW, "moderate") + '</div></div>' +
             '<div class="field"><label class="q" for="fPain">Any period pain?</label>' + selHtml("fPain", PH_CYCLE_PAIN, "none") + '</div>' +
             '<div class="field"><label class="checkrow"><input type="checkbox" id="fRegular" checked> My cycle is usually regular</label></div>' +
@@ -748,7 +750,7 @@
       return;
     }
     if (row.status === "dismissed") { centerScreen("Link no longer active", "This link is no longer active. Please contact your practitioner for a new one."); return; }
-    renderForm(row.patient_name || "there", row.prefill);
+    renderForm(row.patient_name || "there", row.prefill, null, row.created_at);
   }).catch(function () {
     centerScreen("Couldn’t load this form", "Something went wrong loading this form. Please try again, or contact your practitioner.");
   });
