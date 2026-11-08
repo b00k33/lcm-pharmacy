@@ -12243,3 +12243,14 @@ Her last Patient pages pick: My Cycle (`chart.html`) and the intake form (`intak
 
 **Tested:** the sandbox copies of both pages load clean (no console errors beyond the expected offline network ones); `getComputedStyle` on each page's root confirms `--green-deep`/`--ph-green-deep` read the new teal hex and `--serif`/`--font-serif` read the Inter stack. Visual read of the temperature screen and the intake form's headings, not run — no sign-in or test data in the sandbox.
 **SAVED, not live:** goes out with her next "push live". This closes the Patient pages group of the whole-app audit (eight picks, five commits across this session).
+
+## Her whole-app audit, Patient pages — intake link age + cycle length (2026-11-08)
+
+The last two Patient pages picks, both on `intake.html`.
+
+- **A link over 90 days old gets a soft note** (`isOld90`, `renderForm`'s new `createdAt` parameter): reads the `created_at` the last commit's SQL fix added to `get_intake_form`, and shows "This link is over 90 days old — ask your practitioner for a fresh one" above the form — never blocking the submit, just a heads-up. Only the fresh-form path passes `created_at` through; the "these are the answers you already sent" reopen path doesn't need an age warning.
+- **The usual-cycle-length field accepts up to 90 days**, not 60 (`#fCycleLen`'s `max`) — a long or irregular cycle was previously impossible to enter accurately on this form.
+
+**Integration check:** this closes the Patient pages group — all eight of the audit's picks for it are now built across this batch's five commits (SQL, My Cycle logic, the goal picker, the colour/font law, and this one). `get_intake_form`'s `created_at` (an earlier commit this session) is read nowhere else yet; nothing else needed it.
+**Tested:** the sandbox copy loads clean (no console errors beyond the expected offline network ones) and still shows its normal "Link incomplete" screen with no token. `isOld90` is closure-private to the page's own script (same pattern as My Cycle's `CE`), so it couldn't be called directly from the console — read through by hand instead: a `created_at` more than 90×24×60×60×1000 ms old returns true, `null`/`undefined` returns false. The actual banner and a real aged link, not run — no sign-in or test data in the sandbox.
+**SAVED, not live:** goes out with her next "push live".
