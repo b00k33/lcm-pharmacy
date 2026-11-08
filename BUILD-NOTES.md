@@ -12375,3 +12375,31 @@ table rows and columns lines".
   Bing" opens the same popup, searches, adds, and the new row shows up highlighted. Group =
   Importance Edit still shows the old two-column, pencil-editable view, unchanged. Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide Families rail: a fold, and no more blank tail on a tile, 2026-11-08
+
+Her words: "i want to be able to collapse column to the side" and "remove empty space in row" --
+the left Families rail (herb cards, each formula as a tile).
+
+- A small round fold button sits beside the rail now (same spirit as the picture fold from
+  earlier today, `phGdfPicOpen`): closed, the rail's own list isn't in the DOM at all, and the
+  card's column takes the room back. `phGdfMoOpen`, view state, defaults open, never saved.
+- A formula tile now stretches the full width of the rail instead of stopping at its own text and
+  leaving the rest of that row blank -- the name truncates with an ellipsis (its title attribute
+  still gives the full name on hover) and the Ren·Bing count stays pinned to the right.
+- Found and fixed along the way: at 641-1000px (a resized desktop window, not quite phone width)
+  the rail's track had no `minmax(0, …)` floor, so a long tile's own minimum width could force the
+  whole page wider than the window and scroll sideways a little -- the exact "narrow desktop
+  window" case an open question from the 11/8 synth22 batch never got confirmed. Fixed with the
+  same `minmax(0, 1fr)` the desktop two-column layout already uses.
+- Phone width (≤640px, the horizontal scroll strip of family cards) is untouched: tiles there stay
+  compact and side by side, not stretched, and the new fold button is hidden -- there's nothing
+  to fold once the rail isn't a side column any more.
+- **Tested** on a test copy: folding the rail at desktop width removes its content from the DOM
+  (not just hidden) and the card visibly gets the width back; unfolding restores the exact same
+  list; a short-named formula's tile now fills its row with the count still readable on the right;
+  a long name truncates with "…" and its title tooltip still shows the full name; resized the
+  window through 1280 → 900 → 700 → 400px and the rail never forces the page to scroll sideways at
+  any of them; phone width (375px) still shows the old compact horizontal strip, fold button
+  hidden there.
+- **SAVED, not live:** goes out with her next "push live".
