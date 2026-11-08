@@ -12254,3 +12254,39 @@ The last two Patient pages picks, both on `intake.html`.
 **Integration check:** this closes the Patient pages group — all eight of the audit's picks for it are now built across this batch's five commits (SQL, My Cycle logic, the goal picker, the colour/font law, and this one). `get_intake_form`'s `created_at` (an earlier commit this session) is read nowhere else yet; nothing else needed it.
 **Tested:** the sandbox copy loads clean (no console errors beyond the expected offline network ones) and still shows its normal "Link incomplete" screen with no token. `isOld90` is closure-private to the page's own script (same pattern as My Cycle's `CE`), so it couldn't be called directly from the console — read through by hand instead: a `created_at` more than 90×24×60×60×1000 ms old returns true, `null`/`undefined` returns false. The actual banner and a real aged link, not run — no sign-in or test data in the sandbox.
 **SAVED, not live:** goes out with her next "push live".
+
+## Meals goals in one row (2026-11-08)
+
+Her words: "mock putting all the macros adn micro and fasting into same row. make it clean and minimal looking with just essential
+buttons". Mock: private Artifact, `mocks/meals-one-row-mock-2026-11-08.html` (Version 1: three looks, Rings · Bars · One line). Her
+picks: **a ring for the fast, bars for everything else, the bars of one group stacked**; **Start + History** on the row; **three short
+rows** on the phone; **the labels kept**; then on Version 2 **micros 2 × 2**; then "build and then push". Build pieces (git-ignored):
+`mocks/meals-one-row-2026-11-08/app-build/` (`make-pairs.pl` + the new blocks; `perl make-pairs.pl <HEAD index.html> <dir>`).
+
+- **The row** (`phMplGoalsHtml(k, tk, goal, dial, phone)`, the `acts` argument gone): the head as before, then ONE white block
+  `.ph-mpl-r1` on the band: Fast · Reach · Stay under · Micros (grid `auto 1fr 1fr 2fr`, 18px gaps), each under its capitals label;
+  the micros 2 × 2. The old `.fc` / `.gcol` / `.mic` blocks and their rules went.
+- **Fast** (`phMplFastRingHtml(days, acts)`, `phMplDayFastRingHtml(k, tk, acts)`): the app's own fasting dial is the ring (one
+  renderer, never a second): drawn 120px with a -9px margin so its ticks sit in a 102px box, its clock words (`text.tl`) hidden; its
+  words in a button (`.ph-mpl-fw`); Start / Stop over History › on a computer (side by side, the names of the goals lost room at her
+  1220px window: "Magnesium" was cut), side by side on the phone. The goal select and Continue moved to the fast's card
+  (`phFastContHtml`, split out of `phFastBtnsHtml`, which Your fasts still uses unchanged).
+- **A goal** (`phMplGlHtml(x, k, tk, goal, M, tx)`): a `<button>` line, the name and the state, the bar under them (6px, its goal
+  line 2px, a 5px taller hover target in `::after`). `.sw` wraps the state's word; it is hidden on a row under 1040px (a container
+  query on `.ph-mpl-r1`; her 1220px window gives a 913px row) and on the phone; the kJ line keeps its kcal. `tx` = the state as plain
+  words, for the card. The 641–1100px rule that hid the kcal went.
+- **The card** (`phMplGxHtml`; `phMplGx` = the open one, `phMplGxIn` = it just opened): the name and state in words, the goal's
+  field (the same `data-diet-goal` door and focus keeping; the kJ field's kcal follows typing, its input listener now looks in
+  `.ph-mpl-gx`), the 7 ticks + "n in a row", ✕. `data-mpl-gx` joins the Meals click dispatcher, which leaves a tap on the fast's own
+  buttons, the dial's middle swap and a field to their own handlers, and on a phone a tap on a bar or the dial to its box. Esc closes
+  the card (not while typing). It slides in once (`.in`; skipped under reduced motion in JS, off in CSS).
+- **Not changed:** the numbers, ticks, runs, colours, hover boxes, Try stripes, the dial's minute repaint and gold ring, Targets,
+  Numbers.
+- **Checked** on a test copy with the made-up "Zz Me Test": 1220px (no name cut, no line past its box, the fast block 130px and the
+  bars 118px), cards for protein, kJ, carbs and the fast; a goal typed (saved, toast with Undo, the card stays, focus kept; put back);
+  ✕, the same tap and Esc close it; the dial's face opens the fast's card; Start runs a fast with no card, the middle's swap with no
+  card, Stop; the hover box on a bar; no page errors. 360px: the three rows, nothing cut, no sideways scroll, a bar tap gives no card,
+  a name tap its card.
+- **Not checked:** her real record and devices (the Key2 itself), a try open in the new row, a day not today (‹ › from the table),
+  reduced motion in a browser. Pages checked for the integration rule: Meals (the eight goals show only there; Targets and Numbers read
+  the same goals and were not changed).

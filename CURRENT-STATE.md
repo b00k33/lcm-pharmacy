@@ -1266,8 +1266,8 @@ when its words do not fit one): the bar (‹ span › · Today · **Day · 3 day
 Check n to answer** (Eat names today's next meal and its time, "Dinner 6:30 pm", ✓ once all had, a dinner the fast covers left out;
 MEALS GOALS, her pick 7), the first not done filled, each a door: next week · Shopping in the column (made when there is none) · today's
 next meal · How did it sit for each meal she had 1½ h ago not yet answered · **More ▾** = Copy last week, Recipes, Targets (the
-Shop step is the Shopping list's one door, MEALS GOALS). The goals (Meals goals, below) hold the fasting dial, Reach, Stay under
-(the Fast block's Start · Continue / Stop beside its dial and History › on its heading, FAST BLOCK; the clock bar and the Fast row
+Shop step is the Shopping list's one door, MEALS GOALS). The goals (Meals goals, below) are ONE row: the fasting dial, Reach, Stay under, Micros
+(Start / Stop and History › beside the dial, a tap opens a goal's card, ONE ROW 2026-11-08; the clock bar and the Fast row
 are gone). Inside the box (the key along its foot) the week with **the pane** (MEALS PANE, her 2026-11-04 picture): the meal's picker, Shopping, How did it sit, or a day (tap its name: water, numbers,
 bars, Copy this day) slides out over the table, 400px, on the left when it would cover more than a third of its own cell. The table keeps its width. It stays open: ✕, Done, Esc, its own cell or leaving Meals close it, never a tap on the page; a repaint keeps its scroll and holds the add list still on the screen. Its name + ✕ and Done stay in view. Pane and Day · 3 days · Week LIVE build 20261105-093900. **Table**: a row a day,
 Breakfast · Lunch · Dinner · Snacks · drinks · Supps · herbs (a day's kJ · P · C · F are the goals' ticks; the number columns went,
@@ -1407,33 +1407,37 @@ it; History › on the Fast heading. Code: "FASTING DIAL" (`phMplDial*`, `phFdAr
 **Meals goals** (her 2026-11-02 "audit this page and streamline any repeating elements that do the same thing. make it so it
 communicates like atomic habits- its easy for me to see my goals and limits"; mock `meals-goals-mock-2026-11-02.html`, her 8 picks,
 all A; memory project_lcm_meals_goals_2026_11_02): one panel for the goals' day (`phMplGoalsHtml`): a head (the day off today + Today ·
-today's score beside the day, "✓ n kept · n to go · n over / missed"), then **three white blocks on the page colour's tint** (**FAST
-BLOCK**, her 2026-11-03 picks: B "Beside the dial" + "White blocks on a teal band" + "make text in button more succinct"; mocks
-`fast-block-mock-2026-11-03.html`, `fast-block-sep-mock-2026-11-03.html`; memory project_lcm_fast_block_2026_11_03): **Fast** (a
-capitals heading with **History ›** at its end, `phMplRactsHtml`; the **fasting dial** with its line, of Breakfast ▾, → 7 am and
-**Start · Continue** / **Stop** beside it, `phFastBtnsHtml`: short words, each its full name to a screen reader, Continue its fast in
-the hover; its ticks under) and the goals, **Reach** (protein, fat) then **Stay under** (kJ, carbs) stacked, and under both, the
-panel's width, **Micros** (calcium, choline, copper, magnesium, A–Z in two columns; **MICROS**, her 2026-11-03 "include choline and
-calcium and copper and magnesium as well", picks B · Their own block + Women 31–50; mock `micro-goals-mock-2026-11-03.html`; memory
-project_lcm_fat_goal_foods_2026_11_03) (`PH_MPL_GL`, `PH_MAC_REACH`; a phone stacks the blocks, Micros one column; LIVE build
-20261103-122300; fat in Reach and Micros LIVE build 20261103-134900). A goal = its name and **its goal as a
-field** (the one place the eight are set; Targets keeps the rest, her pick 6), a **bar** (had solid, still planned pale, scaled to 125% of
-the goal so **the goal is a line at 80%**; over a limit red with a cut past 125%; a goal to reach deep once reached, amber under 60%; amber
-never on a limit), the **state big** at the end (protein "n g to go" / "✓ 58 g", a past day "short"; a limit "n left", a past day
-"✓ n under", over "n over" with a red dot; a day to come "planned"), and **the last 7 days as ticks** up to the goals' day (`phMplTick`:
-✓ green = kept, an empty circle = missed, a red ring = over a limit, a dashed circle = nothing logged, a pie = today on its way, gold
-ring = the goals' day; the fast's from `phMplDayFast`, today's the fast that ended today else the running one) + **"n in a row"** (the
-kept run up to that day, today on its way skipped, 30 at most, `phMplRun`; a fact, no "never miss twice" nudge, her pick 3). **Fat**
-(her 2026-11-03 "add fat consumption as a goal", pick A · Reach; mock `fat-goal-mock-2026-11-03.html`; before, her pick 2's quiet
-line under Stay under) is a goal to reach under protein, with its bar and ticks; its field starts pale at the rest of her kJ goal
-("The rest of your kJ goal", `au`) until she types her own; clearing it returns it to the rest. A micro's numbers keep its own
-decimals (copper 0.84 mg, `phMacRd`). Point at a bar or a tick = that day's foods (the hover breakdown box); a fast tick = the fast's box. The bars grow
-from the day before (`data-barw`). **One place for each number** (her picks 4, 5): the rings' own ‹ day ›, the Table's kJ · P · C · F
-columns and the Grid's Total row went; the bottom key keeps the table's marks (had it · repeats · bold · Fast · add a photo).
-**Today's camera** (her pick 8): today's Breakfast · Lunch · Dinner and Snacks · drinks carry a 32px camera (a computer: on the meal
-she points at; a phone: at the end of each of today's rows, not a dinner the fast covers): a tap = pick photos for that meal
-(`data-mph-add`, the + Photo's own door). Code: "MEALS GOALS" (`phMplGoals*`, `phMplGl*`, `phMplTick*`, `phMplRun`) and "MICROS" (`phMacIs`,
-`phMacN`, `phMacRd`, `phMacNm`, `phMacU`; `phMplFatHtml` gone). LIVE build 20261103-102500.
+today's score beside the day, "✓ n kept · n to go · n over / missed"), then **ONE ROW** (her 2026-11-08 "mock putting all the macros
+adn micro and fasting into same row. make it clean and minimal looking with just essential buttons"; mock
+`meals-one-row-mock-2026-11-08.html`, her picks: a ring for the fast, bars for everything else, each group's bars stacked, Start +
+History on the row, the micros 2 × 2, the labels kept, the phone in three short rows; BUILD-NOTES "Meals goals in one row"): one white
+block on the page colour's tint (FAST BLOCK's band, her 2026-11-03 pick), `.ph-mpl-r1`, holding **Fast** (the fasting dial in a 102px
+box, its clock words hidden, an hour's box still naming its times; its words, → 7 am or last n h ✓; **Start** / **Stop** over
+**History ›**, `phFastBtnsHtml`, `phMplRactsHtml`; side by side on the phone) · **Reach** (protein, fat) · **Stay under** (kJ, carbs) ·
+**Micros** (calcium, choline, copper, magnesium, A–Z, 2 × 2), each under its capitals label (`PH_MPL_GL`, `PH_MAC_REACH`). A goal is
+ONE line: its name and **state** (protein "n g to go" / "✓ 58 g", a past day "short"; a limit "n left · n kcal", a past day "✓ n
+under", over "n over" with a red dot; a day to come "planned"), its **bar** under them (had solid, still planned pale, scaled to 125%
+of the goal so **the goal is a line at 80%**; over a limit red with a cut past 125%; a goal to reach deep once reached, amber under 60%;
+amber never on a limit). On a row under 1040px (her 1220px window) and on the phone the state's word gives way (`.sw`, a container
+query; the colours, the dot and the card still say it, the kJ line keeps its kcal); a name is never cut. **A tap on the fast or a goal
+opens its card** under the row (`phMplGx`, `phMplGxHtml`, `data-mpl-gx`; the same tap, ✕ or Esc closes it; it slides in once): the
+name and state in words, **its goal as a field** (the one place the eight are set; Targets keeps the rest, her pick 6; the fast's: of
+18 h ▾ / Breakfast, and Continue while none runs, `phFastContHtml`), and **the last 7 days as ticks** up to the goals' day
+(`phMplTick`: ✓ green = kept, an empty circle = missed, a red ring = over a limit, a dashed circle = nothing logged, a pie = today on
+its way, gold ring = the goals' day; the fast's from `phMplDayFast`, today's the fast that ended today else the running one) + **"n in
+a row"** (the kept run up to that day, today on its way skipped, 30 at most, `phMplRun`; a fact, no "never miss twice" nudge, her pick
+3). The dial's middle tap still swaps its number; its buttons and History › keep their own taps; a phone's tap on a bar or the dial
+shows its box. **Fat** (her 2026-11-03 "add fat consumption as a goal", pick A · Reach; mock `fat-goal-mock-2026-11-03.html`) is a goal
+to reach under protein; its field starts pale at the rest of her kJ goal ("The rest of your kJ goal", `au`) until she types her own;
+clearing it returns it to the rest. A micro's numbers keep its own decimals (copper 0.84 mg, `phMacRd`). Point at a bar or a tick =
+that day's foods (the hover breakdown box); a fast tick = the fast's box. The bars grow from the day before (`data-barw`). While Try is
+open its stripes lie on the bars and "today X + try Y" takes its own line. **One place for each number** (her picks 4, 5): the rings'
+own ‹ day ›, the Table's kJ · P · C · F columns and the Grid's Total row went; the bottom key keeps the table's marks (had it · repeats
+· bold · Fast · add a photo). **Today's camera** (her pick 8): today's Breakfast · Lunch · Dinner and Snacks · drinks carry a 32px
+camera (a computer: on the meal she points at; a phone: at the end of each of today's rows, not a dinner the fast covers): a tap = pick
+photos for that meal (`data-mph-add`, the + Photo's own door). Code: "MEALS GOALS" (`phMplGoals*`, `phMplGl*`, `phMplGx*`,
+`phMplTick*`, `phMplRun`) and "MICROS" (`phMacIs`, `phMacN`, `phMacRd`, `phMacNm`, `phMacU`; `phMplFatHtml` gone). First LIVE build
+20261103-102500; ONE ROW built 2026-11-08.
 **Macros against her goal** (her picks: the Macros row AND today's rings) [Meals macros against goal]: energy, protein, carbs, fat.
 **kcal beside kJ** (her 2026-11-06 "put kj with calories as well", then "yes i want kcal" for the rest of Meals; `phKcal`, 4.184 kJ a
 kcal; BUILD-NOTES "Meals: kcal beside every kJ"; LIVE in build 20261106-180400). The goals' kJ row: the goal in kcal beside the name (`.nw .kc`,
