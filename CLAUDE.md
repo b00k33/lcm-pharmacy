@@ -1408,8 +1408,10 @@ not repeated here.
   as "Subjective — how they feel"): change every use together, never one.
 - Sign labels read "Subject: descriptors" ("Sweat: easily").
 - **Shown with capitals, saved as written** (her 2026-11-09 "give symptoms words capitalised first letter except
-  conjunctions"): wherever a symptom's words are listed, `phSymCase` gives every word a capital and keeps a conjunction small
-  unless it leads ("Flushed or Red"; "Sensitive To Cold": only conjunctions stay small, her words). Draw a sign's words through
+  conjunctions"; then "yes keep them small too"): wherever a symptom's words are listed, `phSymCase` gives every word a capital
+  and keeps a conjunction, an article or a short preposition small unless it leads ("Flushed or Red", "Sensitive to Cold",
+  "Pain on Pressure"; the list: and or but nor yet so if than because although though while when whether unless until as
+  whereas, a an the, to of at in on by for with from per into). Draw a sign's words through
   `phSignLabHtml` / `phSignDescHtml` / `phGdfLabHtml` / `phSymLab`, never `esc(label)`. Never capitalise the saved words or
   the pool: the sign pictures, the places, a Diagnosis match, search and the same-wording guard read them as written; a
   rename field opens on the saved words (`data-raw`), so an untouched rename saves nothing.

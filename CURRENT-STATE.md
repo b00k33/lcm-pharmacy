@@ -892,7 +892,8 @@ conditions and source show on the family's card (`phGdfNoteIsFam`, `phGdfFamNote
 Bing, up to four columns (her 2026-11-09 "give 4 columns"; each at least 180px, so the table's width decides: 4 with the formula
 list folded at 1220px, 2 with it open, 1 on the phone), 52px value cells (the number + the other formulas' dot and count; a tap
 opens the box of those formulas). The Guide's pages are one Families ▾ menu at the top (32px; BUILD-NOTES "Guide: tap audit").
-Symptom words show a capital on every word but a conjunction ("Flushed or Red", `phSymCase`, display only; CLAUDE.md "Shown with
+Symptom words show a capital on every word but the small ones (conjunctions, articles, short prepositions: "Flushed or Red",
+"Sensitive to Cold"; `phSymCase`, display only; CLAUDE.md "Shown with
 capitals, saved as written").
 **Edit is the same table** (her 2026-11-08 pick A, `guide-edit-like-study-mock-2026-11-08.html`): Add to Ren · Add to Bing above the
 columns; a tap on a number opens the same box with the five dots, − and × on top (`phGdfEdOpen`, one at a time; a dot sets it and

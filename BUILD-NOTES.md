@@ -12773,3 +12773,15 @@ conjunctions". (The tap audit itself, 883d7791, went live inside another session
 - Pages checked for the integration rule: the Guide (every page), the patient's Tongue, Pulse and Abdomen pages, Fang Bing Ren's
   rows by their shared helpers.
 - **LIVE** on her "push live" (this note's build).
+
+## Symptom words: the small words stay small, 2026-11-09
+
+Her words, to "Would you like to, the, of, at and in kept small too": "yes keep them small too, push live". `phSymCase` now keeps
+the articles and short prepositions small as well as the conjunctions, unless one leads: "Sensitive to Cold", "Strong Around the
+Navel", "Shortness of Breath", "Pain on Pressure", "Craving for Sweets", "In the Morning". The list: and or but nor yet so if than
+because although though while when whether unless until as whereas, a an the, to of at in on by for with from per into (her five
+plus the rest of the same kind). Still display only (CLAUDE.md "Shown with capitals, saved as written").
+
+- **Checked** on a test copy of the newest build at 1220px: the helper on eight phrases; Gui Zhi's card (Area, Importance) and
+  Compare read with the small words small; no page errors. **Not checked:** her own screen, the phone (no size changed).
+- **LIVE** on her "push live" (this note's build).
