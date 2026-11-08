@@ -214,6 +214,7 @@
   var linkInAddress = !!token;
   try { if (!token) token = localStorage.getItem("daybook-chart-link"); } catch (e) {}
   var DEMO = !token;                 // no link = the walk-through she can tap
+  var REMINDERS_LIVE = false;        // her audit pick 2026-11-08: hide the morning-reminder card until a real sender exists
   var sb = null;
   try { if (!DEMO && window.supabase) sb = window.supabase.createClient(SB_URL, SB_KEY); } catch (e) {}
 
@@ -293,6 +294,9 @@
   CE.cycles = function (days) {
     var starts = CE.periodStarts(days), out = [], i;
     if (!starts.length) return [{ start: days.length ? days[0].d : TODAY, end: TODAY, days: days.slice() }];
+    /* her audit pick 2026-11-08: temperatures logged before her first tracked period used to vanish --
+       nothing pushed them into any cycle group below, since every group starts at a period date */
+    if (days.length && days[0].d < starts[0]) out.push({ start: days[0].d, end: addDays(starts[0], -1), days: days.filter(function (x) { return x.d < starts[0]; }) });
     for (i = 0; i < starts.length; i++) {
       var s = starts[i], e = i + 1 < starts.length ? addDays(starts[i + 1], -1) : TODAY;
       out.push({ start: s, end: e, days: days.filter(function (x) { return x.d >= s && x.d <= e; }) });
@@ -485,6 +489,13 @@
       if (DEMO) return true;
       var tz = ""; try { tz = Intl.DateTimeFormat().resolvedOptions().timeZone || ""; } catch (e) {}
       var r = await sb.rpc("set_chart_reminder", { p_token: token, p_time: time, p_tz: tz });
+      if (r.error) throw r.error;
+      return true;
+    },
+
+    setGoal: async function (goal) {
+      if (DEMO) return true;
+      var r = await sb.rpc("set_chart_goal", { p_token: token, p_goal: goal });
       if (r.error) throw r.error;
       return true;
     }
@@ -765,11 +776,11 @@
 
   function renderMe() {
     var l = Store.link, rem = l.reminder_time || "";
-    var h = '<div class="card"><p class="q">Your morning reminder</p>' +
+    var h = REMINDERS_LIVE ? ('<div class="card"><p class="q">Your morning reminder</p>' +
       '<p class="hint" style="margin:0 0 10px">Take your temperature as soon as you wake, before getting up, at about the same time each day.</p>' +
       '<div class="chips"><input type="time" id="remTime" value="' + esc(rem) + '" style="width:130px">' +
       (rem ? '<button type="button" class="chip" data-rem="off">Turn off</button>' : "") + "</div>" +
-      '<p class="hint" id="remNote">' + (rem ? "We’ll remind you at " + esc(rem) + " each morning." : "No reminder set.") + "</p></div>";
+      '<p class="hint" id="remNote">' + (rem ? "We’ll remind you at " + esc(rem) + " each morning." : "No reminder set.") + "</p></div>") : "";
 
     h += '<div class="card"><p class="q">What you’re charting for</p>' +
       '<p class="hint" style="margin:0">' + esc(GOALS[l.goal].label) + " — Linh sets this. Ask her if it should change.</p></div>";
@@ -918,7 +929,7 @@
       if (rec.ptest === "pos" && Store.link.goal !== "preg") {
         setTimeout(function () {
           if (confirm("Congratulations. Would you like your chart to switch to pregnancy mode?")) {
-            Store.link.goal = "preg"; if (DEMO) lsSet("goal", "preg");
+            Store.link.goal = "preg"; if (DEMO) lsSet("goal", "preg"); else Store.setGoal("preg");
             tab = "chart"; render();
           }
         }, 200);

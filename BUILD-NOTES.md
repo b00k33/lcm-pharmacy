@@ -12210,3 +12210,15 @@ Two of the "31 wait for your word" questions, the Patient pages group, the half 
 
 **Tested:** none of this is running code — read the two files over once more for the exact WHERE clause and the new function's shape. Not run against her real Supabase project.
 **SAVED, not live:** goes out with her next "push live" for the app side; the SQL itself needs her own hand to run it once.
+
+## Her whole-app audit, Patient pages — My Cycle logic (2026-11-08)
+
+Three more of the "31 wait for your word" picks, the My Cycle (`chart.html`) half that isn't the colour/font pass (next commit).
+
+- **The morning-reminder card is hidden** (`REMINDERS_LIVE = false`, `renderMe`): My Cycle's "You" tab let a patient set a reminder time, but nothing anywhere sends it — the gap I flagged at `phChartSetStatus`'s neighbourhood is real, not a wiring bug. Her pick: hide the card until a real sender exists, don't build the sender now. The time she could have already saved and `setReminder` still work underneath; only the card is gone, so nothing she already set is lost if this is switched back on later.
+- **The pregnancy switch now persists** (`Store.setGoal`, calling the new `set_chart_goal` RPC from the last commit): when she confirms "Would you like your chart to switch to pregnancy mode?", the goal used to live only in that one browser's memory and localStorage — close the tab, reopen the link elsewhere, and she's back on the TTC chart. Now the same confirm also writes it to her row.
+- **Temperatures before her first tracked period are no longer dropped** (`CE.cycles`): the function only ever started a group at a period date, so a patient who logged a week of mornings before her first period in the app lost that week outright — not hidden, structurally never collected into any cycle. It now gets a leading pseudo-cycle. It is read and drawn through the same `CE.analyse` every other cycle uses, so an early ovulation-style rise in that stretch would show the same badges a real cycle's would — I did not add a flag to suppress that; a cleaner "render but never call it ovulation" treatment is a further step if she wants it, flagging rather than guessing.
+
+**Integration check:** the goal-switch persistence feeds both My Cycle (reads `Store.link.goal`) and the practitioner-side `rec.chartGoal` the next commit's picker writes — the two stay separate fields on purpose (one on `chart_links.goal` written by the patient's own confirm, one on the same column written by her toggle), no third copy.
+**Tested:** read through each change against the live function bodies; `CE.cycles`/`CE.analyse` reasoned through by hand (a pre-period block with ≥10 temps analyses exactly like a real cycle). Not run — no sign-in or test data in the sandbox for a patient chart link.
+**SAVED, not live:** goes out with her next "push live".
