@@ -12652,3 +12652,12 @@ directly edit the name of symptoms and select if its in bing too."
   did), then Undo removed it cleanly. Group = Importance, Quiz, the Signs/Weights covers and Study
   (read-only) mode are unchanged -- this only reaches the Area-grouped Edit table. Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide family Edit table: four columns wide, 2026-11-09
+
+Her words, looking at the merged Area table: "give 4 columns." The desktop layout now flows the
+body-area blocks into four columns instead of two; a laptop/tablet width (900px and under) keeps
+the earlier two, and the existing phone width still stacks to one. Nothing about a block itself
+changed, only how many sit side by side.
+
+**SAVED, not live:** goes out with her next "push live".
