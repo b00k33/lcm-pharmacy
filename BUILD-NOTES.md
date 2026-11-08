@@ -12710,3 +12710,28 @@ deviate from what i want".
   spot), the patient's Tongue exam page itself. Pages checked for the integration rule: the Guide (every page); the patient's
   Tongue exam page by its shared markup only.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Appointments "Up next" card: one action row (2026-11-09)
+
+Her "redesign this because the box is taking up too much space", from a screenshot of the Up next card
+with Open · Profile · Edit on one row and Call · Text · Email on a second row underneath.
+
+- **Shown two mocks, picked "merge to one row."** This reverses her own 2026-10-23 pick (Open/Profile/Edit
+  as a labelled row, Call/Text/Email as a circle row below it) -- her newer word, asked and confirmed before
+  building, per `AskUserQuestion` (she chose it over "keep two rows, just tighten").
+  Before/after screenshots sent to her in chat; she picked the merge.
+- **One row, not two.** Profile and Edit (`phApptUpNextHtml`'s `acts`) are now the same 32px icon circle
+  Call/Text/Email (`icons`) already were -- a person glyph and a pencil glyph (`#i-user`/`#i-edit`), name on
+  hover, no visible label, same as the other three already worked. `acts` and `icons` both sit inside
+  `.un-row3` now, after Open; the old `.un-icons`/`.un-acts`/`.un-ic`/`.un-act` CSS scoped to `.ph-un.vc` is
+  gone (dead once nothing in this card used it), replaced by one shared `.un-circ` rule. The base, non-`.vc`
+  `.un-act` rule earlier in the sheet is untouched -- nothing else used it either way, left alone on purpose.
+- **Saves one full row** (~38px: the row's 32px plus its 6px gap) on every Up next card, every time it's
+  open -- not just this one patient.
+
+**Tested:** in the sandbox, with a stand-in tomorrow's visit and a stand-in today's visit (the "Start visit" /
+"Dispense" button is longer text than "Open") -- both fit the one row with all five circles, no wrap, no
+clipping, by screenshot. No console errors. **Not tested:** her own real Up next card (the sandbox has no real
+appointment data), a visit with no phone or email on file (the `.off` grey-out state wasn't exercised, only
+read in the markup).
+**SAVED, not live:** goes out with her next "push live".
