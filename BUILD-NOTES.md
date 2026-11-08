@@ -12808,3 +12808,32 @@ Her words: "capitalise all words of symptoms except conjunctions."
   Guide's own pen icon still works, still refuses a wording that duplicates another symptom of the
   same Subject. Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide formula list: tinted heads, no colour line; the second capitals change taken out, 2026-11-09
+
+Her words, on a picture of the formula list beside the Guide card: "improve this visual, i dont like the border colour. show mock
+of new". Mock: `mocks/guide-family-rail-mock-2026-11-09.html` (private Artifact; Now · A Dot · B Tint · C One list, her real
+families at the list's 286px). Her picks: **B · Tint**, build and show first, then "Push live".
+
+- **The family card** (`.gf-mc`): the 3px colour line on top went (the card under it was the page's own grey, so the line was its
+  only edge). Now a white card with the thin line and 10px corners; the head row (`h3`) washed in the family's colour at 16%
+  (`color-mix`), so Ban Xia reads gold, Chai Hu green, Da Huang red; On their own and Notes only keep a white head, Notes only
+  dashed. The head is one line, ▸ · NAME · Chinese, with the English under it (`.gf-fnm`, `.gf-fen`; `cardOf` takes `[hz, en]`),
+  so Chai Hu, Da Huang, Huang Lian no longer break in two. Compare stays at the right. The formula rows are unchanged.
+- **Two traps found while building:** the list is a column that scrolls, and a card that clips its corners (`overflow: hidden`)
+  was squeezed shorter than its rows (the English cut, Gui Zhi's last two formulas hidden) — `flex: none`. On the phone the
+  sideways row stretched folded cards to the open one's height, white boxes under their heads — `align-items: flex-start`.
+- **Tap audit:** the new notes-only formula's name field was 28px; 32px now (16px text on the phone).
+- **The second capitals change taken out** (her pick "Take it out"): another session's 1368ea37 ("Every symptom's wording: capital
+  words, conjunctions stay lower"), went live in 20261109-010900, rewrote the pool's words themselves (`phTitleCase` inside
+  `phFbrLabelsApply`, and the added-symptom branch of `phSignLabel`). On top of the live `phSymCase` it brought back "Sensitive To
+  Cold" (her "yes keep them small too"), and a rename box then opened on the capitalised words, so Enter without typing saved
+  "Catches Colds Often" as her own wording (checked on a test copy). Both functions are back exactly as before 1368ea37;
+  `phSymCase` (CLAUDE.md "Shown with capitals, saved as written") does the capitals, display only, as it has since 20261109-005300.
+- **Checked** on a test copy of the newest build: 1220px with the list open and folded, Study and Edit, Area and Importance, a
+  search with its counts on the formulas (inside the cards), the new-note box; Triangle, Compare, Herbs: nothing off, every card
+  its full height, no page errors. 360px: the sideways row, folded cards their own height, nothing off, no sideways page scroll.
+  The capitals: "Sensitive to Cold", the pool's words as written, Enter in an untouched rename saves nothing.
+- **Not checked:** her own screen, the Key2, a real finger or mouse; whether a rename between 01:09 and this build saved
+  capitalised words in her records (read her Guide's renamed symptoms to see).
+- **LIVE** on her "Push live" (this note's build).

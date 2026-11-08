@@ -892,6 +892,9 @@ conditions and source show on the family's card (`phGdfNoteIsFam`, `phGdfFamNote
 Bing, up to four columns (her 2026-11-09 "give 4 columns"; each at least 180px, so the table's width decides: 4 with the formula
 list folded at 1220px, 2 with it open, 1 on the phone), 52px value cells (the number + the other formulas' dot and count; a tap
 opens the box of those formulas). The Guide's pages are one Families ▾ menu at the top (32px; BUILD-NOTES "Guide: tap audit").
+**The formula list beside the card** (`phGdfMosaicHtml`, `.gf-mc`; her 2026-11-09 pick B · Tint): each family a white card with the
+thin line, its head row washed in the family's colour (16%), the name and Chinese on one line, the English under it; no colour
+line. On their own and Notes only keep a white head (Notes only dashed).
 Symptom words show a capital on every word but the small ones (conjunctions, articles, short prepositions: "Flushed or Red",
 "Sensitive to Cold"; `phSymCase`, display only; CLAUDE.md "Shown with
 capitals, saved as written").
