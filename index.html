@@ -71761,7 +71761,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
           phLogConfirmDel = logDel.dataset.phLogDel;
           renderPhLogRows(); return;
         }
-        if (phReverseEntry(logDel.dataset.phLogDel)) { savePharmacy(); renderPharmacy(); }
+        const delId = logDel.dataset.phLogDel;
+        phAsk({ message: "Delete this dispense and put its herbs back on the shelf?", yes: "Delete", danger: true }).then(ok => { if (ok && phReverseEntry(delId)) { savePharmacy(); renderPharmacy(); } });
         return;
       }
       const logDelYes = e.target.closest("[data-ph-log-del-yes]");
@@ -83940,8 +83941,10 @@ or changing anything in Cliniko.
   function phJourneyOpen(name) {
     phJourneyKey = phPatientKey(name);
     phJourneyMenuOpen = false; phJourneyTemplateId = null;
+    phJourneyMenuOpen = window.innerWidth <= 900;   // on a narrow screen the rail is hidden and the contact card lives behind the menu: it arrives open
     PHARMACY.activeTab = "journey";
-    presOpenId = null; presEditId = null; presDraft = null;
+    presPageClose();   // the patient's page closes the way every other tab hop closes it: it left its full-page class on, so the first Back only closed it and the page looked stuck
+    presEditId = null; presDraft = null;
     savePharmacy(); renderPharmacy();
   }
   // patient records carry no display-name field of their own (they're keyed
@@ -95221,7 +95224,7 @@ or changing anything in Cliniko.
     ];
   };
   function presMessagesTabBodyHtml(t, name) {
-    return `${presBandHtml("msg", name)}<div class="ph-fu-block" id="presFuMsgWrap">${presFuMsgHtml(t)}</div>`;
+    return `${presBandHtml("msg", name)}<div class="ph-fu-block" id="presFuMsgWrap">${presFuMsgHtml(t)}</div><div class="ph-mc-acts"><button type="button" class="ph-mc-btn" data-ph-journey-open="${esc(name)}"><svg class="icn" aria-hidden="true"><use href="#i-user"/></svg><span>Contact and preferences</span></button></div>`;
   }
   // sessions logged for this plan (a session with no plan id counts for it)
   const presBandSessions = (rec, plan) => ((rec && rec.acuSessions) || []).filter(s => s.date && (!s.planId || s.planId === plan.id))
@@ -156065,6 +156068,25 @@ Dosage: {dosage}
       try { const r = JSON.parse(pair[PRESC_KEY]); out.presc = r && Array.isArray(r.items) ? r.items.length : null; } catch (e) {}
       return out;
     },
+    // a restore is her newest word, but the record merges go by stamp (mergePatientsByRecency, mergeTemplateOverrides, mergeFbrEdits): a restored
+    // record with its old stamp lost to the very copy she was replacing, here and on her other device. What the restore changes is stamped now
+    stamp(phStr, curStr) {
+      const parse = s => { try { const v = JSON.parse(s); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; } catch (e) { return {}; } };
+      const p = parse(phStr), cur = parse(curStr), now = Date.now();
+      if (!Object.keys(p).length) return phStr;
+      const ps = p.patients && typeof p.patients === "object" ? p.patients : {}, cs = cur.patients && typeof cur.patients === "object" ? cur.patients : {};
+      Object.keys(ps).forEach(k => { if (ps[k] && typeof ps[k] === "object" && JSON.stringify(ps[k]) !== JSON.stringify(cs[k])) ps[k].updatedAt = now; });
+      // an edit the restore changes is stamped now; one it leaves as it was keeps the stamp it had, so another device's newer edit still wins
+      [["tpTemplateOverrides", "tpTemplateOverridesAt"], ["fbrEdits", "fbrEditsAt"], ["gdNoteEdits", "gdNoteEditsAt"]].forEach(([f, fa]) => {
+        const pf = p[f] && typeof p[f] === "object" && !Array.isArray(p[f]) ? p[f] : null, cf = cur[f] && typeof cur[f] === "object" && !Array.isArray(cur[f]) ? cur[f] : {};
+        if (!pf) return;
+        const ids = Object.keys(pf).filter(id => JSON.stringify(pf[id]) !== JSON.stringify(cf[id]));
+        if (!ids.length) return;
+        const at = p[fa] && typeof p[fa] === "object" && !Array.isArray(p[fa]) ? p[fa] : {}; ids.forEach(id => { at[id] = now; });
+        p[fa] = at;
+      });
+      return JSON.stringify(p);
+    },
     compose(cur, bak, ch) {
       const parse = s => { try { const v = JSON.parse(s); return v && typeof v === "object" && !Array.isArray(v) ? v : {}; } catch (e) { return {}; } };
       const curPh = parse(cur[PHARMACY_KEY]), bakPh = parse(bak[PHARMACY_KEY]);
@@ -156195,6 +156217,7 @@ Dosage: {dosage}
       try {
         // her own things go first (phRestMeWrite above). A write this device could not keep stops the whole restore, loudly
         if (meAdds && phMeOk()) meWas = phRestMeWrite(pending.me);
+        if (ch.inventory && pending.norm[PHARMACY_KEY] != null) pending.norm[PHARMACY_KEY] = window.__lcmSections.stamp(pending.norm[PHARMACY_KEY], localStorage.getItem(PHARMACY_KEY));
         if (ch.prescriptions && ch.inventory && ch.log) {
           // everything ticked = the old full restore, including any extra
           // daybook keys (column widths etc.) the backup carries
@@ -159097,6 +159120,7 @@ Dosage: {dosage}
       // reason -- fall back to the old whole-snapshot replace so this screen
       // always at least does SOMETHING safe rather than silently no-op
       var composed = (LS && !(ch.prescriptions && ch.inventory && ch.log)) ? LS.compose(cur, bak, ch) : bak;
+      if (LS && LS.stamp && ch.inventory && composed[PH_KEY] != null) composed[PH_KEY] = LS.stamp(composed[PH_KEY], cur[PH_KEY]);
       // a patient merged away since this copy was kept: this write skips the merge cycle, so the restored record is stamped newer than its tombstone here, or the next sync on any device holding that tombstone drops her again
       try {
         var restoredCore = JSON.parse(composed[PH_KEY]), goneHere = JSON.parse(cur[PH_KEY]).deletedPatients || {}, stampedAny = false;
@@ -159116,8 +159140,8 @@ Dosage: {dosage}
       window.__lcmAllowShrinkUntil = Date.now() + 20000;
       apply(composed);
       refreshApp();
-      setBaseFrom(sectionsFrom(composed));
       sb.from("settings").upsert({ data: composed }, { onConflict: "owner" }).select("updated_at").then(function (r) {
+        if (!r.error) setBaseFrom(sectionsFrom(composed));   // only once the cloud holds it: otherwise this copy stays ahead and the next cycle sends it
         if (r.data && r.data[0]) sessionStorage.setItem(APPLIED, r.data[0].updated_at);
         location.reload();
       }, function () { location.reload(); });
