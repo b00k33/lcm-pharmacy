@@ -12403,3 +12403,12 @@ the left Families rail (herb cards, each formula as a tile).
   any of them; phone width (375px) still shows the old compact horizontal strip, fold button
   hidden there.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide card: the area's name in the Ren · Bing head row (2026-11-08)
+
+Her words, on a screenshot of a Families card's by-area table ("ENERGY & GENERAL ... 5" on its own line, then the table's head row,
+an empty cell + REN · BING): "this can be same line". `phGdfMergedHtml`: the `.gf-mrg-area` line is gone; the area's name and its
+count lead the table's own head row (`th.ar`: ink capitals, the count beside it), beside Ren · Bing, and the formula colour's 2px
+line runs under that row (`.gf-mrg-tbl thead th`). One line less per area, study and edit alike. A narrow card (two columns of
+about 250px) wraps a long area name inside its cell, never cuts it. Checked on a test copy (Guide › Families, Ban Xia: the ten
+areas, the head row, the line, no page errors); not checked on her own screen or the phone.
