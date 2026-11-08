@@ -12477,3 +12477,12 @@ guide page" -- a mock first ("show me mock"), then "yes build it for real".
   "Looking at" search still work through the table exactly as they did before. Tongue & pulse area
   unchanged. Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## The growing triangle card: narrower (2026-11-08)
+
+Her "make it less wide," straight after the calmer-card fix above. `.ph-ftg-wrap` gets `max-width: 720px` and
+centres itself (`margin: 0 auto`) instead of stretching to the panel's full width. 720px keeps it above the
+`W < 640` line inside `phFtgMake` that switches the side Ren/Bing lists down to a bare count -- a narrower
+number would have quietly dropped the sign rows along with the width. Checked at 1280px (centred, detail rows
+intact) and that it still folds into the phone's narrow layout below 640px as it already did.
+**SAVED, not live:** goes out with her next "push live".
