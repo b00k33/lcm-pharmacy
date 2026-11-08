@@ -5960,6 +5960,10 @@
   #pharmacyPage .ph-me-bdrow .ph-me-ic { color: color-mix(in srgb, var(--c22-g-together) 80%, #000); }
   /* a routine's row: its mark, the title, its rule in soft text, the start time */
   #pharmacyPage .ph-me-rtrow .ph-me-txt em { margin-left: 6px; font-style: normal; color: var(--ph-soft); }
+  #pharmacyPage .ph-tb-tdnew { margin: 0 0 4px; }
+  #pharmacyPage .ph-tb-l.sub { margin: 8px 0 2px; }
+  #pharmacyPage .ph-me-row.done .ph-me-tick { background: var(--ph-herb); }
+  #pharmacyPage .ph-me-row.done .ph-me-txt { color: var(--ph-faint); cursor: default; }
   #pharmacyPage .ph-me-more { justify-self: start; height: 32px; min-height: 0; margin: 4px 0 0; padding: 0 12px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); color: var(--ph-ink); font: 600 var(--fs-13)/1 var(--font-body); cursor: pointer; }
   #pharmacyPage .ph-me-more:hover { border-color: var(--ph-herb); }
   /* ONE ME (her picks 2026-10-26, profile-integration-mock-2026-10-26.html). Her card leads the drawer: initials, name, today's
@@ -32697,6 +32701,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
                check; the app opens on Appointments), Intake review,
                Stocktake, Stock statistics. Records unchanged; Projects /
                Reference / Data become one quiet line (.compact below). -->
+          <!-- her 2026-11-08 "give me fast access to my profile page" (pick: a labelled Me item at the top of the left rail): one tap from every
+               page to her own record; the Me chip on the calendar keeps opening her drawer -->
+          <button type="button" class="ph-nav-item" id="phNavMe" data-ph-tip="My profile"><span class="ph-nav-ic"><svg class="icn"><use href="#i-c22-me"/></svg></span><span class="ph-nav-label">Me</span></button>
           <div class="ph-sb-group-label">Every day</div>
           <button type="button" class="ph-nav-item" data-ph-tab="appointments" data-ph-tip="Appointments"><span class="ph-nav-ic"><svg class="icn"><use href="#i-cal"/></svg></span><span class="ph-nav-label">Appointments</span></button>
           <button type="button" class="ph-nav-item" data-ph-tab="prescriptions" data-ph-tip="Patient profile"><span class="ph-nav-ic"><svg class="icn"><use href="#i-pill"/></svg></span><span class="ph-nav-label">Patient profile</span></button>
@@ -40187,7 +40194,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       const mScript = document.getElementById("phMBarScript");
       if (mScript) mScript.addEventListener("click", () => phDashNewPrescription());
       if (backdrop) backdrop.addEventListener("click", closeDrawer);
-      if (sidebar) sidebar.addEventListener("click", e => { if (e.target.closest("[data-ph-tab]")) closeDrawer(); });
+      if (sidebar) sidebar.addEventListener("click", e => { if (e.target.closest("#phNavMe")) { closeDrawer(); phMineOpen(null); return; } if (e.target.closest("[data-ph-tab]")) closeDrawer(); });
       // the existing [data-ph-tab] handler (search "presOpenId = null; presEditId")
       // is deliberately scoped to `e.target.closest("#pharmacyPage")` (her 2026-07-31
       // "inventory does not work" fix) -- the sidebar/mobile-tabbar now live OUTSIDE
@@ -44135,9 +44142,26 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     return todo.map(row).join("") + foot + (phApsDoneOpen ? done.map(row).join("") : "");
   }
   // the to-do rows, the drawer's own (the toolbar's person opens them)
+  // her 2026-11-08 "improve the to do list on calendar page": a box to add one (the drawer's own door, phMeTodoAdd), the open ones under
+  // Late · Today · Later · No day (a day's own label is left off under Today), and the ones done today in a fold, a tick to put one back
+  let phApsTdDoneOpen = false;
   function phApsTodosHtml() {
-    const todos = phMeLive(phMeD().todos).filter(t => !t.done).sort(phMeTodoSort), shown = phMeTdAll ? todos : todos.slice(0, 5);
-    return shown.map(phMeTodoRowHtml).join("") + (todos.length > 5 ? `<button type="button" class="ph-me-more" data-ph-me-tdall="1" aria-expanded="${phMeTdAll}">${phMeTdAll ? "Fewer ▴" : `All ${todos.length} ▾`}</button>` : "");
+    const tk = keyOf(TODAY), all = phMeOk() ? phMeLive(phMeD().todos) : [], todos = all.filter(t => !t.done).sort(phMeTodoSort);
+    const doneT = all.filter(t => t.done && keyOf(new Date(t.done)) === tk).sort((a, b) => b.done - a.done);
+    const grp = t => { const d = phMeTdDay(t); return !d ? 3 : d < tk ? 0 : d === tk ? 1 : 2; }, names = ["Late", "Today", "Later", "No day"];
+    const shown = phMeTdAll ? todos : todos.slice(0, 8);
+    let out = `<label class="ph-me-fld ph-tb-tdnew"><input type="text" class="field-bare" id="phTbTdNew" placeholder="To-do" aria-label="New to-do" autocomplete="off" enterkeyhint="done"></label>`, last = -1;
+    shown.forEach(t => {
+      const g = grp(t);
+      if (g !== last) { out += `<div class="ph-tb-l rl sub">${names[g]}</div>`; last = g; }
+      out += g === 1 ? phMeTodoRowHtml(t).replace(/<span class="ph-me-when">.*?<\/span>/, "") : phMeTodoRowHtml(t);
+    });
+    if (todos.length > 8) out += `<button type="button" class="ph-me-more" data-ph-me-tdall="1" aria-expanded="${phMeTdAll}">${phMeTdAll ? "Fewer ▴" : `All ${todos.length} ▾`}</button>`;
+    if (doneT.length) {
+      out += `<button type="button" class="ph-me-more" data-ph-aps-tddone="1" aria-expanded="${phApsTdDoneOpen}">${doneT.length} done today ${phApsTdDoneOpen ? "▴" : "▾"}</button>`;
+      if (phApsTdDoneOpen) out += doneT.map(t => `<div class="ph-me-row done"><button type="button" class="ph-me-tick" data-ph-me-tdre="${esc(t.id)}" title="Put back" aria-label="Put back: ${esc(t.t)}"></button><span class="ph-me-txt">${esc(t.t)}</span></div>`).join("");
+    }
+    return out;
   }
   /* ---- HER TOOLBAR AND BODY (her 2026-11-05, with a picture of the rail: "i dont like how this opens up and the columns are uneven in
      width, i also don't use most of the buttons when it opens. what i need is a visual anatomy of my body as it is my goal to organise my
@@ -44209,7 +44233,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     }
     if (herbN) low += item(`data-ph-tb="herbs"`, phTbView === "herbs", "Herbs to prepare", bdg("jar", herbN, ""), "Herbs");
     if (hbLeft) low += item(`data-ph-tb="doses"`, false, "My doses left today", bdg("leaf", hbLeft, " hb"), "Doses");
-    if (tdN) low += item(`data-ph-tb="todo"`, phTbView === "todo", "To-dos", bdg("c22-me", tdN, ""), "To-dos");
+    if (phMeOk()) low += item(`data-ph-tb="todo"`, phTbView === "todo", tdN ? `To-dos · ${tdN}` : "To-dos", tdN ? bdg("c22-me", tdN, "") : `<span class="ph-aps-bdg">${phApsIc("c22-me")}</span>`, "To-dos");   // the door stays at none (her 2026-11-08: the panel is where one is added)
     if (!top && !low) return "";
     return `<nav class="ph-aps-rail" aria-label="My priorities">${top}${top && low ? `<span class="ph-tb-sep"></span>` : ""}${low}</nav>`;
   }
@@ -44397,6 +44421,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (!host || host._h === html) return;
     const ae = document.activeElement;
     if (phTbTime && ae && ae.dataset && ae.dataset.tbTime && host.contains(ae)) return;   // the time she is typing stays under her hands
+    if (ae && ae.id === "phTbTdNew" && ae.value && host.contains(ae)) return;   // and so do the words of a to-do she is typing
     const was = host._h === undefined ? null : [...host.querySelectorAll(".ph-tb-rg .val")].map(v => v.style.strokeDashoffset);
     // HER DAY BY TAP: what a mark was (data-tb-an = where it sat, data-tb-k / data-tb-v = its state), so it moves from there and pops once
     const an = new Map(), st = new Map();
@@ -44551,6 +44576,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       return;
     }
     if (T.closest("[data-ph-aps-done]")) { phApsDoneOpen = !phApsDoneOpen; phApsPaint(); return; }
+    if (T.closest("[data-ph-aps-tddone]")) { phApsTdDoneOpen = !phApsTdDoneOpen; phApsPaint(); return; }
+    const tdre = T.closest("[data-ph-me-tdre]");
+    if (tdre) { phMeTodoRe(tdre.dataset.phMeTdre); return; }
     if (!T.isConnected) return;   // a row the tap just took away
     // a tap anywhere else folds the panel; a booking's tap opens its own card as well
     if (phTbView && !T.closest(".ph-tb, .ph-aps-rail, #presSavedToast, #phApptPop, #phApptModal, #phMeDrw, .ph-lk-sheet")) phTbClose();
@@ -45728,6 +45756,13 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const id = uid();
     if (!phMeSave((d, now) => { d.todos[id] = { id, t: t.slice(0, 300), at: now, up: now }; })) return;
     const inp = document.getElementById("phMeTdNew"); if (inp) inp.value = "";
+    const tb = document.getElementById("phTbTdNew"), keep = !!tb && document.activeElement === tb; if (tb) tb.value = "";   // the panel's own box (phApsTodosHtml)
+    phMeDrwPaint();
+    if (keep) { const n = document.getElementById("phTbTdNew"); if (n) n.focus({ preventScroll: true }); }
+  }
+  function phMeTodoRe(id) {   // a to-do done today put back on the list (the panel's fold)
+    const t = phMeD().todos[id];
+    if (!t || !phMeSave((d, now) => { if (d.todos[id]) { delete d.todos[id].done; d.todos[id].up = now; } })) return;
     phMeDrwPaint();
   }
   function phMeTodoDone(id) {
@@ -61528,7 +61563,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   window.addEventListener("resize", () => { if (phMeDrwOpen) phMeDrwTop(); });
   // Enter adds the to-do she typed; Esc closes the drawer (once no card or dialog is open); on a phone a tap outside closes it
   document.addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.isComposing && e.target && e.target.id === "phMeTdNew") { e.preventDefault(); phMeTodoAdd(e.target.value); return; }
+    if (e.key === "Enter" && !e.isComposing && e.target && (e.target.id === "phMeTdNew" || e.target.id === "phTbTdNew")) { e.preventDefault(); phMeTodoAdd(e.target.value); return; }
     if (e.key === "Enter" && !e.isComposing && e.target && e.target.id === "phMeProfIn") { e.preventDefault(); phMeProfileSet(e.target.value); e.target.blur(); return; }
     if (e.key === "Escape" && phMeDrwOpen && !phApptState && !phApptCalOpenId) phMeDrwSet(false);
   });
