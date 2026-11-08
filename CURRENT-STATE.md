@@ -889,7 +889,9 @@ written as 0, and lists filter `w !== 0`. Cloud: `mergeFbrEdits` beside `mergeTe
 A notes-only formula that has become a scoring family (Wen Jing Tang, 2026-10-28) leaves Notes only; its memory aid, distinction,
 conditions and source show on the family's card (`phGdfNoteIsFam`, `phGdfFamNoteId`).
 **The by-area table (Group = Area, `phGdfMergedHtml`):** each area one ruled table, its name and count in the head row beside Ren ·
-Bing, two columns, 52px value cells (the number + the other formulas' dot and count; a tap opens the box of those formulas).
+Bing, up to four columns (her 2026-11-09 "give 4 columns"; each at least 180px, so the table's width decides: 4 with the formula
+list folded at 1220px, 2 with it open, 1 on the phone), 52px value cells (the number + the other formulas' dot and count; a tap
+opens the box of those formulas). The Guide's pages are one Families ▾ menu at the top (32px; BUILD-NOTES "Guide: tap audit").
 **Edit is the same table** (her 2026-11-08 pick A, `guide-edit-like-study-mock-2026-11-08.html`): Add to Ren · Add to Bing above the
 columns; a tap on a number opens the same box with the five dots, − and × on top (`phGdfEdOpen`, one at a time; a dot sets it and
 closes it, the number pops). The card's top bar keeps every part whole and scrolls sideways. BUILD-NOTES "Guide card: Edit laid out
