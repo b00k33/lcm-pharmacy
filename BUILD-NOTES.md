@@ -12290,3 +12290,16 @@ rows** on the phone; **the labels kept**; then on Version 2 **micros 2 × 2**; t
 - **Not checked:** her real record and devices (the Key2 itself), a try open in the new row, a day not today (‹ › from the table),
   reduced motion in a browser. Pages checked for the integration rule: Meals (the eight goals show only there; Targets and Numbers read
   the same goals and were not changed).
+
+## Her whole-app audit, Files — the three hardcoded values (2026-11-08)
+
+The first of her Files group's picks: three real values sat in `index.html`'s source code — visible to anyone who opens this public repo — instead of her own synced data.
+
+- **Her 65% CBD split is now a Settings field** (`phHubRate().p65`, defaulting to 65 so nothing changes until she edits it): a new "CBD split %" field sits beside the existing Acupreg/On call/Admin rates on the Mine hub's Prices card (`data-hub-rate="p65"`, same mask-behind-"Show $" privacy behaviour as the dollar rates). `phHubInc`'s service and herb income lines now read `R.p65` instead of the literal `0.65`.
+- **The lease contact's name is now a Settings field too** (`phHubBiz().leaseContact`, defaulting to "David Dinh"): a new text field beside it; `phHubDues()`'s monthly "lease" reminder now reads it instead of the hardcoded name.
+- **The AACMA member number is gone from the relocation checklist's seed text**, not moved to a field — that checklist's own header already says no specific number belongs in it ("every name, date and amount is invented ... a fabricated fact reads as her real to-do"), so the simplest, truest fix was removing the number from the hint rather than building a field for a single static reminder line. The hint now reads "...with my member number" instead of naming it.
+- **Why a field and not a quiet strip for the other two:** the 65% split and the lease contact's name are read live, every time the money hub renders (`phHubInc`, `phHubDues`) — unlike the AACMA number, which was never read by anything, just shown once in a checklist. A field keeps the real value available to her everywhere it's used, out of the file that's on GitHub.
+
+**Integration check:** `phHubInc` (the day-by-day income calc), `phHubDues` (the bills-due list) and the Mine hub's Prices card all read the same two new fields fresh — no second copy.
+**Tested:** the sandbox copy loads clean (no console errors beyond the expected offline network ones); `phHubRate()` returns `p65: 65` and `phHubBiz()` returns `leaseContact: "David Dinh"` with nothing set yet, matching the old hardcoded values exactly, so this is a no-op until she types something different. The new input fields themselves and a real edit round-trip, not run — no sign-in or her own synced data in the sandbox.
+**SAVED, not live:** goes out with her next "push live".
