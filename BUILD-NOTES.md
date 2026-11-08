@@ -12040,3 +12040,13 @@ Her five requests (a Guide / Compare symptom editor, Fitness decluttered with st
 - **SAVED, not live:** it goes with her next "push live".
 
 **LIVE 2026-11-08, build 20261108-115700 (her "push live").** The audit, the tidy and her four picks went out together, with another session's commit (the Me door and the To-dos panel). Checked on the site: the old install pictures with named patients return 404, the two new ones serve, manifest.json lists only the new ones. Still open: she checks her GitHub plan, then the folder can go private; her gold Update button installs the build on each device.
+
+## Her synth22 of 2026-11-08, step 2: Fitness, steps by day, one Steps place
+
+Her pick: "steps walked, any past day, tap the day in the Steps row" (not the weekday walking plan).
+
+- **Steps by day:** the Week table's Steps row (`phFitWkTblHtml`, `cell.steps`) is a field for every day up to today, not today alone; a typed past day keeps its goal bar under the field; the phone's open day shows the same field. `phStpSet` already took any past day and writes the same `d.stp[day]` as the Steps card and Life > Week's Steps column. Her question answered: tap the day in the row and type. A past day's goal crossing no longer fires the "+1" (`phStpSet`: `phHabFx` only for today); the Habits dot of that day follows the number (Steps is a self-ticking habit), as it already did from Life > Week.
+- **Less clutter:** the Steps plan line (today's planned steps, the week's, the flights, Open) moved inside the Steps card (`phStpCardHtml(keys, plan)`, `phFitSpFoldHtml`); its own "Steps plan" heading is gone while it is closed, and open, the plan table shows under the cards with its heading as before. Steps now has one place (card) plus the row, not a third block. Judgment calls told to her: the posture tip and the weigh-in stay where they are (the tip is old Fitness and was kept on purpose; the weigh-in writes the same fact as Meals).
+- **Tested** (test copy, made-up steps, her records untouched): the row at 1280 (fields for all seven days, bars under typed past days); a real click, 9500 + Enter on a past day: stored, field, bar and the card's "3 of 7 days on goal" follow, no scroll jump, no toast, no page error; the Steps plan line inside the card (Open); at 360x469 the open past day shows its field, no sideways scroll.
+- **Not tested:** her laptop and records; the Steps plan table opened (unchanged code).
+- **SAVED, not live:** it goes with her next "push live".
