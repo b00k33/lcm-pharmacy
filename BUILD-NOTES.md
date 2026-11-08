@@ -12122,3 +12122,23 @@ Four more of the "31 wait for your word" questions, the Dispense group, her pick
 
 **Tested:** the sandbox copy loads clean (no console errors, the four changed functions still defined) at `lcm-sandbox-3fbf`. A live substituted dispense, and real patient/herb search, not run — these are logic/data-flow fixes inside an existing screen, not a new one.
 **SAVED, not live:** goes out with her next "push live".
+
+## Her synth22 of 2026-11-08, item 4: fold "From your notes" into the card
+
+Her pick: "this feels redundant, find a way to integrate it into the whole system."
+
+- `phGdfNotesBlockHtml` (index.html) no longer opens with an `<h4>From your notes</h4>` heading,
+  and `.gf-nb`'s CSS rule dropped its top border + top padding -- the old Body types / Formulas
+  free-text block (figures, chips, quotes, Edit/Delete/Add notes) now reads as a continuation of
+  the card rather than a second titled section. No data, store, write door or edit/delete control
+  changed -- framing only.
+- Empty state (`phGdfOldFor` finds no old record) lost its explanatory sentence; just the
+  `+ Add notes` door, matching the app's "two words + the chip" empty-state convention.
+- **Left alone on purpose:** a chip like "Eyes · round" can already exist as a scored Ren/Bing
+  sign row above it on the same card -- matching free text to sign wording to collapse the two
+  would risk treating her own note and the textbook sign as the same fact when they may not be.
+  Flag to her rather than silently merge.
+- **Tested:** a card with old notes (flows on, no heading/rule), a card with none (just + Add
+  notes), Edit / Delete / Add notes still work, a family card's stacked formula note (famNote)
+  still renders both blocks.
+- **SAVED, not live:** goes with her next "push live".
