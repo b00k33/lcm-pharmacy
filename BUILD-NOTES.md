@@ -12076,3 +12076,15 @@ Six of the "31 wait for your word" questions from the whole-app audit (`mocks/au
 
 **Tested:** the sandbox copy loads clean (no console errors, the four changed functions still defined) at `lcm-sandbox-3fbf`. Phone and real-data testing not run — these are narrow logic/wording fixes, not new screens.
 **SAVED, not live:** goes out with her next "push live".
+
+## Her whole-app audit, Meals and Mine (2026-11-08)
+
+Four more of the "31 wait for your word" questions, the Meals and Mine group, her picks all the recommended options.
+
+- **Had it on a patient's noted day** (`phDietPtHadTog`, `phDietPtHad`): a patient's Diet sheet (a noted day's Breakfast / Lunch / Dinner) had no way to mark a meal had — only to plan or note it, with Had it living only on her own calendar card. A Had it toggle now sits on that day's sheet, mirroring the calendar card's button; the cell shows the same ✓ had mark the legend already described but never reached a patient's table. Snacks and the usual-meal ("Every day") row are untouched — had it only makes sense for a specific noted day. Her pick: add Had it to the table.
+- **Make again skips what's already bought** (`phMplShopMake`): the fresh shopping list it rebuilds each tap never checked what was already ticked bought this week, so a bought thing (milk, say, still planned later that week) came back as a new unchecked row. It now drops any item whose name is already a done entry for that week before adding the rest. Her pick: skip already-bought items.
+- **An old unpaid invoice stays on Due** (`phHubDues`): the generator only ever looked back 35 days, so an invoice unpaid for longer than that silently stopped existing — not faded, dropped. It now reaches back to the day she began using the hub (never further back than that; from before then nothing is ever "late"), so an old unpaid Nabih, lease, Acupreg or BAS line stays listed until she marks it done. Her pick: stay listed until paid.
+- **Over time's photo tiles lose their own frame** (`.ph-mbt-tile`): each Front/Side/Back tile drew its own bordered, filled card nested inside the Body panel it already sits in — a frame inside a frame, not a choice. The tile keeps its padding; the outer panel is the only border now. Her pick: drop the tile's own frame.
+
+**Tested:** the sandbox copy loads clean (no console errors, the four changed functions still defined) at `lcm-sandbox-3fbf`. Phone and real-data testing not run.
+**SAVED, not live:** goes out with her next "push live".

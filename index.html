@@ -7174,7 +7174,7 @@
   #pharmacyPage .ph-mbt-tr em { text-align: right; font: 700 var(--fs-12)/1 var(--font-body); font-style: normal; color: var(--ph-soft); font-variant-numeric: tabular-nums; }
   #pharmacyPage .ph-mbt-tp .ph-mbf-flags { margin-top: 10px; }
   #pharmacyPage .ph-mbt-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  #pharmacyPage .ph-mbt-tile { padding: 8px; border: 1px solid var(--ph-line); border-radius: 10px; background: var(--ph-white); }
+  #pharmacyPage .ph-mbt-tile { padding: 8px; }
   #pharmacyPage .ph-mbt-tile.film { grid-column: 1 / -1; max-width: 300px; margin: 0 auto; width: 100%; }
   #pharmacyPage .ph-mbt-tile .hd { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; margin-bottom: 6px; }
   #pharmacyPage .ph-mbt-tile .hd b { font: 700 var(--fs-11)/1 var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-soft); }
@@ -48728,7 +48728,10 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       if (s.pk.mode === "snack") return `<div class="ph-lk-card ph-meal-sh" role="dialog" aria-label="${esc(t)}">${hd(t)}${phMealPickHtml(s.pk)}</div>`;
       // Every <meal> (her pick 4): her usual meal in one card, its numbers and the small grid, then Done
       const every = !s.pk.pt && s.pk.day === "def";
-      return `<div class="ph-lk-card ph-meal-sh" role="dialog" aria-label="${esc(t)}">${hd(t)}${every ? `<div class="ph-c22-pw"><span>Every day without its own</span></div>` : ""}<div class="ph-meal-lst">${phMealListHtml(s.pk, { full: true })}${phRxPtSec(s.pk)}</div><div class="ph-meal-acts"><button type="button" class="ph-c22-go solid" data-meal-shx="1">Done</button></div></div>`;
+      // Had it (her audit pick): a patient's noted day only, mirrors the calendar card's button, a toggle
+      const ptHad = s.pk.pt && s.pk.day !== "def" && s.pk.sl !== "s" ? phDietPtHad(s.pk.pt, s.pk.day, s.pk.sl) : null;
+      const hadBtn = s.pk.pt && s.pk.day !== "def" && s.pk.sl !== "s" ? `<button type="button" class="ph-c22-go${ptHad ? " on" : ""}" data-diet-pthad="${esc(s.pk.pt + "|" + s.pk.day + "|" + s.pk.sl)}" aria-pressed="${!!ptHad}">${phMealSvg("check")}Had it</button>` : "";
+      return `<div class="ph-lk-card ph-meal-sh" role="dialog" aria-label="${esc(t)}">${hd(t)}${every ? `<div class="ph-c22-pw"><span>Every day without its own</span></div>` : ""}<div class="ph-meal-lst">${phMealListHtml(s.pk, { full: true })}${phRxPtSec(s.pk)}</div><div class="ph-meal-acts">${hadBtn}<button type="button" class="ph-c22-go solid" data-meal-shx="1">Done</button></div></div>`;
     }
     const x = phMeDayItems(s.day).find(y => y.me === s.me);
     if (!x || !x.ml) return "";
@@ -48953,6 +48956,15 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       if (v === "=") delete o[sl]; else o[sl] = v;
     }, say ? say(w) : `✓ ${w} · ${v === "=" ? "same as usual" : phMealName(v) || "nothing"}`, day + "|" + sl);
   }
+  // Had it, for a patient's noted day (her audit pick: mirrors the calendar card's button, a toggle)
+  function phDietPtHad(name, day, sl) { const o = phDietPt(name).days[day]; return o && o.had && o.had[sl] ? o.had[sl] : null; }
+  function phDietPtHadTog(name, day, sl) {
+    const had = phDietPtHad(name, day, sl), w = sl === "s" ? "Snacks" : phMealWord(sl);
+    phDietPtChange(name, D => {
+      const o = D.days[day] || (D.days[day] = {});
+      if (had) { if (o.had) delete o.had[sl]; } else { o.had = o.had || {}; o.had[sl] = { at: Date.now() }; }
+    }, had ? `${w} · Had it removed` : `✓ ${w} · had it`, day + "|" + sl);
+  }
 
   // ---- the Diet page: in every patient's file (Log group). Hers is a week of her meals; a patient's is their usual diet + noted days ----
   let phDietWk = 0, phDietNoteFor = "";   // her page: weeks back from this one · the patient whose "+ Note a day" field is open (this visit only)
@@ -48988,7 +49000,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   const PH_DIET_HEAD = `<thead><tr><th>Day</th><th>Breakfast</th><th>Lunch</th><th>Dinner</th><th>Snacks · drinks</th><th>Water</th><th>Nutrients</th><th>Warm · cool</th></tr></thead>`;
   function phDietLegendHtml(mine, goal) {
     const tc = Object.keys(PH_DIET_TCM).map(k => `<span><i class="ph-meal-dot ${k}"></i>${PH_DIET_TCM[k]}</span>`).join("");
-    return `<div class="ph-diet-legend">${mine ? `<span><i class="ok">${phMealSvg("check")}</i>had it</span><span class="pl">pale = the usual meal</span><span class="own">bold = that day's own</span><span>· no meal event that day</span>` : `<span class="pl">pale = usual</span><span class="own">bold = that day</span>`}${tc}${mine ? `<span>P · C · F = protein · carbs · fat, g</span><span><i class="ph-diet-lo"></i>under 60%</span><span><i class="ph-diet-lo ov"></i>over a limit</span>` : `<span>P Fe Ch C = protein · iron · choline · vitamin C</span><span><i class="ph-diet-lo"></i>under 60%</span>`}</div>`;
+    return `<div class="ph-diet-legend">${mine ? `<span><i class="ok">${phMealSvg("check")}</i>had it</span><span class="pl">pale = the usual meal</span><span class="own">bold = that day's own</span><span>· no meal event that day</span>` : `<span><i class="ok">${phMealSvg("check")}</i>had it</span><span class="pl">pale = usual</span><span class="own">bold = that day</span>`}${tc}${mine ? `<span>P · C · F = protein · carbs · fat, g</span><span><i class="ph-diet-lo"></i>under 60%</span><span><i class="ph-diet-lo ov"></i>over a limit</span>` : `<span>P Fe Ch C = protein · iron · choline · vitamin C</span><span><i class="ph-diet-lo"></i>under 60%</span>`}</div>`;
   }
   // ---- her numbers (FOOD NUMBERS, her picks 6, 7, 11): a day is one line; a tap opens its bars ----
   let phDietOpen = null, phDietTg = false;   // the days whose bars are open (null = today; 2 = every bar, on a phone) · Targets open (this visit only)
@@ -49971,8 +49983,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       .sort((a, b) => a.t.localeCompare(b.t)).concat(Object.values(typed).map(o => ({ t: o.t, from: from(o) })));
   }
   function phMplShopMake(days) {
-    const L = phMplShopList(days), wk = days[0], old = phShopLive().filter(s => s.src === "plan" && s.wk === wk && !s.done);
-    if (!L.length) { presSavedToast("No foods planned from today on this week"); return; }
+    const L0 = phMplShopList(days), wk = days[0], old = phShopLive().filter(s => s.src === "plan" && s.wk === wk && !s.done);
+    if (!L0.length) { presSavedToast("No foods planned from today on this week"); return; }
+    // skip what is already bought this week, so Make again does not bring a bought thing back unchecked (her audit pick)
+    const got = new Set(phShopLive().filter(s => s.src === "plan" && s.wk === wk && s.done).map(s => s.t.split(" · ")[0].trim().toLowerCase()));
+    const L = L0.filter(x => !got.has(x.t.split(" · ")[0].trim().toLowerCase()));
+    if (!L.length) { presSavedToast("Already in Shopping · nothing new to add"); return; }
     const ids = L.map(() => uid());
     phMealSave((d, now) => {
       old.forEach(s => { d.shop[s.id] = Object.assign({}, s, { del: now, up: now }); });
@@ -51949,7 +51965,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const defRow = `<tr class="def"><td class="day"><b>Every day</b><span>usual</span></td>${["b", "l", "d", "s"].map(sl => `<td>${cell("def", sl, usual(sl), usual(sl) ? "own" : "pl")}</td>`).join("")}<td><div class="sn">${phDietWaterHtml(w * PH_WATER_GLASS, goal.wml)}<button type="button" class="ph-meal-plus" data-diet-ptw="${esc(name + "|-1")}" aria-label="250 ml less"${w ? "" : " disabled"}>−</button><button type="button" class="ph-meal-plus" data-diet-ptw="${esc(name + "|1")}" aria-label="250 ml more">+250 ml</button></div></td><td>${phDietNuHtml(sum.t, goal)}</td><td>${phDietWcHtml(sum.m)}</td></tr>`;
     const noted = Object.keys(D.days).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort().reverse().map(k => {
       const o = D.days[k] || {}, d = parseKey(k);
-      return `<tr><td class="day"><b>${DOW_SHORT[d.getDay()]} ${d.getDate()} ${MON_SHORT[d.getMonth()]}</b><span>noted<button type="button" class="ph-diet-x" data-diet-notex="${esc(name + "|" + k)}" title="Remove this day" aria-label="Remove ${esc(phMeDayLbl(k))}">${phMealSvg("x")}</button></span></td>${["b", "l", "d", "s"].map(sl => { const own = phMealIsV(o[sl]); return `<td>${cell(k, sl, own ? o[sl] : usual(sl), own ? (o[sl] === "skip" ? "skip" : "own") : "pl")}</td>`; }).join("")}<td></td><td></td><td></td></tr>`;
+      return `<tr><td class="day"><b>${DOW_SHORT[d.getDay()]} ${d.getDate()} ${MON_SHORT[d.getMonth()]}</b><span>noted<button type="button" class="ph-diet-x" data-diet-notex="${esc(name + "|" + k)}" title="Remove this day" aria-label="Remove ${esc(phMeDayLbl(k))}">${phMealSvg("x")}</button></span></td>${["b", "l", "d", "s"].map(sl => { const own = phMealIsV(o[sl]); return `<td>${cell(k, sl, own ? o[sl] : usual(sl), (o.had && o.had[sl]) ? "had" : own ? (o[sl] === "skip" ? "skip" : "own") : "pl")}</td>`; }).join("")}<td></td><td></td><td></td></tr>`;
     }).join("");
     const note = phDietNoteFor === name
       ? `<span class="ph-diet-note"><label class="ph-meal-fld"><input type="date" data-diet-noteday="1" value="${tk}" max="${tk}" aria-label="Day"></label><button type="button" class="ph-c22-go solid" data-diet-noteadd="${nm}">Add</button><button type="button" class="ph-c22-go" data-diet-note="">Cancel</button></span>`
@@ -52003,7 +52019,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   document.addEventListener("click", e => {
     const T = e.target;
     if (!T || !T.closest || !T.closest("#pharmacyPage")) return;
-    const el = T.closest("[data-meal-add], [data-meal-tab], [data-meal-menus], [data-meal-out], [data-meal-mic], [data-meal-tog], [data-meal-rm], [data-meal-skip],[data-meal-same], [data-meal-back], [data-meal-pick], [data-meal-dish], [data-meal-had], [data-meal-undo], [data-meal-prep], [data-meal-ing], [data-meal-edit], [data-meal-tick], [data-meal-open], [data-meal-water], [data-meal-shop], [data-meal-bring], [data-meal-shx], [data-meal-snack], [data-meal-snackx], [data-meal-def], [data-diet-wk], [data-diet-pt], [data-diet-ptw], [data-diet-note], [data-diet-noteadd], [data-diet-notex], [data-dish-tcm], [data-dish-dk], [data-dish-prepx], [data-dish-ingx], [data-dish-save], [data-dish-del], [data-meal-q], [data-meal-byo], [data-meal-alltog], [data-tb-pick], [data-tb-sz], [data-tb-add], [data-dish-q], [data-dish-fdx], [data-dish-fadd], [data-dish-ftog], [data-dish-tn], [data-diet-nl], [data-diet-more], [data-diet-tg], [data-rx-k], [data-rx-s], [data-rx-w], [data-rx-f], [data-rx-own], [data-rx-ownadd], [data-rx-fine], [data-rxck-x], [data-rxck-go], [data-meal-rp], [data-meal-rpall], [data-meal-rpto], [data-meal-rpwd], [data-meal-rpgo], [data-dksz]");
+    const el = T.closest("[data-meal-add], [data-meal-tab], [data-meal-menus], [data-meal-out], [data-meal-mic], [data-meal-tog], [data-meal-rm], [data-meal-skip],[data-meal-same], [data-meal-back], [data-meal-pick], [data-meal-dish], [data-meal-had], [data-meal-undo], [data-meal-prep], [data-meal-ing], [data-meal-edit], [data-meal-tick], [data-meal-open], [data-meal-water], [data-meal-shop], [data-meal-bring], [data-meal-shx], [data-meal-snack], [data-meal-snackx], [data-meal-def], [data-diet-wk], [data-diet-pt], [data-diet-pthad], [data-diet-ptw], [data-diet-note], [data-diet-noteadd], [data-diet-notex], [data-dish-tcm], [data-dish-dk], [data-dish-prepx], [data-dish-ingx], [data-dish-save], [data-dish-del], [data-meal-q], [data-meal-byo], [data-meal-alltog], [data-tb-pick], [data-tb-sz], [data-tb-add], [data-dish-q], [data-dish-fdx], [data-dish-fadd], [data-dish-ftog], [data-dish-tn], [data-diet-nl], [data-diet-more], [data-diet-tg], [data-rx-k], [data-rx-s], [data-rx-w], [data-rx-f], [data-rx-own], [data-rx-ownadd], [data-rx-fine], [data-rxck-x], [data-rxck-go], [data-meal-rp], [data-meal-rpall], [data-meal-rpto], [data-meal-rpwd], [data-meal-rpgo], [data-dksz]");
     if (!el) return;
     e.stopImmediatePropagation();
     const ds = el.dataset;
@@ -52172,6 +52188,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       return;
     }
     if (ds.dietPt) { const p = String(ds.dietPt).split("|"), sl = p.pop(), day = p.pop(); phMealPk = null; phDietSheetOpen({ kind: "pick", pk: { pt: p.join("|"), day, sl, mode: "pt" } }); return; }
+    if (ds.dietPthad) { const p = String(ds.dietPthad).split("|"), sl = p.pop(), day = p.pop(); phDietPtHadTog(p.join("|"), day, sl); phDietSheetPaint(); return; }
     if (ds.dietPtw) {
       const p = String(ds.dietPtw).split("|"), n = +p.pop(), name = p.join("|"), cur = Math.max(0, Math.round(+phDietPt(name).usual.w || 0)), nx = Math.max(0, Math.min(20, cur + n));
       if (nx !== cur) phDietPtChange(name, D => { D.usual.w = nx; }, `✓ Water · ${phWaterMl(nx * PH_WATER_GLASS)} a day`);
@@ -53910,7 +53927,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // ---- invoices + tax due (her pick 4B): worked out from the calendar, ticked off per time it falls ----
   function phHubDues() {
     const out = [], t0 = TODAY, T = phMeOk() ? phMeD().dueT || {} : {};
-    for (let i = -35; i <= 130; i++) {
+    // an unpaid one stays listed until paid, however old (her audit pick): the loop reaches back to when she began, not a fixed 35 days
+    const tk0 = keyOf(t0), st0 = phMeOk() ? (phMeD().hubset || {}).start : null, from0 = st0 && st0.at ? keyOf(new Date(st0.at)) : tk0;
+    for (let i = -Math.max(35, phTripDiff(tk0, from0)); i <= 130; i++) {
       const d = new Date(t0.getFullYear(), t0.getMonth(), t0.getDate() + i), k = keyOf(d), ym = k.slice(0, 7);
       if (d.getDay() === 1) { const sun = new Date(d); sun.setDate(d.getDate() - 1); out.push({ key: "nabih|" + k, t: `Nabih · week to ${sun.getDate()} ${MON_SHORT[sun.getMonth()]}`, k, wk: true }); }
       if (d.getDate() === 26) out.push({ key: "dinh|" + ym, t: "David Dinh · lease", k });
