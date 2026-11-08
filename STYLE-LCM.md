@@ -63,7 +63,8 @@ padding, a row's own padding), never on the shared wrapper. Don't reintroduce an
 margin/radius on a full-width section without asking.
 
 ### Chips
-TAPPABLE THINGS in CLAUDE.md: a pill, 28px tall, 1px `--ph-line` line, white; picked = solid
+TAPPABLE THINGS in CLAUDE.md: 6px corners (not a pill: CLAUDE.md wins, her 2026-10-24 "no" to the Zanda finish), 28px tall
+(up to 32px), 1px `--ph-line` line, white; picked = solid
 `--ph-herb`, white text; text is 14px on the phone (`--m-fs-label`), 13px on desktop. One
 category's chips join into one bar with no side bracket. A chip is for something she
 **picks or has recorded** — never a proposal (CLAUDE.md "NO SUGGESTIONS").
@@ -72,6 +73,8 @@ category's chips join into one bar with no side bracket. A chip is for something
 Nothing interactive below 12.5px text. Chips and buttons are 28px; a few phone Dispense chips
 are 40px on purpose (`.ph-days-opt` / `.ph-pm-opt`). There is no general tap-target floor:
 the 44px rule is retired (her call) — don't bring one back without asking.
+The phone's sizes are measured, not eyeballed: `.github/scripts/tap-audit.js` at 360px (how: its head; CLAUDE.md TAPPABLE
+THINGS "Measured"); there a field you type into is 16px, a chip or button 28-32px with 6px corners and 12.5px text or more.
 
 ---
 

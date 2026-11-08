@@ -94,6 +94,9 @@ reads it; do not render it again.
 
 **Everything tappable is one of five shapes. Nothing else taps.**
 **One size for all of them (her chip audit, 2026-10-23, applied app-wide by 2026-10-24; this line wins over any older size below):** **32px tall, 6px corners, a thin line, 13px text** (a search box: 32px, 12px text, the search icon); picked = solid; **icon-only = a 32px circle**; one category's chips join into one bar. **Kept as they are:** stat tiles, rows and step rows over 52px, pulse chart cells, calendar days. **The dark top bar too** (her 2026-10-27 "audit these chips size"): from 641px up every control in it is 32px, the page's main button included (icon only = a 32px circle, with words = the Button; the 44px disc is gone); the phone's bar stays 31px. Phone sizes: STYLE-LCM.md. Her "no" to the Zanda finish (2026-10-24) keeps circles, 6px corners and normal case.
+**Measured, never eyeballed (her 2026-11-08 "check the files to prevent future chip sizes to deviate from what i want"):** `.github/scripts/tap-audit.js` measures every control on a page against this size (desktop: 32px tall, 6px corners, 13px text, a search 12px, icon-only a 32px circle, a joined bar 32px; the phone: 28-32px, 6px corners, 12.5px text and up, a field you type into 16px). **Every build that adds or changes a control runs it** (how: the script's head) on each page it touches, at 1220-1280px and at 360px, with that page's menus and boxes open and its side list open and folded; it
+is done when `off` is empty. It measures sizes, not crowding, so look at the page too (2026-11-08: every control was the right size
+while four table columns squeezed the words under them to 8px). A control that should keep its own size goes on the script's KEEP list in the same commit, with her word, never as a one-off. A new control takes an existing shape's class or its page's size block, never a height of its own; a rule written for what a box used to hold (a framed tab bar, a strip that scrolled sideways) is re-checked when what it holds changes (2026-11-08: the Guide's tabs became one Families ▾ dropdown and the old bar rules framed it twice and clipped its menu).
 1. **Chip = pick.** 6px corners, 32px tall, 13px text (14px on a phone, STYLE-LCM's label size), 1px `--ph-line` line, white. Picked = solid `--ph-herb`, white text. One size everywhere.
 2. **Button = act.** 6px corners, 32px, 13px bold, 1.5px `--ph-herb` line, white. ONE solid button per screen = the main step. An action is never an outlined pill.
 3. **Dropdown = pick from many.** A chip ending ▾ that shows what is picked. **More than 6 options, or they wrap onto a second line at 375px = dropdown.** Several picks: ticks inside, the chip says "Build · 2" (picked answers may also show as chips under it). Stay chips: Mon–Sun toggles, calendars, stat strips, tab bars of 5 or fewer, the pulse brush bar.
@@ -1484,6 +1487,9 @@ origin/main:index.html`; don't trust this list's age.
   `text-decoration: underline` and `placeholder="`.
 - Motion: no entrance animation on a base class; all of it off under
   reduced motion.
+- **Sizes:** run `.github/scripts/tap-audit.js` on every page the build touches, at 1220-1280px and at 360px, with its menus and
+  boxes open and its side list open and folded; `off` is empty, or each line left is on the script's KEEP list with her word
+  (TAPPABLE THINGS, "Measured"); then look at the page: nothing squeezed or sitting on top of words.
 - Write the build's note at the END of BUILD-NOTES.md (her words, her
   picks, where the code lives, what was tested and what was NOT); fix any
   standing rule here, or the area's paragraph in CURRENT-STATE.md, in the same commit; update

@@ -12661,3 +12661,52 @@ the earlier two, and the existing phone width still stacks to one. Nothing about
 changed, only how many sit side by side.
 
 **SAVED, not live:** goes out with her next "push live".
+
+## Guide: tap audit, and a script that keeps the sizes, 2026-11-08
+
+Her words, on a screenshot of Gui Zhi's card in Edit: "audit chips on page - check the files to prevent future chip sizes to
+deviate from what i want".
+
+- **The script** (`.github/scripts/tap-audit.js`, not published): measures every button, chip, dropdown, field, search box and
+  tappable div on a page against TAPPABLE THINGS (desktop 32px tall, 6px corners, 13px text, a search 12px, icon-only a 32px
+  circle, a joined bar 32px; the phone 28-32px, 6px corners, 12.5px text and up, a field 16px) and lists what is off, grouped by
+  class, with an example and its size. How to run it is in its head. The agreed exceptions (dots, value cells, rows, fold heads,
+  tiles, the scrubber, the top bar's circles, pictures, calendar and chart cells) are its KEEP list; a new one goes there with
+  her word, or as `data-keep-size` on the control. It measures sizes, not crowding.
+- **The rule** (CLAUDE.md TAPPABLE THINGS "Measured, never eyeballed" + "Before finishing" Sizes; STYLE-LCM.md Chips and
+  Floors): every build that adds or changes a control runs it on each page it touches at 1220-1280px and 360px, menus, boxes and
+  side lists open and folded, and looks at the page. STYLE-LCM.md said "a pill" for a chip; it is 6px corners (CLAUDE.md wins).
+- **The Guide's page menu (Families ▾) could not be used.** On a computer the page's top block clipped the menu
+  (`.ph-shell-topblock` overflow hidden, now visible while it holds the menu: `:has(.ph-gd-tabdrop)`), so no other Guide page
+  could be picked from it; the old tab bar's frame (from when the pages were a row of tabs) still drew a 44px pill around the
+  dropdown. On the phone the bar still scrolled sideways, which clipped the menu the same way. Now: the dropdown 32px (92x32), 6px
+  corners, 13px; each page in the menu 32px, the open one solid; the phone 32px. All 11 pages reachable on both.
+- **Sizes on the Families page, a computer:** the formula list's fold, the + in an empty Ren or Bing cell and the healthy
+  tongue's icon are 32px circles; the formula chips in a value's box at least 32px with 6px corners and 13px text (a long name
+  wraps inside); the add search's field 32px and its results at least 32px; Today and the chart marks (`.ph-gd-today`,
+  `.ph-gd-mark`) 32px, 6px corners, 13px.
+- **The phone (PHONE REDESIGN):** the search 32px with 6px corners; the Guide's chips, buttons, segments and dropdowns 6px
+  corners (they were pills); the number chips 28px; the formula chips in a box at least 28px, 12.5px; the icon circles 28px; Today
+  and the marks 28px, 12.5px; the add search and the pearl 16px text (less makes the phone zoom in).
+- **The Healthy tile's ✕** (Tongue): was 21x15 with square corners; now the same circle as Today's icon it pairs with (32px, the
+  phone 28px). Same markup and styles on the patient's Tongue exam page (no Guide-only rule), so it changed there too; that page
+  itself was not opened.
+- **Four columns, never squeezed** (her 2026-11-09 "give 4 columns", built by another session and live as 20261109-001000):
+  at her 1220px window with the formula list open the table is 560px wide, and four columns were 113px each: the words got 8px
+  (one or two letters a line) with the ✎ and + on top of them. A column is now at least 180px (`column-width: 180px;
+  column-count: 4`), so the table's own width decides, not the window's: list folded 850px = 4 columns (186px, as she saw them);
+  list open = 2 (250px); a 1600px window = 4 either way; 3 in between; the phone 1. The 900px window rule went (the width does it).
+- **Left, found and not changed:** the phone's Tongue map, Pulse and Abdomen pages in the Guide (those charts are the patients'
+  exam pages too): bars with round ends, fields 24-26px with square corners, the pulse ✕ (`.ph-gd-pulse-del`) 21x19, the photo
+  add (`ph-visit-photoadd`) 21px with 10.5px text, 23px chips with 12px text. "Live in Fang Bing Ren" is a status, not a tap;
+  "Learned 0 of 42" keeps its bar.
+- **Checked** on a test copy of the newest build: a computer at 1220px, the whole Guide (Families in Study and Edit, Area and
+  Importance, a value's box open, the add search, the Families ▾ menu open, the list open and folded, and the Triangle, Compare,
+  Tongue map with the Healthy tile open, Pulse, Abdomen, Herbs, Blood tests, Iron, Eggs and Eating eggs pages): nothing off (1,108
+  measured; Families and the Tongue map again after the four columns and the ✕); a real hit-tested click on Pulse in the menu opens Pulse;
+  no page errors. The phone at 360px: Families in every state, nothing off; the menu opens inside the screen and a hit-tested
+  tap on Herbs opens Herbs; no sideways scroll; the table 1 column.
+- **Not checked:** her own screen and records, the Key2, a real mouse or finger (taps were scripted clicks on the hit-tested
+  spot), the patient's Tongue exam page itself. Pages checked for the integration rule: the Guide (every page); the patient's
+  Tongue exam page by its shared markup only.
+- **SAVED, not live:** goes out with her next "push live".
