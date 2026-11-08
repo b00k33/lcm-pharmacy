@@ -15544,9 +15544,19 @@
   #pharmacyPage .ph-gdf .gf-mrg-tbl thead th { text-align: center; font: 600 var(--fs-10) var(--font-disp); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-faint); padding: 5px 2px 4px; border-bottom: 1px solid var(--ph-line); }
   #pharmacyPage .ph-gdf .gf-mrg-tbl thead th:first-child { text-align: left; }
   #pharmacyPage .ph-gdf .gf-mrg-subj td { padding: 7px 0 1px; font: 600 var(--fs-10-5) var(--font-disp); letter-spacing: .05em; text-transform: uppercase; color: var(--ph-faint); }
-  #pharmacyPage .ph-gdf .gf-mrg-row { border-bottom: 1px solid var(--ph-paper); }
-  #pharmacyPage .ph-gdf .gf-mrg-row.both { background: var(--ph-herb-tint); }
+  /* her 2026-11-08 "give table rows and columns lines" -- real cell borders, not just a bottom rule */
+  #pharmacyPage .ph-gdf .gf-mrg-tbl th, #pharmacyPage .ph-gdf .gf-mrg-tbl td { border: 1px solid var(--ph-line); }
+  #pharmacyPage .ph-gdf .gf-mrg-subj td { border-left: 0; border-right: 0; background: var(--ph-paper); }
+  #pharmacyPage .ph-gdf .gf-mrg-row.both td { background: var(--ph-herb-tint); }
   #pharmacyPage .ph-gdf .gf-mrg-lab { padding: 5px 6px 5px 0; font-size: var(--fs-13-5); color: var(--ph-ink); }
+  /* her 2026-11-08 "let me edit directly into the table": the add-symptom toolbar above an editable merged table,
+     wider value columns so the weight dots and their controls have room, the against colour on a plain cell
+     (the old --dc-on-.gf-row.neg rule doesn't reach a table cell) */
+  #pharmacyPage .ph-gdf .gf-mrg.edit { column-count: 1; }
+  #pharmacyPage .ph-gdf .gf-mrg-addbar { position: relative; display: flex; flex-wrap: wrap; gap: 8px; padding: 0 0 12px; }
+  #pharmacyPage .ph-gdf .gf-mc-td.edit { padding: 6px 8px; }
+  #pharmacyPage .ph-gdf .gf-mcell.edit { flex-wrap: wrap; justify-content: center; gap: 6px 8px; cursor: default; }
+  #pharmacyPage .ph-gdf .gf-mcell.neg .gf-dots { --dc: var(--ph-zero); }
   #pharmacyPage .ph-gdf .gf-mrg-or { display: inline-block; font-size: var(--fs-9-5); color: var(--ph-faint); border: 1px solid var(--ph-line); border-radius: 3px; padding: 0 4px; margin-right: 5px; vertical-align: 1px; }
   #pharmacyPage .ph-gdf .gf-mc-td { position: relative; padding: 3px 2px; text-align: center; vertical-align: top; }
   #pharmacyPage .ph-gdf .gf-mc-dash { color: var(--ph-line); }
@@ -91550,12 +91560,30 @@ or changing anything in Cliniko.
       : `<span class="gf-none">Only this formula weighs it</span>`;
     return `<td class="gf-mc-td"><div class="gf-mcell${neg ? " neg" : ""}${phGdfOpenRows[key] ? " open" : ""}" data-gdf-row="${esc(key)}"><b class="gf-mc-w">${neg ? "−" : ""}${Math.abs(r.w)}</b>${sim}<div class="gf-more">${moreList}</div></div></td>`;
   }
-  function phGdfMergedHtml(id) {
-    const rRows = phGdfMergedRows(id, "r"), bRows = phGdfMergedRows(id, "b");
-    if (!rRows.length && !bRows.length) return `<div class="gf-none" style="padding:14px 18px">No rows yet</div>`;
+  // her 2026-11-08 follow-up: "let me edit directly into the table" -- weight dots, the against toggle and remove
+  // live right in the same per-side cell; the add-symptom search for each side moves to one toolbar above the
+  // table (the old column header's own "Add symptom" + its popup, just in one place instead of two). Renaming a
+  // row's wording still happens from the old per-column Edit view -- the merged label is a union of both sides'
+  // wording, so there is no one row to pin an in-place rename to.
+  function phGdfMergeCellEditHtml(id, side, r) {
+    if (!r) return `<td class="gf-mc-td"><span class="gf-mc-dash">—</span></td>`;
+    const neg = r.w < 0, at = `data-id="${esc(id)}" data-side="${side}" data-k="${esc(r.k)}"`;
+    return `<td class="gf-mc-td edit"><div class="gf-mcell edit${neg ? " neg" : ""}">`
+      + phGdfDotsHtml(id, side, r, true)
+      + `<span class="gf-ctl"><button type="button" class="gf-ib" data-gdf-neg="1" ${at} title="${neg ? "Back to a plus sign" : "Mark as against"}" aria-label="${neg ? "Back to a plus sign" : "Mark as against"}">${PH_GDF_IC.minus}</button><button type="button" class="gf-ib red" data-gdf-rm="1" ${at} title="Remove" aria-label="Remove">${PH_GDF_IC.x}</button></span>`
+      + `</div></td>`;
+  }
+  function phGdfMergedHtml(id, edit) {
+    const rRows = phGdfMergedRows(id, "r"), bRows = phGdfMergedRows(id, "b"), cellFn = edit ? phGdfMergeCellEditHtml : phGdfMergeCellHtml;
+    let h = `<div class="gf-mrg${edit ? " edit" : ""}">`;
+    if (edit) h += `<div class="gf-mrg-addbar">`
+      + `<button type="button" class="gf-btn" data-gdf-padd-open="r" data-id="${esc(id)}">${PH_GDF_IC.plus} Add to Ren</button>`
+      + `<button type="button" class="gf-btn" data-gdf-padd-open="b" data-id="${esc(id)}">${PH_GDF_IC.plus} Add to Bing</button>`
+      + phGdfPopHtml(id, "r") + phGdfPopHtml(id, "b") + `</div>`;
+    if (!rRows.length && !bRows.length) return h + `<div class="gf-none" style="padding:14px 0 18px">No rows yet</div></div>`;
     const ixs = Array.from(new Set(rRows.map(r => r.area).concat(bRows.map(r => r.area)))).sort((a, b) => a - b);
     const az = (a, b) => a.localeCompare(b, undefined, { sensitivity: "base" });
-    let h = `<div class="gf-mrg">`;
+    const mc = edit ? ` style="width:150px"` : ` class="mc"`;
     ixs.forEach(ix => {
       const ra = rRows.filter(r => r.area === ix), ba = bRows.filter(r => r.area === ix);
       if (!ra.length && !ba.length) return;
@@ -91568,11 +91596,11 @@ or changing anything in Cliniko.
         descrs.forEach(d => {
           const rr = rs.find(r => r.descr === d), br = bs.find(r => r.descr === d);
           const orTag = (rr && rr.or) || (br && br.or) ? `<span class="gf-mrg-or">OR</span>` : "";
-          rowsHtml += `<tr class="gf-mrg-row${rr && br ? " both" : ""}"><td class="gf-mrg-lab">${orTag}${esc(d)}</td>${phGdfMergeCellHtml(id, "r", rr)}${phGdfMergeCellHtml(id, "b", br)}</tr>`;
+          rowsHtml += `<tr class="gf-mrg-row${rr && br ? " both" : ""}"><td class="gf-mrg-lab">${orTag}${esc(d)}</td>${cellFn(id, "r", rr)}${cellFn(id, "b", br)}</tr>`;
         });
       });
       h += `<div class="gf-mrg-blk"><div class="gf-mrg-area"><span>${esc(PH_FBR_AREAS[ix].lab)}</span><em>${ra.length + ba.length}</em></div>`
-        + `<table class="gf-mrg-tbl"><colgroup><col><col class="mc"><col class="mc"></colgroup><thead><tr><th></th><th>Ren</th><th>Bing</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
+        + `<table class="gf-mrg-tbl"><colgroup><col><col${mc}><col${mc}></colgroup><thead><tr><th></th><th>Ren</th><th>Bing</th></tr></thead><tbody>${rowsHtml}</tbody></table></div>`;
     });
     return h + `</div>`;
   }
@@ -91684,7 +91712,7 @@ or changing anything in Cliniko.
     let body = "";
     if (quizOn) body = phGdfQuizHtml();
     else if (note && !phGdfNoteData(phGdfNoteId(id)).ren.length && !phGdfNoteData(phGdfNoteId(id)).bing.length && !edit) body = `<div class="gf-xt" style="margin-top:16px">No rows yet</div>`;
-    else if (!edit && !note && phGdfGroup === "area" && phGdfCover === "off") body = phGdfMergedHtml(id);
+    else if (!note && phGdfGroup === "area" && (edit || phGdfCover === "off")) body = phGdfMergedHtml(id, edit);
     else body = sw + `<div class="gf-cols">${phGdfColHtml(id, "r", edit)}${phGdfColHtml(id, "b", edit)}</div>`;
     const famNote = note ? null : phGdfFamNoteId(id), extra = quizOn ? "" : note ? phGdfNoteExtrasHtml(id, edit) : phGdfNotesBlockHtml(id, edit) + (famNote ? phGdfNoteExtrasHtml("n:" + famNote, edit) : "");
     const picInner = !note && !quizOn && !edit ? (PH_FP.SC[id] || PH_FS_PEOPLE.has(id) ? `<div class="gf-pp">${phFsCardHtml(id)}</div>` : phPpGdfHtml(id)) : "";

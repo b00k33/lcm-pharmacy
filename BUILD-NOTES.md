@@ -12346,3 +12346,32 @@ coincide too".
   confirmed the old two-column view is unchanged there. Opened Edit and confirmed it is untouched.
   Boots clean.
 - **SAVED, not live:** goes out with this round's push.
+
+## Guide's merged table: real cell lines, and edit right in it, 2026-11-08
+
+Her words, looking at the merged table live: "let me edit directly into the table" and "give
+table rows and columns lines".
+
+- **Grid lines:** every cell in the merged table now has a real 1px border (was a soft bottom
+  rule only), so the Symptom / Ren / Bing columns read as a proper ruled table. A shared ("both")
+  row keeps its light teal tint on every one of its cells now, not just a row-level wash.
+- **Edit, in the same table:** Edit + Group = Area now builds the SAME merged-by-area table
+  instead of falling back to the old two-column view. Each filled cell shows the real weight dots
+  (tap 1-5), an against toggle and a remove button -- the same controls and the same
+  `phGdfSetWeight` / `phGdfFlip` / `phGdfRemove` calls the old view already used, just placed in
+  the table cell. A toolbar above the table replaces the two separate "Add symptom" buttons with
+  one "Add to Ren" / "Add to Bing" pair, opening the same search-or-create popup as before. The
+  table goes to one CSS column while editing (the dots + controls need the width) and its value
+  columns widen to fit them.
+- **Still not carried into the merged table, on purpose:** renaming a row's wording (the pencil) --
+  the merged label is the union of both sides' own wording, so there's no single row to pin an
+  in-place rename to; she can still rename from Group = Importance, which keeps the old per-column
+  Edit view. Group = Importance and the Signs/Weights covers are otherwise unchanged. "Compare
+  with…" still doesn't reach the merged table.
+- **Tested** on a test copy, Gui Zhi: grid lines show on every cell in Study; switching to Edit
+  (Group = Area) renders the merged table with dots, against and remove working -- a dot tap
+  changes the weight and the change sticks after a repaint, the against toggle flips the row red
+  and back, remove takes a row out and Undo in the toolbar restores it. "Add to Ren" / "Add to
+  Bing" opens the same popup, searches, adds, and the new row shows up highlighted. Group =
+  Importance Edit still shows the old two-column, pencil-editable view, unchanged. Boots clean.
+- **SAVED, not live:** goes out with her next "push live".
