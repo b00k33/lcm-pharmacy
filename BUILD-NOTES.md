@@ -12606,3 +12606,22 @@ same for similar pages."
   and Stock movements' search boxes keeps the cursor and focus exactly where she left it, with the
   result count still updating live. Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide family card: the Picture fold opens closed (2026-11-08)
+
+Her "make this always closed", from a screenshot of a family card's Picture section (Gui Zhi, the
+annotated body figure + the picture grid) open by default.
+
+- **One default flipped.** `phGdfPicOpen` already existed as this fold's view-state flag (added
+  earlier today for "collapsing the animation section"); its only change is the starting value,
+  `true` -> `false`. The fold itself -- the button, the chevron, the lazy build that skips drawing
+  the figure at all while closed -- was already built and untouched.
+- **Still a view-state flag, not saved** (same as before): closed is where it starts on every open
+  of the card; she can still tap "Picture" to open it while she's looking at it.
+
+**Tested:** in the sandbox, by calling `phGdfCardHtml()` directly for a formula and injecting the
+markup into `#pharmacyPage` -- confirmed by screenshot and by reading the markup that the fold
+renders `aria-expanded="false"`, a closed chevron, and no figure markup at all underneath (the lazy
+build still works). No console errors. **Not tested:** the real Guide navigation path to open a
+family card (no patient/Guide session state was exercised beyond calling the card renderer itself).
+**SAVED, not live:** goes out with her next "push live".
