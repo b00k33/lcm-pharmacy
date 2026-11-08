@@ -12575,3 +12575,34 @@ markup still stacks the arrow above the avatar. No console errors. **Not tested:
 click-to-fold interaction end to end (only the two CSS states were checked, not the click handler itself, which was
 not touched).
 **SAVED, not live:** she has not said "push live" for this change.
+
+## Six pages: the title bar's second row merges into the first, 2026-11-08
+
+Her words, looking at the 方病人 Guide page's two-row header: "merge these lines into one, do the
+same for similar pages."
+
+- The row under the dark title bar -- tab picker, search box, segment tabs, Export CSV, whatever
+  that page carried -- now rides inside the title bar itself, on the title's own line, wrapping onto
+  a second line only if the screen is too narrow to fit it (the title bar already did this for
+  Dashboard's own toolbar). Six pages changed: **方病人 Guide**, **Patient directory**, **Photos**,
+  **Dispense history**, **Stock movements/Log**, **All templates**. The stat tiles that Stock
+  movements and Dispense history already showed as their own row (Today/This week/This month/...)
+  keep that row exactly where it was -- only the search/filter controls moved up.
+- **The search-box rule, respected throughout:** three of the six pages -- Patient directory,
+  Photos and Stock movements/Log -- rebuild their title bar on every keystroke in their own search
+  box (so the "× results" count stays live as she types). Rebuilding `innerHTML` on a box she is
+  mid-keystroke in would normally yank the cursor out from under her, so those three now only patch
+  the live count text in place after the first build; the box itself is built once and never touched
+  again. The other three pages' toolbars have no search box that types inside itself (方病人 Guide's
+  own search already worked this way before today; Dispense history and All templates only rebuild
+  on a tab click, never per keystroke), so their title bars rebuild in full each time, same as
+  before.
+- **Nothing else changed:** every button, dropdown, segment tab and filter keeps the exact click
+  handler, state variable and wording it already had -- only where it sits in the markup moved.
+- **Tested** in the harness at several widths (desktop, ~900px, ~700px, ~375px) on all six pages:
+  the toolbar sits on the title line at normal widths and wraps to its own line under the title when
+  the screen is narrow, rather than overflowing; segment-tab and filter clicks still flip the right
+  button's "on" state; and -- the point of the exercise -- typing in Patient directory's, Photos'
+  and Stock movements' search boxes keeps the cursor and focus exactly where she left it, with the
+  result count still updating live. Boots clean.
+- **SAVED, not live:** goes out with her next "push live".
