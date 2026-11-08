@@ -12551,3 +12551,27 @@ the fold bar builds the triangle fresh (no console errors) and the chevron flips
 flips back to ▸; the choice persists in `localStorage`. The patient page's own button and its `phFtgShow`/`phPatientPeek`
 path were not exercised (no signed-in patient in the sandbox) -- read only, logic unchanged there beyond the shared default.
 **SAVED, not live:** goes out with her next "push live".
+
+## The teal rail: "‹ Menu" merges into the name row (2026-11-08)
+
+Her "make this back arrow merge with me line, space save", from a screenshot of the left sidebar showing the "‹" fold
+arrow sitting alone on its own row above "👤 Me".
+
+- **One row instead of two.** `presFlowRailHtml()`'s `menu` button (the "‹ Menu" rail-to-icons fold) used to be its own
+  full-width 32px line above `who` (the avatar + name). It now sits inside `who`, first, as a small round 28px icon
+  button, so the fold arrow, avatar and name share one row.
+- **CSS to match:** `.ph-rail-menu` is now a circle (28px, `border-radius: 50%`) instead of a full-width labelled row;
+  its "Menu" text label is dropped (it already had a `title` tooltip when the rail is mini, and had no visible label in
+  the open rail either way once it's this small -- the icon alone reads fine next to the name). `.ph-rail-who`'s gap
+  tightened from 10px to 8px to fit the extra icon.
+- **Mini (icon-only, 56px) rail unchanged in effect:** `#presFlowRail.mini .ph-rail-who` switches to
+  `flex-direction: column` so the chevron still sits above the avatar as two stacked icons there, same as it looked
+  before this change.
+
+**Tested:** in the sandbox, by calling `presFlowRailHtml()` directly with a stand-in patient and injecting the markup
+into `#pharmacyPage` (the sandbox's seed data has no patient record to open the real flow into) -- confirmed by
+screenshot that the arrow, avatar and name sit on one row in the open rail, and that toggling `.mini` on the same
+markup still stacks the arrow above the avatar. No console errors. **Not tested:** her own real record and the real
+click-to-fold interaction end to end (only the two CSS states were checked, not the click handler itself, which was
+not touched).
+**SAVED, not live:** she has not said "push live" for this change.
