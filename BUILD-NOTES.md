@@ -12785,3 +12785,26 @@ plus the rest of the same kind). Still display only (CLAUDE.md "Shown with capit
 - **Checked** on a test copy of the newest build at 1220px: the helper on eight phrases; Gui Zhi's card (Area, Importance) and
   Compare read with the small words small; no page errors. **Not checked:** her own screen, the phone (no size changed).
 - **LIVE** on her "push live" (this note's build).
+
+## Every symptom's wording: capital words, conjunctions stay lower, 2026-11-09
+
+Her words: "capitalise all words of symptoms except conjunctions."
+
+- Every sign's wording, everywhere it shows -- the Guide, Fang Bing Ren, Compare, a custom symptom
+  she made herself -- now capitalises each word of its descriptor, lower-cases a short conjunction
+  (and, or, but, nor, so, yet, for, when, while, if, because, though, although, than, that, as)
+  unless it opens the phrase, and leaves an ALL-CAPS word (a lab marker such as "LDH") exactly as
+  written rather than re-casing it as if it were an ordinary word (`phTitleCase`).
+- **Left alone on purpose:** the Subject before the colon ("Energy & general", "Cold & heat" ...).
+  Its exact wording and case is what groups a row into its body area everywhere in the app
+  (PH_FBR_SUBJ_AREA matches it by exact text) -- re-casing it would have silently scattered
+  symptoms into the wrong areas. Only the descriptor after the colon changes.
+- Display-only: what's actually saved -- the built-in pool, her own rename edits, a symptom she
+  typed herself on the Guide -- keeps exactly the words and case she already has; this only changes
+  how it is shown.
+- **Tested** in the harness: every area on the Fang Bing Ren triangle and the Guide family table
+  still groups its signs under the right heading (area counts unchanged); the Guide's own
+  "LDH" sign still reads "Diagnosis: high LDH" with LDH untouched; renaming a symptom through the
+  Guide's own pen icon still works, still refuses a wording that duplicates another symptom of the
+  same Subject. Boots clean.
+- **SAVED, not live:** goes out with her next "push live".
