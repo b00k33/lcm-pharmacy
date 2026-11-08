@@ -12314,3 +12314,35 @@ Her live feedback on the Guide page, three small fixes.
 
 **Tested:** the sandbox copy renders the mosaic and the detail card with no console errors; `phGdfMosaicHtml()` returns 10 cards with only the current pick's family (and the always-open Notes group) unfolded; simulating a fold-toggle click flips a card from folded to open; the detail header's HTML has no eyebrow or summary markup left; the toolbar's computed style reads `flex-wrap: nowrap` and `overflow-x: auto`. The real click path and how it looks on her own screen, not run — no sign-in in the sandbox.
 **SAVED, not live:** goes out with her next "push live".
+
+## Guide: Ren and Bing merged into one table, 2026-11-08
+
+Last of the night's synth22 round on the Guide sign table. Her words across the round: "is there a
+way to merge it together as a table with ren and bing section", then "i want the rows of signs to
+coincide too".
+
+- One table per body area (not two side-by-side Ren / Bing panels). Inside it, a Ren column and a
+  Bing column; a sign that both sides weigh sits on ONE row with both numbers, tinted so it stands
+  out. A sign only one side weighs leaves the other cell as a dash. Rows are grouped by Subject
+  (A-Z), then by wording (A-Z) within it, matching Ren and Bing by their Subject + wording.
+- The five-dot weight bar is a plain number now (her synth22 pick from earlier in the round). The
+  six-dot "also weighed by" strip is a small dot + count that taps open the same short list of
+  other formulas as the old row always did -- same `phGdfOpenRows` state, same tap-anywhere-on-the-
+  row behaviour, so it works on her phone exactly as it worked before, not just under a mouse.
+- **Scope, on purpose:** this new table only draws in Study, Group = Area, Cover = Off, for a
+  scored formula (not a notes-only one). Edit, Quiz, Group = Importance, and Cover = Signs/Weights
+  keep the exact two-column build they had before, untouched -- merging rows doesn't fit those
+  flows cleanly and nothing asked for them to change. The "Compare with…" dropdown does not reach
+  the merged table yet (picking a formula there has no visible effect while it's showing); the
+  edited/reworded/new-symptom tags are not shown in the merged table either. Flagging both as
+  follow-ups if she wants them carried over.
+- OR-paired signs (e.g. "pale OR dark") keep their small OR tag on the wording, but the old
+  bracket that visually joined the pair is not reproduced -- a disclosed simplification, not a
+  data change.
+- **Tested** on a test copy, Gui Zhi: the merged table renders area by area, a shared sign (e.g.
+  "rush moving upward") shows both numbers on one tinted row, a Ren-only or Bing-only sign shows a
+  dash on the empty side, tapping a dot+count opens the same "also weighed by" list and tapping
+  again closes it, OR tags still show. Switched Group to Importance and Cover to Signs/Weights and
+  confirmed the old two-column view is unchanged there. Opened Edit and confirmed it is untouched.
+  Boots clean.
+- **SAVED, not live:** goes out with this round's push.
