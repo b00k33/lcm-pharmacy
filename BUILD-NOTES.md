@@ -12625,3 +12625,30 @@ renders `aria-expanded="false"`, a closed chevron, and no figure markup at all u
 build still works). No console errors. **Not tested:** the real Guide navigation path to open a
 family card (no patient/Guide session state was exercised beyond calling the card renderer itself).
 **SAVED, not live:** goes out with her next "push live".
+
+## Guide family Edit table: rename a symptom in place, add it to the other side, 2026-11-08
+
+Her words, on the merged Area table (Guide -> a family card -> Edit): "i want to be able to
+directly edit the name of symptoms and select if its in bing too."
+
+- **Rename in place.** A row's wording now carries a pen icon (the same one Group = Importance
+  already used) next to it; tapping it turns the words into a text field, Enter or leaving the
+  field saves, Escape puts it back. When a row shares one line between Ren and Bing (the tinted
+  "twin" rows, Example: "rush moving upward"), the rename reaches both sides at once, under one
+  save and one Undo -- they stay merged. A row with no Subject prefix (rare) has no pen, same rule
+  Importance already followed; the duplicate-wording guard (never two signs of one Subject reading
+  the same) still runs.
+- **Add it to the other side.** A row showing only Ren or only Bing now has a dashed "+" in the
+  empty column instead of a plain dash. Tapping it joins today's exact wording to that side --
+  reusing an existing symptom if one already reads that way, otherwise creating one, exactly what
+  "+Add to Ren/Bing" already does when she types the same words and picks Create -- weighed at the
+  usual starting 3, ready for her to tap the number and rank it. The ordinary per-formula Undo
+  covers it.
+- **Tested** in the harness on a real family card, Edit on, Group = Area: renamed a Ren-only row, a
+  Bing-only row and a shared "both" row (the rename reached both keys, one toast, Undo restored
+  both); tried renaming to match another symptom's exact wording and got the same "already reads
+  that way" refusal Importance gives; used the "+" on a Ren-only row to also weigh it in Bing
+  (reused the existing Bing symptom when one already had that wording, created a new one when none
+  did), then Undo removed it cleanly. Group = Importance, Quiz, the Signs/Weights covers and Study
+  (read-only) mode are unchanged -- this only reaches the Area-grouped Edit table. Boots clean.
+- **SAVED, not live:** goes out with her next "push live".

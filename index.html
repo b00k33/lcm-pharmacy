@@ -15594,6 +15594,10 @@
   #pharmacyPage .ph-gdf .gf-mrg-subj td { border-left: 0; border-right: 0; background: var(--ph-paper); }
   #pharmacyPage .ph-gdf .gf-mrg-row.both td { background: var(--ph-herb-tint); }
   #pharmacyPage .ph-gdf .gf-mrg-lab { padding: 5px 6px 5px 0; font-size: var(--fs-13-5); color: var(--ph-ink); }
+  /* her 2026-11-08 "edit the name of symptoms directly, select if its in bing too": a pen beside the merged row's wording renames
+     whichever key(s) are on the row (phGdfMergeLabCommit); the empty side's dash becomes a dashed "+" (gf-mc-plus, drawn in
+     phGdfMergeCellHtml) that joins today's wording to that side, same text, no search needed (phGdfMergeCross) */
+  #pharmacyPage .ph-gdf .gf-mrg-pen { margin-left: 4px; vertical-align: -5px; }
   /* her 2026-11-08 "let me edit directly into the table": the add-symptom toolbar above an editable merged table, the against
      colour on a plain cell (the old --dc-on-.gf-row.neg rule doesn't reach a table cell). Then her "how to make the edit version
      same layout as study" (pick A, guide-edit-like-study-mock-2026-11-08.html): Edit keeps Study's two columns, 52px cells and
@@ -15611,6 +15615,8 @@
   #pharmacyPage .ph-gdf .gf-mrg-or { display: inline-block; font-size: var(--fs-9-5); color: var(--ph-faint); border: 1px solid var(--ph-line); border-radius: 3px; padding: 0 4px; margin-right: 5px; vertical-align: 1px; }
   #pharmacyPage .ph-gdf .gf-mc-td { position: relative; padding: 3px 2px; text-align: center; vertical-align: top; }
   #pharmacyPage .ph-gdf .gf-mc-dash { color: var(--ph-line); }
+  #pharmacyPage .ph-gdf .gf-mc-plus { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; border: 1px dashed var(--ph-line); background: transparent; color: var(--ph-faint); font: 700 var(--fs-13-5)/1 var(--font-body); padding: 0; cursor: pointer; }
+  #pharmacyPage .ph-gdf .gf-mc-plus:hover { background: var(--ph-herb-tint); color: var(--ph-herb-deep); border-color: var(--ph-herb); border-style: solid; }
   #pharmacyPage .ph-gdf .gf-mcell { position: relative; display: inline-flex; align-items: center; gap: 4px; padding: 2px 5px; border-radius: 6px; cursor: pointer; }
   #pharmacyPage .ph-gdf .gf-mcell:hover { background: var(--ph-paper); }
   #pharmacyPage .ph-gdf .gf-mc-w { font-weight: 700; color: var(--dc, var(--ph-herb-deep)); font-variant-numeric: tabular-nums; }
@@ -91304,7 +91310,7 @@ or changing anything in Cliniko.
     inp.addEventListener("blur", () => fin(true));
     inp.focus(); inp.select();
   }
-  function phGdfLabCommit(key, text) {
+  function phGdfLabCommit(key, text, silent) {
     // what a descriptor may not hold (a reader of the code found the places that parse it): a line break loses the Subject in the place / sex rules,
     // ";" and "·" are stripped by the tongue / pulse phrase, a trailing "?" is the question mark the Ren questions add themselves
     key = String(key); text = String(text == null ? "" : text).replace(/[\u0000-\u001f]+/g, " ").replace(/;/g, ",").replace(/·/g, "-").replace(/\s+/g, " ").replace(/[?\s]+$/, "").trim().slice(0, 80);
@@ -91318,7 +91324,7 @@ or changing anything in Cliniko.
       const row = PH_BING_SIGNS.concat(PH_REN_SIGNS).find(r => r[0] === key), base = row ? (PH_LAB0.get(row) || row[1]) : "", i = base.indexOf(": ");
       // two signs of one Subject never read the same: the Compass and the question pickers merge rows by their words
       const subj = base.slice(0, i), pool = row ? (PH_BING_SIGNS.indexOf(row) >= 0 ? PH_BING_SIGNS : PH_REN_SIGNS) : [], dup = i > 0 && text && text !== base.slice(i + 2) && pool.some(r => r[0] !== key && phSignSubj(r[1]) === subj && r[1].slice(subj.length + 2).toLowerCase() === text.toLowerCase());
-      if (dup) { phGdfPaintAll(); presSavedToast("Another " + subj + " symptom already reads that way"); return; }
+      if (dup) { if (silent) return { dup: true }; phGdfPaintAll(); presSavedToast("Another " + subj + " symptom already reads that way"); return; }
       if (i > 0) {
         const ed = PHARMACY.fbrEdits || (PHARMACY.fbrEdits = {}), cur = ed._labels || (ed._labels = { w: {} }), prev = cur.w[key];
         if (!text || text === base.slice(i + 2)) delete cur.w[key]; else cur.w[key] = text;
@@ -91326,7 +91332,7 @@ or changing anything in Cliniko.
         changed = prev !== cur.w[key];
       }
     }
-    if (!changed) { phGdfPaintAll(); return; }
+    if (!changed) { if (silent) return { changed: false }; phGdfPaintAll(); return; }
     const restore = () => {
       const ed = PHARMACY.fbrEdits || (PHARMACY.fbrEdits = {});
       if (was !== "null") ed._labels = JSON.parse(was); else delete ed._labels;
@@ -91335,9 +91341,54 @@ or changing anything in Cliniko.
       phFbrEditsSync(); phSignLabelsBust();
     };
     if (!added) (PHARMACY.fbrEditsAt || (PHARMACY.fbrEditsAt = {}))._labels = Date.now();
+    if (silent) return { changed: true, restore };
     if (savePharmacy() === false) { restore(); phGdfPaintAll(); presSavedToast(PH_PAT_SAVE_FAIL); return; }
     phFbrEditsSync(); phSignLabelsBust(); phGdfPaintAll();
     presSavedToast(text ? "Wording changed" : "Back to the built-in wording", { undo: () => { restore(); if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); phGdfPaintAll(); } });
+  }
+  // her 2026-11-08 "i want to be able to directly edit the name of symptoms" on the merged Area table (Group = Area), not only from
+  // Group = Importance: a row there may carry a Ren key, a Bing key, or both sharing today's wording -- renaming commits to
+  // whichever key(s) are on the row, as one combined save/toast/Undo (phGdfLabCommit's own dup-check and restore still run per
+  // key, silently; this only narrates the result once, and rolls the first key back if the second turns out a duplicate).
+  function phGdfMergeLabCommit(rKey, bKey, text) {
+    const r1 = rKey ? phGdfLabCommit(rKey, text, true) : null;
+    if (r1 && r1.dup) { phGdfPaintAll(); presSavedToast("Another symptom already reads that way"); return; }
+    const r2 = bKey ? phGdfLabCommit(bKey, text, true) : null;
+    if (r2 && r2.dup) { if (r1 && r1.restore) r1.restore(); phGdfPaintAll(); presSavedToast("Another symptom already reads that way"); return; }
+    if (!((r1 && r1.changed) || (r2 && r2.changed))) { phGdfPaintAll(); return; }
+    const restores = [r2 && r2.restore, r1 && r1.restore].filter(Boolean);   // undo most-recent-first: r2 was committed on top of r1, so r2's own "was" still carries r1's change
+    if (savePharmacy() === false) { restores.forEach(f => f()); phGdfPaintAll(); presSavedToast(PH_PAT_SAVE_FAIL); return; }
+    phFbrEditsSync(); phSignLabelsBust(); phGdfPaintAll();
+    presSavedToast(text ? "Wording changed" : "Back to the built-in wording", { undo: () => { restores.forEach(f => f()); if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); phGdfPaintAll(); } });
+  }
+  // the same click-to-edit box as phGdfLabEdit, over the merged table's one shared label cell; Enter or leaving the field commits
+  // to both sides' keys at once (phGdfMergeLabCommit), Escape repaints as it was
+  function phGdfMergeLabEdit(host, rKey, bKey) {
+    const cur = host.textContent;
+    host.innerHTML = `<input type="text" class="field-bare gf-lin" maxlength="80" value="${esc(cur)}" aria-label="The symptom's wording" autocomplete="off">`;
+    const inp = host.querySelector("input"); let done = false;
+    const fin = ok => { if (done) return; done = true; if (ok) phGdfMergeLabCommit(rKey, bKey, inp.value); else phGdfPaintAll(); };
+    inp.addEventListener("keydown", e => { e.stopPropagation(); if (e.key === "Enter") { e.preventDefault(); fin(true); } else if (e.key === "Escape") { e.preventDefault(); fin(false); } });
+    inp.addEventListener("click", e => e.stopPropagation());
+    inp.addEventListener("blur", () => fin(true));
+    inp.focus(); inp.select();
+  }
+  // her 2026-11-08 "select if its in bing too": tapping the "+" in an empty cell joins today's wording to that side -- reusing a
+  // symptom that already reads this way if one exists (never two symptoms with identical words), new otherwise, exactly what
+  // "+Add to Ren/Bing" already does when she types the same phrase and picks Create. The usual per-formula Undo covers it.
+  function phGdfMergeCross(id, side, subj, descr) {
+    const label = subj + ": " + descr, kind = side === "r" ? "p" : "d", before = phGdfSnap(id);
+    const hit = phGdfPool(side).find(r => r[1].toLowerCase() === label.toLowerCase());
+    let key, lid = null;
+    if (hit) key = hit[0];
+    else {
+      const L = PHARMACY.triLearn || (PHARMACY.triLearn = { counts: {}, added: [] });
+      L.added = L.added || []; lid = Date.now().toString(36);
+      L.added.push({ id: lid, kind, label, pts: 0, agreed: true, fam: "general" });
+      key = "a_" + lid;
+    }
+    const w = phGdfAddKey(id, side, key);
+    phGdfDone(id, before, `Also weighed in ${side === "r" ? "Ren" : "Bing"} at ${w}. Tap the number to rank it`, { flash: id + "|" + side + "|" + key, learned: lid });
   }
   // Key 5 / Strong 4 / Supports 3 / Weak 1-2 / Against; A-Z inside a level (her pick 8: dots only, no drag)
   function phGdfSections(rows, flat) {
@@ -91634,8 +91685,12 @@ or changing anything in Cliniko.
   // which a tap on the number opens (one at a time, `phGdfEdOpen`; a click elsewhere or Esc closes it, in place). The
   // add-symptom search for each side is one toolbar above the table. Renaming a row's wording still happens from Group =
   // Importance -- the merged label is a union of both sides' wording, so there is no one row to pin an in-place rename to.
-  function phGdfMergeCellHtml(id, side, r, edit) {
-    if (!r) return `<td class="gf-mc-td"><span class="gf-mc-dash">—</span></td>`;
+  function phGdfMergeCellHtml(id, side, r, edit, subj, descr) {
+    if (!r) {
+      if (!edit) return `<td class="gf-mc-td"><span class="gf-mc-dash">—</span></td>`;
+      const sideName = side === "r" ? "Ren" : "Bing";
+      return `<td class="gf-mc-td"><button type="button" class="gf-mc-plus" data-gdf-mcross="1" data-id="${esc(id)}" data-side="${side}" data-subj="${esc(subj)}" data-descr="${esc(descr)}" title="Also weigh this for ${sideName}" aria-label="Also weigh this for ${sideName}">+</button></td>`;
+    }
     const key = id + "|" + side + "|" + r.k, others = (phGdfIndex()[side][r.k] || []).filter(x => x.id !== id), neg = r.w < 0;
     const sim = others.length ? `<span class="gf-mc-sim"><i class="gf-mc-dot" style="--c:${phGdfCol(others[0].id).bg}"></i><b class="gf-mc-n2">${others.length}</b></span>` : "";
     const moreList = others.length
@@ -91667,7 +91722,7 @@ or changing anything in Cliniko.
     w.classList.add("pop"); setTimeout(() => w.classList.remove("pop"), 500);
   }
   function phGdfMergedHtml(id, edit) {
-    const rRows = phGdfMergedRows(id, "r"), bRows = phGdfMergedRows(id, "b"), cellFn = (i, s, r) => phGdfMergeCellHtml(i, s, r, edit);
+    const rRows = phGdfMergedRows(id, "r"), bRows = phGdfMergedRows(id, "b"), cellFn = (i, s, r, subj, d) => phGdfMergeCellHtml(i, s, r, edit, subj, d);
     let h = "";
     if (edit) h += `<div class="gf-mrg-addbar">`
       + `<button type="button" class="gf-btn" data-gdf-padd-open="r" data-id="${esc(id)}">${PH_GDF_IC.plus} Add to Ren</button>`
@@ -91690,7 +91745,9 @@ or changing anything in Cliniko.
         descrs.forEach(d => {
           const rr = rs.find(r => r.descr === d), br = bs.find(r => r.descr === d);
           const orTag = (rr && rr.or) || (br && br.or) ? `<span class="gf-mrg-or">OR</span>` : "";
-          rowsHtml += `<tr class="gf-mrg-row${rr && br ? " both" : ""}"><td class="gf-mrg-lab">${orTag}${esc(d)}</td>${cellFn(id, "r", rr)}${cellFn(id, "b", br)}</tr>`;
+          const pen = edit && subj ? `<button type="button" class="gf-ib gf-mrg-pen" data-gdf-mlab-open="1" data-r="${esc(rr ? rr.k : "")}" data-b="${esc(br ? br.k : "")}" title="Change the wording" aria-label="Change the wording">${PH_GDF_PEN}</button>` : "";
+          const labHtml = edit && subj ? `<span class="gf-mrg-labtxt">${esc(d)}</span>${pen}` : esc(d);
+          rowsHtml += `<tr class="gf-mrg-row${rr && br ? " both" : ""}"><td class="gf-mrg-lab">${orTag}${labHtml}</td>${cellFn(id, "r", rr, subj, d)}${cellFn(id, "b", br, subj, d)}</tr>`;
         });
       });
       // her 2026-11-08 "this can be same line": the area's name and count lead the table's own head row, beside Ren · Bing
@@ -91866,6 +91923,7 @@ or changing anything in Cliniko.
       return true;
     }
     if ((el = T.closest("[data-gdf-lab]"))) { const row = el.closest(".gf-row"), host = row && row.querySelector(".gf-lab"); if (host) phGdfLabEdit(host, el.dataset.k); return true; }
+    if ((el = T.closest("[data-gdf-mlab-open]"))) { const row = el.closest("tr"), host = row && row.querySelector(".gf-mrg-labtxt"); if (host) phGdfMergeLabEdit(host, el.dataset.r || null, el.dataset.b || null); return true; }
     if ((el = T.closest("[data-gdf-neg]"))) {
       const d = el.dataset, before = phGdfSnap(d.id), was = (phGdfRows(d.id, d.side).find(r => String(r.k) === d.k) || {}).w;
       phGdfFlip(d.id, d.side, d.k);
@@ -91893,6 +91951,11 @@ or changing anything in Cliniko.
       phGdfPop = null;
       phGdfDone(P.id, before, `Added to ${P.side === "r" ? "Ren" : "Bing"} at ${w}. Tap the dots to rank it`, { flash: P.id + "|" + P.side + "|" + key });
       const fr = document.querySelector(".gf-row.flash"); if (fr) fr.scrollIntoView({ block: "nearest" });
+      return true;
+    }
+    if ((el = T.closest("[data-gdf-mcross]"))) {
+      const d = el.dataset;
+      phGdfMergeCross(d.id, d.side, d.subj, d.descr);
       return true;
     }
     if (T.closest("[data-gdf-pcreate]") && phGdfPop) {
