@@ -12197,3 +12197,16 @@ Reduce animations work (reverted, see above).
   it unchanged; both the formula-story film and the older concept-picture fallback fold the same
   way; chevron and `aria-expanded` track the state.
 - **SAVED, not live:** goes with her next "push live".
+
+## Her whole-app audit, Patient pages — the Supabase half (2026-11-08)
+
+Two of the "31 wait for your word" questions, the Patient pages group, the half that lives in Supabase rather than the app.
+
+- **A paused chart link stops handing over her days** (`get_chart_days` in `supabase/cycle_charts_setup.sql`): its WHERE clause only excluded a *revoked* link, so a *paused* one — the state the practitioner-side toggle actually sets, `phChartToggle`/`phChartSetStatus` — still had every one of her temperatures and signs served to her phone; the app just chose not to draw them. Now only `status = 'active'` reads. Her pick: stop reading, skip building a separate Revoke for now; `get_chart_link` is left as it was (`<> 'revoked'`) on purpose, so a paused patient still gets the friendly "Charting is paused" screen instead of a bare broken-link message — only the actual diary (`chart_days`) is cut off.
+- **A new `set_chart_goal(p_token, p_goal)` function**, same shape as the existing `set_chart_reminder`: lets the patient's own confirmed pregnancy switch (My Cycle's "Would you like your chart to switch to pregnancy mode?") persist server-side instead of only in that one browser's memory/localStorage. Wired into chart.html in the next commit of this batch.
+- **`get_intake_form` now also returns `created_at`**, so intake.html can work out a link's age for the 90-day soft warning (next commit).
+
+**She needs to run this in her own Supabase SQL Editor** — I have no database tool of my own, so the fix exists only in these two files until she pastes them in (same as any other setup-script change here). Nothing in the live app calls `set_chart_goal` or reads `created_at` until the following commits land, so this one is safe to run any time before or after them.
+
+**Tested:** none of this is running code — read the two files over once more for the exact WHERE clause and the new function's shape. Not run against her real Supabase project.
+**SAVED, not live:** goes out with her next "push live" for the app side; the SQL itself needs her own hand to run it once.

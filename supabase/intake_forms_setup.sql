@@ -58,12 +58,12 @@ create policy "owner can update own intake forms"
 -- Lets the patient's browser confirm the link is real and greet her by name,
 -- before she's typed anything -- returns nothing else about her record.
 create or replace function public.get_intake_form(p_token uuid)
-returns table (patient_name text, status text)
+returns table (patient_name text, status text, created_at timestamptz)
 language sql
 security definer
 set search_path = public
 as $$
-  select patient_name, status from public.intake_forms where id = p_token;
+  select patient_name, status, created_at from public.intake_forms where id = p_token;
 $$;
 
 grant execute on function public.get_intake_form(uuid) to anon, authenticated;

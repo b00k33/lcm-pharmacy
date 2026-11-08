@@ -178,7 +178,7 @@ as $$
   from public.chart_days d
   join public.chart_links l on l.id = d.link_id
   where d.link_id = p_token
-    and l.status <> 'revoked'
+    and l.status = 'active'
     and d.day between p_from and p_to
   order by d.day;
 $$;
@@ -205,3 +205,25 @@ end;
 $$;
 
 grant execute on function public.set_chart_reminder(uuid, text, text) to anon, authenticated;
+
+-- Her pregnancy-switch decision, persisted the moment the patient confirms
+-- it (2026-11-08 audit pick), same shape as set_chart_reminder above.
+create or replace function public.set_chart_goal(
+  p_token uuid, p_goal text
+) returns boolean
+language plpgsql security definer set search_path = public
+as $$
+declare n int;
+begin
+  if p_goal not in ('ttc', 'ivf', 'health', 'preg') then
+    return false;
+  end if;
+  update public.chart_links
+     set goal = p_goal
+   where id = p_token and status = 'active';
+  get diagnostics n = row_count;
+  return n > 0;
+end;
+$$;
+
+grant execute on function public.set_chart_goal(uuid, text) to anon, authenticated;
