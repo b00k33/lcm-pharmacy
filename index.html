@@ -55533,8 +55533,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       health: c => phMeDayItems(c.k).filter(x => phHlKindOf(x.t)).map(x => `<button type="button" class="fhb" data-fit-tab="hl" title="Open Health">${PH_FIT_PIN}<span>${esc(phHlLbl(phHlKindOf(x.t), x.t))}${phC22Min(x.s) != null ? `<small>${esc(phHubClk(phC22Min(x.s)))}</small>` : ""}</span></button>`).join(""),
       steps: c => {
         const n = phStpOf(c.k);
-        if (c.k === tk) return `<input type="number" class="cin fwsi" inputmode="numeric" min="0" max="200000" data-stp-day="${c.k}" data-stp-at="fwk" value="${n == null ? "" : n}" placeholder="Steps" aria-label="Steps today" enterkeyhint="done">`;
-        return n == null ? "" : `<span class="fws"><b>${esc(phStpFmt(n))}</b><i><s style="width:${Math.min(100, Math.round(n / goal * 100))}%"></s></i></span>`;
+        // her 2026-11-08 "how do i edit the steps based on day" (pick: steps walked, any past day, tap the day in the Steps row): every day up to
+        // today is a field (phStpSet already took any past day; this row was today's alone, past days were a bar to read). A typed past day keeps
+        // its goal bar under the field. The Steps card, the Week page's Steps column and this row write the same day
+        if (c.k > tk) return "";
+        const fld = `<input type="number" class="cin fwsi" inputmode="numeric" min="0" max="200000" data-stp-day="${c.k}" data-stp-at="fwk" value="${n == null ? "" : n}" placeholder="Steps" aria-label="${c.k === tk ? "Steps today" : `Steps ${esc(phHubDl(c.k))}`}" enterkeyhint="done">`;
+        return c.k === tk || n == null ? fld : `${fld}<span class="fws"><i><s style="width:${Math.min(100, Math.round(n / goal * 100))}%"></s></i></span>`;
       }
     };
     const rehG = new Map();
@@ -55679,11 +55683,13 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     </div>`;
   }
   // ---- Steps plan: today · this week · flights up, Open ▾ = the table ----
-  function phFitSpHtml() {
+  function phFitSpFoldHtml() { return phFitSpHtml(true); }   // the one line, inside the Steps card (her 2026-11-08 decluttering: Steps was said three times on the Week tab)
+  function phFitSpHtml(foldOnly) {
     const tk = phHabTk(), td = phFitSpOn(tk), wk = phHubWeekKeys(0).reduce((a, k) => { const x = phFitSpOn(k); a.n += x.n; a.fl += x.fl; return a; }, { n: 0, fl: 0 });
     const fold = `<div class="ph-fit-fold">${phMeIc("steps")}<b data-roll="fitsp-d" data-roll-open="0">${phStpFmt(td.n)}</b><small>steps today</small><b data-roll="fitsp-w" data-roll-open="0">${phStpFmt(wk.n)}</b><small>this week</small><b data-roll="fitsp-f" data-roll-open="0">${wk.fl}</b><small>flights up</small><button type="button" class="op" data-fit-spo="1" aria-expanded="${phFitSpOpen}">${phFitSpOpen ? "Close" : "Open"}${phMeIc("chev-d")}</button></div>`;
     const head = `<div class="sh"><h3>Steps plan</h3><span class="rule"></span></div>`;
-    if (!phFitSpOpen) return head + fold;
+    if (foldOnly) return fold;
+    if (!phFitSpOpen) return "";
     const L = phFitLive("fsp").sort((a, b) => (a.at || 0) - (b.at || 0)), S = phFitStride();
     const inp = (p, f, v, w, lab) => `<input type="number" inputmode="numeric" class="cin" min="0" max="${f === "w" ? 99999 : 99}" data-fit-spf="${esc(p.id)}|${f}" value="${v === "" || v == null ? "" : esc(String(v))}"${f === "w" ? ` placeholder="steps"` : ""} aria-label="${lab}" style="width:${w}px" enterkeyhint="done">`;
     const days = p => `<span class="cdays" role="group" aria-label="Days">${[1, 2, 3, 4, 5, 6, 0].map(wd => { const on = phFitSpWd(p).includes(wd); return `<button type="button" class="${on ? "on" : ""}" data-fit-spd="${esc(p.id)}|${wd}" aria-pressed="${on}" aria-label="${DOW_SHORT[wd]}">${"SMTWTFS"[wd]}</button>`; }).join("")}</span>`;
@@ -55695,7 +55701,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         <td><button type="button" class="cx" data-fit-spx="${esc(p.id)}" aria-label="Remove ${esc(p.n || "this place")}">${phMeIc("x")}</button></td></tr>`;
     };
     const wl = L.filter(p => p.kd === "walk"), sl = L.filter(p => p.kd !== "walk");
-    return head + fold + `<div class="stepsopen">
+    return head + `<div class="stepsopen">
       <div class="ph-fit-tw"><table class="stt"><colgroup><col style="width:28%"><col style="width:24%"><col style="width:24%"><col style="width:18%"><col style="width:6%"></colgroup>
         <thead><tr><th>Place</th><th>Steps</th><th>Days</th><th style="text-align:right">A day</th><th></th></tr></thead>
         <tbody>${wl.length ? `<tr class="g"><td colspan="5">Walking</td></tr>${wl.map(row).join("")}` : ""}${sl.length ? `<tr class="g"><td colspan="5">Stairs · flights × steps × up + down</td></tr>${sl.map(row).join("")}` : ""}${L.length ? "" : `<tr><td colspan="5"><span class="ph-fit-empty">No walks or stairs yet</span></td></tr>`}</tbody></table></div>
@@ -56686,7 +56692,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       ${phFitWkHeadHtml(keys)}
       ${phFitView === "c" ? phFitCalHtml(keys) : phFitWkTblHtml(keys)}
       ${phFitTodayHtml()}
-      <div class="ph-hub-two">${phStpCardHtml(phHubWeekKeys(1).concat(phHubWeekKeys(0)))}${phFitWtHtml()}</div>
+      <div class="ph-hub-two">${phStpCardHtml(phHubWeekKeys(1).concat(phHubWeekKeys(0)), phFitSpFoldHtml())}${phFitWtHtml()}</div>
       ${phFitSpHtml()}
       ${phFitTipHtml()}
     </div>`;
@@ -57176,7 +57182,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const v = String(raw == null ? "" : raw).replace(/[\s,]/g, ""), n = v === "" ? null : Math.round(+v), was = phStpOf(k), g = phStpGoal();
     if ((n != null && !(n >= 0 && n <= 200000)) || !/^\d{4}-\d{2}-\d{2}$/.test(k) || k > phHabTk() || was === n) { phMineBandPaint(); return; }
     const h = phHabOf("auto:steps");
-    phHabFx = h && n != null && n >= g && !(was >= g) ? { id: h.id, g: h.g } : null;
+    phHabFx = h && k === phHabTk() && n != null && n >= g && !(was >= g) ? { id: h.id, g: h.g } : null;   // the "+1" is for today's goal, not for a day she is putting right
     if (phHubWrite((d, now) => { const M = d.stp || (d.stp = {}); M[k] = n == null ? { id: k, n: "", del: now, up: now } : { id: k, n, up: now }; }) && phHabFx) phHabPlus(phHabFx.g);
     phHabFx = null;
   }
@@ -57323,7 +57329,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   // ---- Steps on Fitness (picks 3 + 4): typed from her watch's app; a ring to her goal, her week, two weeks of bars ----
   let phStpSeen = false, phStpBandEd = false, phStpGoalEd = false;
-  function phStpCardHtml(keys) {
+  function phStpCardHtml(keys, plan) {
     const g = phStpGoal(), tk = phHabTk(), n = phStpOf(tk), C = 2 * Math.PI * 56, p = Math.min(1, (n || 0) / g), first = !phStpSeen && !phTpReduceMotion();
     phStpSeen = true;
     const vals = keys.map(k => k <= tk ? phStpOf(k) : null), mx = Math.max(g * 1.25, ...vals.filter(v => v != null));
@@ -57343,7 +57349,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         <div class="ph-stp-facts"><label class="ph-fast-fld"><span>Today</span><input type="number" inputmode="numeric" min="0" max="200000" data-stp-day="${tk}" data-stp-at="fit" value="${n == null ? "" : n}" aria-label="Steps today" enterkeyhint="done"><span>steps</span></label>
           <div class="ln"><span><b>${on7}</b>of 7 days on goal</span><span><b>${last7.length ? phStpFmt(avg) : "–"}</b>a day</span><span><b>${best ? phStpFmt(best) : "–"}</b>best</span></div></div></div>
       <div class="ph-stp-bars"><span class="gl" style="bottom:${(g / mx * 100).toFixed(1)}%"><em>${phStpFmt(g)}</em></span>${bars}</div>
-      <div class="ph-stp-lab">${keys.map(k => `<span class="${k === tk ? "t" : ""}">${"MTWTFSS"[(parseKey(k).getDay() + 6) % 7]}</span>`).join("")}</div></div>`;
+      <div class="ph-stp-lab">${keys.map(k => `<span class="${k === tk ? "t" : ""}">${"MTWTFSS"[(parseKey(k).getDay() + 6) % 7]}</span>`).join("")}</div>${plan || ""}</div>`;
   }
   // the ring's number counts up the first time Fitness opens
   function phStpCount() {
