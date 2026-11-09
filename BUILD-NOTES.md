@@ -13159,3 +13159,23 @@ pick: "1. smaller pair."
 - **Not tested:** a real tap on a real patient; the chip bar's width at 360px (it wraps like the others); the Guide's chart.
 - **Pages checked:** the Abdomen exam page chart, side view and Summary line (same data).
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide: a Sources tab, her own citable library, 2026-11-09
+
+Her ask: "Ten Key Formula Families in Chinese Medicine by Huang Huang (Author), Michael Max
+(Translator) - add this is a source - make a source page." Confirmed with her: a tab on the Guide,
+beside Families; just the symptom references for now, not the other five editors that already have
+a fixed Mick/Huang Huang/Seminar/Bilton/My-own list.
+
+- A new "Sources" tab (`phGdSourcesHtml`, `phGdSrcClick`) -- a plain list she adds to, edits in
+  place and removes, same shape as a formula note: title, author, translator, notes.
+  Seeded with her book: Ten Key Formula Families in Chinese Medicine, Huang Huang, trans. Michael
+  Max.
+- A symptom's reference box (the one from "see the problem" and the pen's new neighbour) now offers
+  her library's titles in the Who/where field as you type; picking one writes its full citation
+  (title, author, trans. translator) into the reference -- the reference itself never points back at
+  the library entry, so editing or deleting a library entry later can't break what's already cited.
+- **Tested** in the harness: added the seeded book to "Catches Colds Often" by picking it from the
+  field, confirmed the chip reads "Ten Key Formula Families in Chinese Medicine — Huang Huang, trans.
+  Michael Max"; added, edited and removed a second library entry on the new tab. Boots clean.
+- **SAVED, not live:** goes out with her next "push live".

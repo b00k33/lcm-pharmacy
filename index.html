@@ -68922,6 +68922,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       // the photo delete's Undo is the one toast's Undo now (phRenUndoRestore, 2026-11-01)
       if (phRcClick(e)) return;    // Results that count, on the Guide's Blood tests tab since 2026-10-29 (her pick)
       if (phGdfClick(e)) return;   // the Families tab (study + edit); the tabs, tongue map, pulse and the old notes' edit / delete modals stay below
+      if (phGdSrcClick(e)) return;   // the Sources tab -- her own library of books, teachers and events to cite (2026-11-09)
       if (phCmpClick(e)) return;   // the Compare tab and the family heads' Compare chip (2026-11-02)
       if (phIrClick(e)) return;    // the Guide's Iron tab and its doors: Blood tests, a heavy day's card, Meals (her 2026-11-03 picks)
       if (phEgClick(e)) return;    // the Guide's Eggs tab and its doors: Iron's egg lens, the cycle day card (her 2026-11-03 picks)
@@ -77555,6 +77556,7 @@ or changing anything in Cliniko.
   // 方病人 Guide page state (her ask 2026-08-20)
   let phGdTab = "families";   // "families" | "compare" | "tongue" | "pulse" | "abdomen" | "herbs" | "bloods" | "iron" | "eggs" | "eating" | "triangle"
   let phGdTabsOpen = false;   // the Guide's 11 tabs are a dropdown now, her audit pick (over her own "more than 6 = dropdown" rule)
+  let phGdSrcEdit = null;   // the Sources tab's one open row: "new" or an existing source's id
   let phGdSearch = "";
   let presPage = 1;   // STEP 8q (2026-08-14): compact pagination -- 799 imported templates is too long for one scroll
   const presFindHerb = ing => (ing.code && findHerbByCode(ing.code, ing.herb || ing.name)) || findHerbByName(ing.herb || ing.name || "");
@@ -91503,13 +91505,28 @@ or changing anything in Cliniko.
     const t = PH_SOURCE_TYPES[s.type] || PH_SOURCE_TYPES.own;
     return `<div class="gf-src-row"><span class="gf-src-ic">${t.icon}</span><span class="gf-src-txt">${esc(phSourceLabel(s))}</span><button type="button" class="gf-ib" data-gdf-src-rm="${i}" title="Remove" aria-label="Remove this reference">${PH_GDF_IC.x}</button></div>`;
   }
+  // her 2026-11-09 "add this is a source - make a source page": her own library of books, teachers and events (the Guide's new
+  // Sources tab, phGdSourcesHtml) she can cite by title instead of typing the same book out by hand every time. Picking a
+  // library title here writes its full citation (author, trans. translator) into the reference, same as typing it would --
+  // the symptom's own reference never points back at the library, so editing or deleting a library entry later can't break one
+  function phSourceLib() {
+    if (!PHARMACY.sourceLib) PHARMACY.sourceLib = [{ id: uid(), title: "Ten Key Formula Families in Chinese Medicine", author: "Huang Huang", translator: "Michael Max", date: "", notes: "" }];
+    return PHARMACY.sourceLib;
+  }
+  function phSrcLibCite(s) {
+    let c = s.title || "";
+    if (s.author) c += (c ? " — " : "") + s.author;
+    if (s.translator) c += (c ? ", " : "") + "trans. " + s.translator;
+    return c;
+  }
   function phGdfSrcPopHtml(rKey, bKey) {
     const list = phGdfMergeSources(rKey, bKey);
     const rows = list.length ? list.map(phGdfSrcRowHtml).join("") : `<span class="gf-none">No reference yet</span>`;
     const opts = Object.entries(PH_SOURCE_TYPES).map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`).join("");
+    const lib = phSourceLib().map(s => `<option value="${esc(s.title)}">`).join("");
     return `<div class="gf-src-pop" data-gdf-src-pop="1" data-r="${esc(rKey || "")}" data-b="${esc(bKey || "")}">${rows}<div class="gf-src-add">`
       + `<select class="field-bare" data-gdf-src-type>${opts}</select>`
-      + `<input type="text" class="field-bare" data-gdf-src-who placeholder="Who / where -- e.g. HH Study Tour" autocomplete="off">`
+      + `<input type="text" class="field-bare" list="phGdfSrcLib" data-gdf-src-who placeholder="Who / where -- e.g. HH Study Tour" autocomplete="off"><datalist id="phGdfSrcLib">${lib}</datalist>`
       + `<input type="date" class="field-bare" data-gdf-src-date>`
       + `<button type="button" class="gf-btn" data-gdf-src-add="1">Add reference</button></div></div>`;
   }
@@ -92130,8 +92147,10 @@ or changing anything in Cliniko.
     if ((el = T.closest("[data-gdf-src-add]"))) {
       const pop = T.closest(".gf-src-pop"), r = pop.dataset.r || null, b = pop.dataset.b || null;
       const typeEl = pop.querySelector("[data-gdf-src-type]"), whoEl = pop.querySelector("[data-gdf-src-who]"), dateEl = pop.querySelector("[data-gdf-src-date]");
-      const who = (whoEl.value || "").trim();
+      let who = (whoEl.value || "").trim();
       if (!who) { whoEl.focus(); return true; }
+      const matched = phSourceLib().find(s => s.title && s.title.toLowerCase() === who.toLowerCase());
+      if (matched) who = phSrcLibCite(matched);
       phGdfMergeSrcCommit(r, b, phGdfMergeSources(r, b).concat([{ type: typeEl.value, who, date: dateEl.value || "" }]));
       return true;
     }
@@ -92313,6 +92332,66 @@ or changing anything in Cliniko.
     return false;
   }
 
+  // her 2026-11-09 "add this is a source - make a source page": a plain editable list, same shape as a formula note (add,
+  // edit in place, remove) -- a tab on the Guide, beside Families, since every source she cites lives there today
+  function phGdSourceRowHtml2(s) {
+    if (phGdSrcEdit === s.id) {
+      return `<div class="gf-card" style="padding:14px 16px;margin-bottom:10px">
+        <input type="text" class="field-bare" data-gd-sl-title placeholder="Title" value="${esc(s.title || "")}" style="margin-bottom:6px;width:100%">
+        <input type="text" class="field-bare" data-gd-sl-author placeholder="Author" value="${esc(s.author || "")}" style="margin-bottom:6px;width:100%">
+        <input type="text" class="field-bare" data-gd-sl-translator placeholder="Translator (optional)" value="${esc(s.translator || "")}" style="margin-bottom:6px;width:100%">
+        <textarea class="field-bare" data-gd-sl-notes placeholder="Notes (optional)" rows="2" style="width:100%">${esc(s.notes || "")}</textarea>
+        <div style="display:flex;gap:8px;margin-top:8px">
+          <button type="button" class="gf-btn pri" data-gd-sl-save="${esc(s.id)}">Save</button>
+          <button type="button" class="gf-btn" data-gd-sl-cancel="1">Cancel</button>
+        </div>
+      </div>`;
+    }
+    return `<div class="gf-card" style="padding:12px 16px;margin-bottom:10px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
+      <div><b>${esc(s.title || "Untitled")}</b>${s.author ? `<div style="color:var(--ph-soft);font-size:var(--fs-12-5)">${esc(s.author)}${s.translator ? `, trans. ${esc(s.translator)}` : ""}</div>` : ""}${s.notes ? `<div style="color:var(--ph-faint);font-size:var(--fs-12-5);margin-top:4px">${esc(s.notes)}</div>` : ""}</div>
+      <div style="display:flex;gap:6px;flex:none">
+        <button type="button" class="gf-ib" data-gd-sl-edit="${esc(s.id)}" title="Edit" aria-label="Edit">${PH_GDF_PEN}</button>
+        <button type="button" class="gf-ib red" data-gd-sl-rm="${esc(s.id)}" title="Remove" aria-label="Remove">${PH_GDF_IC.x}</button>
+      </div>
+    </div>`;
+  }
+  function phGdSourcesHtml() {
+    const list = phSourceLib();
+    const rows = list.length ? list.map(phGdSourceRowHtml2).join("") : `<div class="gf-none" style="padding:14px 0">No sources yet</div>`;
+    return `<div class="ph-gdf"><div style="padding:16px 18px;max-width:560px">
+      <p style="color:var(--ph-soft);font-size:var(--fs-12-5);margin:0 0 14px">Books, teachers and events you can cite when you reference a symptom.</p>
+      ${phGdSrcEdit === "new" ? phGdSourceRowHtml2({ id: "new" }) : `<button type="button" class="gf-btn pri" data-gd-sl-new="1" style="margin-bottom:14px">${PH_GDF_IC.plus} Add a source</button>`}
+      ${rows}
+    </div></div>`;
+  }
+  function phGdSrcClick(e) {
+    const T = e.target; let el;
+    if (phGdTab !== "sources") return false;
+    if ((el = T.closest("[data-gd-sl-new]"))) { phGdSrcEdit = "new"; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-gd-sl-edit]"))) { phGdSrcEdit = el.dataset.gdSlEdit; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-gd-sl-cancel]"))) { phGdSrcEdit = null; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-gd-sl-rm]"))) {
+      const id = el.dataset.gdSlRm, lib = phSourceLib(), ix = lib.findIndex(s => s.id === id);
+      if (ix >= 0) { lib.splice(ix, 1); if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); }
+      phGdSrcEdit = null; renderPhGdBody();
+      return true;
+    }
+    if ((el = T.closest("[data-gd-sl-save]"))) {
+      const card = T.closest(".gf-card"), id = el.dataset.gdSlSave;
+      const titleEl = card.querySelector("[data-gd-sl-title]"), title = (titleEl.value || "").trim();
+      if (!title) { titleEl.focus(); return true; }
+      const author = (card.querySelector("[data-gd-sl-author]").value || "").trim();
+      const translator = (card.querySelector("[data-gd-sl-translator]").value || "").trim();
+      const notes = (card.querySelector("[data-gd-sl-notes]").value || "").trim();
+      const lib = phSourceLib();
+      if (id === "new") lib.push({ id: uid(), title, author, translator, date: "", notes });
+      else { const s = lib.find(x => x.id === id); if (s) Object.assign(s, { title, author, translator, notes }); }
+      if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return true; }
+      phGdSrcEdit = null; renderPhGdBody();
+      return true;
+    }
+    return false;
+  }
 
   function phGdBodyHtml() {
     if (phGdTab === "pulse") return phGdPulseHtml();
@@ -92325,6 +92404,7 @@ or changing anything in Cliniko.
     if (phGdTab === "eggs") return phEgHtml();
     if (phGdTab === "eating") return phEeHtml();
     if (phGdTab === "triangle") return phFtgGuideHtml();
+    if (phGdTab === "sources") return phGdSourcesHtml();
     return phGdfBodyHtml();
   }
   // ============ Supplement reference (her ask 2026-09-05): a short list of
@@ -92745,7 +92825,7 @@ or changing anything in Cliniko.
   function renderPhGuidePage() {
     const el = document.getElementById("phGuideWrap");
     if (!el) return;
-    const tabs = [["families", "Families"], ["triangle", "Triangle"], ["compare", "Compare"], ["tongue", "Tongue map"], ["pulse", "Pulse"], ["abdomen", "Abdomen"], ["herbs", "Herbs"], ["bloods", "Blood tests"], ["iron", "Iron"], ["eggs", "Eggs"], ["eating", "Eating eggs"]];   // Abdomen = the belly signs + the record's chart (2026-11-03)   // Compare = formulas side by side (2026-11-02)   // Body types / Formulas / Formula notes folded into Families (2026-10-21); Herbs = how a herb is used (2026-11-02)
+    const tabs = [["families", "Families"], ["sources", "Sources"], ["triangle", "Triangle"], ["compare", "Compare"], ["tongue", "Tongue map"], ["pulse", "Pulse"], ["abdomen", "Abdomen"], ["herbs", "Herbs"], ["bloods", "Blood tests"], ["iron", "Iron"], ["eggs", "Eggs"], ["eating", "Eating eggs"]];   // Abdomen = the belly signs + the record's chart (2026-11-03)   // Compare = formulas side by side (2026-11-02)   // Body types / Formulas / Formula notes folded into Families (2026-10-21); Herbs = how a herb is used (2026-11-02); Sources = her own citable library (2026-11-09)
     // her 2026-11-08 ask ("merge these lines into one"): the tab picker, search box and Learned progress pill used to sit in their own row
     // below the dark title bar -- they now ride inside it, as phShellHead's actionHtml (the same slot Dashboard's own quick actions use).
     el.innerHTML = `
@@ -92754,7 +92834,7 @@ or changing anything in Cliniko.
           <button type="button" class="ph-gd-tabddl" data-gd-tabs-toggle="1" aria-expanded="${phGdTabsOpen}">${esc((tabs.find(x => x[0] === phGdTab) || tabs[0])[1])} ▾</button>
           ${phGdTabsOpen ? `<div class="ph-gd-tabdrop">${tabs.map(([k, l]) => `<button type="button" class="ph-gd-tabbtn${phGdTab === k ? " on" : ""}" data-gd-tab="${k}">${l}</button>`).join("")}</div>` : ""}
         </div>
-        ${phGdTab !== "tongue" && phGdTab !== "bloods" && phGdTab !== "iron" && phGdTab !== "eggs" && phGdTab !== "eating" && phGdTab !== "triangle" ? `<input type="search" id="phGdSearch" class="ph-gd-search" value="${esc(phGdSearch)}" placeholder="${phGdTab === "pulse" ? "Search pulse notes" : phGdTab === "abdomen" ? "Search belly signs" : phGdTab === "herbs" ? "Search a herb" : phGdTab === "compare" ? "Search a sign or herb" : "Search a sign or formula"}" autocomplete="off">` : ""}
+        ${phGdTab !== "tongue" && phGdTab !== "bloods" && phGdTab !== "iron" && phGdTab !== "eggs" && phGdTab !== "eating" && phGdTab !== "triangle" && phGdTab !== "sources" ? `<input type="search" id="phGdSearch" class="ph-gd-search" value="${esc(phGdSearch)}" placeholder="${phGdTab === "pulse" ? "Search pulse notes" : phGdTab === "abdomen" ? "Search belly signs" : phGdTab === "herbs" ? "Search a herb" : phGdTab === "compare" ? "Search a sign or herb" : "Search a sign or formula"}" autocomplete="off">` : ""}
         ${phGdTab === "families" ? `<span class="ph-gdf-prog" id="phGdfProg">${phGdfProgHtml()}</span>` : ""}
       </div>`)}
       <section class="ph-widget ph-gd-shell">
