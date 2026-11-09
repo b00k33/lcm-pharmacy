@@ -13465,3 +13465,10 @@ correlation); this is different in kind, so a different tab and name, "Tour Case
 - **Tested** (sandbox, the real table on Gui Zhi, Huang Qi, Shi Gao): 65 Bing cells filled at 60 / 80 / 100%, no Ren cell filled; both-rows show it over their tint; dash and Bing-less rows plain; the number and the dot stay readable on the fill.
 - **Not tested:** edit mode (the dots and the − / × sit on the same cell), the phone width, a real against Bing cell (by reading: `w > 0` only).
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide picture table: the fill moves from the symptom cell to the Ren cell (2026-11-09)
+- **Her words:** "colour the cell of the ren column the same way, and remove the colouring of the symptom column".
+- **Code** (`index.html`): the symptom cell no longer carries `--rw` and its two CSS selectors are gone; `phGdfMergeCellHtml` gives both a Ren and a Bing value cell `--rw` (it was Bing only); the value cell's rule (`.gf-mc-td[style*="--rw"]` and its both-row twin) paints it.
+- **Tested** (sandbox, Gui Zhi, Huang Qi, Shi Gao): 0 symptom cells filled, 74 Ren cells and 65 Bing cells filled at 60 / 80 / 100%, no against cell filled; both-rows show the fill over their tint.
+- **Not tested:** edit mode, the phone width.
+- **SAVED, not live:** goes out with her next "push live". (She then asked to try the split symptom cell: BUILD-NOTES "Symptom cell split" if it is built.)
