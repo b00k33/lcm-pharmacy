@@ -13363,3 +13363,9 @@ Her pick in a popup, after the hover fix above: "Yes, do it here" (a tick redrew
 - **Not tested:** a formula with no recipe or no Diagnosis rows (drawn as a dash by reading); the Copy button (it still copies the two Tables); Edit (it is a Tables control and is hidden in Cases); the Key2.
 - **Pages checked:** the Compare tab only (Families' Compare chip and the study card's Compare with... open it on Tables, as before). The "Cases" name is also wanted by the Nanjing case-study work another session mocked: told that session; no data is shared.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Compare: the Cases | Tables switch on the empty page (2026-11-09)
+- **Her screenshot** (no words): the Compare tab with no formula picked, only "Family…", "Add a formula" and "No formulas": the new Cases | Tables switch was not there, because it was drawn only once formulas were picked, so Cases could not be found from an empty page.
+- **Fix** (`index.html`, `phCmpHtml`): the empty-state return now carries the same bar with the switch. Her pick of Cases stays while she picks formulas or clears them.
+- **Tested** (sandbox): empty page shows Cases | Tables; Cases stays on after picking two formulas and after Clear; tap audit on the bar 4 of 4 ok.
+- **SAVED, not live:** goes out with her next "push live".
