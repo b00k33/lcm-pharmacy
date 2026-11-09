@@ -13472,3 +13472,11 @@ correlation); this is different in kind, so a different tab and name, "Tour Case
 - **Tested** (sandbox, Gui Zhi, Huang Qi, Shi Gao): 0 symptom cells filled, 74 Ren cells and 65 Bing cells filled at 60 / 80 / 100%, no against cell filled; both-rows show the fill over their tint.
 - **Not tested:** edit mode, the phone width.
 - **SAVED, not live:** goes out with her next "push live". (She then asked to try the split symptom cell: BUILD-NOTES "Symptom cell split" if it is built.)
+
+## Guide picture table: the symptom cell split in half, Ren | Bing (2026-11-09)
+- **Her words:** "i want to try colouring the column of the symptom but divide the colouring in half, first half for ren and second half for bing. make mock first".
+- **Mock** (`mocks/guide-symptom-split-fill-mock-2026-11-09.jpg`, the real table on Gui Zhi): A two halves one colour · B Bing a step deeper · C from the middle out. **Her picks:** B; the Ren and Bing number cells plain (so this replaces the value-cell fill just before it).
+- **Code** (`index.html`): the number cell's `--rw` is gone; the symptom cell carries `style="--rr:<Ren/5>;--rb:<Bing/5>"` when either side is plus; one CSS rule (and its both-row twin) paints two background layers in the left and right half (`background-size: calc(50% - 1px)`), the right half at `--deep` 46%.
+- **Tested** (sandbox, Gui Zhi, Huang Qi, Shi Gao): 125 symptom cells carry the two shares, 0 number cells styled; Ren only fills the left half, Bing only the right, both rows both; the built table matches mock B.
+- **Not tested:** edit mode, the phone width, a real against cell (by reading: a plus rank only).
+- **SAVED, not live:** goes out with her next "push live".
