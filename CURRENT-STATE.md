@@ -1972,7 +1972,7 @@ sweep in once per open of a patient (`phAbdScanKey`, `scan0`, each mark's `--sd`
 with it (her "make the side view animate too"): the same scan line, its wall line drawing top to bottom as the line passes, its sounds and °C
 strips sweeping in, warm / cold rows sending up heat / frost inside the belly (`phAbdSideTemp`), and Today / Both / Last fading its marks
 (the wall line and the rows stay). Seen ends with one tap "whole abdomen distended" (`distwhole`, her 2026-11-09: full / distended on the whole belly in
-one tap, on while that mark sits; not a place's sign, so no popup lists it). Seen has "flat" (whole belly, no place); Temp = cold · cool · warm in BLUE / PALE BLUE / RED (temperature
+one tap, on while that mark sits; not a place's sign, so no popup lists it). The Abdomen tabs read A–Z (her 2026-11-09 "make the abdomen tab labels A–Z too"): the group tabs on the page, in the popup and in the Fang Bing Ren chip rows are Feel · Seen · Sounds · Temp · Tension (`PH_ABD_GRPS_AZ`, a sorted copy; `PH_ABD_GRPS` keeps Seen first, still the default tab), and the tabs under the charts are Fang Bing Ren · Note · Summary (Summary still opens first); Today / Both / Last stays in time order, and the chips inside a tab were already A–Z (Tension soft · medium · hard is a scale). Seen has "flat" (whole belly, no place); Temp = cold · cool · warm in BLUE / PALE BLUE / RED (temperature
 only; water and gas ink stay grey), one temperature per place; Feel = tender · tight hypochondrium (`tighthypo`, R / L hypo only,
 ticks the Chest & ribs pair) · pulsation · tight rectus · thin wall. No Xia Xin chip: tender at epi IS Xia Xin tender
 (`phAbd2Read` reads an old `marks.xiaxin` as tender@epi). The page works the Pulse page's way (her pick) [Abdomen page: the Pulse

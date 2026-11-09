@@ -13210,3 +13210,12 @@ Her ask: "add Dr Zhang, Dr Mei, Dr Eran Even" (from the Who/type dropdown on a s
 box). PH_SOURCE_TYPES is one shared list -- every place a source's type picks from it (formula
 notes, tongue, pulse, abdomen notes, Ren options, and the symptom reference box) gets the three new
 names with no further wiring.
+
+## Abdomen tab labels in A–Z order (2026-11-09)
+- **Her words:** "make the abdomen tab labels A–Z too" (after the Guide menu fix).
+- **Rule checked:** CLAUDE.md "A–Z lists" covers every tab set; the exceptions (scales, time order, a document's own order) leave Today / Both / Last and Tension soft · medium · hard as they are. The chips inside each tab were already A–Z.
+- **Code** (`index.html`, Abdomen page): `PH_ABD_GRPS_AZ = PH_ABD_GRPS.slice().sort(phAz on the label)` is used by the page's group tabs, the popup's group tabs (`phAbdPopHtml`) and the Fang Bing Ren chip rows. `PH_ABD_GRPS` itself is untouched (Seen first: the default `presAbdGrp`, the fallback, and the summary text order). The popup's fallback tab, when nothing is marked there, is named Seen (it was `grps[0]`, which would now be Feel). The tabs under the charts are drawn Fang Bing Ren · Note · Summary; Summary still opens first.
+- **Tested** (sandbox, a blank chart): page tabs Feel · Seen · Sounds · Temp · Tension with Seen on; lower tabs Fang Bing Ren · Note · Summary with Summary on; the popup on "lower" shows Feel · Seen · Sounds · Temp with Seen on.
+- **Not tested:** a real patient's record, and the Guide's Abdomen tab (it shares the same chart code but was not driven: no signed-in account in the sandbox).
+- **Pages checked:** the Abdomen page tabs, popup, FBR chip rows; the Pulse page's own tabs were not part of this ask.
+- **SAVED, not live:** goes out with her next "push live".
