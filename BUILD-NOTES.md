@@ -13281,3 +13281,11 @@ Huang / Day 5 Lecture."
 - **Tested** in the harness: `PHARMACY.fbrEdits._sources.w` carries the citation on all 11 keys
   after a fresh load; the flag stops it running twice. Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Fang Bing Ren switch joins the Plans row (2026-11-09)
+- **Her words:** "merge to one line." (screenshot: the Plans row, then the Fang Bing Ren · Patterns · Diagnosis switch on a second line).
+- **Code** (`index.html`): `phFbrSwitchHosted(name)` is true when a plan's Fang Bing Ren or Patterns · Diagnosis page is open and the Plans row shows (more than one plan, or a loose prescription). Then `presTpPlanTabsHtml` appends the switch to the row (`phFbrSwitchHtml(name, presTpMainTab, true)`) and the page body draws none (`phFbrSwitchHtml` returns "" when hosted and not `inRow`). `presTpMainTabRefresh` (the scoped page swap) also repaints `.ph-tp-plantabs`, so the switch's lit side follows the page. `phFbrSwitchRefresh` (counts) finds it wherever it sits. CSS: `.ph-tp-plantabs .ph-fbr-switch { margin: 0 0 0 4px }`. With one plan and nothing loose there is no Plans row, so the switch stays at the top of the page as before.
+- **Tested** (sandbox, the real app, a made-up patient "Zz Plans Test" with two plans, 1220): one row, 42px, Plans · plan chips · + New · the switch; one switch in the page; tapping Patterns · Diagnosis and back lights the right side; switching plan or "+ New" removes it (no page open); with one plan the switch is back at the top of the page and there is no Plans row. 375 wide: the row wraps, no sideways scroll.
+- **Not tested:** the "Not on a plan" row with a real loose prescription; the Key2; a real phone (the pane's emulated phone drew the switch as the older pill, not the 32px bar).
+- **Pages checked:** both Fang Bing Ren pages (the only two callers of `phFbrSwitchHtml`); the plan list / editor / new-plan form unchanged.
+- **SAVED, not live:** goes out with her next "push live".

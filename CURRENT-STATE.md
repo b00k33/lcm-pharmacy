@@ -843,6 +843,7 @@ also shows the pattern's concept picture. One pattern can be ★ main. Formula i
 she overrode in Settings never gains new clue keys later (deliberate). All pattern wording is Claude-drafted, hers to correct.
 Since 2026-10-29 (her audit pick: opened for 2 patients) Patterns · Diagnosis sits with Timeline under the rail's folded
 "⋯ More" row after Fang Bing Ren (`presFlowMoreOpen`; open on a tap or while one of them is the page, closed when she leaves).
+The Fang Bing Ren | Patterns · Diagnosis switch rides at the end of the **Plans row** when that row shows (more than one plan, or a loose prescription; her 2026-11-09 "merge to one line"): `phFbrSwitchHosted(name)` is true on a plan's Fang Bing Ren or Patterns · Diagnosis page, `presTpPlanTabsHtml` draws the switch (`phFbrSwitchHtml(name, tab, true)`), the page body draws none, and `presTpMainTabRefresh` repaints the row with the page. With one plan and nothing loose there is no Plans row, so the switch stays at the top of the page.
 **Concept pictures** are drawn from the body (a natural hand, a real stomach / throat / kidney, vessel walls with cells). Her
 rule: this anatomical model is the model for every picture; the rest move over in batches. Yin deficiency and Heat are drawn on
 the body chart itself (organs at true size, `anat` in `PH_PP`, a 300 x 200 frame) [Concept pictures on the anatomical body]. The
