@@ -13240,3 +13240,17 @@ Bilton."
   hidden this way no longer offers on a fresh pick but an existing reference using it still shows its
   old label (never pointed at by key alone). Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Source types: A-Z order, Dr Huang Huang, 2026-11-09
+
+Her ask, with a screenshot of the type dropdown: "alphabetical order, Dr Huang Huang."
+
+- `PH_SOURCE_TYPES_BASE` is now ordered A-Z by label (Dr Eran Even, Dr Huang Huang, Dr Karen
+  Bilton, Dr Mei, Dr Zhang, Mick, My own observation, Seminar transcript); `phSrcTypes()` reads
+  the base object in order, so this is the order every picker and chip shows, no separate sort
+  needed.
+- "Huang Huang" relabelled "Dr Huang Huang", matching Dr Zhang / Dr Mei / Dr Eran Even / Dr
+  Karen Bilton.
+- **Tested** in the harness: Sources tab's "Who / where you can pick from" list reads A-Z with
+  Dr Huang Huang in place. Boots clean.
+- **SAVED, not live:** goes out with her next "push live".
