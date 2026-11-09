@@ -13132,3 +13132,18 @@ added herself), right beside the rename pen in the merged Area table.
 - **Not tested:** a real patient; a thin wall (dashed, no draw) by eye; the Guide's chart; reduced motion by running it; the Key2.
 - **Pages checked:** the Abdomen exam page side view (the Guide's shares the code).
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide family Edit table: three columns, a quieter pen + reference pair, 2026-11-09
+
+Her ask: "give the edit page 3 columns and improve the overall display." I showed three mocks for
+the pen+reference pair (which had started wrapping onto its own crowded line under a label); her
+pick: "1. smaller pair."
+
+- The merged Area table's column count is 3 now, not 4 (still never squeezed below 180px a column,
+  still 1 on the phone).
+- The pen and the reference book are smaller (24px, was 32) and held together as one unit
+  (`gf-mrg-ic`) that only moves to its own line when the label itself wraps -- the two icons never
+  split from each other.
+- **Tested** in the harness: Gui Zhi, Edit, 1220px and 1380px both show 3 columns; "Catches Colds
+  Often" keeps its icon pair on the label's own line. Boots clean.
+- **SAVED, not live:** goes out with her next "push live".
