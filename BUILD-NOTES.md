@@ -13511,3 +13511,28 @@ the second column empty. Same bug in both, same fix: `grid-column:1 / -1` on tha
 Confirmed in the harness: Tour Cases' picker now fits 7-per-row and the card fills the page;
 Sources is back to its own 560px reading width. **SAVED, not live:** goes out with her next
 "push live".
+
+## 2026-11-09 · Compare › Tables in the Guide picture's layout
+Her words, on a picture of a formula's Guide picture table (area tables, Ren | Bing numbers, the symptom cell split-filled, OR tags): "i like
+this organisation and display. use it for the compare and table and cases display. show me mock". The mock was the real build in the sandbox
+(shots/compare-picture-*-mock-2026-11-09.png, local: Tables at 1220, Cases at 1220, Tables at 360); her popup "Yes, test + push live".
+- **Built** (`index.html`): `phCmpPicRows(sds)` merges the picked formulas' signs the way the Guide picture does (`phGdfMergedRows`: one row
+  per body area + subject + wording, a Ren and a Bing sign of the same words together; `wr` / `wb` per formula, `w` the stronger for the
+  filters, `or` per formula). `phCmpPicTblHtml(side, cols, all)` draws one table with the rows lined up: a body area is a head row (its name
+  and count, then Ren · Bing under each formula over that formula's 2px line), a subject a paper row, the wording A-Z with an OR tag; each
+  number in ink on a fill of its weight out of 5 in the formula's colour (Ren 30%, Bing 46%, the Guide's two halves), an against number red
+  with no fill, a dash for none. The Ren | Bing | Both switch picks the columns; the filters, overlap bar, head focus, share bars, sign
+  pictures (hover and tap) and Copy are as before. The filter words and overlap bar moved into `phCmpWhat` / `phCmpOvlHtml` (both tables use
+  them). Edit keeps the dot rows (`phCmpSignsTableHtml`): five dots need the width. Phone: the symptom column 120 px, a number column 52 px,
+  the table scrolls inside its card.
+- **Not built: Cases.** While this was being tested, the other session rebuilt Cases into 14 rows from her synth22 list (e7b453c0, LIVE
+  150500). The mock's Cases (one full picture per case, Signs & symptoms · Pathology · Prescription) would have replaced those rows, so it
+  waits for her word on how the two meet.
+- **Tested** (sandbox, Xiao Chai Hu Tang + Da Chai Hu Tang unless named; nothing saved):
+  - Every filter on Both / Ren / Bing: the rows match the chip counts (Both 87 · 20 · 12 · 52 · 75; only-one bar 30 / 45).
+  - Search ("dizz" 2 rows; none: "No signs for …"); head focus fades the 45 rows Xiao lacks; the filter motion runs and settles.
+  - Single herbs only (3: 103 rows, no Herbs table); one formula; the Chai Hu family (9 formulas, 19 columns, scrolls inside its card); none.
+  - An against sign (Ma Huang): red −2, no fill. A sign picture opens on a tap (74 in the list). Copy unchanged. Edit: the two dot tables.
+  - Tap audit on Compare at 1220 and 360: only the Herbs table's recipe picker (as before). At 360 the words 13 px, a number cell 52 × 28,
+    no sideways page scroll. Console clean. The other session's Cases (14 rows) draws as before.
+- **Not tested:** her real records; the Key2.
