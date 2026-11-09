@@ -13179,3 +13179,18 @@ a fixed Mick/Huang Huang/Seminar/Bilton/My-own list.
   field, confirmed the chip reads "Ten Key Formula Families in Chinese Medicine — Huang Huang, trans.
   Michael Max"; added, edited and removed a second library entry on the new tab. Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Sources: a second book, 2026-11-09
+
+Her ask: "add to source A Manual of Classic Formulas for Primary Care by Huang Huang (Author)
+translated by Eran Even and Craig Mitchel."
+
+- `phSourceLib`'s seed became a list, checked by title, not "if empty": the first book is already
+  saved in her data by now, so a plain empty-check would never have added a second one. Each title
+  in `PH_SOURCE_LIB_SEED` is added once if her list doesn't already carry it.
+- Second entry: A Manual of Classic Formulas for Primary Care, Huang Huang, trans. Eran Even and
+  Craig Mitchell.
+- **Tested** in the harness: a fresh copy gets both books; a copy that already had the first book
+  (and a third, unrelated one she'd added herself) keeps all three and gains only the new one, no
+  duplicates on a second load. Boots clean.
+- **SAVED, not live:** goes out with her next "push live".
