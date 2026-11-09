@@ -13673,3 +13673,15 @@ hu and ban xia." and "some formulas from case studies have the base formula e.g.
 - **Tested** (sandbox, Case 2): an old single link stays one link; + Sign adds a second (saved as `s.more`); a reset line Accepts to two links (Bitter Taste and Dry Mouth, each Bing, 3) and both rows draw in the Cases table; a weight on the second link saves alone; unlinking the first promotes the second; To diagnosis on Prostate hyperplasia marks it (the conditions already held it, nothing added) and Undo restores it; on Lung nodules it adds the line and Undo takes it out; tap audit 87 / 90 / 89 of the same at 1220 and 86 / 89 at 360, none off; no page scroll sideways at 360 (the table scrolls inside its box). Picture: mocks/tour-cases-correlate-tables-built-2026-11-10.jpg.
 - **Not tested:** the Key2; a case saved on another device before this build (reads as one link, as before); More than two signs on one line by hand beyond the two tested.
 - **SAVED, not live:** goes out with her next "push live".
+
+## 2026-11-10 · Chai Po Tang wears both colours
+Her words: "give chai po tang half ban xia nad half chai hu colour in the circle and in the banner".
+- **Built** (`index.html`): `PH_FBR_COLOUR_TWO = { chaipo: "banxia" }`. `phGdfCol` gives a split swatch (`sw`: its own Chai Hu shade on the left,
+  Ban Xia's herb colour on the right, a hard line down the middle); `phGdfStyle` carries it as `--cs`, and `phGdfDotStyle` for the lone
+  circles. The Guide banner, the Guide list circles (both family cards), the sign-row and "also weighs this" circles, the Compare chips and the
+  Compare column-head circles read it. Everything else (table lines, fills, the board, scoring) keeps its own colour. Ink on both halves: 7.4
+  and 7.6 to 1.
+- **Tested** (sandbox): the banner and both list circles split; another formula's banner and circles plain; with Chai Po Tang open, 2 of 71
+  circles split (its own); on Xiao Chai Hu Tang's page 2 of 218 (Chai Po Tang's own); the Compare chip and head circle split, the others
+  plain; console clean.
+- **SAVED, not live:** waits for her "push live".
