@@ -15742,6 +15742,16 @@
   #pharmacyPage .ph-cmp-cs .za { margin: 12px -10px 0; padding: 7px 10px; background: color-mix(in srgb, var(--ph-herb) 16%, var(--ph-white)); font: 700 var(--fs-11) var(--font-disp); letter-spacing: .07em; text-transform: uppercase; color: var(--ph-ink); }
   #pharmacyPage .ph-cmp-cs .za em { margin-left: 8px; font: 500 var(--fs-11) var(--font-body); font-style: normal; letter-spacing: 0; text-transform: none; color: var(--ph-faint); }
   #pharmacyPage .ph-cmp-cs .zs:first-child, #pharmacyPage .ph-cmp-cs .za:first-child { margin-top: 0; }
+  /* ---- Cases over time (her 2026-11-10): a session's fields, and a changed cell ---- */
+  #pharmacyPage .ph-cmp-cs td.chg { background: var(--ph-gold-tint); position: relative; }
+  #pharmacyPage .ph-cmp-cs td.chg::before { content: ""; position: absolute; left: 4px; top: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--ph-gold); }
+  #pharmacyPage .ph-tc .ph-tc-sp { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px 12px; margin-top: 10px; align-items: start; }
+  #pharmacyPage .ph-tc .ph-tc-sf { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  #pharmacyPage .ph-tc .ph-tc-sf.w { grid-column: 1 / -1; }
+  #pharmacyPage .ph-tc .ph-tc-sf > span { font: 700 var(--fs-11) var(--font-body); letter-spacing: .09em; text-transform: uppercase; color: var(--ph-ink); }
+  #pharmacyPage .ph-tc .ph-tc-sf textarea.gf-fld { height: auto; min-height: 76px; padding: 8px 10px; width: 100%; resize: vertical; line-height: 1.35; }
+  #pharmacyPage .ph-tc .ph-tc-sf input.gf-fld { width: 100%; }
+  #pharmacyPage .ph-tc .ph-tc-sa { grid-column: 1 / -1; display: flex; gap: 8px; flex-wrap: wrap; }
   /* ---- Tour Cases: Correlate and Integrate as tables (her 2026-11-10 synth22) ---- */
   #pharmacyPage .ph-tc-flat .ph-tc-wrap { border: 1px solid var(--ph-line); border-radius: 6px; }
   #pharmacyPage .ph-tc .ph-tc-h { font-size: var(--fs-13-5); margin: 0 0 8px; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
@@ -77805,6 +77815,7 @@ or changing anything in Cliniko.
   let phGdTcBy = "cc";   // Tour Cases tab: "cc" names the cases by chief complaint and filters by it, "fm" by formula (her "toggle filter by complaint/formula")
   let phGdTcFc = [], phGdTcFf = [];   // Tour Cases tab: the picked complaints, the picked formulas (the filter)
   let phGdTcSrcF = "";   // Tour Cases tab: a book / seminar / tour kept as the filter (a tap on its name)
+  let phGdTcSess = "";   // Cases tab: the session in focus for Correlate / Integrate ("" = the case's own first record, Day 1) (her 2026-11-10)
   let phGdTcMore = false;   // Tour Cases tab: the open Correlate form adds ANOTHER sign to an observation that already has one (her 2026-11-10: one line, more than one sign)
   let phGdTcMenu = false, phGdTcAddKind = null;   // Tour Cases tab: the filter list is open; the kind of place being added
   let phGdTcAdd = null;   // Tour Cases tab: the one open "Correlate" row, "<caseId>|<symptomIndex>"
@@ -92986,6 +92997,23 @@ low blood pressure|Blood pressure: low|b
 soft below the navel|Abdominal: lower belly weak, soft or numb|r
 pale red tongue|Tongue: pale-red|r`;
   let PH_TC_MATCH_MAP = null;
+  // a new observation (her own session notes) that is the catalog's own wording for one sign gets that sign pre-filled too: "Hard to fall asleep" = Sleep: hard to fall asleep.
+  // Only an exact wording, only one sign (both sides holding it = the Bing one); an ambiguous wording gets none. Nothing scores until she accepts.
+  let PH_TC_DESC_MAP = null;
+  function phTcDescMatch(t) {
+    if (!t) return [];
+    if (!PH_TC_DESC_MAP) {
+      PH_TC_DESC_MAP = new Map();
+      [["r", PH_REN_SIGNS], ["b", PH_BING_SIGNS]].forEach(([side, list]) => list.forEach(r => {
+        const lab = String(r[1]), at = lab.indexOf(": "), d = (at >= 0 ? lab.slice(at + 2) : lab).toLowerCase(), a = PH_TC_DESC_MAP.get(d) || [];
+        if (!a.some(x => x.key === r[0] && x.side === side)) a.push({ key: r[0], side, label: phSignLabel(r[0]) }); PH_TC_DESC_MAP.set(d, a);
+      }));
+    }
+    const a = PH_TC_DESC_MAP.get(t) || [];
+    if (a.length <= 1) return a;
+    const labs = new Set(a.map(x => x.label.toLowerCase()));
+    return labs.size === 1 ? [a.find(x => x.side === "b") || a[0]] : [];
+  }
   function phTcMatchAll(text) {
     if (!PH_TC_MATCH_MAP) {
       PH_TC_MATCH_MAP = new Map();
@@ -92999,7 +93027,7 @@ pale red tongue|Tongue: pale-red|r`;
         if (byLab[side].has(lab)) { const key = byLab[side].get(lab), o = p[0].trim().toLowerCase(), a = PH_TC_MATCH_MAP.get(o) || []; if (!a.some(x => x.key === key && x.side === side)) a.push({ key, side, label: phSignLabel(key) }); PH_TC_MATCH_MAP.set(o, a); }
       });
     }
-    return PH_TC_MATCH_MAP.get(String(text || "").trim().toLowerCase()) || [];
+    return PH_TC_MATCH_MAP.get(String(text || "").trim().toLowerCase()) || phTcDescMatch(String(text || "").trim().toLowerCase());
   }
   const phTcMatch = text => phTcMatchAll(text)[0] || null;   // the first match: the Change form opens on it
   const phTcOpenMatches = c => c.symptoms.map((s, i) => ({ s, i, m: !s.sign && !s.skip && !s.dx ? phTcMatch(s.text) : null })).filter(x => x.m);
@@ -93036,7 +93064,7 @@ pale red tongue|Tongue: pale-red|r`;
     const book = col && col.classic ? phCmpBookHtml(col) : "";
     return { id: "tc" + c.id, signs: [...m.values()], dx: c.cond.slice(), fid: col ? (phFpIdFor(col.name) || phFpIdFor(col.rname)) : null,
       invHtml: col ? (phCmpInvHtml(col) || `<span class="no">Not in your formulas</span>`) : `<span class="no">Not matched yet</span>`,
-      bkHtml: lecture + (book ? `<div style="margin-top:10px">${book}</div>` : "") };
+      lectureHtml: lecture, bkHtml: lecture + (book ? `<div style="margin-top:10px">${book}</div>` : "") };
   }
   // ---- Tour Cases, books / seminars / tours by case number (her 2026-11-10 "on the left, make a column for all the books/seminars/tours i can organise cases to, and top row is the case numbers",
   // "also allow for multiple case view e.g. cases are side by side. name the cases C#1 - Chief Complaint or formula, sometimes i want to filter based on condition or formula",
@@ -93063,6 +93091,7 @@ pale red tongue|Tongue: pale-red|r`;
   const phTcColStyle = c => c.fam && PH_FORMULAS[c.fam] ? phGdfStyle(c.fam) : "--c:var(--ph-herb);--deep:var(--ph-herb-deep)";
   // the case table: one column per case on show, the rows Compare > Cases has (phCmpCaseRowsHtml)
   function phTcTableHtml(cs) {
+    if (cs.length === 1 && ((cs[0].sessions || []).length || cs[0].note)) return phTcProgressHtml(cs[0]);
     const anim = phGdTcAnim !== false, cols = cs.map(c => ({ style: phTcColStyle(c) })), parts = cs.map(c => phCmpCaseParts(phTcSrc(c), "", anim));
     const heads = cs.map((c, i) => `<th style="${cols[i].style}"><span class="cn">C#${c.n}</span>${esc(phTcNm(c))}<small class="ph-tc-sub">${esc(c.name)}</small>
         <div style="margin-top:6px;font-weight:400"><label style="font-size:var(--fs-11);color:var(--ph-soft);margin-right:6px">Formula family</label><select class="field-bare gf-chip" data-tc-fam="${esc(c.id)}" style="font-size:var(--fs-12-5)"><option value=""${c.fam ? "" : " selected"}>Not matched yet</option>${Object.keys(PH_FORMULAS).map(id => `<option value="${esc(id)}"${c.fam === id ? " selected" : ""}>${esc(phGdfName(id))}</option>`).join("")}</select></div>
@@ -93149,15 +93178,57 @@ pale red tongue|Tongue: pale-red|r`;
       <div class="ph-tc-wrap"><table class="ph-tc-cor"><thead><tr><th class="ck"></th><th>Sign</th><th>Side</th><th>Weight</th><th>Change</th></tr></thead><tbody>${rows}</tbody></table></div>
       <div class="ph-tc-ft"><span>✎ Dr Huang Huang · Nanjing Study Tour Nov 2026 — Day 1, Case ${c.n}</span><button type="button" class="gf-btn pri" data-tc-apply="${esc(c.id)}">Apply to ${esc(phGdfName(c.fam))}</button></div></div>`;
   }
+  // ---- Cases over time (her 2026-11-10 "build 4": a real case can have more than one treatment-session note; compile them over time as the same rows with the dates across) ----
+  // A case's own record is its first column (the Nanjing Day 1 clinic). Each later session is c.sessions[] = {id, date, label, note, symptoms[], cond[], recipe[[name, dose]], formula}; a session reads as a case
+  // through phTcView / phTcFind (the same symptom objects, so Correlate, Accept and Integrate work on it unchanged). A cell that differs from the column before it is marked (gold tint + dot).
+  const phTcSessions = c => (c.sessions || []).slice().sort((a, b) => String(a.date || "9999").localeCompare(String(b.date || "9999")));
+  const phTcDate = d => { if (!d) return "No date"; const t = new Date(d + "T00:00:00"); return isNaN(t) ? String(d) : t.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" }); };
+  const phTcView = (c, s) => Object.assign({}, s, { fam: c.fam, n: c.n, name: c.name, mod: c.mod, caseId: c.id });
+  function phTcFind(id) {
+    const cs = phTourCases(), c = cs.find(x => x.id === id); if (c) return c;
+    for (const k of cs) { const s = (k.sessions || []).find(x => x.id === id); if (s) return phTcView(k, s); }
+    return null;
+  }
+  function phTcProgressHtml(c) {
+    const anim = phGdTcAnim !== false, vs = [c].concat(phTcSessions(c).map(s => phTcView(c, s))), cols = vs.map(() => ({ style: phTcColStyle(c) }));
+    const parts = vs.map((v, i) => {
+      if (!i) return phCmpCaseParts(phTcSrc(c), "", anim);
+      const src = phTcSrc(v); src.invHtml = ""; src.fid = null; src.bkHtml = src.lectureHtml;
+      const p = phCmpCaseParts(src, "", false); p.an = ""; p.inv = ""; return p;
+    });
+    const chg = vs.map((v, i) => { const set = new Set(); if (i) Object.keys(parts[i]).forEach(k => { if (k !== "an" && k !== "inv" && parts[i][k] !== parts[i - 1][k]) set.add(k); }); return set; });
+    const heads = vs.map((v, i) => i
+      ? `<th style="${cols[i].style}"><span class="cn">${esc(phTcDate(v.date))}</span>${esc(v.label || "Follow-up")}${v.formula ? `<small class="ph-tc-sub">${esc(v.formula)}</small>` : ""}</th>`
+      : `<th style="${cols[0].style}"><span class="cn">C#${c.n} · Day 1</span>${esc(phTcNm(c))}<small class="ph-tc-sub">${esc(c.name)}</small>
+        <div style="margin-top:6px;font-weight:400"><label style="font-size:var(--fs-11);color:var(--ph-soft);margin-right:6px">Formula family</label><select class="field-bare gf-chip" data-tc-fam="${esc(c.id)}" style="font-size:var(--fs-12-5)"><option value=""${c.fam ? "" : " selected"}>Not matched yet</option>${Object.keys(PH_FORMULAS).map(id => `<option value="${esc(id)}"${c.fam === id ? " selected" : ""}>${esc(phGdfName(id))}</option>`).join("")}</select></div></th>`).join("");
+    const notes = `<tr><th class="rh" scope="row">Notes</th>${vs.map((v, i) => `<td style="${cols[i].style}">${esc(v.note || "")}</td>`).join("")}</tr>`;
+    return `<div class="ph-cmp-wrap"><table class="ph-cmp-cs" style="--n:${vs.length}"><colgroup><col class="s">${vs.map(() => "<col>").join("")}</colgroup>
+      <thead><tr><th class="rh"></th>${heads}</tr></thead>
+      <tbody>${phCmpCaseRowsHtml(parts, cols, anim, "data-tc-anim", chg).replace('Prescription · Book / lecture', 'Prescription · Lecture / visit')}${notes}</tbody></table></div>`;
+  }
+  // the session chips (Day 1, then a chip a dated session), + Add a session, and the open session's fields
+  function phTcSessBarHtml(c, cur) {
+    const ss = phTcSessions(c), s = cur ? (c.sessions || []).find(x => x.id === cur) : null;
+    const chips = [["", "Day 1"]].concat(ss.map(x => [x.id, phTcDate(x.date)])).map(([id, l]) => `<button type="button" class="gf-chip${cur === id ? " on" : ""}" data-tc-sess="${esc(id)}">${esc(l)}</button>`).join("");
+    const rx = s ? (s.recipe || []).map(r => (r[0] + " " + (r[1] || "")).trim()).join("\n") : "";
+    const fld = (lab, inner, wide) => `<label class="ph-tc-sf${wide ? " w" : ""}"><span>${lab}</span>${inner}</label>`;
+    const panel = `<div class="ph-tc-sp" data-tc-sp="${esc(cur)}" data-tc-case="${esc(c.id)}">
+      ${s ? fld("Date", `<input type="date" class="field-bare gf-fld" data-tc-s-date value="${esc(s.date || "")}">`) + fld("Label", `<input type="text" class="field-bare gf-fld" data-tc-s-label value="${esc(s.label || "")}" autocomplete="off">`) + fld("Formula", `<input type="text" class="field-bare gf-fld" data-tc-s-formula value="${esc(s.formula || "")}" autocomplete="off">`) + fld("Prescription", `<textarea class="field-bare gf-fld" data-tc-s-rx rows="3">${esc(rx)}</textarea>`, true) : ""}
+      ${fld("Note", `<textarea class="field-bare gf-fld" data-tc-s-note rows="3">${esc((s || c).note || "")}</textarea>`, true)}
+      ${fld("Add observations", `<textarea class="field-bare gf-fld" data-tc-s-obs rows="3"></textarea>`, true)}
+      <div class="ph-tc-sa"><button type="button" class="gf-btn pri" data-tc-sess-save="1">Save</button>${s ? `<button type="button" class="gf-btn" data-tc-sess-del="${esc(cur)}">Remove session</button>` : ""}</div></div>`;
+    return `<div class="ph-cmp ph-tc-flat" style="margin-top:14px"><div class="ph-tc-fc"><b class="ph-tc-lb">Sessions</b>${chips}<button type="button" class="gf-btn" data-tc-sess-add="${esc(c.id)}">+ Add a session</button></div>${panel}</div>`;
+  }
   function phTcHtml() {
     const cases = phTourCases(), vis = phTcVisible(), shown = phTcShown(vis), shownIds = shown.map(c => c.id), multi = shown.length > 1;
     if (!cases.length) return `<div class="ph-gdf"><div class="gf-none" style="grid-column:1 / -1;padding:16px">No cases yet</div></div>`;
     const focus = shown.find(c => c.id === phGdTcSel) || shown[0];
+    const sessOk = !multi && focus && phGdTcSess && (focus.sessions || []).some(x => x.id === phGdTcSess), target = sessOk ? phTcFind(phGdTcSess) : focus, sessBar = !multi && focus ? phTcSessBarHtml(focus, sessOk ? phGdTcSess : "") : "";
     const focusBar = multi ? `<div class="ph-cmp ph-tc-flat" style="margin-top:18px"><div class="ph-tc-fc"><b class="ph-tc-lb">Correlate</b>${shown.map(c => `<button type="button" class="gf-chip${c.id === focus.id ? " on" : ""}" data-tc-focus="${esc(c.id)}">C#${c.n}</button>`).join("")}</div></div>` : "";
     return `<div class="ph-gdf"><div class="ph-tc" style="grid-column:1 / -1;padding:16px 18px;min-width:0">
       <div class="ph-cmp">${phTcBarHtml(vis, cases.length)}${vis.length ? phTcGridHtml(vis, shownIds) : `<div class="gf-none" style="padding:16px 18px">No cases match</div>`}</div>
       ${focus ? `<div style="margin-top:14px${multi ? "" : ";max-width:720px"}">${phTcTableHtml(shown)}</div>
-      <div>${focusBar}${phTcCorrelateHtml(focus)}${phTcIntegrateHtml(focus)}</div>` : ""}
+      <div>${focusBar}${sessBar}${phTcCorrelateHtml(target)}${phTcIntegrateHtml(target)}</div>` : ""}
     </div></div>`;
   }
   function phTcSrcSave(kind) {
@@ -93223,7 +93294,7 @@ pale red tongue|Tongue: pale-red|r`;
     phGdfDone(famId, before, null);
   }
   function phTcApplySource(key, c) {
-    const src = { type: "huanghuang", who: `Nanjing Study Tour Nov 2026 — Day 1, Case ${c.n}`, date: "" };
+    const src = c.caseId ? { type: "own", who: `Case ${c.n}, session ${c.date || ""}`, date: c.date || "" } : { type: "huanghuang", who: `Nanjing Study Tour Nov 2026 — Day 1, Case ${c.n}`, date: "" };
     const have = phSignSources(key), tag = s => s.type + "|" + s.who + "|" + s.date;
     if (!have.some(s => tag(s) === tag(src))) phSignSourcesSet(key, have.concat([src]));
   }
@@ -93233,28 +93304,64 @@ pale red tongue|Tongue: pale-red|r`;
     if (phGdTcMenu && !T.closest("[data-tc-menu-wrap], [data-tc-menu]")) { phGdTcMenu = false; renderPhGdBody(); }
     if (phTcGridClick(T)) return true;
     if ((el = T.closest("[data-tc-fam]"))) {
-      const c = phTourCases().find(x => x.id === el.dataset.tcFam);
+      const c = phTcFind(el.dataset.tcFam);
       if (c) { c.fam = el.value || null; if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); }
       renderPhGdBody(); return true;
     }
     if (T.closest("[data-tc-anim]")) { phGdTcAnim = phGdTcAnim === false; renderPhGdBody(); return true; }
-    if ((el = T.closest("[data-tc-accept]"))) { const [cid, i] = el.dataset.tcAccept.split("|"), c = phTourCases().find(x => x.id === cid); if (c && phTcAccept(c, +i) && savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); phGdTcAdd = null; renderPhGdBody(); return true; }
-    if ((el = T.closest("[data-tc-accept-all]"))) { const c = phTourCases().find(x => x.id === el.dataset.tcAcceptAll); if (c) { let n = 0; phTcOpenMatches(c).forEach(x => { if (phTcAccept(c, x.i)) n++; }); if (n && savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); } phGdTcAdd = null; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-tc-accept]"))) { const [cid, i] = el.dataset.tcAccept.split("|"), c = phTcFind(cid); if (c && phTcAccept(c, +i) && savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); phGdTcAdd = null; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-tc-accept-all]"))) { const c = phTcFind(el.dataset.tcAcceptAll); if (c) { let n = 0; phTcOpenMatches(c).forEach(x => { if (phTcAccept(c, x.i)) n++; }); if (n && savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); } phGdTcAdd = null; renderPhGdBody(); return true; }
     if ((el = T.closest("[data-tc-correlate-open]"))) { phGdTcAdd = el.dataset.tcCorrelateOpen; phGdTcMore = false; renderPhGdBody(); return true; }
     if (T.closest("[data-tc-cancel]")) { phGdTcAdd = null; phGdTcMore = false; renderPhGdBody(); return true; }
     if ((el = T.closest("[data-tc-skip]"))) {
-      const [cid, i] = el.dataset.tcSkip.split("|"), c = phTourCases().find(x => x.id === cid);
+      const [cid, i] = el.dataset.tcSkip.split("|"), c = phTcFind(cid);
       if (c) { c.symptoms[+i].skip = true; if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); }
       phGdTcAdd = null; renderPhGdBody(); return true;
     }
     if ((el = T.closest("[data-tc-unskip]"))) {
-      const [cid, i] = el.dataset.tcUnskip.split("|"), c = phTourCases().find(x => x.id === cid);
+      const [cid, i] = el.dataset.tcUnskip.split("|"), c = phTcFind(cid);
       if (c) { c.symptoms[+i].skip = false; if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); }
       renderPhGdBody(); return true;
     }
+    if ((el = T.closest("[data-tc-sess]"))) { phGdTcSess = el.dataset.tcSess; phGdTcAdd = null; phGdTcMore = false; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-tc-sess-add]"))) {
+      const c = phTcFind(el.dataset.tcSessAdd), d = new Date(), id = uid();
+      if (c) {
+        (c.sessions = c.sessions || []).push({ id, date: [d.getFullYear(), String(d.getMonth() + 1).padStart(2, "0"), String(d.getDate()).padStart(2, "0")].join("-"), label: "", note: "", symptoms: [], cond: [], recipe: [], formula: "" });
+        phGdTcSess = id; phGdTcAdd = null;
+        if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+      }
+      renderPhGdBody(); return true;
+    }
+    if ((el = T.closest("[data-tc-sess-save]"))) {
+      const sp = el.closest("[data-tc-sp]"), c = sp && phTourCases().find(x => x.id === sp.dataset.tcCase); if (!c) return true;
+      const sid = sp.dataset.tcSp, s = sid ? (c.sessions || []).find(x => x.id === sid) : c, q = a => sp.querySelector(a);
+      if (!s) return true;
+      s.note = q("[data-tc-s-note]").value.trim();
+      if (sid) {
+        const yr = +String(q("[data-tc-s-date]").value).slice(0, 4);
+        s.date = yr >= 1900 && yr <= 2100 ? q("[data-tc-s-date]").value : "";
+        s.label = q("[data-tc-s-label]").value.trim(); s.formula = q("[data-tc-s-formula]").value.trim();
+        s.recipe = q("[data-tc-s-rx]").value.split(/\n+/).map(t => t.trim()).filter(Boolean).map(t => { const m = /^(.*?)[\s,:]+(\d+(?:\.\d+)?\s*g)$/i.exec(t); return m ? [m[1].trim(), m[2].replace(/\s+/g, "")] : [t, ""]; });
+      }
+      q("[data-tc-s-obs]").value.split(/\n+/).map(t => t.trim()).filter(Boolean).forEach(t => { if (!s.symptoms.some(x => String(x.text).toLowerCase() === t.toLowerCase())) s.symptoms.push({ text: t, sign: null, side: null, w: null, skip: false, newsign: false }); });
+      if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+      renderPhGdBody(); return true;
+    }
+    if ((el = T.closest("[data-tc-sess-del]"))) {
+      const sid = el.dataset.tcSessDel, c = phTourCases().find(x => (x.sessions || []).some(s => s.id === sid));
+      if (c) phAsk({ message: "Remove this session? Its note and observations go with it.", yes: "Remove", danger: true }).then(ok => {
+        if (!ok) return;
+        c.sessions = c.sessions.filter(s => s.id !== sid); if (!c.sessions.length) delete c.sessions;
+        if (phGdTcSess === sid) phGdTcSess = "";
+        if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+        renderPhGdBody();
+      });
+      return true;
+    }
     if ((el = T.closest("[data-tc-more]"))) { phGdTcAdd = el.dataset.tcMore; phGdTcMore = true; renderPhGdBody(); return true; }
     if ((el = T.closest("[data-tc-dx]"))) {
-      const [cid, i] = el.dataset.tcDx.split("|"), c = phTourCases().find(x => x.id === cid), s = c && c.symptoms[+i];
+      const [cid, i] = el.dataset.tcDx.split("|"), c = phTcFind(cid), s = c && c.symptoms[+i];
       if (s) {
         const t = String(s.text).trim();
         s.dx = true;
@@ -93264,7 +93371,7 @@ pale red tongue|Tongue: pale-red|r`;
       phGdTcAdd = null; phGdTcMore = false; renderPhGdBody(); return true;
     }
     if ((el = T.closest("[data-tc-undx]"))) {
-      const [cid, i] = el.dataset.tcUndx.split("|"), c = phTourCases().find(x => x.id === cid), s = c && c.symptoms[+i];
+      const [cid, i] = el.dataset.tcUndx.split("|"), c = phTcFind(cid), s = c && c.symptoms[+i];
       if (s) {
         s.dx = false;
         if (s.dxAdded) { const at = c.cond.findIndex(d => String(d).trim().toLowerCase() === String(s.text).trim().toLowerCase()); if (at >= 0) c.cond.splice(at, 1); delete s.dxAdded; }
@@ -93273,7 +93380,7 @@ pale red tongue|Tongue: pale-red|r`;
       renderPhGdBody(); return true;
     }
     if ((el = T.closest("[data-tc-unlink]"))) {
-      const [cid, i, j] = el.dataset.tcUnlink.split("|"), c = phTourCases().find(x => x.id === cid), s = c && c.symptoms[+i];
+      const [cid, i, j] = el.dataset.tcUnlink.split("|"), c = phTcFind(cid), s = c && c.symptoms[+i];
       if (s) {
         if (+j === 0) {
           const nx = (s.more || []).shift();
@@ -93285,7 +93392,7 @@ pale red tongue|Tongue: pale-red|r`;
       renderPhGdBody(); return true;
     }
     if ((el = T.closest("[data-tc-sign-save]"))) {
-      const [cid, i] = el.dataset.tcSignSave.split("|"), c = phTourCases().find(x => x.id === cid), card = T.closest(".gf-card");
+      const [cid, i] = el.dataset.tcSignSave.split("|"), c = phTcFind(cid), card = T.closest(".gf-card");
       const input = card.querySelector("[data-tc-sign-input]"), raw = (input.value || "").trim();
       if (!raw) { input.focus(); return true; }
       const sideEl = card.querySelector(`input[name="tcside${i}"]:checked`), side = sideEl ? sideEl.value : "r";
@@ -93299,12 +93406,12 @@ pale red tongue|Tongue: pale-red|r`;
       phGdTcAdd = null; phGdTcMore = false; renderPhGdBody(); return true;
     }
     if ((el = T.closest("[data-tc-w]"))) {
-      const [cid, i, j, n] = el.dataset.tcW.split("|"), c = phTourCases().find(x => x.id === cid), l = c && c.symptoms[+i] && phTcLinks(c.symptoms[+i])[+j];
+      const [cid, i, j, n] = el.dataset.tcW.split("|"), c = phTcFind(cid), l = c && c.symptoms[+i] && phTcLinks(c.symptoms[+i])[+j];
       if (l) { l.w = +n; if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); }
       renderPhGdBody(); return true;
     }
     if ((el = T.closest("[data-tc-apply]"))) {
-      const cid = el.dataset.tcApply, c = phTourCases().find(x => x.id === cid);
+      const cid = el.dataset.tcApply, c = phTcFind(cid);
       if (!c || !c.fam) return true;
       let n = 0;
       c.symptoms.forEach((s, i) => phTcLinks(s).forEach((l, j) => {
@@ -93821,11 +93928,11 @@ pale red tongue|Tongue: pale-red|r`;
     return out;
   }
   // the rows' own list, and the rows themselves; `an` = (attr) the animation row's toggle, `cols[i].style` the column's colour
-  function phCmpCaseRowsHtml(parts, cols, anim, animAttr) {
+  function phCmpCaseRowsHtml(parts, cols, anim, animAttr, chg) {
     const rows = [["an"], ["Ren", "vis"], ["Bing · diagnosis", "dx"]].concat(PH_CMP_CASE_GRP.map((g, i) => [g[0], "g" + i]), [["Signs · Ren, the rest", "sr"], ["Signs · Bing, the rest", "sb"], ["Prescription · Inventory", "inv", "rx"], ["Prescription · Book / lecture", "bk", "rx"]]);
     return rows.map(([lab, k, cls]) => lab === "an"
       ? `<tr class="an${anim ? "" : " off"}"><th class="rh" scope="row"><button type="button" class="an-tg" ${animAttr}="1" aria-expanded="${anim}" title="${anim ? "Hide" : "Show"} the animations">How it works</button></th>${parts.map((p, i) => `<td style="${cols[i].style}">${p.an}</td>`).join("")}</tr>`
-      : `<tr${cls ? ` class="${cls}"` : ""}><th class="rh" scope="row">${lab}</th>${parts.map((p, i) => `<td style="${cols[i].style}">${p[k]}</td>`).join("")}</tr>`).join("");
+      : `<tr${cls ? ` class="${cls}"` : ""}><th class="rh" scope="row">${lab}</th>${parts.map((p, i) => `<td style="${cols[i].style}"${chg && chg[i] && chg[i].has(k) ? " class=\"chg\"" : ""}>${p[k]}</td>`).join("")}</tr>`).join("");
   }
   // an inventory cell (her own recipe, in grams, with the total) and a book cell (the classical recipe in grams: 1 liang = 3 g; a sheng, a piece, a slice is "— g")
   const phCmpInvHtml = c => {
@@ -93939,7 +94046,7 @@ pale red tongue|Tongue: pale-red|r`;
   function renderPhGuidePage() {
     const el = document.getElementById("phGuideWrap");
     if (!el) return;
-    const tabs = [["families", "Families"], ["sources", "Sources"], ["tourcases", "Tour Cases"], ["triangle", "Triangle"], ["compare", "Compare"], ["tongue", "Tongue map"], ["pulse", "Pulse"], ["abdomen", "Abdomen"], ["herbs", "Herbs"], ["bloods", "Blood tests"], ["iron", "Iron"], ["eggs", "Eggs"], ["eating", "Eating eggs"]];   // Abdomen = the belly signs + the record's chart (2026-11-03)   // Compare = formulas side by side (2026-11-02)   // Body types / Formulas / Formula notes folded into Families (2026-10-21); Herbs = how a herb is used (2026-11-02); Sources = her own citable library (2026-11-09)   // Tour Cases = her clinical-observation case studies, correlated to Fang Bing Ren and integrated into it (2026-11-09)
+    const tabs = [["families", "Families"], ["sources", "Sources"], ["tourcases", "Cases"], ["triangle", "Triangle"], ["compare", "Compare"], ["tongue", "Tongue map"], ["pulse", "Pulse"], ["abdomen", "Abdomen"], ["herbs", "Herbs"], ["bloods", "Blood tests"], ["iron", "Iron"], ["eggs", "Eggs"], ["eating", "Eating eggs"]];   // Abdomen = the belly signs + the record's chart (2026-11-03)   // Compare = formulas side by side (2026-11-02)   // Body types / Formulas / Formula notes folded into Families (2026-10-21); Herbs = how a herb is used (2026-11-02); Sources = her own citable library (2026-11-09)   // Tour Cases = her clinical-observation case studies, correlated to Fang Bing Ren and integrated into it (2026-11-09)
     // her 2026-11-08 ask ("merge these lines into one"): the tab picker, search box and Learned progress pill used to sit in their own row
     // below the dark title bar -- they now ride inside it, as phShellHead's actionHtml (the same slot Dashboard's own quick actions use).
     el.innerHTML = `
