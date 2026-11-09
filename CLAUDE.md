@@ -1461,7 +1461,13 @@ not repeated here.
   Tang (6), Gui Zhi Fu Ling Wan (7), Wen Qing Yin (9), Shi San Wei Xue Bi Tang (10); each case points at its own (`PH_TC_NEWFAM`, once, never
   over a family she picked). Her pick "Fair share": a `src` table is scored against the median book ceiling on each side (`phFbrCeil`) until
   its own is bigger, so it leads its own case and every other case keeps its order. Case 5 (three formulas at once) stays unlinked (her pick).
-  Case 2 (filed Da Cheng Qi Tang, herbs of Da Chai Hu Tang) waits for her word.
+  Cases 2 and 11 are Da Chai Hu Tang (her own notes: "1. DCHT: ch20 hqin15 ...", "Dr HH still contined DCHT ... ZK was 20").
+- Two families (her 2026-11-10 "some formulas can be in 2 families e.g. chai po tang is XCHT and BXHPT - so its both chai hu and ban xia"): a
+  formula made of two family formulas shows in both (`also` in `PH_REN_FAM_GROUPS`); its colour, scoring and home stay with the first. Chai Po
+  Tang also under Ban Xia; Chai Ling Tang and Shi San Wei Xue Bi Tang also under Gui Zhi.
+- A case's formula is its base (her 2026-11-10 "some formulas from case studies have the base formula e.g. dcht and additions so its dcht
+  modified"): `formula` / `fms` name the base formula(s) only; herbs added or a dose changed are `mod`, shown as "Modified" on the Book /
+  lecture row and ", modified" in the By Formula names, never a formula in the filter list. `PH_TC_FIX` moved the Day 1 names once.
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast
