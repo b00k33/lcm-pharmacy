@@ -12860,3 +12860,27 @@ carries the count; edit mode still renders its dots/minus/remove controls. No co
 own real family data, or tapping a dot to confirm the full breakdown panel still opens (that handler wasn't
 touched, but wasn't driven through a real click in this sandbox).
 **SAVED, not live:** goes out with her next "push live".
+
+## Abdomen chart: bulging (whole) swells the silhouette (2026-11-09)
+
+Her "for abdomen chart, improve bulging type - bulge the whole abdomen."
+
+- **The front chart's "Whole abdomen" bulging mark used to draw one thin decorative arc across the middle** --
+  unconvincing next to the side view, where a whole-belly bulging mark already genuinely swells the real silhouette
+  (`phAbdSideState`'s "full" contour, built 2026-10-22). The front chart's zones, ribs, rectus edge and labels are
+  fixed geometry (not redrawn per mark, unlike the side view's), so morphing the real outline itself was out of
+  scope for this fix -- instead a new overlay, `phAbdBulgeWholeSvg`/`phAbdBulgeHw`, swells past the real outline
+  from the rib edge to the hip line, peaking at the navel (+11 past the body's own half-width there), using the
+  same cosine ease `phAbdHw` already uses so it meets the real line exactly at both ends -- no gap, no seam.
+- **Drawn in the outline's own line (`ph-abd2-skin`, teal), not the sign's usual green mark colour** -- it reads as
+  the belly pushing outward, not as a mark drawn on top of it. The per-zone (non-whole) bulging mark is unchanged,
+  still its own short green arc at that place.
+- `phAbdBulgeHw(y)` is read-only geometry, no patient state; reused only by the one glyph. Checked the 20..100
+  viewBox: the peak half-width (~39.8 at the navel) stays inside it with room either side.
+
+**Tested:** in the sandbox, calling `phAbdChartSvg({marks:{bulging:["whole"]}, ...})` directly (both normal and
+`{ro:true}`) and screenshotting it -- the silhouette visibly bulges out past the rib line and back in by the hip
+line, no stray marks over the ribs or sternum, no console errors. **Not tested:** her own real patient record, the
+exam page's own tap-to-mark flow for Seen (the function was called directly with a hand-built `marks` object, not
+through the UI), the SIDE view (unchanged -- its own "full" contour already did this).
+**SAVED, not live:** goes out with her next "push live".
