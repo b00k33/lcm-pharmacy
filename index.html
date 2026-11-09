@@ -18707,6 +18707,8 @@
   @keyframes phAbd2In { from { opacity: 0; } to { opacity: 1; } }
   @keyframes phAbd2Scan { from { transform: translateY(20px); opacity: 1; } 88% { opacity: 1; } to { transform: translateY(146px); opacity: 0; } }
   #pharmacyPage .ph-abd2-scan { display: none; }
+  @keyframes phAbd2Draw { from { stroke-dasharray: 0 1.001; } to { stroke-dasharray: 1 0; } }
+  #pharmacyPage .ph-abd3-left.scan0 .ph-abd2-wall[pathLength] { animation: phAbd2Draw 1.5s ease-in-out; }
   #pharmacyPage .ph-abd3-left.scan0 .ph-abd2-scan { display: block; animation: phAbd2Scan 1.5s ease-in-out both; }
   #pharmacyPage .ph-abd3-left.scan0 .ph-abd2-nowl > g { animation: phAbd2In .5s ease both; animation-delay: var(--sd, 0s); }
   #pharmacyPage .ph-abd2-nowl, #pharmacyPage .ph-abd3-prev { transition: opacity .35s ease; }
@@ -18715,7 +18717,7 @@
   #pharmacyPage .ph-abd3-left[data-view="last"] .ph-abd3-prev { opacity: 1; }
   @media (prefers-reduced-motion: reduce) {
     #pharmacyPage .ph-abd3-replay { display: none; }
-    #pharmacyPage .ph-abd2-rp circle, #pharmacyPage .ph-abd2-m-heat, #pharmacyPage .ph-abd2-m-frost, #pharmacyPage .ph-abd2-scan, #pharmacyPage .ph-abd3-left .ph-abd2-nowl > g { animation: none !important; }
+    #pharmacyPage .ph-abd2-rp circle, #pharmacyPage .ph-abd2-m-heat, #pharmacyPage .ph-abd2-m-frost, #pharmacyPage .ph-abd2-scan, #pharmacyPage .ph-abd2-wall, #pharmacyPage .ph-abd3-left .ph-abd2-nowl > g { animation: none !important; }
     #pharmacyPage .ph-abd2-nowl, #pharmacyPage .ph-abd3-prev, #pharmacyPage .ph-abd3 .ph-abd2-lbl { transition: none; }
   }
   #pharmacyPage .ph-abd2-g { stroke: var(--ph-good-deep); stroke-width: 1.1; fill: none; }
@@ -146416,6 +146418,19 @@ or changing anything in Cliniko.
       return x - 1.6 * Math.exp(-Math.pow((y - PH_ABD_UMB_Y) / 1.5, 2));   // the navel dimple
     };
   }
+  // heat / frost in the side view's warm / cold rows (her 2026-11-09 "make the side view animate too"): inside the belly, one row each, clipped to the cavity and the row
+  function phAbdSideTemp(m, RY, W0, uid) {
+    let out = "";
+    [0, 1, 2].forEach(r => phAbdTWashes(m, z => phAbdRowOf(z) === r).forEach(t => {
+      const y0 = RY[r] + 1, y1 = RY[r + 1] - 1, ym = (y0 + y1) / 2, x0 = phAbdAortaX(ym) + 4, x1 = W0(ym) - 3, id = `${uid}r${r}${t}`;
+      if (x1 - x0 < 8) return;
+      let g = "";
+      if (t === "warm") for (let i = 0; i < 4; i++) g += `<path d="M${phAbdN(x0 + (i + .5) * (x1 - x0) / 4)},${phAbdN(y1 - 2)} q1.4,-2.2 0,-4.4 t0,-4.4 t0,-4.4" class="ph-abd2-m-heat" style="animation-delay:${(i * .55).toFixed(2)}s" fill="none" stroke="#C0485F" stroke-width=".7" stroke-linecap="round"/>`;
+      else for (let j = 0; j < (t === "cold" ? 8 : 5); j++) g += `<circle cx="${phAbdN(x0 + (j * 37 % 100) / 100 * (x1 - x0))}" cy="${phAbdN(y0 + 2 + (j * 53 % 70) / 100 * (y1 - y0 - 4))}" r="${j % 3 ? .7 : 1}" class="ph-abd2-m-frost" style="animation-delay:${(j * .4).toFixed(1)}s" fill="#FFFFFF" stroke="${t === "cold" ? "#3B78B0" : "#7FAED3"}" stroke-width=".4"/>`;
+      out += `<clipPath id="${id}"><rect x="0" y="${phAbdN(y0)}" width="100" height="${phAbdN(y1 - y0)}"/></clipPath><g clip-path="url(#${id})">${g}</g>`;
+    }));
+    return out ? `<g clip-path="url(#${uid})" pointer-events="none" style="--sd:.5s">${out}</g>` : "";
+  }
   function phAbdSideSvg(abd, opts) {
     const a = phAbd2Read(abd), m = a.marks, uid = "phAbdS" + (++phAbdUid);
     const still = !!(opts && opts.still) || (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -146459,14 +146474,17 @@ or changing anything in Cliniko.
       return `<path d="${ptsOf(W0, y0, y1, .2)}" stroke="${col}" stroke-width="2.8" stroke-opacity=".95" fill="none" stroke-linecap="round">${anim(ptsOf(W0, y0, y1, .2), ptsOf(W1, y0, y1, .2))}</path>
         <circle cx="${phAbdN(tx + 1.4)}" cy="${phAbdN(ym)}" r="1.4" fill="${col}"/><text x="${phAbdN(tx + 3.6)}" y="${phAbdN(ym + 1.5)}" font-size="4.2" font-weight="700" class="ph-abd2-tnum">${a.tempC[k].toFixed(1)}°</text>`;
     }).join("");
-    return `<svg viewBox="0 0 100 150" class="ph-ltr-fndsvg ph-abd2-svg ph-abd2-side" aria-label="Abdomen, side view from the patient's right">
-      <defs><clipPath id="${uid}"><path d="${cavA}">${anim(cavA, cavB)}</path></clipPath></defs>
+    const tm = still ? "" : phAbdSideTemp(m, RY, W0, uid);
+    return `<svg viewBox="0 0 100 150" class="ph-ltr-fndsvg ph-abd2-svg ph-abd2-side" data-ten="${a.tension || ""}" aria-label="Abdomen, side view from the patient's right">
+      <defs><clipPath id="${uid}"><path d="${cavA}">${anim(cavA, cavB)}</path></clipPath><linearGradient id="${uid}sg" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="var(--ph-herb)" stop-opacity="0"/><stop offset="1" stop-color="var(--ph-herb)" stop-opacity=".28"/></linearGradient></defs>
       <path d="${phAbdPts(YS.map(y => [phAbdBackX(y), y]))}" class="ph-abd2-skin" stroke-opacity=".65"/>
       <g clip-path="url(#${uid})">${rows}${rowLines}${bands}</g>
       ${spine}${aorta}${bones}${prevSide}
-      <path d="${wallA}" class="ph-abd2-skin" stroke-opacity="${thin ? .55 : .8}" stroke-width="${tw}"${thin ? ' stroke-dasharray="2.4 1.2"' : ""}>${anim(wallA, wallB)}</path>
+      <path d="${wallA}" class="ph-abd2-skin ph-abd2-wall"${thin ? "" : ' pathLength="1"'} stroke-opacity="${thin ? .55 : .8}" stroke-width="${tw}"${thin ? ' stroke-dasharray="2.4 1.2"' : ""}>${anim(wallA, wallB)}</path>
       <ellipse cx="${phAbdN(W0(PH_ABD_UMB_Y) + .1)}" cy="${PH_ABD_UMB_Y}" rx=".9" ry="1.5" class="ph-abd2-pt"/>
-      ${tStrip}${labels}${soundsOf(m, "")}
+      <g class="ph-abd2-nowl"><g style="--sd:.7s">${tStrip}</g><g style="--sd:.9s">${soundsOf(m, "")}</g>${tm}</g>
+      ${labels}
+      <g class="ph-abd2-scan" pointer-events="none"><rect x="0" y="-10" width="100" height="10" fill="url(#${uid}sg)"/><line x1="0" x2="100" y1="0" y2="0" stroke="var(--ph-herb)" stroke-width=".7" stroke-opacity=".7"/></g>
     </svg>`;
   }
   // ==== Findings trend (her ask 2026-10-19, "a way to visually track Tongue
