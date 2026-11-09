@@ -15719,6 +15719,13 @@
   #pharmacyPage .ph-cmp-cs .gf-dots i { display: block; width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--dc); margin: 0 .5px; box-sizing: border-box; }
   #pharmacyPage .ph-cmp-cs .gf-dots i.f { background: var(--dc); }
   #pharmacyPage .ph-cmp-cs .cs.neg .gf-dots { --dc: var(--ph-zero); }
+  #pharmacyPage .ph-cmp-cs .rb { display: inline-block; width: 14px; height: 14px; line-height: 14px; margin-right: 5px; border-radius: 3px; text-align: center; font: 700 9px var(--font-body); font-style: normal; vertical-align: 1px; color: var(--ph-soft); box-shadow: inset 0 0 0 1px var(--ph-line); }
+  #pharmacyPage .ph-cmp-cs .rb.b { background: color-mix(in srgb, var(--deep, var(--ph-herb)) 24%, var(--ph-white)); box-shadow: none; }
+  #pharmacyPage .ph-cmp-cs tr.rx td { background: var(--ph-paper); }
+  #pharmacyPage .ph-cmp-cs .cs.tot { border-top: 1px solid var(--ph-line); margin-top: 3px; font-weight: 600; }
+  #pharmacyPage .ph-cmp-cs .ds small { font-size: var(--fs-11); color: var(--ph-faint); margin-right: 4px; }
+  #pharmacyPage .ph-cmp-cs .bx { max-height: 190px; }
+  #pharmacyPage .ph-cmp-cs button.ph-pp-thumb { width: 100%; margin-bottom: 6px; }
   #pharmacyPage .ph-cmp-tbl { width: max(100%, calc(200px + 130px * var(--n, 4))); border-collapse: separate; border-spacing: 0; table-layout: fixed; font-size: var(--fs-12-5); }   /* seven columns grow past the card and scroll inside it, the first column held */
   #pharmacyPage .ph-cmp-tbl col.s { width: 200px; }
   #pharmacyPage .ph-cmp-tbl th { text-align: left; font-weight: 600; vertical-align: bottom; padding: 10px 8px 8px; border: 0; border-bottom: 2px solid var(--ph-line); background: var(--ph-white); color: var(--ph-ink); }
@@ -93140,22 +93147,36 @@ or changing anything in Cliniko.
   // her 2026-11-09 "table comparison is just case 1 signs symptoms row, pathology row and prescription type of table format" (her picks: a Cases view on the
   // Compare tab, every sign, Pathology = the formula's own Diagnosis rows, as the mock showed): one column a case (each picked formula), three rows: Signs & symptoms
   // (Ren then Bing, each A-Z, the dots as on the Tables view), Pathology (its Diagnosis signs, A-Z), Prescription (the classical recipe, `phCmpCol(...).classic`)
+  // her 2026-11-09 synth22 list for the Cases view (mock first, her picks): rows Ren (the formula's picture + its 3 strongest Ren signs), Bing · diagnosis (the old Pathology row),
+  // one row per sign group (Tongue, Pulse, Abdominal, Sleep, Mood, Energy, Family history, Medical findings), Signs · Ren and Signs · Bing for the rest, then two Prescription rows,
+  // both in grams: Inventory (her own recipe, `c.rec`) and Book / lecture (the classical recipe, `c.classic`, 1 liang = 3 g, 1 jin = 16 liang; a sheng, a piece or a slice is not weighed, so
+  // its dose shows with "— g"). A sign line carries an R / B tag for its side. The Medical findings row holds the Blood pressure signs; X-ray, scan and ultrasound have no formula data yet
   function phCmpCasesHtml(cols) {
-    const q = phGdSearch.trim().toLowerCase();
-    const dash = `<span class="no">—</span>`;
+    const q = phGdSearch.trim().toLowerCase(), dash = `<span class="no">—</span>`, LIANG = 3;
+    const GRP = [["Tongue", ["Tongue", "Tongue coat"]], ["Pulse", ["Pulse"]], ["Abdominal", ["Abdominal"]], ["Sleep", ["Sleep"]], ["Mood", ["Mind & mood"]], ["Energy", ["Energy"]], ["Family history", ["Family history"]], ["Medical findings", ["Blood pressure"]]];
+    const used = new Set(["Diagnosis"].concat(GRP.flatMap(g => g[1])));
     const parts = cols.map(c => {
-      const rows = ["r", "b"].flatMap(sd => phGdfRows(c.id, sd).filter(r => r.w).map(r => { const p = phGdfSplit(r.lab); return { sd, subj: p[0], d: p[1], lab: r.lab, w: r.w }; })).filter(r => !q || r.lab.toLowerCase().indexOf(q) >= 0);
-      const dx = rows.filter(r => r.subj === "Diagnosis" && r.w > 0).sort((a, b) => phAz(a.d, b.d)).filter((r, i, a) => !i || a[i - 1].d.toLowerCase() !== r.d.toLowerCase());   // Ren and Bing can both list one Diagnosis: it shows once
-      const grp = sd => { const rs = rows.filter(r => r.sd === sd && r.subj !== "Diagnosis").sort((a, b) => phAz(a.lab, b.lab)); return rs.length ? `<div class="gl">${sd === "r" ? "Ren" : "Bing"}<em>${rs.length}</em></div>` + rs.map(r => `<div class="cs${r.w < 0 ? " neg" : ""}"><span class="nm">${r.subj ? `<b>${esc(r.subj)}:</b> ` : ""}${esc(phSymCase(r.d))}</span>${phCmpDots(r.w)}</div>`).join("") : ""; };
-      const sx = grp("r") + grp("b");
-      return {
-        sx: sx ? `<div class="bx">${sx}</div>` : dash,
-        dx: dx.length ? dx.map(r => `<div class="cs"><span class="nm">${esc(phSymCase(r.d))}</span></div>`).join("") : dash,
-        rx: c.classic ? `<div class="gl">${esc(c.classic.n)}</div>` + c.classic.hs.map(h => `<div class="cs"><span class="nm">${esc(h.name)}</span><span class="ds">${esc(h.dose)}</span></div>`).join("") : dash
-      };
+      const all = ["r", "b"].flatMap(sd => phGdfRows(c.id, sd).filter(r => r.w).map(r => { const p = phGdfSplit(r.lab); return { sd, subj: p[0], d: p[1], lab: r.lab, w: r.w }; })).filter(r => !q || r.lab.toLowerCase().indexOf(q) >= 0);
+      const line = r => `<div class="cs${r.w < 0 ? " neg" : ""}"><span class="nm"><i class="rb ${r.sd}">${r.sd === "r" ? "R" : "B"}</i>${r.subj ? `<b>${esc(r.subj)}:</b> ` : ""}${esc(phSymCase(r.d))}</span>${phCmpDots(r.w)}</div>`;
+      const box = rs => rs.length ? `<div class="bx">${rs.slice().sort((a, b) => (a.sd < b.sd ? 1 : a.sd > b.sd ? -1 : 0) || phAz(a.lab, b.lab)).map(line).join("")}</div>` : dash;
+      const out = {};
+      const ren = all.filter(r => r.sd === "r"), top = ren.filter(r => r.w > 0).sort((a, b) => b.w - a.w || phAz(a.lab, b.lab)).slice(0, 3);
+      const fid = phFpIdFor(c.name) || phFpIdFor(c.rname);
+      out.vis = (fid ? phFpThumbHtml(fid, "cmp:" + c.id) : "") + `<div class="gl">Ren<em>${ren.length}</em></div>` + (top.length ? top.map(r => `<div class="cs"><span class="nm">${r.subj ? `<b>${esc(r.subj)}:</b> ` : ""}${esc(phSymCase(r.d))}</span>${phCmpDots(r.w)}</div>`).join("") : dash);
+      const dx = all.filter(r => r.subj === "Diagnosis" && r.w > 0).sort((a, b) => phAz(a.d, b.d)).filter((r, i, a) => !i || a[i - 1].d.toLowerCase() !== r.d.toLowerCase());
+      out.dx = dx.length ? `<div class="bx">${dx.map(r => `<div class="cs"><span class="nm">${esc(phSymCase(r.d))}</span></div>`).join("")}</div>` : dash;
+      GRP.forEach((g, i) => { out["g" + i] = box(all.filter(r => g[1].indexOf(r.subj) >= 0)); });
+      out.sr = box(all.filter(r => r.sd === "r" && !used.has(r.subj)));
+      out.sb = box(all.filter(r => r.sd === "b" && !used.has(r.subj)));
+      const rec = c.rec, ings = rec && Array.isArray(rec.ingredients) ? rec.ingredients.slice().sort((a, b) => phAz(a.herb, b.herb)) : [];
+      out.inv = ings.length ? `<div class="gl">${esc(rec.name)}</div>` + ings.map(i => `<div class="cs"><span class="nm">${esc(phHuTitle(phHuKeys(i.herb)[0] || "") || i.herb)}</span><span class="ds">${phRound2(Number(i.grams) || 0)} g</span></div>`).join("") + `<div class="cs tot"><span class="nm">Total</span><span class="ds">${phRound2(ings.reduce((s, i) => s + (Number(i.grams) || 0), 0))} g</span></div>` : `<span class="no">Not in your formulas</span>`;
+      const cl = c.classic, gram = d => { const z = phCmpZhu(d); return z == null ? null : Math.round(z / 24 * LIANG * 10) / 10; };
+      out.bk = cl ? `<div class="gl">${esc(cl.n)} · ${esc(cl.book)}</div>` + cl.hs.map(h => { const g = gram(h.dose); return `<div class="cs"><span class="nm">${esc(h.name)}</span><span class="ds${g == null ? " no" : ""}">${g == null ? `<small>${esc(h.dose)}</small> — g` : g + " g"}</span></div>`; }).join("") : dash;
+      return out;
     });
-    const row = (lab, k) => `<tr><th class="rh" scope="row">${lab}</th>${parts.map((p, i) => `<td style="${cols[i].style}">${p[k]}</td>`).join("")}</tr>`;
-    return `<div class="ph-cmp-wrap"><table class="ph-cmp-cs" style="--n:${cols.length}"><colgroup><col class="s">${cols.map(() => "<col>").join("")}</colgroup><thead><tr><th class="rh"></th>${cols.map((c, i) => `<th style="${c.style}"><span class="cn">Case ${i + 1}</span>${esc(c.name)}</th>`).join("")}</tr></thead><tbody>${row("Signs &amp; symptoms", "sx")}${row("Pathology", "dx")}${row("Prescription", "rx")}</tbody></table></div>`;
+    const rows = [["Ren", "vis", "vis"], ["Bing · diagnosis", "dx"]].concat(GRP.map((g, i) => [g[0], "g" + i]), [["Signs · Ren, the rest", "sr"], ["Signs · Bing, the rest", "sb"], ["Prescription · Inventory", "inv", "rx"], ["Prescription · Book / lecture", "bk", "rx"]]);
+    const row = ([lab, k, cls]) => `<tr${cls ? ` class="${cls}"` : ""}><th class="rh" scope="row">${lab}</th>${parts.map((p, i) => `<td style="${cols[i].style}">${p[k]}</td>`).join("")}</tr>`;
+    return `<div class="ph-cmp-wrap"><table class="ph-cmp-cs" style="--n:${cols.length}"><colgroup><col class="s">${cols.map(() => "<col>").join("")}</colgroup><thead><tr><th class="rh"></th>${cols.map((c, i) => `<th style="${c.style}"><span class="cn">Case ${i + 1}</span>${esc(c.name)}</th>`).join("")}</tr></thead><tbody>${rows.map(row).join("")}</tbody></table></div>`;
   }
   function phCmpCopyText() {
     const ids = phCmpIds(), cols = ids.map(phCmpCol), names = cols.map(c => c.name), lines = [];
