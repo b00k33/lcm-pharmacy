@@ -1441,6 +1441,9 @@ not repeated here.
   touches only what differs. While one build runs, `phTriMemo` answers a repeated question once (`phTriEffective`, `phPatClues`,
   `phFbrRenLead`, `phTriAll`), so nothing called from `phTriHtml` or the cards beside it may change her data; `phFbrSignFam` is kept
   until `phFbrEditsBust`.
+- On a phone the Fang Bing Ren board keeps Symptom · Bing · Ren (her 2026-11-09 pick A of three mocks): the table is fixed to the card,
+  Bing and Ren 72 px, a cell is a 30 px box whose whole face ticks and whose ✕ is its own 28 px end, a link's word on a second line
+  inside it, no score in the cell; the page's inner paddings are off (PHONE REDESIGN block).
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast

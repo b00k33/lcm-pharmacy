@@ -13369,3 +13369,29 @@ Her pick in a popup, after the hover fix above: "Yes, do it here" (a tick redrew
 - **Fix** (`index.html`, `phCmpHtml`): the empty-state return now carries the same bar with the switch. Her pick of Cases stays while she picks formulas or clears them.
 - **Tested** (sandbox): empty page shows Cases | Tables; Cases stays on after picking two formulas and after Clear; tap audit on the bar 4 of 4 ok.
 - **SAVED, not live:** goes out with her next "push live".
+
+## 2026-11-09 · Fang Bing Ren board on a phone: three columns, fitted
+Found while testing the faster tick: at 360 px the board's table was cut off (no Ren column) and a tick's button was 8 px tall; her
+popup "Yes, fix it here", then pick **A · Three columns** of three mocks drawn in chat (A three columns fitted, B the name above two
+boxes, C one side at a time with a Bing | Ren switch), then "Push live" on the built picture (shots/fbr-phone-board-built-2026-11-09.png,
+local).
+- **Why it broke:** five nested side paddings (the stage 16, the panel 12, the outer card 8, the page column 6, the inner card 8, the
+  area 6) left the board 227 px; the outer card clips (`overflow: hidden`) and the auto-width table needed 316 px. The page column's
+  6 px was the tick button's own rule leaking: `.ph-fbr-main` names both the page's main column and a row's tick button. On a phone
+  the computer's 32 px box rules (`min-width: 641px`) never applied, so a cell kept the old compact row: an empty tick button 8 px
+  tall and an 18 px ✕.
+- **Built (PHONE REDESIGN block only):** the page column's and the inner card's paddings off, the inner card's line and white off
+  (the outer card is the card); the area body 0 4px 6px; the table `table-layout: fixed`, Bing and Ren 72 px each. A cell is a grid
+  box: 30 px tall, white with its line (the ticked colour, the ruled-out grey, the clash yellow as before), the dot and the ✓ on its
+  first line, the tick button over the whole first line, the ✕ its own 28 px end; a link's word (ruled out, auto, clash) on a second
+  line inside the box; no score in the cell. The Tongue & pulse block keeps its two lanes and its look: rows 30 px, the ✕ a 28 px
+  end, no score on the row (with the score its ticked name was squeezed to 10 px; HEAD's was 43, now 46).
+- **Also (every width):** a ticked sign that clashes sits on the pale clash yellow; a dark family's white words, score and ✕ vanished
+  there, now ink.
+- **Tested** (sandbox, a build copy on cfca348d's index, nothing saved, 360 and 1220): at 360 the table 261 px inside a 271 px card
+  (the sandbox has a 15 px scrollbar), each cell 65 × 30, the ✕ 28 × 30; tick, rule out and a clash all draw inside the box; tap
+  audit on the board: no button under 28 px (was 704 ✕ at 18 px and the tick buttons at 8 px); left: the audit reads a 65 × 30 box as
+  an "icon" (the computer's 82 × 32 box reads the same), and the Tongue & pulse rows' own 10 px corners and 12 px words (as before).
+  At 1220 nothing changed: tap audit 1536 / 873 as HEAD, the table auto width, the inner card 14 px with its line; the clash ✕ is ink.
+  No sideways scroll; console clean.
+- **Not tested:** her real records; the Key2 (360 × 469: the same width as tested).
