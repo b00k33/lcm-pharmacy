@@ -13457,3 +13457,11 @@ correlation); this is different in kind, so a different tab and name, "Tour Case
   `PH_FORMULAS.huangqi.bing.pulse_weak` through `PHARMACY.fbrEdits` (confirmed live, not the
   pristine object) and attached the Nanjing-tour source citation. Boots clean on a fresh reload.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide picture table: the Bing cell fills by its Bing number (2026-11-09)
+- **Her words:** "colour the cell of the bing column with the colour e.g. 4/5 = 80% cell coloured" (screenshot: the BING column of the picture table).
+- **Read as:** the same fill the symptom cell has by its Ren number, now on the Bing value cell by its Bing number, in the same wash (the formula's `--deep` at 30% on white). No mock: it is her named rule on a column; the Ren cell is left plain, as she asked for Bing only.
+- **Code** (`index.html`): `phGdfMergeCellHtml` adds `style="--rw:<min(w,5)/5>"` to the Bing `<td class="gf-mc-td">` when `r.w > 0`; one CSS rule beside the symptom cell's paints the gradient as a `background-image` (a second selector beats the `.both td` shorthand).
+- **Tested** (sandbox, the real table on Gui Zhi, Huang Qi, Shi Gao): 65 Bing cells filled at 60 / 80 / 100%, no Ren cell filled; both-rows show it over their tint; dash and Bing-less rows plain; the number and the dot stay readable on the fill.
+- **Not tested:** edit mode (the dots and the − / × sit on the same cell), the phone width, a real against Bing cell (by reading: `w > 0` only).
+- **SAVED, not live:** goes out with her next "push live".
