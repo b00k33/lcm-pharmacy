@@ -13354,3 +13354,12 @@ Her pick in a popup, after the hover fix above: "Yes, do it here" (a tick redrew
 - **Found, already there before today (her pick: fix it next, mock first):** on the phone layout the board's Ren column is cut off at
   the right edge and its tick buttons measure 8 px tall.
 - **Published on her popup "Push live"** with this commit.
+
+## Compare: a Cases view (2026-11-09)
+- **Her words:** "table comparison is just case 1 signs symptoms row pathology row and prescription type of table format - also show mock before building".
+- **Mock** (`mocks/compare-cases-mock-2026-11-09.jpg`, drawn from the real data for Xiao Chai Hu Tang, Da Chai Hu Tang and Chai Hu Jia Long Gu Mu Li Tang). **Her picks:** the shape as shown (a column a case, three rows); a Cases | Tables switch on the Compare tab (nothing removed); every sign in the Signs & symptoms cell; Pathology from the formula's own Diagnosis rows.
+- **Code** (`index.html`): `phCmp.view`; `viewSeg` (Cases | Tables, A–Z, the joined 32px bar `.gf-seg`, first in the bar row; in Cases it is the only thing in the bar); `phCmpCasesHtml(cols)` after `phCmpHtml`; click `data-cmp-view`; CSS `.ph-cmp-cs` after `.ph-cmp-wrap` (sticky first column, head in the formula's `--c` / `--deep`, dots as `.ph-cmp-tbl`'s). Signs come from `phGdfRows(id, side)` split by `phGdfSplit`, drawn through `phSymCase`; the Diagnosis rows are the ones whose subject is "Diagnosis" (Ren and Bing can both list one: shown once); the recipe is `phCmpCol(id).classic`. No new store, no write door.
+- **Tested** (sandbox, the real app): a three-case comparison (Xiao Chai Hu, Da Chai Hu, Chai Hu Jia Long Gu Mu Li): the heads, the three row heads, 36-76 sign lines per cell, Pathology 9 / 10 / 5 with no repeats, the recipes with doses; the search box narrows the signs; Tables and Cases switch back and forth with the Tables view intact; tap audit on the Compare bar 8 of 8 ok (1220) and 7 of 7 (360); at 360 the table scrolls inside its card, the row heads stay, no sideways scroll on the page.
+- **Not tested:** a formula with no recipe or no Diagnosis rows (drawn as a dash by reading); the Copy button (it still copies the two Tables); Edit (it is a Tables control and is hidden in Cases); the Key2.
+- **Pages checked:** the Compare tab only (Families' Compare chip and the study card's Compare with... open it on Tables, as before). The "Cases" name is also wanted by the Nanjing case-study work another session mocked: told that session; no data is shared.
+- **SAVED, not live:** goes out with her next "push live".
