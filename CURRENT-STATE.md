@@ -1961,7 +1961,14 @@ whole-abdomen value. Full / distended sits only on the whole abdomen, above the 
 umbilical row or flanks (`phAbdOkAt`; her 2026-11-09 "almost never the umbilicus"). It draws as one soft rose glow, breathing, fading to
 nothing at its edge and round every place's word (`phAbdDistLayer`, her pick A; no dashes or rings): above = costal margin to the
 umbilicus, below = umbilicus to the pubis, whole = one glow over the trunk with the outline pushed out at the sides; the side view's belly
-line swells there to match. An old mark saved at the umbilical row still draws as a band. Seen has "flat" (whole belly, no place); Temp = cold · cool · warm in BLUE / PALE BLUE / RED (temperature
+line swells there to match. An old mark saved at the umbilical row still draws as a band. The chart's basic drawing (outline, ribs, rectus,
+bones, dotted lines) sits back, Ghost-faded (her 2026-11-09 pick; `--abd-f` .28 inside, `--abd-fs` .55 outline; the `.ro` minis keep full
+strength; the words and every finding stay full). Motion on the interactive chart only (`.ph-abd3`; her 2026-11-09 picks, mock
+abdomen-fade-motion-mock-2026-11-09.html; all off under reduced motion where it moves): hover a place and it lights, its band on the side
+view lights and the other words dim (hover a band: its places; `phAbdHl`); a tap sends rings from the finger, slower and wider the softer the
+wall (the chart's Tension, `phAbdRipple`, carried through the repaint by `phAbdTap`); a warm place sends up heat, a cold or cool one drifts
+frost (`phAbdTempMotion`); a Today / Both / Last bar under the front chart (`presAbdView`, `data-view`) fades one visit's marks out; the marks
+sweep in once per open of a patient (`phAbdScanKey`, `scan0`, each mark's `--sd`), with a Replay circle beside the bar. Seen has "flat" (whole belly, no place); Temp = cold · cool · warm in BLUE / PALE BLUE / RED (temperature
 only; water and gas ink stay grey), one temperature per place; Feel = tender · tight hypochondrium (`tighthypo`, R / L hypo only,
 ticks the Chest & ribs pair) · pulsation · tight rectus · thin wall. No Xia Xin chip: tender at epi IS Xia Xin tender
 (`phAbd2Read` reads an old `marks.xiaxin` as tender@epi). The page works the Pulse page's way (her pick) [Abdomen page: the Pulse
