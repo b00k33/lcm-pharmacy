@@ -1428,6 +1428,8 @@ not repeated here.
   against-pair "low energy, sunken lax pulse" stay as they are, unnamed.
 - A second table for a Fang Bing Ren family that already exists merges into it (her 2026-11-09 "Keep them", Huang Qi): where both
   weigh a sign the higher number stays, and her earlier lines the new table does not name stay.
+- No hover motion on the Fang Bing Ren board (her 2026-11-09 "this page is too laggy. remove the animation hover"): pointing at
+  a symptom opens no picture, an area's icon does not wiggle, a faded row does not fade in. Its rows carry no `data-ks-pop`.
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast

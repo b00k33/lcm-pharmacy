@@ -13289,3 +13289,26 @@ Huang / Day 5 Lecture."
 - **Not tested:** the "Not on a plan" row with a real loose prescription; the Key2; a real phone (the pane's emulated phone drew the switch as the older pill, not the 32px bar).
 - **Pages checked:** both Fang Bing Ren pages (the only two callers of `phFbrSwitchHtml`); the plan list / editor / new-plan form unchanged.
 - **SAVED, not live:** goes out with her next "push live".
+
+## 2026-11-09 · Fang Bing Ren board: no hover motion
+Her words, on a picture of the board's area tables: "this page is too laggy. remove the animation hover".
+- **What moved on hover (measured in the sandbox, a made-up patient, 1220):** (1) pointing at a symptom's Bing or Ren cell opened the
+  big key-sign picture beside it (`data-ks-pop` → `phKsPopShow`): a 218-part drawn picture built and laid out each time, median 14 ms,
+  up to 48 ms on this computer, then moved every frame; (2) an area heading's icon tipped and grew (`.ph-fbr-grp-hd:hover
+  .ph-fbr-grp-ic`, .2 s); (3) a faded row (a complaint lifting its signs) faded back in over .15 s.
+- **Removed, all three:** the board's rows (`phFbrRowHtml`, both templates) carry no `data-ks-pop`, so no picture opens on hover or
+  on focus (a phone's tap focused the button and could open it too); the icon rule is gone; the two fades are gone (their
+  reduced-motion lines with them). The same rows lose it wherever `phFbrRowHtml` draws them (checked: this page's Tongue & pulse block).
+- **A leak fixed (MY call):** a hidden picture box kept its picture, so the frame loop kept running for the rest of the session after
+  the first hover. `phKsPopHide` now empties the box; the Compare table's hover picture still opens (tested), and the loop stops
+  once it hides.
+- **Not changed:** a tick still repaints the whole board (`phTriRefresh` → `phTriHtml`, 507 KB of HTML: 100 ms to build, about 0.2 to
+  0.35 s per tick with layout on this computer). Offered to her as the next step.
+- **Tested** (sandbox, a build copy on 8c361a7b's index, nothing saved): 707 board rows, none with a picture; 25 rows pointed at:
+  nothing built, no transitions, no frame loop; a real pointer on a Bing cell: no picture box; the CSS holds no hover-wiggle rule and
+  no row fade; Compare (Gui Zhi): the picture opens, hides empty, opens again, the loop stops; console clean; no sideways scroll at
+  1220 or 360. Tap audit on the board: 1536 checked at 1220, 1515 at 360, the SAME flags as HEAD before the change (the table's
+  dot-and-✕ cells read as "icons" at 1220; on the phone the cells' buttons measure 8 px tall and the ✕ 18 px): already there,
+  not from this change, told to her.
+- **Not tested:** her real records; the Key2.
+- **SAVED, not live:** goes out with her next "push live".
