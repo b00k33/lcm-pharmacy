@@ -879,7 +879,7 @@ signs; the Care Plan Diagnosis = its pictures; the Patterns page = every pattern
 (`--px-h`), so nothing moves; a sign's name is said once, in the header with its Ren / Bing marks and weight dots.
 
 ## Guide — Families (study + edit)
-The Guide is **[Families] [Triangle] [Compare] [Tongue map] [Pulse] [Abdomen] [Herbs] [Blood tests] [Iron] [Eggs] [Eating eggs]**: a herb card is the body type with its formulas under it, notes-only formulas are
+The Guide is **[Abdomen] [Blood tests] [Compare] [Eating eggs] [Eggs] [Families] [Herbs] [Iron] [Pulse] [Sources] [Tongue map] [Triangle]** (the tab menu lists them A–Z, her 2026-11-09 "alphabetical order"; it opens on Families): a herb card is the body type with its formulas under it, notes-only formulas are
 dashed tiles, a study card sits on the right (in Study, the concept picture of the pattern(s) the family counts for, under the
 pearl). **The card's rows ARE the Fang Bing Ren tables** (`PH_FORMULAS[id]`): her edits live in `PHARMACY.fbrEdits[id]` (+
 `fbrEditsAt`), and `phFbrEditsApply()` rebuilds `.ren/.bing/.or/.core` in place from `phFbrPristine`; `phFbrEditsSync()` (top of

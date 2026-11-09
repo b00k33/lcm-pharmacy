@@ -13194,3 +13194,12 @@ translated by Eran Even and Craig Mitchel."
   (and a third, unrelated one she'd added herself) keeps all three and gains only the new one, no
   duplicates on a second load. Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide tab menu in A–Z order (2026-11-09)
+- **Her words:** "alphabetical order. review app rules" (the Families ▾ menu: Families, Sources, Triangle, Compare, Tongue map, Pulse, Abdomen, Herbs, Blood tests, Iron, Eggs, Eating eggs).
+- **Rule checked:** CLAUDE.md "A–Z lists" names dropdowns and gives no exception for a menu of pages (the exceptions are ranks, time order, a document's own order, groups' headings); so the menu was a miss, not a decision.
+- **Code** (`index.html`, `renderPhGuidePage`): the menu draws `tabs.slice().sort((a, b) => phAz(a[1], b[1]))` (a sorted copy: `tabs` itself keeps Families first, which the button label and the
+  default tab read). Menu now: Abdomen, Blood tests, Compare, Eating eggs, Eggs, Families, Herbs, Iron, Pulse, Sources, Tongue map, Triangle.
+- **Tested:** the sort on the real labels (computed with the same `phAz` rule in the page); not re-drawn in the live Guide (its page needs a signed-in app).
+- **Pages checked:** Guide tab menu only; no other copy of the tab list exists (`data-gd-tab` is drawn from this one array).
+- **SAVED, not live:** goes out with her next "push live".
