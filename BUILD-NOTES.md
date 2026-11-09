@@ -12909,3 +12909,30 @@ the new ink is visibly bolder against the teal outline and the dotted anatomy li
 console errors. **Not tested:** the thin-wall mark specifically (not rendered in this pass, though it reads the
 same constant), her own real exam data, the side view (uses its own separate styling, not `PH_ABD_INK`).
 **SAVED, not live:** goes out with her next "push live".
+
+## Restore panel: closes when she switches tabs (2026-11-09)
+
+Her "when i click restore and then guide it always link the two pages" (a screenshot of the Restore list still
+showing, with Guide's page visible underneath it).
+
+- **Root cause:** `#phRestorePanel` sits in normal page flow at the top of `#pharmacyPage` (not a modal/overlay),
+  toggled open by its own `phRestoreBtn` click handler. Nothing closed it when she switched tabs -- the
+  `[data-ph-tab]` tab-switch handler already clears `presOpenId`/`presEditId`/`presDraft` ("panels don't follow
+  across tabs") but never touched the Restore panel, so it stayed open and visible above whatever page she opened
+  next, reading as the two pages merged together.
+- **Two handlers, both fixed, nothing else touched.** Her click came from the left sidebar
+  (`#phSidebar [data-ph-tab]`), which has its own separate click listener (deliberately mirroring the main
+  `#pharmacyPage`-scoped one, per that code's own comment, since the sidebar lives outside `#pharmacyPage`) -- both
+  now close the Restore panel (`rp.hidden = true; phPendingRestore = null; phRenderRestorePanel();`) the same way
+  its own Close button already does, right alongside the existing "panels don't follow across tabs" line.
+- **Left alone on purpose:** ~14 other spots in the file set `PHARMACY.activeTab` directly from deep inside a
+  specific page action (a "next patient" band, a door from Appointments/Communications, etc.) rather than through
+  a `[data-ph-tab]` click -- none of them are reachable from the Restore panel's own context, so they were not
+  touched; this fix covers every way she can tap Guide, Inventory or any other rail item while Restore is open.
+
+**Tested:** in the sandbox, opening Restore (`phRestoreBtn.click()`), then clicking the sidebar's Guide tab and,
+separately, an in-page tab button -- both now leave the Restore panel hidden and land on the right page, confirmed
+by reading `panel.hidden` and `PHARMACY.activeTab`, and by a screenshot (Inventory page, no Restore list left
+showing above it). No console errors. **Not tested:** her own real backups list, the mobile tabbar's `[data-ph-tab]`
+path (same handler as the sidebar's, not separately driven through a click in this sandbox).
+**SAVED, not live:** goes out with her next "push live".
