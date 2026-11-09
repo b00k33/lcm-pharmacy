@@ -15742,6 +15742,7 @@
   #pharmacyPage .ph-cmp-cs .za { margin: 12px -10px 0; padding: 7px 10px; background: color-mix(in srgb, var(--ph-herb) 16%, var(--ph-white)); font: 700 var(--fs-11) var(--font-disp); letter-spacing: .07em; text-transform: uppercase; color: var(--ph-ink); }
   #pharmacyPage .ph-cmp-cs .za em { margin-left: 8px; font: 500 var(--fs-11) var(--font-body); font-style: normal; letter-spacing: 0; text-transform: none; color: var(--ph-faint); }
   #pharmacyPage .ph-cmp-cs .zs:first-child, #pharmacyPage .ph-cmp-cs .za:first-child { margin-top: 0; }
+  #pharmacyPage .ph-cmp-cs .zl .nm small.zt { display: block; margin-top: 1px; color: var(--ph-faint); font-size: var(--fs-11); font-style: italic; line-height: 1.25; }
   #pharmacyPage .ph-cmp-cs .gl + .bx .zs:first-child { margin-top: 2px; }
   #pharmacyPage .ph-cmp-cs .or, #pharmacyPage .ph-cmp-tbl.herbs .or { display: inline-block; margin-right: 6px; padding: 0 5px; border-radius: 4px; font: 700 var(--fs-10) var(--font-body); letter-spacing: .04em; color: var(--ph-soft); box-shadow: inset 0 0 0 1px var(--ph-line); vertical-align: 1px; }
   /* the animation row: its own row, collapsed to a thin row by the head's toggle */
@@ -92879,7 +92880,15 @@ pale red tongue|Tongue: pale-red|r`;
     return PH_TC_MATCH_MAP.get(String(text || "").trim().toLowerCase()) || null;
   }
   const phTcOpenMatches = c => c.symptoms.map((s, i) => ({ s, i, m: !s.sign && !s.skip ? phTcMatch(s.text) : null })).filter(x => x.m);
+  // her 2026-11-10 "when i accept, still keep some details e.g. nocturia 4-5 times a night (as an additional note)": her recorded words stay with the sign they were matched to, as a note
+  // (the symptom's own text is never overwritten; this only shows it when it says more than the sign's wording)
+  const phTcNote = s => {
+    if (!s || s.newsign || !s.sign) return "";
+    const lab = String(phSignLabel(s.sign)), at = lab.indexOf(": "), wd = at >= 0 ? lab.slice(at + 2) : lab, t = String(s.text || "").trim().toLowerCase();
+    return !t || t === wd.toLowerCase() || t === lab.toLowerCase() ? "" : String(s.text).trim();
+  };
   function phTcAccept(c, i) {
+
     const s = c.symptoms[i], m = s && !s.sign && !s.skip ? phTcMatch(s.text) : null; if (!m) return false;
     Object.assign(s, { sign: m.key, newsign: false, side: m.side, w: s.w || 3 }); return true;
   }
@@ -92892,6 +92901,7 @@ pale red tongue|Tongue: pale-red|r`;
       const key = ar + "|" + (subj + "|" + descr).toLowerCase();
       let e = m.get(key); if (!e) { e = { ar, subj, descr, r: 0, b: 0, or: false }; m.set(key, e); }
       e[s.side] = s.w || 3;
+      const nt = phTcNote(s); if (nt && (e.note || "").indexOf(nt) < 0) e.note = e.note ? e.note + "; " + nt : nt;
     });
     const col = c.fam && PH_FORMULAS[c.fam] ? phCmpCol(c.fam) : null, g = d => { const x = /^(\d+(?:\.\d+)?)\s*g$/i.exec(String(d).trim()); return x ? +x[1] : null; };
     const tot = c.recipe.every(r => g(r[1]) != null) ? phRound2(c.recipe.reduce((s, r) => s + g(r[1]), 0)) : null;
@@ -92914,7 +92924,7 @@ pale red tongue|Tongue: pale-red|r`;
     if (s.skip) return `<div class="cs" style="padding:6px 0;opacity:.6"><span class="nm">${esc(s.text)}</span><span style="font-size:var(--fs-11-5);color:var(--ph-faint);font-style:italic">not a sign</span><button type="button" class="gf-ib" data-tc-unskip="${c.id}|${i}" title="Undo" aria-label="Undo">↺</button></div>`;
     if (s.sign) {
       const st = phTcStatus(c, s);
-      return `<div class="cs" style="padding:6px 0;flex-wrap:wrap;gap:6px 10px"><span class="nm"><b>${s.side === "r" ? "REN" : "BING"}:</b> ${esc(phSymCase(s.newsign ? s.text : phSignLabel(s.sign)))}${s.newsign ? ` <em style="color:var(--ph-faint);font-weight:400">(no catalog key yet)</em>` : ""}</span>${phTcDots(c.id + "|" + i, s.w)}${st ? `<span style="font-size:var(--fs-11);color:var(--ph-soft)">${st.msg}</span>` : ""}<button type="button" class="gf-ib" data-tc-unlink="${c.id}|${i}" title="Unlink" aria-label="Unlink">${PH_GDF_IC.x}</button></div>`;
+      return `<div class="cs" style="padding:6px 0;flex-wrap:wrap;gap:6px 10px"><span class="nm"><b>${s.side === "r" ? "REN" : "BING"}:</b> ${esc(phSymCase(s.newsign ? s.text : phSignLabel(s.sign)))}${s.newsign ? ` <em style="color:var(--ph-faint);font-weight:400">(no catalog key yet)</em>` : phTcNote(s) ? ` <em style="color:var(--ph-faint);font-weight:400">— ${esc(phTcNote(s))}</em>` : ""}</span>${phTcDots(c.id + "|" + i, s.w)}${st ? `<span style="font-size:var(--fs-11);color:var(--ph-soft)">${st.msg}</span>` : ""}<button type="button" class="gf-ib" data-tc-unlink="${c.id}|${i}" title="Unlink" aria-label="Unlink">${PH_GDF_IC.x}</button></div>`;
     }
     const m = phTcMatch(s.text);
     if (phGdTcAdd !== c.id + "|" + i) return m
@@ -93514,7 +93524,7 @@ pale red tongue|Tongue: pale-red|r`;
   function phCmpCaseBox(rs, sds, areas) {
     if (!rs.length) return phCmpCaseDash;
     const cap = sds.length > 1 ? `<div class="zl zh"><span></span>${sds.map(sd => `<span>${phCmpCaseSide[sd]}</span>`).join("")}</div>` : "";
-    const lines = list => [...new Set(list.map(r => r.subj))].sort(phAz).map(subj => (subj ? `<div class="zs">${esc(subj)}</div>` : "") + list.filter(r => r.subj === subj).sort((a, b) => phAz(a.descr, b.descr)).map(r => `<div class="zl ${sds.length > 1 ? "two" : "one"}"><span class="nm">${r.or ? `<span class="or">OR</span>` : ""}${esc(phSymCase(r.descr))}</span>${sds.map(sd => phCmpCaseNum(sd, r[sd])).join("")}</div>`).join("")).join("");
+    const lines = list => [...new Set(list.map(r => r.subj))].sort(phAz).map(subj => (subj ? `<div class="zs">${esc(subj)}</div>` : "") + list.filter(r => r.subj === subj).sort((a, b) => phAz(a.descr, b.descr)).map(r => `<div class="zl ${sds.length > 1 ? "two" : "one"}"><span class="nm">${r.or ? `<span class="or">OR</span>` : ""}${esc(phSymCase(r.descr))}${r.note ? `<small class="zt">${esc(r.note)}</small>` : ""}</span>${sds.map(sd => phCmpCaseNum(sd, r[sd])).join("")}</div>`).join("")).join("");
     const inner = areas ? [...new Set(rs.map(r => r.ar))].sort((a, b) => a - b).map(ix => { const ra = rs.filter(r => r.ar === ix); return `<div class="za">${ix < 0 ? "Not in the catalog yet" : esc(PH_FBR_AREAS[ix].lab)}<em>${ra.length}</em></div>` + lines(ra); }).join("") : lines(rs);
     return cap + `<div class="bx">${inner}</div>`;
   }
@@ -93523,7 +93533,7 @@ pale red tongue|Tongue: pale-red|r`;
     const used = new Set(["Diagnosis"].concat(PH_CMP_CASE_GRP.flatMap(g => g[1]))), out = {};
     let all = src.signs; if (q) all = all.filter(r => (r.subj + ": " + r.descr).toLowerCase().indexOf(q) >= 0);
     out.an = anim ? (src.fid ? phFpThumbHtml(src.fid, "cmp:" + src.id) : phCmpCaseDash) : "";
-    const ren = all.filter(r => r.r), top = ren.filter(r => r.r > 0).sort((a, b) => b.r - a.r || phAz(a.descr, b.descr)).slice(0, 3);
+    const ren = all.filter(r => r.r), top = ren.filter(r => r.r > 0 && !used.has(r.subj)).sort(   /* her 2026-11-10 "dont repeat abdominal in ren when its got its own row", "same with pulse": the Ren summary skips a sign that has its own row */(a, b) => b.r - a.r || phAz(a.descr, b.descr)).slice(0, 3);
     out.vis = `<div class="gl">Ren<em>${ren.length}</em></div>` + (top.length ? phCmpCaseBox(top, ["r"], false) : phCmpCaseDash);
     const dx = (src.dx || (all.filter(r => r.subj === "Diagnosis" && (r.r > 0 || r.b > 0)).sort((a, b) => phAz(a.descr, b.descr)).map(r => r.descr))).filter((d, i, a) => a.findIndex(x => x.toLowerCase() === d.toLowerCase()) === i);
     out.dx = dx.length ? `<div class="bx">${dx.map(d => `<div class="cs"><span class="nm">${esc(src.dx ? d : phSymCase(d))}</span></div>`).join("")}</div>` : phCmpCaseDash;   // a source's own conditions are free text as recorded; a formula's Diagnosis signs are catalog wording
