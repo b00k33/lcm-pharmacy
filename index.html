@@ -77557,6 +77557,7 @@ or changing anything in Cliniko.
   let phGdTab = "families";   // "families" | "compare" | "tongue" | "pulse" | "abdomen" | "herbs" | "bloods" | "iron" | "eggs" | "eating" | "triangle"
   let phGdTabsOpen = false;   // the Guide's 11 tabs are a dropdown now, her audit pick (over her own "more than 6 = dropdown" rule)
   let phGdSrcEdit = null;   // the Sources tab's one open row: "new" or an existing source's id
+  let phGdStEdit = null;   // the Sources tab's one open name row (People & other sources): "new" or an existing type key
   let phGdSearch = "";
   let presPage = 1;   // STEP 8q (2026-08-14): compact pagination -- 799 imported templates is too long for one scroll
   const presFindHerb = ing => (ing.code && findHerbByCode(ing.code, ing.herb || ing.name)) || findHerbByName(ing.herb || ing.name || "");
@@ -85667,7 +85668,7 @@ or changing anything in Cliniko.
     if (!modal || modal.hidden || !phRenEditField) return;
     const meta = phRenFieldMeta(phRenEditField);
     const list = phRenList(phRenEditField);
-    const srcTypeOpts = (cur) => Object.entries(PH_SOURCE_TYPES).map(([k, v]) => `<option value="${k}"${cur === k ? " selected" : ""}>${esc(v.label)}</option>`).join("");
+    const srcTypeOpts = (cur) => Object.entries(phSrcTypes()).map(([k, v]) => `<option value="${k}"${cur === k ? " selected" : ""}>${esc(v.label)}</option>`).join("");
     modal.innerHTML = `<div class="ph-hx-card ph-gd-modal-card">
       <div class="ph-hx-head">
         <button type="button" class="ph-stocktake-close" data-gd-modal-close="1" aria-label="Close">×</button>
@@ -90230,16 +90231,42 @@ or changing anything in Cliniko.
      ============================================================ */
 
   // ---- sources: every entry carries at least one, per her STEP 3 ----
-  const PH_SOURCE_TYPES = {
+  // her 2026-11-09 "give option to edit this list... edit Dr Karen Bilton": the built-in names stay in code (never
+  // re-numbered, so a saved source's type key still means the same person), but her own edits -- a rename, a new name
+  // she adds, a built-in she'd rather not see -- live in PHARMACY.srcTypeEdits, the same w/added/hidden shape a sign's
+  // wording override already uses. phSrcTypes() is what every picker and every chip actually reads.
+  const PH_SOURCE_TYPES_BASE = {
     mick: { icon: "<svg class=icn aria-hidden=true><use href=#i-msg></use></svg>", label: "Mick" },
     huanghuang: { icon: "<svg class=icn aria-hidden=true><use href=#i-book></use></svg>", label: "Huang Huang" },
     seminar: { icon: "<svg class=icn aria-hidden=true><use href=#i-edit></use></svg>", label: "Seminar transcript" },
-    bilton: { icon: "<svg class=icn aria-hidden=true><use href=#i-book></use></svg>", label: "Karen Bilton, SHPD" },
+    bilton: { icon: "<svg class=icn aria-hidden=true><use href=#i-book></use></svg>", label: "Dr Karen Bilton" },
     zhang: { icon: "<svg class=icn aria-hidden=true><use href=#i-msg></use></svg>", label: "Dr Zhang" },
     mei: { icon: "<svg class=icn aria-hidden=true><use href=#i-msg></use></svg>", label: "Dr Mei" },
     eraneven: { icon: "<svg class=icn aria-hidden=true><use href=#i-msg></use></svg>", label: "Dr Eran Even" },
     own: { icon: "✎", label: "My own observation" },
   };
+  const PH_SRC_TYPE_ICON = "<svg class=icn aria-hidden=true><use href=#i-msg></use></svg>";
+  function phSrcTypeEdits() { return PHARMACY.srcTypeEdits || (PHARMACY.srcTypeEdits = { w: {}, added: {}, hidden: [] }); }
+  function phSrcTypes() {
+    const e = phSrcTypeEdits(), out = {};
+    Object.entries(PH_SOURCE_TYPES_BASE).forEach(([k, v]) => { if (e.hidden.indexOf(k) < 0) out[k] = { icon: v.icon, label: e.w[k] || v.label, built: true }; });
+    Object.entries(e.added).forEach(([k, v]) => { out[k] = { icon: PH_SRC_TYPE_ICON, label: v.label, built: false }; });
+    return out;
+  }
+  function phSrcTypeSave(key, label) {
+    label = String(label || "").trim(); if (!label) return;
+    const e = phSrcTypeEdits();
+    if (key === "new") { const k = "c_" + uid(); e.added[k] = { label }; }
+    else if (PH_SOURCE_TYPES_BASE[key]) { if (label === PH_SOURCE_TYPES_BASE[key].label) delete e.w[key]; else e.w[key] = label; }
+    else if (e.added[key]) e.added[key].label = label;
+    if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+  }
+  function phSrcTypeHide(key) {
+    const e = phSrcTypeEdits();
+    if (PH_SOURCE_TYPES_BASE[key]) { if (e.hidden.indexOf(key) < 0) e.hidden.push(key); delete e.w[key]; }
+    else delete e.added[key];
+    if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+  }
   function phFmtSrcDate(iso) {
     if (!iso) return "";
     const d = new Date(iso + "T00:00:00");
@@ -90247,7 +90274,7 @@ or changing anything in Cliniko.
     return d.toLocaleDateString("en-AU", { day: "numeric", month: "short", year: "numeric" });
   }
   function phSourceLabel(s) {
-    const t = PH_SOURCE_TYPES[s.type] || PH_SOURCE_TYPES.own;
+    const T = phSrcTypes(), t = T[s.type] || T.own;
     const who = (s.who && s.who.trim()) || t.label;
     return s.date ? `${who} · ${phFmtSrcDate(s.date)}` : who;
   }
@@ -90255,7 +90282,7 @@ or changing anything in Cliniko.
   // handler just toggles whatever immediately follows the tapped chip, no
   // id bookkeeping needed since they're always emitted as a pair in order
   function phSourceChipHtml(s) {
-    const t = PH_SOURCE_TYPES[s.type] || PH_SOURCE_TYPES.own;
+    const T = phSrcTypes(), t = T[s.type] || T.own;
     const hasQuote = !!(s.quote && s.quote.trim());
     return `<span class="ph-src-chip${hasQuote ? " has-quote" : ""}"${hasQuote ? ` data-src-toggle="1" tabindex="0" role="button"` : ""}>${esc(phSourceLabel(s))}</span>`
       + (hasQuote ? `<blockquote class="ph-src-quote" hidden>&ldquo;${esc(s.quote.trim())}&rdquo;</blockquote>` : "");
@@ -91505,7 +91532,7 @@ or changing anything in Cliniko.
     phFbrEditsSync(); phGdfPaintAll();
   }
   function phGdfSrcRowHtml(s, i) {
-    const t = PH_SOURCE_TYPES[s.type] || PH_SOURCE_TYPES.own;
+    const T = phSrcTypes(), t = T[s.type] || T.own;
     return `<div class="gf-src-row"><span class="gf-src-ic">${t.icon}</span><span class="gf-src-txt">${esc(phSourceLabel(s))}</span><button type="button" class="gf-ib" data-gdf-src-rm="${i}" title="Remove" aria-label="Remove this reference">${PH_GDF_IC.x}</button></div>`;
   }
   // her 2026-11-09 "add this is a source - make a source page": her own library of books, teachers and events (the Guide's new
@@ -91533,7 +91560,7 @@ or changing anything in Cliniko.
   function phGdfSrcPopHtml(rKey, bKey) {
     const list = phGdfMergeSources(rKey, bKey);
     const rows = list.length ? list.map(phGdfSrcRowHtml).join("") : `<span class="gf-none">No reference yet</span>`;
-    const opts = Object.entries(PH_SOURCE_TYPES).map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`).join("");
+    const opts = Object.entries(phSrcTypes()).map(([k, v]) => `<option value="${k}">${esc(v.label)}</option>`).join("");
     const lib = phSourceLib().map(s => `<option value="${esc(s.title)}">`).join("");
     return `<div class="gf-src-pop" data-gdf-src-pop="1" data-r="${esc(rKey || "")}" data-b="${esc(bKey || "")}">${rows}<div class="gf-src-add">`
       + `<select class="field-bare" data-gdf-src-type>${opts}</select>`
@@ -92366,6 +92393,29 @@ or changing anything in Cliniko.
       </div>
     </div>`;
   }
+  function phGdStRowHtml(key, t) {
+    if (phGdStEdit === key) {
+      return `<div class="gf-card" style="padding:12px 16px;margin-bottom:8px;display:flex;gap:8px;align-items:center">
+        <input type="text" class="field-bare" data-gd-st-label value="${esc(t.label)}" style="flex:1 1 auto" placeholder="Name">
+        <button type="button" class="gf-btn pri" data-gd-st-save="${esc(key)}">Save</button>
+        <button type="button" class="gf-btn" data-gd-st-cancel="1">Cancel</button>
+      </div>`;
+    }
+    return `<div class="gf-card" style="padding:9px 16px;margin-bottom:8px;display:flex;justify-content:space-between;align-items:center;gap:10px">
+      <span style="display:flex;align-items:center;gap:8px">${t.icon}<b>${esc(t.label)}</b></span>
+      <span style="display:flex;gap:6px;flex:none">
+        <button type="button" class="gf-ib" data-gd-st-edit="${esc(key)}" title="Edit" aria-label="Edit">${PH_GDF_PEN}</button>
+        ${key === "own" ? "" : `<button type="button" class="gf-ib red" data-gd-st-hide="${esc(key)}" title="Remove" aria-label="Remove">${PH_GDF_IC.x}</button>`}
+      </span>
+    </div>`;
+  }
+  function phGdSrcTypesHtml() {
+    const rows = Object.entries(phSrcTypes()).map(([k, v]) => phGdStRowHtml(k, v)).join("");
+    return `<h3 style="font-size:var(--fs-13-5);margin:26px 0 6px">Who / where you can pick from</h3>
+      <p style="color:var(--ph-soft);font-size:var(--fs-12-5);margin:0 0 12px">Shown on every source's type -- the symptom reference box, formula notes, tongue, pulse, abdomen and Ren option sources.</p>
+      ${phGdStEdit === "new" ? phGdStRowHtml("new", { icon: PH_SRC_TYPE_ICON, label: "" }) : `<button type="button" class="gf-btn pri" data-gd-st-new="1" style="margin-bottom:10px">${PH_GDF_IC.plus} Add a name</button>`}
+      ${rows}`;
+  }
   function phGdSourcesHtml() {
     const list = phSourceLib();
     const rows = list.length ? list.map(phGdSourceRowHtml2).join("") : `<div class="gf-none" style="padding:14px 0">No sources yet</div>`;
@@ -92373,6 +92423,7 @@ or changing anything in Cliniko.
       <p style="color:var(--ph-soft);font-size:var(--fs-12-5);margin:0 0 14px">Books, teachers and events you can cite when you reference a symptom.</p>
       ${phGdSrcEdit === "new" ? phGdSourceRowHtml2({ id: "new" }) : `<button type="button" class="gf-btn pri" data-gd-sl-new="1" style="margin-bottom:14px">${PH_GDF_IC.plus} Add a source</button>`}
       ${rows}
+      ${phGdSrcTypesHtml()}
     </div></div>`;
   }
   function phGdSrcClick(e) {
@@ -92399,6 +92450,18 @@ or changing anything in Cliniko.
       else { const s = lib.find(x => x.id === id); if (s) Object.assign(s, { title, author, translator, notes }); }
       if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return true; }
       phGdSrcEdit = null; renderPhGdBody();
+      return true;
+    }
+    if ((el = T.closest("[data-gd-st-new]"))) { phGdStEdit = "new"; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-gd-st-edit]"))) { phGdStEdit = el.dataset.gdStEdit; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-gd-st-cancel]"))) { phGdStEdit = null; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-gd-st-hide]"))) { phSrcTypeHide(el.dataset.gdStHide); phGdStEdit = null; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-gd-st-save]"))) {
+      const card = T.closest(".gf-card"), key = el.dataset.gdStSave, inp = card.querySelector("[data-gd-st-label]");
+      const label = (inp.value || "").trim();
+      if (!label) { inp.focus(); return true; }
+      phSrcTypeSave(key, label);
+      phGdStEdit = null; renderPhGdBody();
       return true;
     }
     return false;
@@ -94436,7 +94499,7 @@ or changing anything in Cliniko.
   }
   function phGdSourceRowHtml(s, i) {
     return `<div class="ph-gd-src-row" data-gd-src-idx="${i}">
-      <select data-gd-src-type>${Object.entries(PH_SOURCE_TYPES).map(([k, v]) => `<option value="${k}"${s.type === k ? " selected" : ""}>${esc(v.label)}</option>`).join("")}</select>
+      <select data-gd-src-type>${Object.entries(phSrcTypes()).map(([k, v]) => `<option value="${k}"${s.type === k ? " selected" : ""}>${esc(v.label)}</option>`).join("")}</select>
       <input type="text" data-gd-src-who class="field-bare" placeholder="Who" value="${esc(s.who || "")}">
       <input type="date" data-gd-src-date class="field-bare" value="${esc(s.date || "")}">
       <textarea data-gd-src-quote class="field-bare" rows="2" placeholder="Quote (optional)">${esc(s.quote || "")}</textarea>
@@ -147482,7 +147545,7 @@ or changing anything in Cliniko.
   }
   const phPulseKbSrcShort = n => n.source ? (n.source.type === "own" ? "mine" : phSourceLabel(n.source)) : ((PH_PULSE_KB_SRC[n.src] || {}).short || "");
   function phPulseKbLineHtml(n) {
-    const t = PH_SOURCE_TYPES[phPulseNoteSource(n).type] || PH_SOURCE_TYPES.own;
+    const T = phSrcTypes(), t = T[phPulseNoteSource(n).type] || T.own;
     return `<div class="ph-kb-line"><b>${esc(n.quality)}</b> ${esc(n.meaning)}${n.patterns ? ` <span class="pat">· ${esc(n.patterns)}</span>` : ""}${n.formulas ? ` <span class="fx">${esc(n.formulas)}</span>` : ""}${n.points ? ` <span class="pts">${esc(n.points)}</span>` : ""}<span class="src">${t.icon} ${esc(phPulseKbSrcShort(n))}</span><button type="button" class="ph-gd-door" data-gd-open="pulse:${esc(n.id)}" title="Open this note in your Guide">Guide ›</button></div>`;   // the door into the Guide (2026-11-03)
   }
   function phPulseKbBlockHtml(list, label) {

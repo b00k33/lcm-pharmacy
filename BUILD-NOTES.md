@@ -13219,3 +13219,24 @@ names with no further wiring.
 - **Not tested:** a real patient's record, and the Guide's Abdomen tab (it shares the same chart code but was not driven: no signed-in account in the sandbox).
 - **Pages checked:** the Abdomen page tabs, popup, FBR chip rows; the Pulse page's own tabs were not part of this ask.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Source types are editable now, 2026-11-09
+
+Her ask, with a screenshot of the type dropdown: "give option to edit this list / edit Dr Karen
+Bilton."
+
+- `PH_SOURCE_TYPES` (Mick, Huang Huang, Seminar transcript, Dr Karen Bilton, Dr Zhang, Dr Mei, Dr
+  Eran Even, My own observation) is now a built-in base plus her own edits
+  (`PHARMACY.srcTypeEdits` -- `w` for a rename, `added` for a name she makes herself, `hidden` for a
+  built-in she'd rather not see), read through `phSrcTypes()`. Every place that picks a source's type
+  (the symptom reference box, formula notes, tongue, pulse, abdomen notes, Ren options) reads the
+  same function, so an edit there shows everywhere at once.
+- A new "Who / where you can pick from" list on the Sources tab: add, rename, remove. "My own
+  observation" can't be removed (every place with no better type falls back to it).
+- Applied her ask directly in the built-in: Karen Bilton, SHPD -> Dr Karen Bilton, matching Dr
+  Zhang / Dr Mei / Dr Eran Even's naming.
+- **Tested** in the harness: renamed Dr Zhang to "Dr Zhang (acupuncture)" on the new list, confirmed
+  it reads that way on a symptom's reference chip too; added "Dr Example" then removed it; a built-in
+  hidden this way no longer offers on a fresh pick but an existing reference using it still shows its
+  old label (never pointed at by key alone). Boots clean.
+- **SAVED, not live:** goes out with her next "push live".
