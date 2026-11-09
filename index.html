@@ -145850,6 +145850,23 @@ or changing anything in Cliniko.
     return left.concat(base, right);
   })();
   const PH_ABD_OUT_FILL = phAbdPts(PH_ABD_OUT) + "Z", PH_ABD_OUT_STROKE = phAbdPts(PH_ABD_OUT);
+  // her 2026-11-09 "bulge the whole abdomen": a whole-belly bulging mark used to draw one thin decorative arc across
+  // the middle (the per-zone mark still does); now the silhouette itself swells, from the rib edge to the hip line,
+  // peaking at the navel -- an overlay in the same line as the real outline (ph-abd2-skin), not a second mark colour,
+  // so it reads as the belly pushing out rather than a sign drawn on top of it. Blends to zero at both ends (meets
+  // the real line exactly there), same cosine ease as phAbdHw. The side view already does this for its own silhouette
+  // (phAbdSideState's "full" contour); this brings the front view to the same idea.
+  function phAbdBulgeHw(y) {
+    const y0 = PH_ABD_RIB_Y, y1 = PH_ABD_UMB_Y, y2 = PH_ABD_ASIS_Y, w0 = phAbdHw(y0), w1 = phAbdHw(y1) + 11, w2 = phAbdHw(y2);
+    if (y <= y0 || y >= y2) return phAbdHw(y);
+    const [ya, wa, yb, wb] = y <= y1 ? [y0, w0, y1, w1] : [y1, w1, y2, w2], t = (y - ya) / (yb - ya);
+    return wa + (wb - wa) * (1 - Math.cos(Math.PI * t)) / 2;
+  }
+  function phAbdBulgeWholeSvg() {
+    const l = [], r = [];
+    for (let y = PH_ABD_RIB_Y; y <= PH_ABD_ASIS_Y; y += 2) { l.push([PH_ABD_CX - phAbdBulgeHw(y), y]); r.push([PH_ABD_CX + phAbdBulgeHw(y), y]); }
+    return `<path d="${phAbdPts(l)}" class="ph-abd2-skin" pointer-events="none"/><path d="${phAbdPts(r)}" class="ph-abd2-skin" pointer-events="none"/>`;
+  }
   // ---- her 2026-10-28 ask ("i dont understand why the hypochondriac region is drawn like that. shouldnt it follow the space along the
   // curve of the rib cage?"; mock abdomen-rib-curve-mocks-2026-10-28.html, her picks B "rib cage drawn"): the hypochondrium is a BAND
   // along the inside of the rib arch, from beside the breastbone (PH_ABD_CUT off the midline) out past the 10th rib, PH_ABD_BAND deep
@@ -146026,7 +146043,7 @@ or changing anything in Cliniko.
       // a tight hypochondrium (her 2026-10-24; along the rib edge since her 2026-10-28 pick): a firm red line hugging the arch on that
       // side, a dashed line at the band's inner edge
       const tightHypo = (m.tighthypo || []).filter(z => PH_ABD_HYPO.includes(z)).map(z => `<g${live ? ` data-m="tighthypo|${z}"` : ""} pointer-events="none"><path d="${PH_ABD_HYPO_LINES[z].firm}" fill="none" stroke="#A83C50" stroke-width="2.2" stroke-linecap="round" stroke-opacity=".75"/><path d="${PH_ABD_HYPO_LINES[z].dash}" fill="none" stroke="#A83C50" stroke-width=".7" stroke-dasharray="1.6 1.2" stroke-linecap="round"/></g>`).join("");
-      const bulge = glyph("bulging", (x, y, z) => z.whole ? `<path d="M37,98 q23,-30 46,0" class="ph-abd2-g" stroke-width="1.6" pointer-events="none"/>` : `<path d="M${x - z.w / 2 + 1},${y + 2} q${z.w / 2 - 1},${-z.h * .5} ${z.w - 2},0" class="ph-abd2-g" stroke-width="1.4" pointer-events="none"/>`);
+      const bulge = glyph("bulging", (x, y, z) => z.whole ? phAbdBulgeWholeSvg() : `<path d="M${x - z.w / 2 + 1},${y + 2} q${z.w / 2 - 1},${-z.h * .5} ${z.w - 2},0" class="ph-abd2-g" stroke-width="1.4" pointer-events="none"/>`);
       const sunk = glyph("sunken", (x, y, z) => z.whole ? `<path d="M37,76 q23,30 46,0" class="ph-abd2-g" stroke-width="1.6" pointer-events="none"/>` : `<path d="M${x - z.w / 2 + 1},${y - 2} q${z.w / 2 - 1},${z.h * .5} ${z.w - 2},0" class="ph-abd2-g" stroke-width="1.4" pointer-events="none"/>`);
       // tight rectus: the rectus border in red, dashed, down the row of the place (a side zone: that side only; the whole belly: full length)
       const tightRect = glyph("tightrect", (x, y, z, zk) => { const [y0, y1] = z.whole ? [RXY[0][0], RXY[2][1]] : RXY[phAbdRowOf(zk)], sides = z.c === 1 ? [-1, 1] : [z.c === 0 ? -1 : 1]; return `<g pointer-events="none">${sides.map(s => `<path d="${rb(s, y0, y1)}" fill="none" stroke="#A83C50" stroke-width="1.3" stroke-dasharray="2.4 1.4" stroke-linecap="round"/>`).join("")}</g>`; });
