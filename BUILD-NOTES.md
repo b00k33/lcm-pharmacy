@@ -13497,3 +13497,17 @@ correlation); this is different in kind, so a different tab and name, "Tour Case
 - **Not tested:** the Key2; a real against (minus) sign in a group row (red dots by the existing rule); Copy on the Cases view (it copies the Tables, as before).
 - **Calls made:** a case with no picture (Ban Xia, a single herb, had none drawn here) shows the Ren count and signs only; Medical findings holds Blood pressure only until X-ray, scan and ultrasound data exist.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide: Sources and Tour Cases fill the page again, 2026-11-09
+
+Her "look at the display -- see the problem" on Tour Cases, picker wrapped to 3-per-row and the
+card confined to a narrow strip with a huge blank area to its right.
+
+Root cause: `.ph-gdf` is the Families tab's own two-column layout (`display:grid`,
+`grid-template-columns: 318px minmax(0,1fr)` -- a rail, then the wide content pane), not a plain
+styling wrapper. Sources and Tour Cases both reused it just to pick up its card/button CSS, each
+with one content div -- which an implicit grid drops into that first 318px rail column, leaving
+the second column empty. Same bug in both, same fix: `grid-column:1 / -1` on that one div.
+Confirmed in the harness: Tour Cases' picker now fits 7-per-row and the card fills the page;
+Sources is back to its own 560px reading width. **SAVED, not live:** goes out with her next
+"push live".
