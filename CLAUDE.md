@@ -1446,6 +1446,11 @@ not repeated here.
   inside it, no score in the cell; the page's inner paddings are off (PHONE REDESIGN block). The Tongue & pulse block is the same table
   on a phone (her 2026-11-09 "fix the tongue & pulse block on phone too"): `phFbrTpAreaHtml` picks it when drawn, a shared Bing sign is
   one cell spanning its rows, and crossing 640 px redraws the page; the computer keeps its two lanes.
+- Guide › Compare › Tables is drawn in the Guide picture table's order and look (her 2026-11-09 "i like this organisation and display. use
+  it for the compare and table and cases display"): a body area head row, its subjects as paper rows, a Ren and a Bing sign of the same words
+  on one row, each formula its Ren and Bing number columns, a number on a fill of its weight out of 5 (`phCmpPicRows`, `phCmpPicTblHtml`).
+  Edit keeps the dot rows (`phCmpSignsTableHtml`). The Cases view is the other session's 14 rows (her synth22 list); the picture look there
+  waits for her word.
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast
