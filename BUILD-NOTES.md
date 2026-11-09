@@ -13203,3 +13203,10 @@ translated by Eran Even and Craig Mitchel."
 - **Tested:** the sort on the real labels (computed with the same `phAz` rule in the page); not re-drawn in the live Guide (its page needs a signed-in app).
 - **Pages checked:** Guide tab menu only; no other copy of the tab list exists (`data-gd-tab` is drawn from this one array).
 - **SAVED, not live:** goes out with her next "push live".
+
+## Source types: Dr Zhang, Dr Mei, Dr Eran Even, 2026-11-09
+
+Her ask: "add Dr Zhang, Dr Mei, Dr Eran Even" (from the Who/type dropdown on a symptom's reference
+box). PH_SOURCE_TYPES is one shared list -- every place a source's type picks from it (formula
+notes, tongue, pulse, abdomen notes, Ren options, and the symptom reference box) gets the three new
+names with no further wiring.
