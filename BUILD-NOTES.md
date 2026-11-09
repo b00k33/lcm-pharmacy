@@ -13416,3 +13416,44 @@ picture (shots/fbr-phone-tongue-pulse-built-2026-11-09.jpg, local).
   - At 1220: the lanes as before; tap audit 1539 / 873 (HEAD 1536 / 873; the 3 are the ticks' own ✕).
   - 360 → 1220 → 360 redraws each way. Console clean.
 - **Not tested:** her real records; the Key2 (360 × 469: the same width as tested).
+
+## Guide: a Tour Cases tab, 2026-11-09
+
+Her ask, in pieces: a case-study feature built from Dr Huang Huang's Nanjing Study Tour clinic
+(8am-12pm, Day 1, Nov 2026, 15 cases pasted in full), "correlate the fang bing ren signs and
+symptoms... integrate... to update where relevant", "a singular case display and then a separate
+one", "separate ren and bing into its own rows". Checked with the B33 C4 LCM session first --
+their own new Compare "Cases" view shows a built-in formula as a case card (no real patients, no
+correlation); this is different in kind, so a different tab and name, "Tour Cases".
+
+- One case at a time, in the SAME card shape Compare's Cases view uses (`phCmpCasesHtml`'s own
+  `.ph-cmp-cs` table): a column, her "own rows" split -- Ren, Bing, Pathology, Prescription.
+  Seeded with all 15 of her Day 1 cases (`PH_TOURCASE_SEED`, `phTourCases()`, the same
+  idempotent-by-key seed pattern as the Sources library). A `Formula family` picker on the card
+  links a case to its PH_FORMULAS entry; 8 cases matched with reasonable confidence on name or
+  recipe (Da Cheng Qi Tang, Zhen Wu Tang, Wen Dan Tang, Ban Xia Xie Xin Tang, Huang Lian Tang,
+  Huang Qi), the rest left for her to pick -- several of her formula names and abbreviations
+  (Gui Ling Wu Wei Gan Cao Tang, Shi San Wei Xue Bi Tang, GZFLW, CPT, ZYSGT...) aren't in the
+  catalog as their own entries.
+- **Correlate**, kept separate below the card: each raw symptom, as she wrote it, searched
+  against the real sign catalog (`PH_REN_SIGNS` + `PH_BING_SIGNS`) or typed fresh, which flags
+  it as needing a new catalog key rather than guessing one. Picking a side (Ren/Bing) and an
+  importance (the same 5-dot picker Compare's own edit mode uses) is hers; nothing auto-scores.
+- **Integrate**, also separate: once a symptom is correlated, its status against that case's own
+  formula family's LIVE table is read fresh every render (never a stored "already applied" flag)
+  -- already there, worth raising, or new. Only new/raise rows show, each a checkbox; Apply writes
+  through the exact same pipeline the Guide's own Edit table and Compare use
+  (`phGdfAddKey`/`phGdfSetWeight`/`phGdfDone`, the overlay in `PHARMACY.fbrEdits`, never the
+  pristine `PH_FORMULAS` object directly) and tags the sign with the case's own citation
+  (Dr Huang Huang, "Nanjing Study Tour Nov 2026 -- Day 1, Case N"), the same `phSignSources`
+  mechanism the reference box and this week's Huang Qi update use.
+- **Nothing invented**: every one of the 15 cases seeds with its symptoms un-correlated. No
+  clinical weight shipped in this build -- the one tested in the harness (Case 10's "Weak pulse"
+  -> Huang Qi bing, new -> applied) was a live test of the mechanism, not a pre-decided score.
+- **Tested** in the harness: Tour Cases tab lists all 15, card splits Ren/Bing/Pathology/
+  Prescription correctly, Case 10's "Large, soft abdomen" correlates to a sign already live from
+  this week's Huang Qi update and correctly reads "already 5" rather than re-proposing it;
+  correlating "Weak pulse" as Bing showed as "new in Huang Qi" in Integrate, Apply wrote
+  `PH_FORMULAS.huangqi.bing.pulse_weak` through `PHARMACY.fbrEdits` (confirmed live, not the
+  pristine object) and attached the Nanjing-tour source citation. Boots clean on a fresh reload.
+- **SAVED, not live:** goes out with her next "push live".
