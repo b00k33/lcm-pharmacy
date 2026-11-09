@@ -1454,6 +1454,14 @@ not repeated here.
   ink over them; a tap on a block sets that weight, a tap on the top shaded block again takes the sign off, Undo on the toast; the words
   keep a pen that renames the row (`phGdfMergeLabEdit`). The dot-row tables are gone. The Cases view keeps the other session's 14 rows with R / B lines and dots (her synth22
   list): shown three pictures (A those rows as picture tables, B as they are, C one full picture per case), she picked B, 2026-11-09.
+- Tour Case formulas (her 2026-11-10 "if there are cases with new formulas, add it to fang bing ren using the case info to add that fang bing
+  ren details", then her popup picks): a Day 1 case whose formula Fang Bing Ren lacked has a formula of its own, built from that case only:
+  each observation its match list (`PH_TC_MATCH`) reads as a catalog sign, at 3 (the weight Accept gives), on the side it matched; `src: [n]`
+  names the case; its conditions go in `core` and score nothing. Six: Gui Ling Wu Wei Gan Cao Tang (Case 1), Chai Po Tang (3), Zhu Ye Shi Gao
+  Tang (6), Gui Zhi Fu Ling Wan (7), Wen Qing Yin (9), Shi San Wei Xue Bi Tang (10); each case points at its own (`PH_TC_NEWFAM`, once, never
+  over a family she picked). Her pick "Fair share": a `src` table is scored against the median book ceiling on each side (`phFbrCeil`) until
+  its own is bigger, so it leads its own case and every other case keeps its order. Case 5 (three formulas at once) stays unlinked (her pick).
+  Case 2 (filed Da Cheng Qi Tang, herbs of Da Chai Hu Tang) waits for her word.
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast

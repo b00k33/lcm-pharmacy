@@ -13594,3 +13594,40 @@ popup "C · Blocks, push live".
 - **Tested** (sandbox, Case 1, Accept all): Ren row shows no Pulse or Abdominal sign; Pulse and Abdominal rows show the note ("Rapid pulse", "Soft lower abdomen"); notes list = Rapid pulse, Soft lower abdomen, Night sweats, SOB, Nocturia 4-5x a night, Sore back; a match whose text equals the wording shows no note; tap audit 28 of 28 at 1220 and 360; no page scroll sideways at 360. Picture: mocks/tour-cases-ren-no-repeat-note-built-2026-11-10.jpg.
 - **Not tested:** the Key2.
 - **SAVED, not live:** goes out with her next "push live" (with the Formula tab, 51f2579a).
+
+## 2026-11-10 · Fang Bing Ren: six formulas from the Tour Cases
+Her words, on a picture of Case 1's Book / lecture prescription (Gui Ling Wu Wei Gan Cao Tang): "if there are cases with new formulas, add it to
+fang bing ren using the case info to add that fang bing ren details - show mock". The mock was the real build in the sandbox
+(shots/case-formulas-*-mock-2026-11-10.png, local); her popup picks: board "Fair share", Case 5 "Leave it unlinked", Case 2 "ask me again
+tomorrow", then "Test + push live".
+- **Found:** six of the 15 Day 1 cases used a formula Fang Bing Ren did not have: Gui Ling Wu Wei Gan Cao Tang (Case 1), Chai Po Tang (Case 3,
+  written CPT: its herbs are Xiao Chai Hu Tang with Ban Xia Hou Po Tang), Zhu Ye Shi Gao Tang (6), Gui Zhi Fu Ling Wan (7), Wen Qing Yin (9),
+  Shi San Wei Xue Bi Tang (10, filed under the Huang Qi herb before). Case 4 has no formula recorded; Case 5 used three at once.
+- **Built** (`index.html`): `PH_FORMULAS` guilingwuwei, chaipo, zhuyeshigao, guizhifuling, wenqingyin, shisanwei. Each table is its case only:
+  every observation `PH_TC_MATCH` reads as a catalog sign, at 3 (Accept's weight), on the side it matched (2 to 8 Bing, 1 to 3 Ren); `src: [n]`;
+  `core` says "From one case, not a book table", the source, the signs, and the conditions (they score nothing). No new pool signs, so every
+  sign keeps the chart wiring it has. `PH_BTJ` names (n, 汉字 except Shi San Wei Xue Bi Tang, which has none on file, en, a person line from the
+  case). Herb homes, MY picks (the leading herb): Gui Zhi (Gui Zhi Fu Ling Wan, Gui Ling Wu Wei Gan Cao Tang), Chai Hu (Chai Po Tang), Shi Gao
+  (Zhu Ye Shi Gao Tang), Huang Lian (Wen Qing Yin), Huang Qi (Shi San Wei Xue Bi Tang); colours follow as shades. Chai Po Tang joins the Chai
+  Hu kinds ("the phlegm Chai Hu", Xiao Chai Hu + Ban Xia Hou Po: her own word, waiting in the code since 2026-11-02). Red cautions
+  (`PH_FBR_AVOID`), by the case recipes: Ban Xia (pregnancy) Chai Po Tang, Zhu Ye Shi Gao Tang; warm herbs (bronchiectasis) Gui Ling Wu Wei Gan
+  Cao Tang, Gui Zhi Fu Ling Wan, Shi San Wei Xue Bi Tang; Chai Hu (drug liver damage) Chai Po Tang; her run-20 "Wu Tou, Rou Gui, Gui Zhi Fu
+  Ling Wan" read as pregnancy lines (MY reading, hers to correct): "Pregnant: avoid Gui Zhi Fu Ling Wan", and "avoid Rou Gui" on the three
+  whose case recipe has Rou Gui. A caution marks red; the ranking is unchanged.
+- **Board, her pick "Fair share":** measured first on the 15 cases. Plain small tables led other cases from two ticks (Case 8's Zhen Wu Tang
+  picture put Zhu Ye Shi Gao Tang first at 50%; Cases 2, 12, 14, 15 changed leader too). `phFbrCeil(f, tab)` scores a `src` table against the
+  median book ceiling on that side (Bing 74, Ren 68 today; reset with the other caches after her edits) until its own is bigger; a book table
+  is its own ceiling as before. Used by `phFbrRank` and the Ren page's change marks. Result: each new formula leads its own case (Case 10 is
+  second, 8 to 11), every other case keeps the leader it had; Gui Ling Wu Wei Gan Cao Tang's whole picture reads 19%.
+- **Tour Cases:** the six seeds point at their own formula; a case already saved moves once (`PH_TC_NEWFAM`, `famNew`) when its family is
+  still the old seed value (none, or Huang Qi for Case 10), never over a family she picked; clearing it later stays cleared. Correlate then
+  reads "already 3 in <formula>", and Integrate offers a raise when she sets a sign higher. Case 5 stays unlinked (her pick). Case 2 waits:
+  filed Da Cheng Qi Tang, its herbs (Chai Hu, Huang Qin, Ban Xia, Da Huang, Bai Shao, Zhi Ke, Da Zao, Sheng Jiang) are Da Chai Hu Tang's;
+  her answer "ask me again tomorrow".
+- **Not built:** a film ("How it works") and a book type for the six; the Fu Ling Xing Ren Gan Cao Tang and Ju Zhi Jiang Tang of Case 5.
+- **Tested** (sandbox, nothing saved): key check clean; all six have name, card line, colour, source; the 15-case ranking as above; a book
+  ceiling unchanged; the cautions; the case moves (fresh, old saved, her own pick kept, cleared stays, Case 5 none); Chai Po Tang's "Together"
+  line; each new formula's Guide Study and Edit; Compare Edit sets 5 and takes it off on one; the board and Quick assess draw them. Tap audit
+  on the Guide and Tour Cases at 1220 (33, 36 of 36) and 360 (32, 38), no sideways page scroll at 360, console clean.
+- **LIVE** with her "Test + push live".
+- **Not tested:** her real records (her own accepted case signs); the Key2.
