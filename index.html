@@ -116835,7 +116835,7 @@ or changing anything in Cliniko.
       else if (k === "chip") {
         presAbdChipPop = phTpReduceMotion() ? "" : v;
         // flat, water and the tension values: one tap on / off (water, saved anywhere before, goes off in one tap too)
-        if (PH_ABD_ONETAP.has(v)) { if (phAbdChartWrite(name, c => { if (v === "water" && c.marks.water) delete c.marks.water; else phAbdToggleAt(c, v, v === "water" ? "umb" : "whole"); })) phAbdRefresh(name); }
+        if (PH_ABD_ONETAP.has(v)) { if (phAbdChartWrite(name, c => { if (v === "water" && c.marks.water) delete c.marks.water; else phAbdToggleAt(c, v === "distwhole" ? "distended" : v, v === "water" ? "umb" : "whole"); })) phAbdRefresh(name); }
         else {
           presAbdBrush = presAbdBrush === v ? null : v; presAbdPop = null;
           const g = PH_ABD_GRPS.find(x => x.q.some(q => q[0] === v)); if (g) presAbdGrp = g.id;
@@ -146653,13 +146653,13 @@ or changing anything in Cliniko.
   // signs that can sit there, Clear place); "Whole abdomen" is a place too (flat, tension, whole-belly signs); °C sits in the Temp row;
   // one tab panel beside the charts: Summary · Note · Photo · Fang Bing Ren (the gold count lives on its tab now). View state only. ====
   const PH_ABD_GRPS = [
-    { id: "seen", l: "Seen", q: PH_ABD_SEEN },
+    { id: "seen", l: "Seen", q: PH_ABD_SEEN.concat([["distwhole", "whole abdomen distended"]]) },   // her 2026-11-09 "add an option to label whole abdomen distended": one tap = full / distended on the whole belly
     { id: "temp", l: "Temp", q: PH_ABD_TEMP },
     { id: "sounds", l: "Sounds", q: PH_ABD_SOUNDS },
     { id: "tension", l: "Tension", q: PH_ABD_TENSION.map(([k, l]) => ["tension:" + k, l]) },
     { id: "feel", l: "Feel", q: PH_ABD_FEEL }
   ];
-  const PH_ABD_ONETAP = new Set(["flat", "water", "tension:soft", "tension:medium", "tension:hard"]);   // one tap = on / off, nothing to place
+  const PH_ABD_ONETAP = new Set(["flat", "water", "distwhole", "tension:soft", "tension:medium", "tension:hard"]);   // one tap = on / off, nothing to place
   let presAbdGrp = "seen", presAbdBrush = null, presAbdPop = null, presAbdPopGrp = "", presAbdPopFrom = "", presAbdBelow = "sum", presAbdPhotoLast = false;
   let presAbdView = "both", phAbdScanKey = "", phAbdTap = null;   // Today / Both / Last; the patient whose marks last swept in; the last tap on a place (its rings follow a repaint)
   let presAbdPopFresh = false, presAbdChipPop = "", presAbdFresh = "";   // the one change that moves: a popup opening, the chip tapped, the mark just put down
@@ -146667,6 +146667,7 @@ or changing anything in Cliniko.
   // can sign k sit on place p? (water at the umbilicus, gas at her five spots, a tight hypochondrium under the ribs, flat and tension the whole belly)
   function phAbdOkAt(k, p) {
     if (k.indexOf("tension:") === 0 || k === "flat") return p === "whole";
+    if (k === "distwhole") return false;   // a one-tap chip, never a sign on a place
     if (k === "water") return p === "umb";
     if (k === "gas") return PH_ABD_SPOTS.includes(p);
     if (k === "tighthypo") return PH_ABD_HYPO.includes(p);
@@ -146735,9 +146736,9 @@ or changing anything in Cliniko.
   // the sign bar, the charts with the Whole abdomen place, and the tab panel (panels = the Summary / Note / Photo bodies phAbdHtml builds)
   function phVisitAbdHtml(name, draft, panels) {
     const a = phAbd2Read(draft.abd), pn = panels || {};
-    const isOn = k => k.indexOf("tension:") === 0 ? a.tension === k.slice(8) : !!a.marks[k];
+    const isOn = k => k.indexOf("tension:") === 0 ? a.tension === k.slice(8) : k === "distwhole" ? phAbdSits(a, "distended", "whole") : !!a.marks[k];
     const grp = PH_ABD_GRPS.find(g => g.id === presAbdGrp) || PH_ABD_GRPS[0];
-    const tabs = PH_ABD_GRPS.map(g => { const n = g.q.filter(([k]) => isOn(k)).length, on = g === grp; return `<button type="button" role="tab" class="${on ? "on" : ""}" aria-selected="${on}" data-abd3="grp:${g.id}">${esc(g.l)}${n ? `<span class="n">${n}</span>` : ""}</button>`; }).join("");
+    const tabs = PH_ABD_GRPS.map(g => { const n = g.q.filter(([k]) => k !== "distwhole" && isOn(k)).length, on = g === grp; return `<button type="button" role="tab" class="${on ? "on" : ""}" aria-selected="${on}" data-abd3="grp:${g.id}">${esc(g.l)}${n ? `<span class="n">${n}</span>` : ""}</button>`; }).join("");
     const chips = grp.q.map(([k, l]) => phAbdChipHtml(k, l, isOn(k), presAbdBrush === k, "chip")).join("");
     // °C at epi (CV12) and lower (CV4): the stepper with a typed value, 0.1 steps; the one number that matters is the difference
     const tin = ([k, l, cv]) => `<span class="ph-abd3-tcs"><b>${l}</b><small>${cv}</small><span class="ph-abd2-tin"><button type="button" data-abd3="tempc:${k}:-1" aria-label="Down 0.1">−</button><input type="number" class="field-bare" data-abd-temp="${k}" inputmode="decimal" step="0.1" min="${PH_ABD_TEMPC_MIN}" max="${PH_ABD_TEMPC_MAX}" value="${a.tempC[k] != null ? a.tempC[k].toFixed(1) : ""}" placeholder="—" aria-label="${l} °C"><small>°C</small><button type="button" data-abd3="tempc:${k}:+1" aria-label="Up 0.1">+</button></span></span>`;

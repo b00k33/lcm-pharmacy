@@ -1971,7 +1971,8 @@ frost (`phAbdTempMotion`); a Today / Both / Last bar under the front chart (`pre
 sweep in once per open of a patient (`phAbdScanKey`, `scan0`, each mark's `--sd`), with a Replay circle beside the bar. The side view moves
 with it (her "make the side view animate too"): the same scan line, its wall line drawing top to bottom as the line passes, its sounds and °C
 strips sweeping in, warm / cold rows sending up heat / frost inside the belly (`phAbdSideTemp`), and Today / Both / Last fading its marks
-(the wall line and the rows stay). Seen has "flat" (whole belly, no place); Temp = cold · cool · warm in BLUE / PALE BLUE / RED (temperature
+(the wall line and the rows stay). Seen ends with one tap "whole abdomen distended" (`distwhole`, her 2026-11-09: full / distended on the whole belly in
+one tap, on while that mark sits; not a place's sign, so no popup lists it). Seen has "flat" (whole belly, no place); Temp = cold · cool · warm in BLUE / PALE BLUE / RED (temperature
 only; water and gas ink stay grey), one temperature per place; Feel = tender · tight hypochondrium (`tighthypo`, R / L hypo only,
 ticks the Chest & ribs pair) · pulsation · tight rectus · thin wall. No Xia Xin chip: tender at epi IS Xia Xin tender
 (`phAbd2Read` reads an old `marks.xiaxin` as tender@epi). The page works the Pulse page's way (her pick) [Abdomen page: the Pulse

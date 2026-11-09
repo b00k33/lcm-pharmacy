@@ -13147,3 +13147,15 @@ pick: "1. smaller pair."
 - **Tested** in the harness: Gui Zhi, Edit, 1220px and 1380px both show 3 columns; "Catches Colds
   Often" keeps its icon pair on the label's own line. Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Abdomen Seen: a one-tap "whole abdomen distended" chip (2026-11-09)
+- **Her words:** "add an option to label whole abdomen distended" (before this, whole-belly distension took the full / distended chip + the Whole abdomen button).
+- **Code** (`index.html`): `PH_ABD_GRPS` Seen = `PH_ABD_SEEN` + `["distwhole", "whole abdomen distended"]` (last, A–Z); `distwhole` is in `PH_ABD_ONETAP`, so one tap runs
+  `phAbdToggleAt(c, "distended", "whole")` (on / off, no brush); `isOn("distwhole")` = `phAbdSits(a, "distended", "whole")`; `phAbdOkAt("distwhole", p)` is false everywhere, so no place's
+  popup lists it; the Seen tab's count skips it (one mark, one count). It stores the same `marks.distended = ["whole"]` as before, so Fang Bing Ren, the summary, the front glow and the side view read it unchanged.
+  It is not in `PH_ABD_SEEN` / `PH_ABD_MARKS` (summary text, key signs and pattern words stay as they were).
+- **Tested** (sandbox, real `phAbdToggleAt` / `phVisitAbdHtml`): blank → on gives `{distended:["whole"]}`, the chip and full / distended both read on, the Seen tab says 1, off clears; the chip is last in the row;
+  `phAbdOkAt` false at epi and whole. The real tap path (`phAbdClick` → `phAbdChartWrite` → repaint) was read, not driven.
+- **Not tested:** a real tap on a real patient; the chip bar's width at 360px (it wraps like the others); the Guide's chart.
+- **Pages checked:** the Abdomen exam page chart, side view and Summary line (same data).
+- **SAVED, not live:** goes out with her next "push live".
