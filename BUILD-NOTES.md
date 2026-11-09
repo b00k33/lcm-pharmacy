@@ -13263,3 +13263,21 @@ Her ask, with a screenshot of the type dropdown: "alphabetical order, Dr Huang H
 - **Not tested:** the edit mode (pen / book icons sit on the same cell, nothing else changed), the phone width, a rank-0 "against" row in real data (by reading: `w > 0` only).
 - **Pages checked:** the Guide card's by-area table only. The patient's own Fang Bing Ren page (`phFbrTpAreaHtml`) is a separate table and was not changed.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Huang Qi: her new table's 11 rows sourced, 2026-11-09
+
+Her ask: "all the huang qi info recently added, tag source as Nanjing Study Tour Nov 2026 / Huang
+Huang / Day 5 Lecture."
+
+- The 11 sign keys her integrate33 run 23 Huang Qi table added -- `limbs_weak_now`,
+  `hips_thighs_cold_now`, `mood_swings_now`, `abd_large_full_tend`, `tongue_soft_fissured`,
+  `tongue_yellowish_tend`, `skin_rash_purpura_ulcer_tend`, `wound_heal_slow_tend`,
+  `dx_diabetic_foot`, `dx_neuropathy`, `neck_fat_tend` -- now each carry one reference (type Dr
+  Huang Huang, who "Nanjing Study Tour Nov 2026 -- Day 5 Lecture"), written the same way her own
+  reference box writes one. No other formula scores any of these signs, so one reference per key
+  is the whole citation; a reference she adds herself on one of these later stays alongside it.
+- A one-time migration (`phMigrateHuangQiR23Source`, gated on `PHARMACY.huangqiR23SrcTagged`), the
+  same pattern as the other boot-time migrations in the file.
+- **Tested** in the harness: `PHARMACY.fbrEdits._sources.w` carries the citation on all 11 keys
+  after a fresh load; the flag stops it running twice. Boots clean.
+- **SAVED, not live:** goes out with her next "push live".
