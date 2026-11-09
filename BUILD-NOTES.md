@@ -12884,3 +12884,28 @@ line, no stray marks over the ribs or sternum, no console errors. **Not tested:*
 exam page's own tap-to-mark flow for Seen (the function was called directly with a hand-built `marks` object, not
 through the UI), the SIDE view (unchanged -- its own "full" contour already did this).
 **SAVED, not live:** goes out with her next "push live".
+
+## Abdomen chart: sound/thin-wall marks in ink, not soft grey (2026-11-09)
+
+Her "improve the visual differentiation of the abdomen verse the sign deviations. its too similar", from a
+screenshot of the Sounds tab (the water-sound wavy line reading close to the teal outline and the grey anatomy
+dotted lines).
+
+- **`PH_ABD_INK` was `#4A575B` -- the exact hex of `--ph-soft`, a de-emphasis tone**, same muted family as the
+  structure's own teal (opacity .65-.8) and the anatomy divider lines (`#8A9293`, opacity .75). A finding mark
+  drawn in a "quieter than normal" ink was never going to read as the boldest thing on a chart whose plain parts
+  are already fairly solid. It's now `#141F23`, the exact hex of `--ph-ink` -- the app's darkest neutral -- so
+  water, gas and thin-wall marks are the strongest, darkest lines on the chart, the way a finding should read.
+- **Still ink, not a new colour** -- keeps her 2026-10-22 rule ("the drawing is plain, every colour is a finding
+  she marked"): sounds and thin wall were deliberately neutral, not given their own hue like tender (red) or
+  temperature (blue/red); this fix is about weight/contrast, not adding a colour. Bulging/sunken (green),
+  tender (red) and pulsation (maroon) were already clearly their own hue against the teal structure and weren't
+  touched.
+- One constant, four call sites (water's two wave lines + its boundary ellipse, gas bubbles, thin wall's ring) --
+  all read the same `PH_ABD_INK`, so the fix is uniform without touching each glyph.
+
+**Tested:** in the sandbox, rendering the same chart with the old and new hex side by side (water + gas marked) --
+the new ink is visibly bolder against the teal outline and the dotted anatomy lines in both screenshots. No
+console errors. **Not tested:** the thin-wall mark specifically (not rendered in this pass, though it reads the
+same constant), her own real exam data, the side view (uses its own separate styling, not `PH_ABD_INK`).
+**SAVED, not live:** goes out with her next "push live".
