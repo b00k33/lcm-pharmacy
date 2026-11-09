@@ -13539,3 +13539,24 @@ this organisation and display. use it for the compare and table and cases displa
   - Tap audit on Compare at 1220 and 360: only the Herbs table's recipe picker (as before). At 360 the words 13 px, a number cell 52 × 28,
     no sideways page scroll. Console clean. The other session's Cases (14 rows) draws as before.
 - **Not tested:** her real records; the Key2.
+
+## 2026-11-09 · Compare › Edit in the same picture table, as shaded blocks
+Her words, on two pictures (the Tables view and the Edit view's dot rows): "how to make the edit table similar to the table display". Shown
+A (tap a number, a small box of dots opens) and B (five dots in every cell) as the real build in the sandbox; her answer "what about coloured
+blocks inside the cell, totalling to 5, that will shade the cell". Shown C as built (shots/compare-edit-A/B/C-*-2026-11-09.png, local); her
+popup "C · Blocks, push live".
+- **Built** (`index.html`): Edit draws `phCmpPicTblHtml` too. A number cell is five blocks across the whole cell (`.bkr`, a 5-column grid,
+  2 px gaps); the first *weight* blocks shaded in the formula's colour (Ren 30%, Bing 46%, an against sign light red), the rest faint; the
+  number in ink over the left (red with − if against), a pale dash when the formula hasn't the sign. A block taps `data-cmp-w` with its
+  number (`phCmpSet`: adds the sign at that weight, keeps an against sign's −); the top shaded block taps `data-cmp-xw` (`phCmpDrop`, takes
+  it off); both toast with Undo. `phCmpPicRows` keeps each formula's Ren and Bing keys per row (`kr` / `kb`); in Edit a row whose sign you
+  just set stays while you work (`phCmp.keep`). The words carry a pen (`data-cmp-mlab`) that renames the merged row (`phGdfMergeLabEdit`).
+  The chip counts read the merged rows in both modes. Gone: `phCmpSignsTableHtml`, `phCmpEditCell`, `phCmpGhost` (the dot-row tables). Phone:
+  an Edit column 90 px, the symptom column 120 px, the table scrolls inside its card.
+- **Tested** (sandbox, every family formula, Tells, nothing saved): Tables has no blocks; Edit 124 rows, 1240 block cells, 124 pens; block 3
+  sets 3; adding Ma Huang at 2 keeps the row; the top block again takes it off (the row leaves when no picked formula has it); an against
+  sign set to 4 reads −4; on Both the Bing blocks are deeper; the pen opens on the saved words; Edit off, no blocks; Cases still its 14 rows.
+  Tap audit at 1220 and 360: only a block (11 × 30 desktop, 16 × 30 phone: five in a cell is her design) and the Guide's 24 px pen. No
+  sideways page scroll at 360. Console clean.
+- **LIVE** with her "C · Blocks, push live".
+- **Not tested:** her real records; the Key2.

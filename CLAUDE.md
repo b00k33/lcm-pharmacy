@@ -1449,7 +1449,10 @@ not repeated here.
 - Guide › Compare › Tables is drawn in the Guide picture table's order and look (her 2026-11-09 "i like this organisation and display. use
   it for the compare and table and cases display"): a body area head row, its subjects as paper rows, a Ren and a Bing sign of the same words
   on one row, each formula its Ren and Bing number columns, a number on a fill of its weight out of 5 (`phCmpPicRows`, `phCmpPicTblHtml`).
-  Edit keeps the dot rows (`phCmpSignsTableHtml`). The Cases view keeps the other session's 14 rows with R / B lines and dots (her synth22
+  Edit is the same table (her 2026-11-09 "how to make the edit table similar to the table display", then "what about coloured blocks inside
+  the cell, totalling to 5, that will shade the cell", her pick C): a number cell is five blocks, the shaded ones its weight, the number in
+  ink over them; a tap on a block sets that weight, a tap on the top shaded block again takes the sign off, Undo on the toast; the words
+  keep a pen that renames the row (`phGdfMergeLabEdit`). The dot-row tables are gone. The Cases view keeps the other session's 14 rows with R / B lines and dots (her synth22
   list): shown three pictures (A those rows as picture tables, B as they are, C one full picture per case), she picked B, 2026-11-09.
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
