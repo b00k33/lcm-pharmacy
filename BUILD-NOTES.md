@@ -12958,3 +12958,23 @@ Her words, with a screenshot of "Catches Colds Often": "see the problem."
   below is visibly dimmed while it's open. A row with room on every side opens exactly as before.
   Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Abdomen chart: full / distended as a soft glow, larger, clear of the words (2026-11-09)
+- **Her words:** "improve this animation visual - make it larger and fade it from the annotations" and "improve the option to have total abdomen
+  distension" (with the Seen › full / distended screenshot: small dashed rings sitting on top of "flank", "umb", "iliac"). Then "show mock".
+- **Mock** (`mocks/abdomen-distension-mock-2026-11-09.html` + `.jpg`, the real chart output): Now vs A Soft glow · B Contour dome · C Ripple, rows
+  marked and Whole abdomen. **Her picks:** A; Whole abdomen = the look (not a new way to pick it); the side view swells more too.
+- **Code** (`index.html`): `phAbdDistLayer(rows, Z, uid, tag)` replaces the old `DOME` dashed rings in `marksSvg`.
+  - One radial rose glow per marked ROW across the whole skin width (rows 0 epi / 1 umb / 2 lower from `PH_ABD_QY`, `PH_ABD_R1Y`, `PH_ABD_R2Y`),
+    clipped to the skin (`${uid}` clip), breathing with the existing `.ph-abd2-m-swell`.
+  - A mask (blurred holes at every place's label) fades the glow out round the words.
+  - Whole abdomen: one glow over the trunk, plus the outline pushed out at the sides (two soft lines, biggest at the navel, none at ribs / hips).
+  - Hex colours only, own ids per layer (`uid` + `n` / `p`), so last visit's copy in the same SVG greys through `phAbdGrey` (checked: no rose left).
+  - Side view (`phAbdSideWall` / `phAbdSideState`): whole distended amplitude 19 → 21 with a bigger breath (1.3 → 2.2); a distended row's local bulge 6 → 8.5.
+  - The small read-only charts (`.ro`) still draw no distension, as before.
+- **Tested** (sandbox, the real `phAbdChartSvg` / `phAbdSideSvg`, hand-built marks): rows epi + umb + lower, one flank, whole, whole with last visit's
+  rows under it, side view of rows and whole (nothing cut at the right edge, temperature text still fits); no duplicate ids; no console errors.
+- **Not tested:** a real patient's record; the Key2; reduced motion by running it (the swell rule already sits in the reduced-motion list, by reading only);
+  the Visit / Care Plan minis (they never drew distension).
+- **Pages checked:** the Abdomen exam page chart and side view only (the one place the distension is drawn).
+- **SAVED, not live:** goes out with her next "push live".

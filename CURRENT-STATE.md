@@ -1957,7 +1957,9 @@ show on today's finding); a sublingual shot opens on Sublingual; Drawing hides o
 **Abdomen** (her redesign): `visitFnd[id].abd =
 {tension, tensionAt{} (read-only legacy: nothing new is written), tempC{epi, lower} (°C at CV12 / CV4, 28–40, no navel),
 marks{sign:[zones]} (Seen signs distended / bulging / sunken / vispulse sit by ROW: whole, epi, umb, lower), v2}`; tension is one
-whole-abdomen value. Seen has "flat" (whole belly, no place); Temp = cold · cool · warm in BLUE / PALE BLUE / RED (temperature
+whole-abdomen value. Full / distended draws as one soft rose glow across the whole row, breathing, fading to nothing at its edge
+and round every place's word (`phAbdDistLayer`, her 2026-11-09 pick A; no dashes or rings); the whole belly is one glow over the trunk
+with the outline pushed out at the sides, and the side view's belly line swells further to match. Seen has "flat" (whole belly, no place); Temp = cold · cool · warm in BLUE / PALE BLUE / RED (temperature
 only; water and gas ink stay grey), one temperature per place; Feel = tender · tight hypochondrium (`tighthypo`, R / L hypo only,
 ticks the Chest & ribs pair) · pulsation · tight rectus · thin wall. No Xia Xin chip: tender at epi IS Xia Xin tender
 (`phAbd2Read` reads an old `marks.xiaxin` as tender@epi). The page works the Pulse page's way (her pick) [Abdomen page: the Pulse

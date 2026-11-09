@@ -146020,6 +146020,30 @@ or changing anything in Cliniko.
     `<circle cx="${bx}" cy="${by}" r="${r}" class="ph-abd2-m-bub" style="animation-delay:${d}s" fill="rgba(255,255,255,.75)" stroke="${PH_ABD_INK}" stroke-width=".55"/>`).join("")}</g>`;
   const phAbdGPulse = (x, y, s) => `<g transform="translate(${phAbdN(x)},${phAbdN(y)}) scale(${s})" pointer-events="none"><circle r="2.4" class="ph-abd2-m-ring" fill="none" stroke="#7A2F45" stroke-width=".6"/><circle r="2.4" class="ph-abd2-m-ring r2" fill="none" stroke="#7A2F45" stroke-width=".6"/><circle r="1.7" class="ph-abd2-m-beat" fill="#7A2F45"/></g>`;
   const phAbdGTender = (x, y) => `<g transform="translate(${phAbdN(x)},${phAbdN(y)})" pointer-events="none"><circle r="4.6" class="ph-abd2-m-halo" fill="rgba(178,58,58,.2)"/><path d="M-2.6,-2.6 l5.2,5.2 M2.6,-2.6 l-5.2,5.2" class="ph-abd2-x" stroke-linecap="round"/></g>`;
+  // distension is SEEN (her 2026-11-09 "make it larger and fade it from the annotations", pick A "soft glow"): one rose glow across the WHOLE
+  // width of the row (a raised dome), fading to nothing at its edge and round every place's word, so the words stay clear; breathing (the
+  // existing swell). No dashes, no rings. The whole belly = one glow over the trunk, with the outline pushed out at the sides. Clipped to
+  // the skin, except the outline swell; hex colours only, so last visit's copy greys through phAbdGrey. rows: 0 epi, 1 umb, 2 lower, -1 whole.
+  function phAbdDistLayer(rows, Z, uid, tag) {
+    const id = uid + tag, CX = PH_ABD_CX, RS = "#A83C50";   // own ids per layer: the chart can hold today's and last visit's
+    const Y0 = [PH_ABD_QY - 2, PH_ABD_R1Y - 2, PH_ABD_R2Y - 2], Y1 = [PH_ABD_R1Y + 2, PH_ABD_R2Y + 2, 139];
+    const holes = PH_ABD_ZONE_ORDER.map(k => { const z = Z[k]; return `<ellipse cx="${z.cx.toFixed(1)}" cy="${(z.cy + (k === "umb" ? -3.5 : 0)).toFixed(1)}" rx="${z.c === 1 ? 7.5 : 9}" ry="4.8" fill="#000000"/>`; }).join("");
+    const defs = `<defs>
+      <filter id="${id}df" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="2"/></filter>
+      <mask id="${id}dm" maskUnits="userSpaceOnUse" x="20" y="0" width="80" height="150"><rect x="20" y="0" width="80" height="150" fill="#FFFFFF"/><g filter="url(#${id}df)">${holes}</g></mask>
+      <radialGradient id="${id}dg"><stop offset="0" stop-color="${RS}" stop-opacity=".46"/><stop offset=".5" stop-color="${RS}" stop-opacity=".3"/><stop offset="1" stop-color="${RS}" stop-opacity="0"/></radialGradient>
+    </defs>`;
+    // the outline pushed out at the sides of the whole belly, biggest at the navel, none at the ribs and hips
+    const edge = (amp, sgn, w, o) => { const P = []; for (let y = PH_ABD_RIB_Y - 8; y <= PH_ABD_ASIS_Y + 8; y += 2) { const t = Math.max(0, Math.min(1, (y - PH_ABD_RIB_Y) / (PH_ABD_ASIS_Y - PH_ABD_RIB_Y))); P.push([CX + sgn * (phAbdHw(y) + amp * Math.sin(Math.PI * t)), y]); } return `<path d="${phAbdPts(P)}" fill="none" stroke="${RS}" stroke-width="${w}" stroke-opacity="${o}" stroke-linecap="round"/>`; };
+    const sw = (inner, cy) => `<g class="ph-abd2-m-swell" style="transform-origin:${CX}px ${cy}px">${inner}</g>`;
+    let inside = "", outside = "";
+    rows.forEach(r => {
+      const whole = r < 0, cy = whole ? 84 : (Y0[r] + Y1[r]) / 2, ry = whole ? 56 : (Y1[r] - Y0[r]) / 2 + 2, rx = whole ? 31 : phAbdHw(cy) - 1.5;
+      inside += sw(`<ellipse cx="${CX}" cy="${cy}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" fill="url(#${id}dg)"/>`, cy);
+      if (whole) outside += sw(edge(6, -1, 1, .6) + edge(6, 1, 1, .6) + edge(11, -1, .8, .28) + edge(11, 1, .8, .28), 84);
+    });
+    return `${defs}<g mask="url(#${id}dm)" pointer-events="none"><g clip-path="url(#${uid})">${inside}</g>${outside}</g>`;
+  }
   function phAbdChartSvg(abd, active, opts) {
     const a = phAbd2Read(abd);
     const uid = "phAbd" + (++phAbdUid);   // own clip id per chart: the trend sheet draws many at once
@@ -146076,8 +146100,7 @@ or changing anything in Cliniko.
       // thin wall: a dotted ring in the place (the whole belly: one ring round it)
       const thinWall = glyph("thinwall", (x, y, z) => z.whole ? `<ellipse cx="${PH_ABD_CX}" cy="85" rx="26" ry="45" fill="none" stroke="${PH_ABD_INK}" stroke-width=".8" stroke-dasharray=".5 1.6" stroke-linecap="round" pointer-events="none"/>` : `<ellipse cx="${phAbdN(z.cx)}" cy="${phAbdN(z.cy + 1)}" rx="${phAbdN(z.w * .42)}" ry="${phAbdN(z.h * .32)}" fill="none" stroke="${PH_ABD_INK}" stroke-width=".8" stroke-dasharray=".5 1.6" stroke-linecap="round" pointer-events="none"/>`);
       // distension is SEEN: dashed contour rings across that ROW (a raised dome), breathing; the side view draws the real belly line
-      const DOME = { 0: [47, 12, 9], 1: [84, 24, 13], 2: [119, 17, 9.5], "-1": [84, 27, 50] };
-      const dist = ro ? "" : [...new Set((m.distended || []).map(phAbdRowOf))].map(r => { const [cy, rx, ry] = DOME[r]; return `<g class="ph-abd2-m-swell" style="transform-origin:${PH_ABD_CX}px ${cy}px" pointer-events="none"><ellipse cx="${PH_ABD_CX}" cy="${cy}" rx="${rx}" ry="${ry}" fill="rgba(168,60,80,.07)" stroke="#A83C50" stroke-width=".8" stroke-dasharray="2 1.4"/><ellipse cx="${PH_ABD_CX}" cy="${cy}" rx="${phAbdN(rx * .55)}" ry="${phAbdN(ry * .55)}" fill="none" stroke="#A83C50" stroke-width=".7" stroke-dasharray="2 1.4" stroke-opacity=".8"/></g>`; }).join("");
+      const dist = ro ? "" : (m.distended || []).length ? phAbdDistLayer([...new Set((m.distended || []).map(phAbdRowOf))], Z, uid, live ? "n" : "p") : "";
       return { dist, top: bulge + sunk + thinWall + tightRect + water + gas + tightHypo + tender + puls + vispulse };
     };
     const now = marksSvg(m, !ro);
@@ -146122,14 +146145,14 @@ or changing anything in Cliniko.
     else if (whole("bulging")) contour = "full";
     else if (whole("sunken")) contour = "sunken";
     const locals = [];
-    if (has("distended") && !whole("distended")) rowsOf("distended").forEach(r => locals.push([r, 6]));
+    if (has("distended") && !whole("distended")) rowsOf("distended").forEach(r => locals.push([r, 8.5]));
     if (has("bulging") && !whole("bulging")) rowsOf("bulging").forEach(r => locals.push([r, 7.5]));
     if (has("sunken") && !whole("sunken")) rowsOf("sunken").forEach(r => locals.push([r, -4.5]));
     return { contour, locals };
   }
   function phAbdSideWall(a, breath) {
     const S = phAbdSideState(a), k = a.tension === "soft" ? 1.35 : a.tension === "hard" ? .95 : 1.12;
-    const amp = { flat: 2, full: 8.5, distended: 19, sunken: -6.5 }[S.contour] + (breath ? (S.contour === "distended" ? 1.3 : 1.9) : 0);
+    const amp = { flat: 2, full: 8.5, distended: 21, sunken: -6.5 }[S.contour] + (breath ? (S.contour === "distended" ? 2.2 : 1.9) : 0);
     return y => {
       if (y <= PH_ABD_XIPH_Y) return phAbdCos([[0, 61], [PH_ABD_XIPH_Y, 60]], y);
       if (y >= PH_ABD_PUBIS_Y) return phAbdCos([[PH_ABD_PUBIS_Y, 57.5], [150, 55]], y);
