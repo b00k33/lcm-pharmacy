@@ -12995,3 +12995,70 @@ Her words, with a screenshot of "Catches Colds Often": "see the problem."
 - **Not tested:** a real tap on the umbilical zone with the brush in the live page (the toast path is the existing one); a patient record; the Key2.
 - **Pages checked:** the Abdomen exam page chart, side view and place popup logic only.
 - **SAVED, not live:** goes out with her next "push live".
+
+## 2026-11-09 · Huang Qi: her new table, integrate33 run 23
+Her paste: a symptom table /5 (no heading; her source's "REN"), "BING – Objective signs" /5 and "Conditions Treated / Clinical Applications"
+(condition → formula), and "integrate33". Huang Qi was already a family (her 2026-10-08 passage and run 20's two pointer lines). Matrix
+`fbr-integrate33-huangqi-2026-11-09.html` (root until live, then mocks/), published to her as an artifact.
+- **Swap:** her headings run the other way round from the app's, as in runs 18 to 22; by her 2026-10-14 swap rule her symptoms are Bing and
+  her objective signs Ren, every line at her number.
+- **A second table for a family that exists (MY call, asked):** her lines join Huang Qi beside the October ones. Where a line names a sign
+  Huang Qi already weighs, the higher number stays (numbness 4 → 5; soft, loose muscle keeps its 5 against the new line's 4; swelling 5 = 5).
+  Her October lines this table does not name stay as they were.
+- **"With" and "and" add both halves** (her Da Chai Hu answer): cough + phlegm (4 each), irritable + mood swings (3 each), soft flesh +
+  obesity, the yellow face + the yellow tongue. A line the pool holds as one sign stays one: numbness and loss of sensation, fatigue and
+  general weakness, joint pain and swelling (`joint_swollen_painful`), recurrent colds / susceptibility to infections (`colds_often`).
+- **Reused:** Bing numbness, sweat_profuse ("especially lower body": no lower-body row, not kept), fatigue_now, colds_often, cough,
+  phlegm_now, sob, appetite_poor_now, abd_disc ("chronic" not kept), irritable_restless, forgetful_now, tremor (hand tremors or tics),
+  vision_blur_now, joint_swollen_painful; Ren edema_tend, soft_loose_muscle, obesity_tend, complexion_sallow (her sallow 4 and the yellow
+  face 3 are one sign: 4), tongue_pale_only (one `or` with October's pale, flabby: one paleness, scored once), complexion_dark_tend ("dark,
+  ashen complexion in advanced illness": the complexion is the sign, the illness is when).
+- **New rows (11):** Bing `limbs_weak_now` "Limbs: weak, or restricted movement", `hips_thighs_cold_now` "Hips & thighs: cold, sore, heavy
+  (lao han tui)" (her "Old Cold Legs"; new subject Hips & thighs, area Pain, muscles & joints, body place hips), `mood_swings_now` "Mind &
+  mood: mood swings" (the Bing twin of irritable_mood); Ren `abd_large_full_tend` "Abdominal: large, full", `tongue_soft_fissured` "Tongue:
+  soft, fissured (frog's belly)", `tongue_yellowish_tend` "Tongue: yellowish" (asked), `skin_rash_purpura_ulcer_tend` "Skin: rashes, purpura
+  or ulcers" (one line, one row), `wound_heal_slow_tend` "Skin: wounds slow to heal" (a wound is not an ulcer), `dx_diabetic_foot`
+  "Diagnosis: diabetic foot wounds", `dx_neuropathy` "Diagnosis: peripheral neuropathy", `neck_fat_tend` "Build: fat at the neck". Each in
+  one board group; subgroups (Build › Shape, a new Skin › Condition, Abdominal › Fullness); the Tongue & pulse block's body rows; the two
+  conditions' areas (`PH_FBR_DX_AREA`: neuropathy with the nerves, the diabetic foot with the skin); body places (`PH_FBB_KEY`: hands and
+  feet for both conditions, the neck); spots (`PH_REN_DRAW`, `PH_BING_SITE`, DRAFT placement); twin `mood_swings_now` ↔ `irritable_mood`;
+  search words (`PH_BING_ALIAS`).
+- **Ceilings:** Huang Qi Bing 46 → 106, Ren 82 → 122.
+- **Wired:** tongue chart: Soft AND a crack (cracks, horizontal or centre) → the soft, fissured row (`phTngSignChips`; the chips' badge
+  `PH_TNG_FBR_MAP`; tappable on the Tongue page, `PH_TRI_INLINE.tng`; the old chart's words in `PH_FBR_CHART_PREFILL`); Pale → pale
+  (already). Belly chart: Bulging on the Whole abdomen → the large, full row (`abd:bulging@whole`; `phAbdChartWordsOf` now also says
+  `@whole` for a sign saved with no place, `phAbdSideState`'s own rule; tappable on the Abdomen page). Medical history: the Diabetes row's
+  own note naming neuropathy → peripheral neuropathy; naming a diabetic foot or a foot ulcer, wound or sore → diabetic foot wounds
+  (`PH_TRI_PREFILL_HX`; diabetes alone ticks neither). Ask her: Mood › Mood swings now answers Right now too (`mood_swings_now`; Usually stays
+  irritable_mood). Patterns (`PH_FBR_TO_CLUE`): the soft, fissured tongue → the cracked-tongue clue, mood swings → the stress clue;
+  `bt_huangqi` already sits in Qi deficiency. Links (`PH_LINKS_BUILTIN`): "Belly: large vs flat" (new); obesity joined the robust side of
+  "Thin vs robust build".
+- **The person film:** a person's film never plays a Diagnosis row (`phFsStory`, the person branch, `!isDx(g)`), her 2026-11-04 rule "the
+  person, never pathology"; the tiles beside it still list every Ren row. Huang Qi's film now: obesity, large full belly, soft loose
+  muscles, lusterless, vigorous appetite, cold hands and feet, sweats easily, dislikes wind, pale tongue (before: catches colds and bloating
+  where obesity and the belly are). No other person's film changed (none weighs a Diagnosis row at 4 or 5).
+- **`core`:** her conditions as "Reported uses (they score nothing)" (run 18's answer), after the strongest lines. The formulas her table
+  names that are not families wait for their tables: Huang Qi Jian Zhong Tang, Huang Qi Gui Zhi Wu Wu Tang (already on run 20's list), Dang
+  Gui Si Ni Tang, the Huang Qi Shao Yao Gui Zhi Fu Ling Tang modification.
+- **Not wired (no honest source):** blood tests (no marker says neuropathy or a foot wound; diabetes from one number would be a compound),
+  the cycle, the pulse (her table names none), weak limbs, cold hips and thighs, tremor, the skin rows and neck fat (no question asks them:
+  taps), the yellow tongue (the chart has no yellow body).
+- **Tested** (sandbox, a build copy on 78c2e110, nothing saved): no duplicate keys, every Huang Qi key and `or` key resolves; each new row in
+  one group, area and body place as above; all 40 families lead their own full picture; Huang Qi's full picture 100% (next Yu Ping Feng 58);
+  her new table alone 52% first (next Ling Gui Zhu Gan 18); her 5s alone 16% first; each new row alone puts Huang Qi first (2%). Look-alikes:
+  tired + poor appetite → Chai Ling 6, Xiao Jian Zhong 6, Wen Dan 5, Huang Qi 4 (a plain tired patient is not pulled to Huang Qi); cough +
+  phlegm → Ban Xia Hou Po 4, Huang Qi 4; Yu Ping Feng and Fang Ji Huang Qi still lead their own. Charts: Soft + cracks ticks (and Soft + a
+  centre crack); Soft alone, a crack alone, Tender + a crack do not; Whole bulging ticks (and an old no-place save); bulging at the navel and
+  Whole full / distended do not; the same through `phFbrChartWords` on a record-shaped tongue and belly chart. History: diabetes Yes +
+  "peripheral neuropathy in both feet" ticks neuropathy only; "Foot ulcer, left heel", "ulcers on both feet", "diabetic foot clinic" tick the
+  foot row only; diabetes Yes alone, or "Type 1, on insulin pump", neither; diabetes No with a neuropathy note neither. Ask her: Mood swings
+  Usually = irritable_mood, Right now = mood_swings_now (Huang Qi 3). Chip hovers: Soft and each crack name the new row; Bulging names it
+  with the navel row. The Fang Bing Ren board, Ask her, Find the Ren card and the Medical history figure draw for the sandbox patient; every
+  new row draws its sign picture; Guide Huang Qi, Study and Edit, at 1220 and 360: tap audit 0 off (35 / 143 and 32 / 142 checked), no
+  sideways scroll, nothing squeezed; console clean.
+- **Not tested:** her real records; the Key2; Prescriptions search (not touched).
+- **Pages checked:** Guide (the Huang Qi card, Study and Edit, both widths, its film), Fang Bing Ren board, Ask her, Find the Ren, Medical
+  history figure, the Tongue and Abdomen charts' chip links.
+- **Needs her word:** keep her October lines this table does not name (built: kept); the yellow tongue (built: a tongue row of its own);
+  "(lao han tui)" for her Old Cold Legs. DRAFT: the 11 row names, the body spots, the `core` summary.
+- **SAVED, not live:** goes out with her next "push live".

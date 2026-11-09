@@ -1470,7 +1470,7 @@ origin/main:index.html`; don't trust this list's age.
   Wan, Chai Hu Gui Zhi Tang, Chai Gui Tang (her "blood stasis Chai Hu"; run 20's
   dry palms and soles line waits for it), Chai Po Tang (her "phlegm Chai Hu"), and
   the formulas her 2026-11-01 pointer list names (Si Jun Zi, Mai Men Dong, Huang
-  Lian E Jiao, Li Zhong, Zhu Ling, Ma Xing Shi Gan and more: the run 20 note). Huang
+  Lian E Jiao, Li Zhong, Zhu Ling, Ma Xing Shi Gan and more: the run 20 note), and those her Huang Qi table names (Huang Qi Jian Zhong Tang, Dang Gui Si Ni Tang, a Huang Qi Shao Yao Gui Zhi Fu Ling Tang modification: the run 23 note). Huang
   Lian Jie Du Tang, Da Chai Hu Tang, Wen Jing Tang, Ling Gui Zhu Gan Tang, Wai Tai
   Fu Ling Yin, Chai Hu Gui Zhi Gan Jiang Tang and Chai Ling Tang are families now.
   Her Chai Hu kinds (2026-11-02) lead each one's card line (`PH_BTJ` arch): anxious
