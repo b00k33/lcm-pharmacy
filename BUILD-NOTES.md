@@ -13580,3 +13580,10 @@ popup "C · Blocks, push live".
 - **Not tested:** the Key2; an Accept on a device that syncs (it saves like any Correlate); a case with a newsign (typed) sign in the table (drawn under "Not in the catalog yet" by reading).
 - **Calls made:** Accept all is per case, never every case at once, so she sees what it will save; weight 3 is the Correlate card's own default; the Inventory row needs a family and says so; Compare > Cases is unchanged (the same functions).
 - **SAVED, not live:** goes out with her next "push live".
+
+## Compare: a Formula tab holds the Herbs table (2026-11-10)
+- **Her words:** "add a tab for formula and move it from bottom of page to that tab" (pictures: the Tables bar, and the Herbs table under the signs).
+- **Code** (`index.html`, `phCmpHtml`): `viewSeg` gains `["formula", "Formula"]` between Cases and Tables; a `phCmp.view === "formula"` branch draws the pick bar, the switch and `phCmpHerbsTableHtml(cols)`; the Tables branch no longer appends it.
+- **Tested** (sandbox, the Ban Xia family): Tables = the signs table only, no herbs table; Formula = the herbs table (17 rows, 5 grips, the heading chips, Can make now filters in place); a column moved by the arrows keeps the Formula tab; a single herb alone shows the one-line message; Cases still draws; tap audit 22 of 22 at 1220 and 360; no page scroll sideways at 360.
+- **Not tested:** the Key2.
+- **SAVED, not live:** goes out with her next "push live".
