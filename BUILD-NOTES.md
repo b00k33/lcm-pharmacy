@@ -13088,3 +13088,31 @@ added herself), right beside the rename pen in the merged Area table.
   symptom she made herself, removed one, reopened the card -- both read back correctly; the chip
   uses the same "who · date" format as a formula note's own source. Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Abdomen chart: basic drawing faded, motion and touch (2026-11-09)
+- **Her words:** "add more animations or interactive elements. the fundamental drawing of the abdomen needs to be more faded. show mock".
+- **Mock** (`mocks/abdomen-fade-motion-mock-2026-11-09.html` + `.jpg`, the real chart output, live controls). **Her picks:** fade = Ghost; hover link, press
+  ripple, heat and frost, Today / Both / Last bar, scan in once per open + Replay (all five).
+- **Code** (`index.html`):
+  - Fade: the anatomy groups carry `.ph-abd2-b` (dotted lines, ribs, rectus) and the outline `.ph-abd2-bs`; CSS gives them, the bones and the points
+    `--abd-f` (default .28) / `--abd-fs` (.55) on `.ph-abd2-svg:not(.ro)`, so the `.ro` minis (Visit checks, Care Plan, trend sheet, Key-sign scene) keep full strength.
+  - Today's layers sit in `<g class="ph-abd2-nowl">` (dist + heat / frost, and top); last visit stays `.ph-abd3-prev`.
+  - Hover link: `phAbdHl` / `phAbdHlClear` (delegated mouseover / mouseout, only when `(any-hover: hover)`): a tint overlay on the place, `.foc` dims the anatomy, the
+    other words go `.dim`, the side band `.hl`; hover a side band and its places light on the front.
+  - Press rings: a capture-phase click listener draws `phAbdRipple` at the tap (the svg's `data-ten` = the chart's Tension sets reach, seconds, rings, line);
+    `phAbdTap` lets `phAbdAfterPaint` carry the rings on after the repaint the tap causes (negative animation delay = the age).
+  - Heat and frost: `phAbdTempMotion(m, Z, uid)` in `marksSvg` (live charts only): warm = 4 wavy lines rising, cold / cool = frost specks drifting, each clipped to its place and the skin; whole = the centre column.
+  - Today / Both / Last: `phVisitAbdHtml` draws one joined `.ph-tng2-seg` bar (`data-abd3="view:*"`) plus the Replay 32px circle (`data-abd3="replay:"`, `i-refresh`) under the
+    front chart, replacing the two key dots; `presAbdView` (reset on open) sets `data-view` on `.ph-abd3-left`; the bar's taps update in place (`phAbdViewApply`), no repaint.
+    Last fades today's marks to 8% and shows last visit's at full; Today fades last visit's.
+  - Sweep in: the first render of a patient's chart in an open carries `scan0` (key `phAbdScanKey`, cleared in `presOpenScript`; not on an empty chart or under reduced motion):
+    a scan line (`.ph-abd2-scan`) moves ribs to pubis in 1.5 s and each mark fades in as it reaches its height (`--sd` from `phAbdSd`); pure CSS, so nothing can stay hidden.
+    Replay removes and re-adds the class. A repaint (any tap) drops it.
+  - All of it off under reduced motion (the Replay circle hidden); the side chart gets the fade, hover link and rings, not heat / frost / sweep / Today-Last.
+- **Tested** (sandbox, the real `phVisitAbdHtml` / `phAbdChartSvg` / `phAbdSideSvg` drawn into a made-up host, no patient): fade computed .28 / .55 on the live chart, 1 / 1 on a `.ro`
+  mini; hover on the R flank tinted it, dimmed 8 words, lit the side umb band; a tap made 3 rings + dot at soft tension; Last / Replay set `data-view` / `scan0`; no duplicate ids;
+  tap-audit at 1280: only the existing `.ph-tng2-seg` bars (Seen, Whole abdomen and the new bar alike, 29px in this bare host) flagged, the Replay circle passes; 360: the bar wraps in the 144px figure.
+- **Not tested:** a real patient (the exam page, the Guide's chart, a tap that paints a mark, with the popup); the repaint carrying the rings in the live flow; reduced motion by running it; the Key2;
+  the Guide's copy of the chart (shares the code); the bar's 29px / 999 corners are the existing `.ph-tng2-seg` look in this host, not re-measured in the real page.
+- **Pages checked:** the Abdomen exam page chart + side view only (the Guide's Abdomen chart shares the same code and the same host class).
+- **SAVED, not live:** goes out with her next "push live". (The two distension commits before it went live early, with another session's publish 20261109-115800.)
