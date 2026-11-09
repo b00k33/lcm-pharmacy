@@ -15796,6 +15796,17 @@
   #pharmacyPage .ph-cmp-tbl .mk.u, #pharmacyPage .ph-cmp-tbl tr.g .comp i.u { background: var(--u); }
   #pharmacyPage .ph-cmp-tbl tbody tr.sh td { background: var(--ph-herb-tint); }
   #pharmacyPage .ph-cmp-tbl .sg.gh { opacity: .32; }
+  /* her 2026-11-09 "make the same split fill in the Compare tab" (pick: split each formula's cell): on Both, a formula's cell is two halves with a 2px gap, the left Ren and the right Bing,
+     each filled left to right by its own rank / 5 (--w) in the formula's --deep, 30% for Ren and 46% for Bing (a step deeper, as in the Guide table); a missing or against half has no fill */
+  #pharmacyPage .ph-cmp-tbl.rb { width: max(100%, calc(200px + 150px * var(--n, 4))); }
+  #pharmacyPage .ph-cmp-tbl td.sp { padding: 3px 4px; vertical-align: middle; }
+  #pharmacyPage .ph-cmp-tbl .sp2 { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; }
+  #pharmacyPage .ph-cmp-tbl .sp2 .h { --dc: var(--deep); display: flex; align-items: center; justify-content: center; min-height: 24px; min-width: 0; }
+  #pharmacyPage .ph-cmp-tbl .sp2 .h.neg { --dc: var(--ph-zero); }
+  #pharmacyPage .ph-cmp-tbl .sp2 .h .gf-dots { margin-top: 0; }
+  #pharmacyPage .ph-cmp-tbl .sp2 .h .no { color: var(--ph-faint); }
+  #pharmacyPage .ph-cmp-tbl .sp2 .h.r[style*="--w"] { background-image: linear-gradient(90deg, color-mix(in srgb, var(--deep) 30%, var(--ph-white)) calc(var(--w) * 100%), transparent 0); }
+  #pharmacyPage .ph-cmp-tbl .sp2 .h.b[style*="--w"] { background-image: linear-gradient(90deg, color-mix(in srgb, var(--deep) 46%, var(--ph-white)) calc(var(--w) * 100%), transparent 0); }
   #pharmacyPage .ph-cmp-tbl tr.g .comp { display: inline-flex; gap: 3px; margin-left: 10px; vertical-align: middle; }
   #pharmacyPage .ph-cmp-tbl tr.g .comp i { width: 6px; height: 6px; border-radius: 50%; }
   #pharmacyPage .ph-cmp-ovl { padding: 12px 18px 10px; border-bottom: 1px solid var(--ph-line); }
@@ -92932,6 +92943,15 @@ or changing anything in Cliniko.
   function phCmpPaintFilter() { phCmpPaint("filter"); }
   // ---- signs: one row per sign key across the picked formulas; w[i] = its weight in formula i (0 = not weighed there) ----
   function phCmpSignRows(side) {
+    if (side === "rb") {   // her 2026-11-09 "make the same split fill in the Compare tab" (pick: split each formula's cell): a Ren and a Bing row of the same sign are one row; w = the stronger of the two (the filters read it), wr / wb = each side's own
+      const n = phCmpIds().length, zero = () => Array(n).fill(0), mm = new Map();
+      ["r", "b"].forEach(sd => phCmpSignRows(sd).forEach(r => {
+        const key = r.lab.toLowerCase(); let e = mm.get(key);
+        if (!e) { e = { k: r.k, cat: r.cat, sg: r.sg, lab: r.lab, ar: r.ar, wr: zero(), wb: zero() }; mm.set(key, e); }
+        e[sd === "r" ? "wr" : "wb"] = r.w;
+      }));
+      return [...mm.values()].map(e => { e.w = e.wr.map((x, i) => Math.abs(e.wb[i]) > Math.abs(x) ? e.wb[i] : x); return e; });
+    }
     const ids = phCmpIds(), m = new Map();
     ids.forEach((id, i) => phGdfRows(id, side).forEach(r => { let e = m.get(r.k); if (!e) { const p = phGdfSplit(r.lab); e = { k: r.k, cat: p[0] || "Other", sg: p[1], lab: r.lab, ar: phFbrAreaOf(side === "r" ? "p" : "d", [r.k, r.lab]), w: ids.map(() => 0) }; m.set(r.k, e); } e.w[i] = r.w; }));
     return [...m.values()];
@@ -92971,21 +92991,23 @@ or changing anything in Cliniko.
       const lb = (k, c, txt) => `<button type="button" class="${f === k ? "on" : ""}" data-cmp-filter="${k}"><i class="${c ? "" : "sh"}" style="--u:${c}"></i>${txt}</button>`;
       ovl = `<div class="ph-cmp-ovl"><div class="bar">${seg("only:0", n0, d0, "Only " + cols[0].name)}${seg("shared", ns, "", "Shared")}${seg("only:1", n1, d1, "Only " + cols[1].name)}</div><div class="lb">${lb("only:0", d0, `Only ${esc(cols[0].name)} ${n0}`)}${lb("shared", "", `Shared ${ns}`)}${lb("only:1", d1, `Only ${esc(cols[1].name)} ${n1}`)}</div></div>`;
     }
-    if (!rows.length) return ovl + `<p class="ph-cmp-none">No ${side === "r" ? "Ren" : "Bing"} ${what}${q ? ` for “${esc(phGdSearch.trim())}”` : ""}</p>`;
+    if (!rows.length) return ovl + `<p class="ph-cmp-none">No ${side === "rb" ? "" : (side === "r" ? "Ren" : "Bing") + " "}${what}${q ? ` for “${esc(phGdSearch.trim())}”` : ""}</p>`;
     const cats = [...new Set(rows.map(r => r.ar))].sort((a, b) => a - b);   // her 2026-11-08 pick: the ten body areas (one header row each) instead of one huge "Diagnosis" group
     const hasOf = w => w.map((x, i) => x ? i : -1).filter(i => i >= 0);
     let ri = 0;
+    // a half of a split cell: its dots, filled left to right by its own number (5 = the whole half, 4 = 80%); an against (minus) half and a missing half are not filled
+    const halfH = (cls, nm, w, col) => `<div class="h ${cls}${w < 0 ? " neg" : ""}"${w > 0 ? ` style="--w:${Math.min(w, 5) / 5}"` : ""} title="${w ? nm + " · " + phCmpLevel(w) + " · " + esc(col.name) : "No " + nm + " in " + esc(col.name)}">${w ? phCmpDots(w) : `<span class="no">—</span>`}</div>`;
     const body = cats.map(ci => {
       const c = PH_FBR_AREAS[ci].lab, rs = rows.filter(r => r.ar === ci).sort((a, b) => phAz(a.lab, b.lab));
       return `<tr class="g" data-g="${esc(c)}" style="--r:${Math.min(ri++, 25)}"><td class="s" colspan="${cols.length + 1}">${esc(c)}<small>${rs.length} sign${rs.length === 1 ? "" : "s"}</small><span class="comp">${rs.map(r => phCmpMark(hasOf(r.w), cols, "")).join("")}</span></td></tr>`
         + rs.map(r => {
           const has = hasOf(r.w), shared = has.length >= 2, top = Math.max(...r.w.map(Math.abs)), low = shared ? Math.min(...has.map(i => Math.abs(r.w[i]))) : 0;
           const dim = phCmp.focus != null && has.indexOf(phCmp.focus) < 0;
-          return `<tr data-k="${esc(r.k)}" data-has="${has.join(",")}" class="${shared ? "sh" : "un"}${dim ? " dim" : ""}" style="--r:${Math.min(ri++, 25)}"><td class="s"${phKsHas(r.k) ? ` data-ks-pop="${esc(r.k)}" data-w="${top}"` : ""}><div class="nmr">${phCmpMark(has, cols, "mk")}<div class="nm"><b>${esc(r.cat)}:</b> ${esc(phSymCase(r.sg))}</div>${phCmp.edit && r.cat !== "Other" ? `<button type="button" class="gf-ib" data-cmp-lab="1" data-k="${esc(r.k)}" title="Change the wording" aria-label="Change the wording">${PH_GDF_PEN}</button>` : ""}</div></td>${cols.map((col, i) => { const w = r.w[i]; if (phCmp.edit) return `<td style="${col.style}">${phCmpEditCell(col.id, side, r.k, w)}</td>`; return `<td style="${col.style}">${w ? `<div class="sg${w >= 5 ? " k" : ""}${w < 0 ? " neg" : ""}" title="${phCmpLevel(w)} · ${esc(col.name)}">${phCmpDots(w, shared && Math.abs(w) > low ? low : null)}<span>${esc(phSymCase(r.sg))}</span></div>` : `<div class="sg gh" title="Not in ${esc(col.name)}">${phCmpGhost(top)}</div>`}</td>`; }).join("")}</tr>`;
+          return `<tr data-k="${esc(r.k)}" data-has="${has.join(",")}" class="${shared ? "sh" : "un"}${dim ? " dim" : ""}" style="--r:${Math.min(ri++, 25)}"><td class="s"${phKsHas(r.k) ? ` data-ks-pop="${esc(r.k)}" data-w="${top}"` : ""}><div class="nmr">${phCmpMark(has, cols, "mk")}<div class="nm"><b>${esc(r.cat)}:</b> ${esc(phSymCase(r.sg))}</div>${phCmp.edit && r.cat !== "Other" ? `<button type="button" class="gf-ib" data-cmp-lab="1" data-k="${esc(r.k)}" title="Change the wording" aria-label="Change the wording">${PH_GDF_PEN}</button>` : ""}</div></td>${cols.map((col, i) => { const w = r.w[i]; if (side === "rb" && w) return `<td class="sp" style="${col.style}"><div class="sp2">${halfH("r", "Ren", r.wr[i], col)}${halfH("b", "Bing", r.wb[i], col)}</div></td>`; if (phCmp.edit) return `<td style="${col.style}">${phCmpEditCell(col.id, side, r.k, w)}</td>`; return `<td style="${col.style}">${w ? `<div class="sg${w >= 5 ? " k" : ""}${w < 0 ? " neg" : ""}" title="${phCmpLevel(w)} · ${esc(col.name)}">${phCmpDots(w, shared && Math.abs(w) > low ? low : null)}<span>${esc(phSymCase(r.sg))}</span></div>` : `<div class="sg gh" title="Not in ${esc(col.name)}">${phCmpGhost(top)}</div>`}</td>`; }).join("")}</tr>`;
         }).join("");
     }).join("");
     const share = i => { const own = all.filter(r => r.w[i]); return own.length ? Math.round(own.filter(r => r.w.filter(x => x).length >= 2).length / own.length * 100) : 0; };   // each head's bar: how much of this formula the others share (her pick 10)
-    return ovl + `<div class="ph-cmp-wrap"><table class="ph-cmp-tbl" data-side="${side}" style="--n:${cols.length}"><colgroup><col class="s">${cols.map(() => "<col>").join("")}</colgroup><thead><tr><th class="s">${side === "r" ? "Ren" : "Bing"}</th>${cols.map((col, i) => `<th data-cmp-foc="${i}" class="${phCmp.focus === i ? "foc" : ""}" style="${col.style}" title="Fade what ${esc(col.name)} lacks"><span class="sw"></span>${esc(col.name)}<small>${phGdfCount(col.id, "r")}·${phGdfCount(col.id, "b")} · ren·bing</small><span class="mini" title="${share(i)}% of its signs shared"><i style="--w:${share(i)}%"></i></span></th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
+    return ovl + `<div class="ph-cmp-wrap"><table class="ph-cmp-tbl${side === "rb" ? " rb" : ""}" data-side="${side}" style="--n:${cols.length}"><colgroup><col class="s">${cols.map(() => "<col>").join("")}</colgroup><thead><tr><th class="s">${side === "r" ? "Ren" : side === "b" ? "Bing" : "Ren | Bing"}</th>${cols.map((col, i) => `<th data-cmp-foc="${i}" class="${phCmp.focus === i ? "foc" : ""}" style="${col.style}" title="Fade what ${esc(col.name)} lacks"><span class="sw"></span>${esc(col.name)}<small>${phGdfCount(col.id, "r")}·${phGdfCount(col.id, "b")} · ren·bing</small><span class="mini" title="${share(i)}% of its signs shared"><i style="--w:${share(i)}%"></i></span></th>`).join("")}</tr></thead><tbody>${body}</tbody></table></div>`;
   }
   // ---- herbs: a column = the formula's classical recipe, her recipes (the picked one) and her formula jar ----
   const phCmpBase = s => phGdfNorm(String(s || "").split(/[(/#*]/)[0]);
@@ -93108,12 +93130,12 @@ or changing anything in Cliniko.
     const viewSeg = `<div class="gf-seg">${[["cases", "Cases"], ["tables", "Tables"]].map(([k, l]) => `<button type="button" data-cmp-view="${k}" class="${phCmp.view === k ? "on" : ""}">${l}</button>`).join("")}</div>`;   // A-Z; her 2026-11-09 Cases view
     if (!ids.length) return `<div class="ph-cmp">${pick}<div class="ph-cmp-bar">${viewSeg}</div><p class="ph-cmp-none">No formulas</p></div>`;   // the switch shows on an empty page too: Cases is found before a formula is picked
     if (phCmp.view === "cases") return `<div class="ph-cmp">${pick}<div class="ph-cmp-bar">${viewSeg}</div>${phCmpCasesHtml(cols)}</div>`;
-    const sides = phCmp.side === "rb" ? ["r", "b"] : [phCmp.side];
+    const sides = phCmp.side === "rb" ? (phCmp.edit ? ["r", "b"] : ["rb"]) : [phCmp.side];
     const cnt = {}; ["all", "key", "shared", "tells", "unique"].forEach(f => { cnt[f] = sides.reduce((s, sd) => s + phCmpSignFilter(phCmpSignRows(sd), f).length, 0); });
     const bar = `<div class="ph-cmp-bar">${viewSeg}<div class="gf-seg">${[["r", "Ren"], ["b", "Bing"], ["rb", "Both"]].map(([k, l]) => `<button type="button" data-cmp-side="${k}" class="${phCmp.side === k ? "on" : ""}">${l}</button>`).join("")}</div>${[["all", "All"], ["key", "Key"], ["shared", "Shared"], ["tells", "Tells"], ["unique", "Unique"]].map(([k, l]) => `<button type="button" class="gf-chip${phCmp.filter === k ? " on" : ""}" data-cmp-filter="${k}">${l} <em>${cnt[k]}</em></button>`).join("")}<span class="gf-sp"></span>${phCmp.edit ? `<span class="ph-cmp-live" title="A change here changes how that formula scores in Fang Bing Ren, for every patient"><i></i>Live in Fang Bing Ren · every patient</span>` : ""}<button type="button" class="gf-chip${phCmp.edit ? " on" : ""}" data-cmp-edit="1" aria-pressed="${phCmp.edit}">Edit</button><button type="button" class="gf-btn" data-cmp-copy="1" title="${ppl1 && phCmp.side !== "rb" ? "The table" : "Both tables"} as text, for a note or a spreadsheet">Copy</button></div>`;
     const shared = phCmp.filter === "tells" && ids.length > 1 ? sides.flatMap(sd => phCmpSignRows(sd).filter(r => r.w.every(x => x !== 0)).map(r => `<span>${esc(r.cat)}: ${esc(r.sg)} ${phCmpDots(Math.max(...r.w))}</span>`)) : [];
     const sh = shared.length ? `<div class="ph-cmp-shared"><b>Shared by all ${ids.length}</b>${shared.join("")}</div>` : "";
-    return `<div class="ph-cmp">${pick}${bar}${sh}${sides.map(sd => phCmpSignsTableHtml(sd, cols)).join("")}<div class="ph-cmp-lg"><span>●●●●● Key (bold) · ●●●●○ Strong · ●●●○○ Supports · ●○○○○ Weak · red = against · faint dots = not in this formula · ◯ both have it · ● only this one</span></div>${ppl1 ? "" : phCmpHerbsTableHtml(cols)}</div>`;
+    return `<div class="ph-cmp">${pick}${bar}${sh}${sides.map(sd => phCmpSignsTableHtml(sd, cols)).join("")}<div class="ph-cmp-lg"><span>●●●●● Key (bold) · ●●●●○ Strong · ●●●○○ Supports · ●○○○○ Weak · red = against · faint dots = not in this formula · ◯ both have it · ● only this one${phCmp.side === "rb" && !phCmp.edit ? " · left half Ren, right half Bing, filled by its number" : ""}</span></div>${ppl1 ? "" : phCmpHerbsTableHtml(cols)}</div>`;
   }
   // her 2026-11-09 "table comparison is just case 1 signs symptoms row, pathology row and prescription type of table format" (her picks: a Cases view on the
   // Compare tab, every sign, Pathology = the formula's own Diagnosis rows, as the mock showed): one column a case (each picked formula), three rows: Signs & symptoms

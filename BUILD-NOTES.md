@@ -13480,3 +13480,11 @@ correlation); this is different in kind, so a different tab and name, "Tour Case
 - **Tested** (sandbox, Gui Zhi, Huang Qi, Shi Gao): 125 symptom cells carry the two shares, 0 number cells styled; Ren only fills the left half, Bing only the right, both rows both; the built table matches mock B.
 - **Not tested:** edit mode, the phone width, a real against cell (by reading: a plus rank only).
 - **SAVED, not live:** goes out with her next "push live".
+
+## Compare > Tables > Both: each formula's cell split, Ren | Bing (2026-11-09)
+- **Her words:** "make the same split fill in the Compare tab". **Her pick** (popup): "Split each formula's cell" (rows merge Ren and Bing for the same sign; left half Ren, right half Bing, each filled by its number; a Ren-only sign fills the left half only; sign-name column plain).
+- **Code** (`index.html`): `phCmpSignRows("rb")` merges the two sides' rows by label; `phCmpHtml` draws `["rb"]` (one table) instead of `["r","b"]` unless Edit is on; `phCmpSignsTableHtml` takes side `rb`: `td.sp > .sp2 > .h.r + .h.b` (helper `halfH`), `--w` = rank / 5 on a plus half, a legend note; CSS beside `.sg.gh` (`.ph-cmp-tbl.rb` is wider, 150px a formula).
+- **Tested** (sandbox, Gui Zhi + Chai Hu + Huang Qi): Tells shows 92 merged rows where Ren and Bing showed 65 and 44 (128 rows under All), 206 halves, 121 filled (69 Ren, 52 Bing), 18 formula cells with both sides, 76 Ren-only, 51 Bing-only; the filter chips and counts follow the merged rows (All 128, Key 22, Shared 16, Tells 92, Unique 112); Ren / Bing alone unchanged (65 / 44 rows, no split); Edit shows the two tables and turns back into one; tap audit 20 of 20 at 1220 and at 360; at 360 the page does not scroll sideways, the table scrolls inside its wrap, and the five dots fit in a half (49 of 80px). Picture: `mocks/compare-split-fill-built-2026-11-09.jpg`.
+- **Not tested:** the Key2, a real against (minus) half (by reading: a plus rank fills only), Copy text on Both (unchanged code).
+- **Calls made:** Edit on Both still shows the two tables, because a Bing-only sign has no Ren key to edit on its other half; Ren and Bing alone are not split (one side only).
+- **SAVED, not live:** goes out with her next "push live".
