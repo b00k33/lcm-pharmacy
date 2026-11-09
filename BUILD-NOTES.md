@@ -13061,7 +13061,11 @@ Her paste: a symptom table /5 (no heading; her source's "REN"), "BING – Object
   history figure, the Tongue and Abdomen charts' chip links.
 - **Needs her word:** keep her October lines this table does not name (built: kept); the yellow tongue (built: a tongue row of its own);
   "(lao han tui)" for her Old Cold Legs. DRAFT: the 11 row names, the body spots, the `core` summary.
-- **SAVED, not live:** goes out with her next "push live".
+- **Her answers (popups, same day):** "Keep them" (the October lines stay beside the new table: a re-sent table merges, the higher number
+  stays), "Tongue: yellowish" (its own row, as built), "(lao han tui)" (as built). No change to the build. Still DRAFT: the 11 row names, the
+  body spots, the `core` summary.
+- **LIVE in build 20261109-115800** (publish 6cb95107, another session's push, with the two belly-chart changes and the symptom reference;
+  her "Push live" and "Push all"). Her devices need the gold Update. Matrix moved to mocks/.
 
 ## Guide family Edit table: reference a symptom, 2026-11-09
 
