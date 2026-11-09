@@ -1437,6 +1437,10 @@ not repeated here.
   weigh a sign the higher number stays, and her earlier lines the new table does not name stay.
 - No hover motion on the Fang Bing Ren board (her 2026-11-09 "this page is too laggy. remove the animation hover"): pointing at
   a symptom opens no picture, an area's icon does not wiggle, a faded row does not fade in. Its rows carry no `data-ks-pop`.
+- A tick on the Fang Bing Ren page repaints in place (her 2026-11-09 "too laggy"): `phTriRefresh` builds the same HTML and `phTriMorph`
+  touches only what differs. While one build runs, `phTriMemo` answers a repeated question once (`phTriEffective`, `phPatClues`,
+  `phFbrRenLead`, `phTriAll`), so nothing called from `phTriHtml` or the cards beside it may change her data; `phFbrSignFam` is kept
+  until `phFbrEditsBust`.
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast
