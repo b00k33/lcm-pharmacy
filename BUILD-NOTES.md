@@ -12936,3 +12936,25 @@ by reading `panel.hidden` and `PHARMACY.activeTab`, and by a screenshot (Invento
 showing above it). No console errors. **Not tested:** her own real backups list, the mobile tabbar's `[data-ph-tab]`
 path (same handler as the sidebar's, not separately driven through a click in this sandbox).
 **SAVED, not live:** goes out with her next "push live".
+
+## Guide family Edit table: a weight box no longer clips or floats over the row below, 2026-11-09
+
+Her words, with a screenshot of "Catches Colds Often": "see the problem."
+
+- The box a tap on a number opens (the dots, minus, remove, and the other formulas weighing it) is
+  a plain absolutely-positioned popover anchored to its own narrow cell. Near the left edge of a
+  column, its width (up to 200px) ran past the card's own left edge; the card's `overflow: hidden`
+  then clipped the box's first few letters away invisibly -- "Yu Ping Feng San" read as "Ping Feng
+  San", "Huang Qi" as "ang Qi" -- rather than showing them cut off, so it looked like noise, not a
+  cut box.
+- `phGdfEdPlace` now also keeps the whole box inside the card horizontally (nudging it right off the
+  left edge, left off the right edge, with `--gf-dx`/`transform: translateX`), on top of the flip-up
+  it already did for the card's own foot.
+- The card also dims behind an open box (`.has-open-cell`, a faint wash, 6%) so a row the box still
+  runs close to near the top or bottom of a short column -- the little headroom "Catches Colds
+  Often" had above "Blood Stasis" -- reads as behind a layer, not as if both sat on one.
+- **Tested** in the harness: Gui Zhi, Edit, "Catches Colds Often" (the row from her screenshot) --
+  the box now keeps "Yu Ping Feng San 5" and "Huang Qi 4" whole, sits inside the card, and the row
+  below is visibly dimmed while it's open. A row with room on every side opens exactly as before.
+  Boots clean.
+- **SAVED, not live:** goes out with her next "push live".
