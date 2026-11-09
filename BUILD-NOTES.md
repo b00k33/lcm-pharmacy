@@ -13312,3 +13312,12 @@ Her words, on a picture of the board's area tables: "this page is too laggy. rem
   not from this change, told to her.
 - **Not tested:** her real records; the Key2.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Title bar: one centre line, and a check so it stays (2026-11-09)
+- **Her words:** "see the problem? fix it and prevent from happening in the future" (screenshot of the Guide's bar: Me, Families, the search box, Learned 0 of 42).
+- **The problem:** Me sat 8px lower than Families, the search box and the Learned pill (22 vs 14px from the top; the pill was 28px, the rest 32px). Cause: since her 2026-11-08 "merge these lines into one" the Guide's head (`.ph-gd-head`) rides inside the title bar, but kept its `margin-bottom: 16px` from when it was its own row; the bar centres its children, so the 16px pushed the whole cluster 8px up. The same fault sat on the Log (`.ph-widget-head` 14px top), All templates, Directory and Dispenses (`.ph-widget-head` 10-12px bottom margin / padding): found by the new check, not by her.
+- **Fix** (`index.html`): `#pharmacyPage .ph-shell-titlebar > :not(h1) { margin-block: 0 !important }` and `> div { padding-block: 0 !important }` beside `.ph-tbmerge` (the guard: no vertical margin or padding on anything the bar centres); the Learned pill `.ph-gdf-prog` 28px to 32px (the chip size).
+- **Prevention:** `.github/scripts/titlebar-audit.js` (`lcmTitlebarAudit()`): lists any control whose centre is off its row's line by more than 1px, a single row off the bar's centre by more than 1.5px, and any vertical margin on a wrapper in the bar. CLAUDE.md gets the rule "TOP BAR" (Fit the screen) and a line in "Before finishing".
+- **Tested** (sandbox, the real app): before the fix the check flagged the Guide, Log, All templates, Directory and Dispenses (Me 4-9px off); after it, all 21 pages with a bar are clean at 1220 and at 360 (phone); bar heights are now one value (58-59px, Photos 97 with its second row); the Guide's Families menu opens fully with the bar aligned; tap audit on the Guide's bar (menu open) 14 of 14 ok.
+- **Not tested:** the Key2; a patient page's own bar (Today's visit and the others draw their head inside the plan stage, not through `phShellHead`); the Cycle / Appointments calendar bar (it has its own bar, the check read it as clean).
+- **SAVED, not live:** goes out with her next "push live".

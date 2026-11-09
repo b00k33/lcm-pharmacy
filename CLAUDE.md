@@ -496,6 +496,13 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   main disc · ⋯. Calendar blocks take Cliniko's clear colours
   (`phCkClear`; Break alone keeps `phCkTone`), a past day stays full colour
   with its ticks, and the name comes first.
+- **TOP BAR: every control in a page's bar sits on one centre line** (her 2026-11-09 "see the problem? fix it and prevent from happening in the future": the Guide's bar had Me 8px
+  lower than Families, the search box and the Learned pill, because the head beside it kept the 16px bottom margin of the days it was its own row). The bar centres its children, so
+  a vertical margin or padding on one of them moves the box it centres and the controls inside look off. A page's head cluster that rides in the bar (`.ph-gd-head`, `.ph-widget-head`,
+  any new one) carries NO vertical margin or padding of its own: the guard `.ph-shell-titlebar > :not(h1) { margin-block: 0 }` and `> div { padding-block: 0 }` (in the shell CSS beside
+  `.ph-tbmerge`) holds it, and a control keeps the 32px chip size (the Learned pill too). **Measured, never eyeballed:** `.github/scripts/titlebar-audit.js` (`lcmTitlebarAudit()`
+  in the sandbox, the page drawn; head to the script) lists any control whose centre is off its row's line by more than 1px, a single row off the bar's centre, or a vertical margin
+  on a wrapper. Run it on every page whose bar you touch, at 1220-1280px and at 360px, with its menus open: `off` is empty.
 - **Information in a REAL table, not a sheet of sub-rows/steppers**, is the
   default for any multi-item editor — one row per item, one column per
   field, hairline cells, labels repeated per group. **A merged widget's
@@ -1502,6 +1509,7 @@ origin/main:index.html`; don't trust this list's age.
 - **Sizes:** run `.github/scripts/tap-audit.js` on every page the build touches, at 1220-1280px and at 360px, with its menus and
   boxes open and its side list open and folded; `off` is empty, or each line left is on the script's KEEP list with her word
   (TAPPABLE THINGS, "Measured"); then look at the page: nothing squeezed or sitting on top of words.
+- **Top bar:** run `.github/scripts/titlebar-audit.js` on every page whose bar the build touches (a new control in a head, a changed head, a new page), at 1220-1280px and at 360px, menus open; `off` is empty ("TOP BAR", under Fit the screen).
 - Write the build's note at the END of BUILD-NOTES.md (her words, her
   picks, where the code lives, what was tested and what was NOT); fix any
   standing rule here, or the area's paragraph in CURRENT-STATE.md, in the same commit; update
