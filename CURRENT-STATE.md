@@ -1968,7 +1968,10 @@ abdomen-fade-motion-mock-2026-11-09.html; all off under reduced motion where it 
 view lights and the other words dim (hover a band: its places; `phAbdHl`); a tap sends rings from the finger, slower and wider the softer the
 wall (the chart's Tension, `phAbdRipple`, carried through the repaint by `phAbdTap`); a warm place sends up heat, a cold or cool one drifts
 frost (`phAbdTempMotion`); a Today / Both / Last bar under the front chart (`presAbdView`, `data-view`) fades one visit's marks out; the marks
-sweep in once per open of a patient (`phAbdScanKey`, `scan0`, each mark's `--sd`), with a Replay circle beside the bar. Seen has "flat" (whole belly, no place); Temp = cold · cool · warm in BLUE / PALE BLUE / RED (temperature
+sweep in once per open of a patient (`phAbdScanKey`, `scan0`, each mark's `--sd`), with a Replay circle beside the bar. The side view moves
+with it (her "make the side view animate too"): the same scan line, its wall line drawing top to bottom as the line passes, its sounds and °C
+strips sweeping in, warm / cold rows sending up heat / frost inside the belly (`phAbdSideTemp`), and Today / Both / Last fading its marks
+(the wall line and the rows stay). Seen has "flat" (whole belly, no place); Temp = cold · cool · warm in BLUE / PALE BLUE / RED (temperature
 only; water and gas ink stay grey), one temperature per place; Feel = tender · tight hypochondrium (`tighthypo`, R / L hypo only,
 ticks the Chest & ribs pair) · pulsation · tight rectus · thin wall. No Xia Xin chip: tender at epi IS Xia Xin tender
 (`phAbd2Read` reads an old `marks.xiaxin` as tender@epi). The page works the Pulse page's way (her pick) [Abdomen page: the Pulse

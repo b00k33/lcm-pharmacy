@@ -13116,3 +13116,19 @@ added herself), right beside the rename pen in the merged Area table.
   the Guide's copy of the chart (shares the code); the bar's 29px / 999 corners are the existing `.ph-tng2-seg` look in this host, not re-measured in the real page.
 - **Pages checked:** the Abdomen exam page chart + side view only (the Guide's Abdomen chart shares the same code and the same host class).
 - **SAVED, not live:** goes out with her next "push live". (The two distension commits before it went live early, with another session's publish 20261109-115800.)
+
+## Abdomen side view animates too (2026-11-09)
+- **Her words:** "make the side view animate too" (after the fade and motion build, which gave the side only the fade, hover link and press rings).
+- **Code** (`index.html`, `phAbdSideSvg`):
+  - Today's marks sit in `<g class="ph-abd2-nowl">` (the °C strips, the water / gas sounds, heat / frost), each with a `--sd` delay, so the front's sweep-in and Today / Both / Last
+    CSS work on it unchanged; the wall line and the row tints stay (the belly line IS the finding, and a Last view with equal shapes would otherwise show no belly).
+  - The same scan band (`.ph-abd2-scan` + its own gradient id) crosses the side chart with the front's; the wall path carries `pathLength="1"` (not a thin dashed wall, whose dash
+    lengths it would rescale) and `.scan0 .ph-abd2-wall[pathLength]` draws it top to bottom (`phAbd2Draw`, stroke-dasharray only, no fill mode, so it ends as drawn).
+  - `phAbdSideTemp(m, RY, W0, uid)`: for each row with a warm / cold / cool wash (`phAbdTWashes`, the same read the row tints use) 4 heat lines or 5-8 frost specks inside the
+    belly, clipped to the cavity and the row; skipped under reduced motion (`still`).
+  - `data-ten` on the side svg, so the press rings there follow the Tension too; the reduced-motion list gains `.ph-abd2-wall`.
+- **Tested** (sandbox, real `phVisitAbdHtml` in a made-up host): heat 8 and frost 8 for warm at epi + iliac and cold at lower, 3 groups in the side's `.ph-abd2-nowl`, `pathLength` on the wall,
+  no duplicate ids, Last view puts today's side marks at .08 and last visit's grey at 1; Replay frozen at 0.9 s: the scan line level across both charts, the wall drawn down to it, heat rising in the epi row.
+- **Not tested:** a real patient; a thin wall (dashed, no draw) by eye; the Guide's chart; reduced motion by running it; the Key2.
+- **Pages checked:** the Abdomen exam page side view (the Guide's shares the code).
+- **SAVED, not live:** goes out with her next "push live".
