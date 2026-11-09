@@ -1449,8 +1449,8 @@ not repeated here.
 - Guide › Compare › Tables is drawn in the Guide picture table's order and look (her 2026-11-09 "i like this organisation and display. use
   it for the compare and table and cases display"): a body area head row, its subjects as paper rows, a Ren and a Bing sign of the same words
   on one row, each formula its Ren and Bing number columns, a number on a fill of its weight out of 5 (`phCmpPicRows`, `phCmpPicTblHtml`).
-  Edit keeps the dot rows (`phCmpSignsTableHtml`). The Cases view is the other session's 14 rows (her synth22 list); the picture look there
-  waits for her word.
+  Edit keeps the dot rows (`phCmpSignsTableHtml`). The Cases view keeps the other session's 14 rows with R / B lines and dots (her synth22
+  list): shown three pictures (A those rows as picture tables, B as they are, C one full picture per case), she picked B, 2026-11-09.
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast
