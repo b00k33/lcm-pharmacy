@@ -891,7 +891,7 @@ conditions and source show on the family's card (`phGdfNoteIsFam`, `phGdfFamNote
 **The by-area table (Group = Area, `phGdfMergedHtml`):** each area one ruled table, its name and count in the head row beside Ren ·
 Bing, up to four columns (her 2026-11-09 "give 4 columns"; each at least 180px, so the table's width decides: 4 with the formula
 list folded at 1220px, 2 with it open, 1 on the phone), 52px value cells (the number + the other formulas' dot and count; a tap
-opens the box of those formulas). The Guide's pages are one Families ▾ menu at the top (32px; BUILD-NOTES "Guide: tap audit").
+opens the box of those formulas). **The symptom cell fills by its Ren number** (her 2026-11-09 "colour the symptom block based on the ren number", pick B · Formula colour): the label cell carries `--rw` = Ren rank / 5 (5 = full, 4 = 80%) and paints that share left to right in the formula's own `--deep` at 30% on white; a Bing-only or against (minus) symptom has no `--rw`, so no fill; a both-row's tint stays behind the unfilled part. The Guide's pages are one Families ▾ menu at the top (32px; BUILD-NOTES "Guide: tap audit").
 **The formula list beside the card** (`phGdfMosaicHtml`, `.gf-mc`; her 2026-11-09 pick B · Tint): each family a white card with the
 thin line, its head row washed in the family's colour (16%), the name and Chinese on one line, the English under it; no colour
 line. On their own and Notes only keep a white head (Notes only dashed).
