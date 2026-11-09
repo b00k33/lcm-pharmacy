@@ -13254,3 +13254,12 @@ Her ask, with a screenshot of the type dropdown: "alphabetical order, Dr Huang H
 - **Tested** in the harness: Sources tab's "Who / where you can pick from" list reads A-Z with
   Dr Huang Huang in place. Boots clean.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide picture table: the symptom fills by its Ren number (2026-11-09)
+- **Her words:** "colour the symptom block based on the ren number e.g. 4/5 = 80% coloured. show mock" (the Picture table on a formula's Guide card).
+- **Mock** (`mocks/guide-picture-ren-fill-mock-2026-11-09.png`, drawn by the real table code on Gui Zhi): A teal wash · B formula colour · C five steps. **Her picks:** B; against and Bing-only symptoms get no fill.
+- **Code** (`index.html`, `phGdfMergedHtml`): the label cell gets `style="--rw:<min(w,5)/5>"` only when the Ren row exists and `w > 0`; one CSS rule paints `linear-gradient(90deg, color-mix(in srgb, var(--deep) 30%, white) calc(var(--rw) * 100%), transparent 0)` as a `background-image` (so the row's own colour and a both-row's tint stay underneath; a second selector beats the `.both td` shorthand). `--deep` is each formula's own deep colour (set by `phGdfStyle`), not `--c`: the pale `--c` of Gui Zhi and the white of Shi Gao would barely show. No new colour token, no side line.
+- **Tested** (sandbox, the real table on Gui Zhi, Huang Qi, Shi Gao): fills at 60 / 80 / 100%; both-rows show the fill over their tint; Bing-only and dash rows plain; ink text stays above 9.8:1 on the fill for all 40 formulas' `--deep` (computed). Tap audit on the table: 0 targets checked (the harness has no buttons; no size or layout changed).
+- **Not tested:** the edit mode (pen / book icons sit on the same cell, nothing else changed), the phone width, a rank-0 "against" row in real data (by reading: `w > 0` only).
+- **Pages checked:** the Guide card's by-area table only. The patient's own Fang Bing Ren page (`phFbrTpAreaHtml`) is a separate table and was not changed.
+- **SAVED, not live:** goes out with her next "push live".
