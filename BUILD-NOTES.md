@@ -13587,3 +13587,10 @@ popup "C · Blocks, push live".
 - **Tested** (sandbox, the Ban Xia family): Tables = the signs table only, no herbs table; Formula = the herbs table (17 rows, 5 grips, the heading chips, Can make now filters in place); a column moved by the arrows keeps the Formula tab; a single herb alone shows the one-line message; Cases still draws; tap audit 22 of 22 at 1220 and 360; no page scroll sideways at 360.
 - **Not tested:** the Key2.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Ren row stops repeating; an accepted match keeps her words as a note (2026-11-10)
+- **Her words** (relayed by the B33 C4 LCM bugs session): "dont repeat abdominal in ren when its got its own row", "same with pulse", and "when i accept, still keep some details e.g. nocturia 4-5 times a night (as an additional note)".
+- **Code** (`index.html`): `phCmpCaseParts` builds the Ren row's three strongest from signs not in `used` (the sign groups that have their own row); `phTcNote(s)` returns the symptom's own text when it differs from the matched sign's wording; `phTcSrc` joins it onto the sign as `note`; `phCmpCaseBox` draws `small.zt` under the wording; `phTcCorrelateRowHtml` shows it after the linked sign with a dash.
+- **Tested** (sandbox, Case 1, Accept all): Ren row shows no Pulse or Abdominal sign; Pulse and Abdominal rows show the note ("Rapid pulse", "Soft lower abdomen"); notes list = Rapid pulse, Soft lower abdomen, Night sweats, SOB, Nocturia 4-5x a night, Sore back; a match whose text equals the wording shows no note; tap audit 28 of 28 at 1220 and 360; no page scroll sideways at 360. Picture: mocks/tour-cases-ren-no-repeat-note-built-2026-11-10.jpg.
+- **Not tested:** the Key2.
+- **SAVED, not live:** goes out with her next "push live" (with the Formula tab, 51f2579a).
