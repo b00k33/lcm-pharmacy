@@ -1443,7 +1443,9 @@ not repeated here.
   until `phFbrEditsBust`.
 - On a phone the Fang Bing Ren board keeps Symptom · Bing · Ren (her 2026-11-09 pick A of three mocks): the table is fixed to the card,
   Bing and Ren 72 px, a cell is a 30 px box whose whole face ticks and whose ✕ is its own 28 px end, a link's word on a second line
-  inside it, no score in the cell; the page's inner paddings are off (PHONE REDESIGN block).
+  inside it, no score in the cell; the page's inner paddings are off (PHONE REDESIGN block). The Tongue & pulse block is the same table
+  on a phone (her 2026-11-09 "fix the tongue & pulse block on phone too"): `phFbrTpAreaHtml` picks it when drawn, a shared Bing sign is
+  one cell spanning its rows, and crossing 640 px redraws the page; the computer keeps its two lanes.
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast

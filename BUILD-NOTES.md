@@ -13395,3 +13395,24 @@ local).
   At 1220 nothing changed: tap audit 1536 / 873 as HEAD, the table auto width, the inner card 14 px with its line; the clash ✕ is ink.
   No sideways scroll; console clean.
 - **Not tested:** her real records; the Key2 (360 × 469: the same width as tested).
+
+## 2026-11-09 · Fang Bing Ren board on a phone: Tongue & pulse as the same table
+Her words, after the phone board went live: "fix the tongue & pulse block on phone too"; then "Push live" in a popup on the built
+picture (shots/fbr-phone-tongue-pulse-built-2026-11-09.jpg, local).
+- **Before:** on a phone the Tongue & pulse block kept the computer's two lanes (a Bing list and a Ren list side by side), unlike
+  every other area, which is now the Symptom · Bing · Ren table.
+- **Built** (`index.html`, `phFbrTpAreaHtml`): on a phone (`window.innerWidth <= 640` when drawn) the block is one Symptom · Bing ·
+  Ren table in the area tables' own markup (`.ph-bd-tbl`, `phFbrMergeCellHtml`), so the phone cell rules from the board fix serve it.
+  It has a heading row per group (BODY OF THE TONGUE: COLOUR AND SHAPE · 24, COAT · 22, PULSE · 24). A Bing sign that reaches across
+  rows (`bFrom`) is one Bing cell spanning them (rowspan), its words on its first row; a row with a Bing and a Ren sign of different
+  words shows both ("Bing / Ren"). The filter's lift and dim carry over. The computer keeps its lanes. Crossing 640 px (a rotation, a
+  resized window) redraws the open page once (`phFbrTpPhone`, the Inventory idiom). The six PHONE block `.ph-sh-cell` rules from
+  a81c80e5 are gone: nothing on a phone draws the lanes now.
+- **Tested** (sandbox, the build on a8278778's index, nothing saved):
+  - At 360: the table 261 px in a 271 px card, 70 rows, each cell 65 × 30, the ✕ 28 × 30, no sideways scroll.
+  - Tick Bing, tick Ren, rule out: each tap 130–210 ms, and the page then equals a fresh full drawing.
+  - A temporary shared Bing sign drew one cell spanning 2 rows, its words once (no real row shares one today).
+  - Tap audit inside the block: only the "icon" note every area cell carries. Whole board at 360: 1535 checked, nothing new.
+  - At 1220: the lanes as before; tap audit 1539 / 873 (HEAD 1536 / 873; the 3 are the ticks' own ✕).
+  - 360 → 1220 → 360 redraws each way. Console clean.
+- **Not tested:** her real records; the Key2 (360 × 469: the same width as tested).

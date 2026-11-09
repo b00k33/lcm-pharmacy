@@ -28963,12 +28963,7 @@
     #pharmacyPage .ph-bd-tbl .ph-fbr-row.q .ph-fbr-x, #pharmacyPage .ph-bd-tbl .ph-fbr-row.q.no .ph-fbr-x.on { grid-row: 1; grid-column: 2; align-self: stretch; width: 28px; height: 30px; visibility: visible !important; border-radius: 0; border-left: 1px solid var(--ph-line); line-height: normal; font-size: var(--fs-12-5); }
     #pharmacyPage .ph-bd-tbl .ph-fbr-row.q.on .ph-fbr-x { border-left-color: color-mix(in srgb, var(--rfg) 35%, transparent); }
     #pharmacyPage .ph-bd-tbl .ph-fbr-row.q.no .ph-fbr-x.on { border-left: 0; background: var(--ph-faint); }
-    /* the Tongue & pulse block keeps its two lanes and its look; its rows reach 30 px, the ✕ is its own 28 px end there too, and the score stays off the row as in the table */
-    #pharmacyPage .ph-sh-cell .ph-fbr-row.q { min-height: 30px; padding: 0 0 0 8px; overflow: hidden; align-items: stretch; }
-    #pharmacyPage .ph-sh-cell .ph-fbr-row.q .ph-fbr-bar, #pharmacyPage .ph-sh-cell .ph-fbr-row.q .ph-fbr-ck, #pharmacyPage .ph-sh-cell .ph-fbr-row.q .ph-lk-chip { align-self: center; }
-    #pharmacyPage .ph-sh-cell .ph-fbr-row.q .ph-fbr-pt { display: none; }
-    #pharmacyPage .ph-sh-cell .ph-fbr-row.q .ph-fbr-main { align-self: stretch; display: flex; align-items: center; min-height: 30px; border-radius: 0; }
-    #pharmacyPage .ph-sh-cell .ph-fbr-row.q .ph-fbr-x, #pharmacyPage .ph-sh-cell .ph-fbr-row.q.no .ph-fbr-x.on { width: 28px; height: auto; align-self: stretch; border-radius: 0; visibility: visible !important; line-height: normal; font-size: var(--fs-12-5); }
+    /* the Tongue & pulse block is drawn as the same table on a phone (phFbrTpAreaHtml, 2026-11-09), so the cell rules above serve it too */
   }
   /* ==== FORMULA REFILL -- the To make list, 1:1 with her approved mock
      (2026-10-02, "Option A, simpler", artifact GBkghFDZMfhgU1FzmHu2WP v4),
@@ -120480,18 +120475,45 @@ or changing anything in Cliniko.
     };
     const svg = ic => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${PH_FBR_GRP_ICONS[ic]}</svg>`;
     let total = 0, ticks = 0;
+    // her 2026-11-09 "fix the tongue & pulse block on phone too": on a phone (640 px, the PHONE REDESIGN line) the block is the same
+    // Symptom · Bing · Ren table as the other areas (her pick A that day), one table with a heading row per group; a Bing sign that
+    // reaches across rows is one Bing cell spanning them (rowspan), its words on its first row. The computer keeps the two lanes.
+    // Chosen when drawn: crossing the line redraws the page (phFbrTpPhone below).
+    const phone = window.innerWidth <= 640;
+    const tdLift = (k, key) => key && ctx.lift ? (ctx.lift.has(k + ":" + key) ? " lift" : " dim") : "";
+    const cellT = (k, key, span) => `<td class="side ${k === "d" ? "bing" : "ren"}${tdLift(k, key)}"${span > 1 ? ` rowspan="${span}"` : ""}>${key ? phFbrMergeCellHtml(rec, name, rowOf[k].get(key), k, S[k].picks, S[k].eff, S[k].w, "tri", prevD, filtColour) : `<span class="ph-bd-dash" aria-hidden="true">–</span>`}</td>`;
+    const labT = (k, key) => ns ? phSignDescHtml(rowOf[k].get(key)[1]) : phSignLabHtml(rowOf[k].get(key)[1]);
+    const tblRows = rows => rows.map((x, i) => {
+      const b = ownB(x), r = ownR(x), cont = !!b && i > 0 && ownB(rows[i - 1]) === b;
+      let span = 1; if (b && !cont) while (i + span < rows.length && ownB(rows[i + span]) === b) span++;
+      const bl = b && !cont ? labT("d", b) : "", rl = r ? labT("p", r) : "";
+      const lab = bl && rl ? (bl === rl ? bl : `${bl}<span class="ph-bd-sl"> / </span>${rl}`) : (bl || rl);
+      return `<tr class="ph-bd-row ${b && r ? "both" : b ? "bing" : "ren"}"><td class="sym">${lab}</td>${cont ? "" : cellT("d", b, span)}${cellT("p", r, 1)}</tr>`;
+    }).join("");
     const body = groups.map(({ g, rows }) => {
       ns = !g.more;
       const dk = Array.from(new Set(rows.map(ownB).filter(Boolean))), pk = rows.map(ownR).filter(Boolean);
       const n = dk.length + pk.length, tk = dk.filter(k => S.d.eff[k]).length + pk.filter(k => S.p.eff[k]).length;
       total += n; ticks += tk;
+      if (phone) return `<tr class="ph-bd-subrow"><td colspan="3">${esc(g.lab.toUpperCase())}<span class="ph-fbr-sub-cnt"> · ${n}</span></td></tr>${tblRows(rows)}`;
       return `<div class="ph-sh-grp"><div class="ph-fbr-grp-hd ph-sh-ghd"><span class="ph-fbr-grp-ic">${svg(g.icon)}</span><span class="ph-fbr-grp-lab">${esc(g.lab)}</span>${tk ? `<span class="ph-fbr-grp-tk">${tk} ticked</span>` : ""}<span class="ph-fbr-grp-cnt">${n}</span></div>
         <div class="ph-sh-grid">${lane("d", rows, ownB)}${lane("p", rows, ownR)}</div></div>`;
     }).join("");
     const st = phFbrOpenSt.get(phPatientKey(name)) || new Map(), k = "a|" + PH_FBR_TP_IX, open = st.has(k) ? st.get(k) : true;
     return `<details class="ph-fbr-grp enh ph-bd-area${total > 0 && ticks === total ? " done" : ""}"${open ? " open" : ""}><summary class="ph-fbr-grp-hd" data-fbr-sum="${k}"><span class="ph-fbr-grp-ic">${svg(PH_FBR_AREAS[PH_FBR_TP_IX].icon)}</span><span class="ph-fbr-grp-lab">${esc(PH_FBR_AREAS[PH_FBR_TP_IX].lab)}</span>${ticks ? `<span class="ph-fbr-grp-tk">${ticks} ticked</span>` : ""}<span class="ph-fbr-grp-cnt">${total}</span></summary>
-      <div class="ph-bd-body">${body}</div></details>`;
+      <div class="ph-bd-body">${phone ? `<table class="ph-bd-tbl"><colgroup><col class="sym"><col class="side"><col class="side"></colgroup><thead><tr><th>Symptom</th><th class="side">Bing</th><th class="side">Ren</th></tr></thead><tbody>${body}</tbody></table>` : body}</div></details>`;
   }
+  // the Tongue & pulse block is drawn as a table on a phone and as lanes on a computer (above): a rotation or a resized window that crosses
+  // the 640 px line redraws the open Fang Bing Ren page once, the Inventory sheet's idiom
+  var phFbrTpPhone = window.innerWidth <= 640, phFbrTpRsT = 0;
+  window.addEventListener("resize", () => {
+    clearTimeout(phFbrTpRsT);
+    phFbrTpRsT = setTimeout(() => {
+      const now = window.innerWidth <= 640; if (now === phFbrTpPhone) return; phFbrTpPhone = now;
+      const nm = document.querySelector("#pharmacyPage [data-tri-host]") ? phPfwName() : null;
+      if (nm) phTriRefresh(nm);
+    }, 200);
+  });
   // The "Looking at" line (her synth22 2026-10-21 picks 1, 10, 12; mock synth22-focus-bodymap-mock-2026-10-21.html). One joined bar: Everything, her chief
   // complaint (★ + Main) and her other complaints, read off Came in for (phFbrCcList); the tile she tapped (faded while a complaint or Everything is picked: tap
   // it to look at it again, ✕ clears it); then the search box (it still adds a complaint) and the Show switch. `ctx.today` = Today's visit: complaints and tile only.
