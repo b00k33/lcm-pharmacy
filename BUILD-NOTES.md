@@ -13062,3 +13062,25 @@ Her paste: a symptom table /5 (no heading; her source's "REN"), "BING – Object
 - **Needs her word:** keep her October lines this table does not name (built: kept); the yellow tongue (built: a tongue row of its own);
   "(lao han tui)" for her Old Cold Legs. DRAFT: the 11 row names, the body spots, the `core` summary.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide family Edit table: reference a symptom, 2026-11-09
+
+Her ask: "give an option to reference the symptom - i want to mark that the symptom was from HH
+Study Tour Nov 2026 etc." Scope and placement confirmed with her: every symptom (built-in or one she
+added herself), right beside the rename pen in the merged Area table.
+
+- A second button beside the pen -- a small book -- opens a box of references (type, who/where,
+  date), the same shape her formula notes, tongue notes, pulse notes and Ren options already carry.
+  Filled (a tinted ring) once a symptom has at least one.
+- A reference lives keyed the same way a wording override does
+  (`PHARMACY.fbrEdits._sources.w[key]`), so it works for a built-in sign and one she made on the
+  Guide alike with no special-casing; a merged row (one Ren key, one Bing key, or both sharing
+  today's wording) writes the same list to whichever key(s) it has, the same rule the rename already
+  follows.
+- The box shares the weight box's own clamp and dimmed backdrop (her "see the problem" fix, same
+  day) -- it never runs off the card's edge either, and only one of the two boxes (a weight, or a
+  reference) is open on the table at a time.
+- **Tested** in the harness: added "HH Study Tour, 9 Nov 2026" to a built-in symptom and to a
+  symptom she made herself, removed one, reopened the card -- both read back correctly; the chip
+  uses the same "who · date" format as a formula note's own source. Boots clean.
+- **SAVED, not live:** goes out with her next "push live".
