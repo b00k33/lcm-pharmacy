@@ -15505,7 +15505,10 @@
   #pharmacyPage .ph-gdf .gf-newnote { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
   #pharmacyPage .ph-gdf .gf-newnote .gf-fld { flex: 1 1 120px; }
   /* the study card */
-  #pharmacyPage .ph-gdf .gf-card { background: var(--ph-white); border-radius: 12px; box-shadow: 0 1px 3px rgba(11,59,75,.12); overflow: hidden; min-width: 0; --dc: var(--deep); }
+  #pharmacyPage .ph-gdf .gf-card { position: relative; background: var(--ph-white); border-radius: 12px; box-shadow: 0 1px 3px rgba(11,59,75,.12); overflow: hidden; min-width: 0; --dc: var(--deep); }
+  /* her 2026-11-09 "see the problem": a box open on a symptom's weight dimmed the card behind it, so a row it still runs
+     close to (she had little headroom under "Catches Colds Often") reads as dimmed, not as if two things sat on one layer */
+  #pharmacyPage .ph-gdf .gf-card.has-open-cell::after { content: ""; position: absolute; inset: 0; z-index: 5; background: rgba(20,31,35,.06); pointer-events: none; }
   #pharmacyPage .ph-gdf .gf-ch { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: flex-start; padding: 14px 18px; background: var(--c); color: var(--fg); }
   #pharmacyPage .ph-gdf .gf-card.pale .gf-ch { box-shadow: inset 0 -1px 0 var(--cb); }
   #pharmacyPage .ph-gdf .gf-tt { flex: 1 1 360px; min-width: 0; }
@@ -15629,7 +15632,7 @@
   #pharmacyPage .ph-gdf .gf-mc-w { font-weight: 700; color: var(--dc, var(--ph-herb-deep)); font-variant-numeric: tabular-nums; }
   #pharmacyPage .ph-gdf .gf-mcell.neg .gf-mc-w { color: var(--ph-zero); }
   #pharmacyPage .ph-gdf .gf-mc-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--c); display: inline-block; flex: none; box-shadow: inset 0 0 0 1px rgba(0,0,0,.2); }
-  #pharmacyPage .ph-gdf .gf-mcell .gf-more { display: none; position: absolute; z-index: 6; right: 0; top: 100%; margin-top: 4px; width: max-content; max-width: 200px; padding: 8px; border-radius: 10px; background: var(--ph-white); box-shadow: 0 6px 18px rgba(11,59,75,.22); flex-wrap: wrap; gap: 6px; }
+  #pharmacyPage .ph-gdf .gf-mcell .gf-more { display: none; position: absolute; z-index: 6; right: 0; top: 100%; margin-top: 4px; width: max-content; max-width: 200px; padding: 8px; border-radius: 10px; background: var(--ph-white); box-shadow: 0 6px 18px rgba(11,59,75,.22); flex-wrap: wrap; gap: 6px; transform: translateX(var(--gf-dx, 0px)); }
   #pharmacyPage .ph-gdf .gf-mcell.open .gf-more { display: flex; }
   #pharmacyPage .ph-gdf .gf-cmpb { font-size: var(--fs-11); padding: 1px 7px; border-radius: 999px; background: var(--ph-gold-tint); color: #7a5a05; box-shadow: inset 0 0 0 1px var(--ph-gold); }
   #pharmacyPage .ph-gdf .gf-cmpb.no { background: var(--ph-paper); color: var(--ph-faint); box-shadow: inset 0 0 0 1px var(--ph-line); }
@@ -91776,14 +91779,25 @@ or changing anything in Cliniko.
   function phGdfEdClose() {
     phGdfEdOpen = null;
     document.querySelectorAll("#phGdfCard .gf-mcell.ed.open").forEach(c => c.classList.remove("open", "up"));
+    document.querySelectorAll("#phGdfCard .gf-card.has-open-cell").forEach(c => c.classList.remove("has-open-cell"));
   }
+  // her 2026-11-09 "see the problem": a row near the top of a narrow column opened a box wider than its own cell, which ran
+  // off the card's own edge -- the card's "overflow: hidden" then silently clipped the box's first letters, invisibly, rather
+  // than showing them cut off; keep the whole box inside the card instead of just flipping it up when the card's foot cuts it
   function phGdfEdPlace() {
     const cell = document.querySelector("#phGdfCard .gf-mcell.ed.open"), box = cell && cell.querySelector(".gf-more"), card = cell && cell.closest(".gf-card");
     if (!box || !card) return;
+    card.classList.add("has-open-cell");
     cell.classList.remove("up");
+    box.style.setProperty("--gf-dx", "0px");
     const b = box.getBoundingClientRect(), c = cell.getBoundingClientRect(), k = card.getBoundingClientRect();
     if (b.bottom > Math.min(window.innerHeight, k.bottom) - 6 && c.top - b.height - 4 > Math.max(6, k.top)) cell.classList.add("up");
     else if (b.bottom > window.innerHeight - 6) box.scrollIntoView({ block: "nearest" });
+    const pad = 10, b2 = box.getBoundingClientRect();
+    let dx = 0;
+    if (b2.left < k.left + pad) dx = (k.left + pad) - b2.left;
+    else if (b2.right > k.right - pad) dx = (k.right - pad) - b2.right;
+    if (dx) box.style.setProperty("--gf-dx", Math.round(dx) + "px");
   }
   function phGdfPopW(key) {   // a dot set in the box: the number pops once (a transient class; off under reduced motion)
     if (phTpReduceMotion()) return;
