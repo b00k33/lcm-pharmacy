@@ -104404,6 +104404,10 @@ or changing anything in Cliniko.
     return pq;
   }
   function phPatClues(rec, name) {
+    if (!phTriMemo || !rec) return phPatCluesRaw(rec, name);
+    return phTriMemoGet("clues|" + phPatientKey(name), () => phPatCluesRaw(rec, name)).slice();
+  }
+  function phPatCluesRaw(rec, name) {
     const out = [], seen = new Set();
     if (!rec) return out;
     // group = the one answer a clue came from. Several keys from one answer count once per rule (see phPatCompute)
@@ -118749,6 +118753,7 @@ or changing anything in Cliniko.
   }
   function phFbrEditsBust() {
     try { phTriOrderCache = {}; } catch (er) { /* not defined yet */ }
+    phFbrSignFamMemo = null;   // a var: never in its dead zone
     try { phTpAutoBust(); } catch (er) { /* */ }
     try { phWatchMemo.m = Object.create(null); } catch (er) { /* */ }
     try { phTpFxCtxCache.clear(); } catch (er) { /* */ }
@@ -118789,12 +118794,19 @@ or changing anything in Cliniko.
   // can score differently per family (phFbrPts), so two rows in the same column can now show two
   // different family colours; a sign with no positive weight anywhere falls back to PH_FBR_ACTIVE
   // rather than an undefined colour. Deliberately colour-only (no text tag) -- her call.
+  // a row's colour family (the one that weighs it most) was worked out over all 40 families for every row of every build (about 20 ms
+  // a tick, her 2026-11-09 "too laggy"); it changes only when a weight does, so it is kept until phFbrEditsBust (every weight edit,
+  // every replace of PHARMACY) lets it go. Lazy, so a call during boot never meets an uninitialised Map.
+  var phFbrSignFamMemo = null;
   function phFbrSignFam(kind, r) {
+    const M = phFbrSignFamMemo || (phFbrSignFamMemo = new Map()), mk = kind + "|" + r[0] + "|" + (r[2] == null ? "" : r[2]);
+    const hit = M.get(mk); if (hit !== undefined) return hit;
     let best = PH_FBR_ACTIVE, bestW = 0;
     for (const id in PH_FORMULAS) {
       const w = phFbrPts(PH_FORMULAS[id][kind === "d" ? "bing" : "ren"], r);
       if (w > bestW) { bestW = w; best = id; }
     }
+    M.set(mk, best);
     return best;
   }
   // Her ask (2026-10-09, "organise the feels symptoms into subjective category"): the Bing column
@@ -119663,7 +119675,12 @@ or changing anything in Cliniko.
     } catch (e) { /* not ready yet */ }
     return out;
   }
+  // a copy each time, so a caller that adds to its answer never changes another's (phTriMemo above)
   function phTriEffective(rec, name, kind, picks, prevD) {
+    if (!phTriMemo || !rec) return phTriEffectiveRaw(rec, name, kind, picks, prevD);
+    return Object.assign({}, phTriMemoGet("eff|" + phPatientKey(name) + "|" + kind + "|" + JSON.stringify(picks || {}) + "|" + JSON.stringify(prevD || {}), () => phTriEffectiveRaw(rec, name, kind, picks, prevD)));
+  }
+  function phTriEffectiveRaw(rec, name, kind, picks, prevD) {
     const clueKeys = new Set(phPatClues(rec, name).filter(c => !c.fbrTap).map(c => c.key));   // never the clues her own Fang Bing Ren taps added (no echo)
     const pmSigns = phTriPainSigns(rec, kind);                  // the words on her pain table (2026-10-14)
     const chartWords = phFbrChartWords(rec, kind);
@@ -119854,7 +119871,8 @@ or changing anything in Cliniko.
   function phFbrRenLead(rec, name) {
     const tri = rec && rec.tri;
     if (!tri || !tri.p || !Object.values(tri.p).some(Boolean)) return null;
-    return phFbrBySide(phFbrRank(rec, phTriFam(name), {}, tri.p), "p")[0].id;
+    const lead = () => phFbrBySide(phFbrRank(rec, phTriFam(name), {}, tri.p), "p")[0].id;
+    return phTriMemo ? phTriMemoGet("renLead|" + phPatientKey(name) + "|" + JSON.stringify(tri.p), lead) : lead();
   }
   // The symptom library learns. Seed lists above never change; what she adds lives in PHARMACY.triLearn.added
   // (agreed = on the list for everyone). Tick counts per complaint only ORDER the list -- points come from
@@ -119872,7 +119890,15 @@ or changing anything in Cliniko.
   // same-session scoped repaint a tap triggers (phTriRefresh/phRenTabRefresh, `fresh` omitted).
   // Session-only cache, never persisted -- a page reload is itself a "fresh open".
   var phTriOrderCache = {};
+  // the sign list in tap order: asked about 400 times a build (once per family and side by phFbrRank); a copy each time from
+  // phTriMemo. A fresh call (the page opening) re-sorts and is never served from it, and drops the plain answer it replaces.
   function phTriAll(kind, fam, name, fresh) {
+    if (!phTriMemo) return phTriAllRaw(kind, fam, name, fresh);
+    const mk = "all|" + kind + "|" + fam + "|" + phPatientKey(name) + "|";
+    if (fresh) { phTriMemo.delete(mk); return phTriAllRaw(kind, fam, name, fresh); }
+    return phTriMemoGet(mk, () => phTriAllRaw(kind, fam, name, false)).slice();
+  }
+  function phTriAllRaw(kind, fam, name, fresh) {
     const seed = kind === "d" ? PH_BING_SIGNS : PH_REN_SIGNS, L = PHARMACY.triLearn || {}, cnt = L.counts || {};
     const extra = (L.added || []).filter(a => a.kind === kind && a.agreed).map(a => ["a_" + a.id, a.label, a.pts]);
     const all = seed.concat(extra);
@@ -122260,7 +122286,20 @@ or changing anything in Cliniko.
     if (!e.target.matches || !e.target.matches("[data-ftg-q]")) return false;
     phFtgG.q = e.target.value; phFtgGBoard(); return true;
   }
+  // one build of the page asked the same questions again and again (her 2026-11-09 "too laggy"): the Ren leader 8 times, a side's
+  // effective ticks 6 times, the pattern clues 8 times (about 70 of the build's 120 ms). Nothing changes while the page is built, so
+  // during ONE build each answer is worked out once (phTriMemo, cleared when the build ends); outside a build every call is fresh.
+  var phTriMemo = null;
+  function phTriMemoGet(key, make) {
+    if (!phTriMemo) return make();
+    if (!phTriMemo.has(key)) phTriMemo.set(key, make());
+    return phTriMemo.get(key);
+  }
   function phTriHtml(name, fresh) {
+    const own = !phTriMemo; if (own) phTriMemo = new Map();
+    try { return phTriHtmlBody(name, fresh); } finally { if (own) phTriMemo = null; }
+  }
+  function phTriHtmlBody(name, fresh) {
     const rec = phPatientPeek(name) || {}, today = phTriToday(rec), d = today.d, p = today.p;
     const L = PHARMACY.triLearn || { added: [] }, fam = phTriFam(name);
     const effD = phTriEffective(rec, name, "d", d, today.prevD), effP = phTriEffective(rec, name, "p", p);
@@ -122428,17 +122467,45 @@ or changing anything in Cliniko.
     if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return false; }
     return true;
   }
+  // her 2026-11-09 "this page is too laggy": a tick swapped in the whole Fang Bing Ren page (6,800 parts: about 0.15 s to parse and lay
+  // out on a fast computer). phTriMorph builds the same HTML and touches only what differs: an equal part stays (isEqualNode), a part
+  // whose shape changed (a running picture, a list that grew) is swapped whole, attributes and text are set in place, and every field
+  // ends on its markup value, as a full redraw left it. (phMorph is the composer's: keyed children, typed words kept.)
+  function phTriMorph(el, html) {
+    const t = document.createElement("template"); t.innerHTML = html;
+    const nu = t.content.firstElementChild;
+    if (!nu || t.content.childElementCount !== 1 || nu.nodeName !== el.nodeName) { el.outerHTML = html; return; }
+    const want = Array.from(nu.querySelectorAll("input, textarea, select"), c => [c.value, c.checked]);
+    phTriMorphNode(el, nu);
+    const got = el.querySelectorAll("input, textarea, select");
+    if (got.length === want.length) got.forEach((c, i) => { if (c.value !== want[i][0]) c.value = want[i][0]; if (c.type === "checkbox" || c.type === "radio") c.checked = want[i][1]; });
+  }
+  function phTriMorphNode(a, b) {
+    if (a.isEqualNode(b)) return;
+    if (a.nodeType !== b.nodeType || a.nodeName !== b.nodeName) { a.replaceWith(b); return; }
+    if (a.nodeType !== 1) { if (a.nodeValue !== b.nodeValue) a.nodeValue = b.nodeValue; return; }
+    if (a.__pp || a.childNodes.length !== b.childNodes.length) { a.replaceWith(b); return; }
+    for (let i = a.attributes.length - 1; i >= 0; i--) { const n = a.attributes[i].name; if (!b.hasAttribute(n)) a.removeAttribute(n); }
+    for (const at of Array.from(b.attributes)) if (a.getAttribute(at.name) !== at.value) a.setAttribute(at.name, at.value);
+    const ac = Array.from(a.childNodes), bc = Array.from(b.childNodes);
+    for (let i = 0; i < ac.length; i++) phTriMorphNode(ac[i], bc[i]);
+  }
   function phTriRefresh(name) {
-    const h = document.querySelector("#pharmacyPage [data-tri-host]");
-    if (h) h.outerHTML = phTriHtml(name);
-    try { phFtgRefresh(name); } catch (e) { /* only when the triangle is on screen */ }
-    // Today's visit essentials card (her 2026-10-19 "primary place" ask): a tap inside it writes
-    // through the same phTriWrite/phTriSetYes/phTriSetNo door as the full Triangle page, so it
-    // repaints the same way -- in place, never a full renderPresPanel (that would reset her scroll).
-    const qh = document.querySelector(`#pharmacyPage [data-today-qa-host="${CSS.escape(name)}"]`);
-    if (qh) qh.outerHTML = phTodayFbrEssentialsHtml(name);
-    try { phFbrSwitchRefresh(name); } catch (e) { /* only when the switch is on screen */ }
-    try { phPfwSideRefresh(name); } catch (e) { /* only on a wide screen */ }
+    // one memo (phTriMemo) for the page and the cards drawn beside it: they ask the same questions. The Compass below stays outside
+    // it, since its repaint may write her answers.
+    const own = !phTriMemo; if (own) phTriMemo = new Map();
+    try {
+      const h = document.querySelector("#pharmacyPage [data-tri-host]");
+      if (h) phTriMorph(h, phTriHtml(name));
+      try { phFtgRefresh(name); } catch (e) { /* only when the triangle is on screen */ }
+      // Today's visit essentials card (her 2026-10-19 "primary place" ask): a tap inside it writes
+      // through the same phTriWrite/phTriSetYes/phTriSetNo door as the full Triangle page, so it
+      // repaints the same way -- in place, never a full renderPresPanel (that would reset her scroll).
+      const qh = document.querySelector(`#pharmacyPage [data-today-qa-host="${CSS.escape(name)}"]`);
+      if (qh) qh.outerHTML = phTodayFbrEssentialsHtml(name);
+      try { phFbrSwitchRefresh(name); } catch (e) { /* only when the switch is on screen */ }
+      try { phPfwSideRefresh(name); } catch (e) { /* only on a wide screen */ }
+    } finally { if (own) phTriMemo = null; }
     // the Compass (her 2026-10-22): its sign rows follow her Fang Bing Ren answers -- repainted once, never back and forth (phCxTriBusy)
     if (!phCxTriBusy && document.querySelector("#pharmacyPage [data-cx-host]")) { phCxTriBusy = true; try { phCxRefresh(name); } catch (e) { /* the card is not on screen */ } finally { phCxTriBusy = false; } }
   }

@@ -13311,7 +13311,7 @@ Her words, on a picture of the board's area tables: "this page is too laggy. rem
   dot-and-✕ cells read as "icons" at 1220; on the phone the cells' buttons measure 8 px tall and the ✕ 18 px): already there,
   not from this change, told to her.
 - **Not tested:** her real records; the Key2.
-- **SAVED, not live:** goes out with her next "push live".
+- **LIVE in build 20261109-131800** (her popup "Push live"; publish 506d20ff), and in 20261109-133600 after it.
 
 ## Title bar: one centre line, and a check so it stays (2026-11-09)
 - **Her words:** "see the problem? fix it and prevent from happening in the future" (screenshot of the Guide's bar: Me, Families, the search box, Learned 0 of 42).
@@ -13321,3 +13321,36 @@ Her words, on a picture of the board's area tables: "this page is too laggy. rem
 - **Tested** (sandbox, the real app): before the fix the check flagged the Guide, Log, All templates, Directory and Dispenses (Me 4-9px off); after it, all 21 pages with a bar are clean at 1220 and at 360 (phone); bar heights are now one value (58-59px, Photos 97 with its second row); the Guide's Families menu opens fully with the bar aligned; tap audit on the Guide's bar (menu open) 14 of 14 ok.
 - **Not tested:** the Key2; a patient page's own bar (Today's visit and the others draw their head inside the plan stage, not through `phShellHead`); the Cycle / Appointments calendar bar (it has its own bar, the check read it as clean).
 - **SAVED, not live:** goes out with her next "push live".
+
+## 2026-11-09 · Fang Bing Ren board: a tick repaints in place
+Her pick in a popup, after the hover fix above: "Yes, do it here" (a tick redrew the whole board), then "Push live" on the numbers.
+- **Measured (sandbox, a made-up patient, the same row ticked 8 times a round, 3 rounds):** a tick took a median 220 ms on the computer
+  layout (1220) and 840 ms on the phone layout (360). Where it went: `phTriHtml` built 500 KB of HTML (about 100 ms), then
+  `outerHTML` swapped in all 6,800 parts of the page and laid them out (about 150 ms). Inside the build the same questions were
+  asked again and again: the Ren leader (`phFbrRenLead`) 8 times, a side's effective ticks (`phTriEffective`) 6, the pattern clues
+  (`phPatClues`) 8, the sign list (`phTriAll`) about 720 times (80 per `phFbrRank`), and every row's colour family
+  (`phFbrSignFam`) over all 40 families.
+- **Built:**
+  - `phTriMorph` / `phTriMorphNode`: the same HTML is parsed into a template. An equal part stays (`isEqualNode`); a part whose shape
+    changed (its child count, or a running picture `__pp`) is swapped whole; attributes and text are set in place; every field
+    ends on its markup value, as the full redraw left it. If the build has more than one root it falls back to `outerHTML`.
+    (`phMorph` stays the composer's: keyed children, typed words kept.)
+  - `phTriMemo` + `phTriMemoGet`: one memo while ONE build runs (`phTriHtml` wraps `phTriHtmlBody`; `phTriRefresh` opens it for the
+    page and the cards beside it: growing triangle, Today's card, the switch, the side rail; never the Compass, which may write).
+    Served from it: `phTriEffective` (a copy each time; key = side + her picks + carried ticks), `phPatClues` (a copy),
+    `phFbrRenLead` (a family id), `phTriAll` (a copy; a fresh call re-sorts, is never served from it, and drops the plain answer).
+    Outside a build every call is as before.
+  - `phFbrSignFam`: kept per side + sign (+ a learned sign's own points) until `phFbrEditsBust`, which runs on every weight edit and
+    every replace of PHARMACY; lazy, so boot never meets an uninitialised Map.
+- **Now:** a median 100 ms a tick on the computer layout (from 220), 310 ms on the phone layout (from 840); the build 59 ms (from 96).
+- **Tested** (sandbox, a build copy on c9937d7b's index, nothing saved): after each of 26 taps (Bing and Ren ticks and unticks, rule
+  out and undo, the Tongue & pulse block, Show All / Ticked / Still to ask, a family tile, two tiles, clearing them, an area folded
+  and opened, ticks at 360) the page equals a plain full build, apart from two things a full redraw has too: a mounted picture
+  (`svg[data-pp]`, drawn after the paint) and Ask her's one-off `ph-qr in` class. The memo build is byte for byte the plain build
+  (no memo, no colour cache) in every state, on the page's first open (fresh) too; the switch and Today's card the same. A weight
+  edit through `PHARMACY.fbrEdits` + `phFbrEditsSync` moves a row's colour family and undoing it moves it back. Console clean, no
+  sideways scroll; tap audit the same as before (the markup is the same).
+- **Not tested:** her real records; the Key2.
+- **Found, already there before today (her pick: fix it next, mock first):** on the phone layout the board's Ren column is cut off at
+  the right edge and its tick buttons measure 8 px tall.
+- **Published on her popup "Push live"** with this commit.
