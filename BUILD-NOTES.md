@@ -12978,3 +12978,20 @@ Her words, with a screenshot of "Catches Colds Often": "see the problem."
   the Visit / Care Plan minis (they never drew distension).
 - **Pages checked:** the Abdomen exam page chart and side view only (the one place the distension is drawn).
 - **SAVED, not live:** goes out with her next "push live".
+
+## Abdomen chart: distension is whole, above or below the umbilicus, never at it (2026-11-09)
+- **Her words:** "abdominal distension is always whole abdomen or above or below umbilicus, almost never the umbilicus" (after the soft-glow build).
+- **Code** (`index.html`):
+  - `phAbdOkAt("distended", p)`: only `whole`, or a place that is not the umbilical row (umb, flankR, flankL), so tapping those with the full / distended
+    brush toasts "Whole abdomen, or above or below the umbilicus" (`phAbdWhyNot`), and the place popup of those zones no longer lists it.
+  - `phAbdDistLayer`: above = just under the xiphoid down to the umbilicus, below = umbilicus down to the pubis (was three row bands, the middle one
+    sitting on the navel). An old mark saved at the umbilical row (`@umb`, `@flank`) still draws, as the row-1 band.
+  - Side view: a distended mark above / below bulges centred half way to the ribs / the pubis, wider (`phAbdSideState` locals carry a centre and
+    spread; `phAbdSideWall` reads them).
+- **Left alone on purpose:** the Fang Bing Ren / Patterns words that read `abd:distended@umb` (`umb_enlarged_tend`, `phKsAbdScene`'s `PH_KS_ABD_AT`)
+  still match old marks; only new marks at the umbilical row are refused. `bulging` and `sunken` keep every place.
+- **Tested** (sandbox, the real `phAbdOkAt` / `phAbdChartSvg` / `phAbdSideSvg`): epi, hypoR, lower, iliac, whole allowed; umb, flankR, flankL refused;
+  flat / tension still whole-only, gas at the umbilicus still allowed; above, below, whole, above + below and an old `@umb` mark all draw (front + side).
+- **Not tested:** a real tap on the umbilical zone with the brush in the live page (the toast path is the existing one); a patient record; the Key2.
+- **Pages checked:** the Abdomen exam page chart, side view and place popup logic only.
+- **SAVED, not live:** goes out with her next "push live".
