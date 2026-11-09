@@ -13639,3 +13639,30 @@ tomorrow", then "Test + push live".
 - **Tested** (sandbox, expose build): the grid draws 15 cases x 1 place; + Add a book saves (Shang Han Lun), ticking C#2 and C#11 saves; Enter saves a seminar; x asks first and removes it; By Formula + Da Cheng Qi Tang narrows to C#2 and C#11 (names under the numbers), Side by side puts both in columns with their own colour and one animation each; Wen Dan Tang filter = C#12 and C#14 with the formula as recorded; an outside tap closes the list; the last case on show cannot be removed; tap audit 68 / 83 / 97 of the same at 360 (menu open, side by side) and 83 / 99 / 55 at 1220 with none off; no page scroll sideways at 360; the list opens fully on screen at 360. Pictures: mocks/tour-cases-source-grid-built-2026-11-10.jpg, -phone-built-.
 - **Not tested:** the Key2; two devices syncing `tourSources` at once (same shape as `tourCases`); dragging a column (Compare has it, the Tour Cases columns follow the case number); renaming a place (remove and add again).
 - **Calls made:** the seed tour is the only place that exists until she adds more (no starter books, the no-suggestions rule); a case can be in several places; filtering by place and by complaint / formula combine (all must match); Correlate / Integrate stay one case at a time.
+
+## 2026-11-10 · Two families, and a case's formula is its base ("modified")
+Her words, after the six Tour Case formulas went live: "some formulas can be in 2 families e.g. chai po tang is XCHT and BXHPT - so its both chai
+hu and ban xia." and "some formulas from case studies have the base formula e.g. dcht and additions so its dcht modified."
+- **Two families** (`PH_REN_FAM_GROUPS`, `also`, as Da Chai Hu Tang under Da Huang): Chai Po Tang (Xiao Chai Hu + Ban Xia Hou Po) also under Ban
+  Xia; by the same rule, MY completion, Chai Ling Tang (Xiao Chai Hu + Wu Ling San) and Shi San Wei Xue Bi Tang (Huang Qi Gui Zhi Wu Wu Tang +
+  Gui Zhi Fu Ling Wan, her notes) also under Gui Zhi. Colour, scoring and home stay with the first family. Wen Qing Yin's Si Wu Tang has no
+  family here. The Guide cards, Compare's Family list, the Ren page's family filter and the Fang Bing Ren family cards all read `also`.
+- **Base + modified** (Tour Cases): read again against her Day 1 notes (pasted in the "B33 C4 LCM bugs" session). A case's `formula` / `fms`
+  name base formulas only; added herbs or a changed dose are `mod`. The By Formula view used to split "Huang Lian Tang + Da Huang" and "...
+  Ban Xia Xie Xin Tang + Huang Bai" into formulas named "Da Huang" and "Huang Bai"; now its list is formulas only, a case reads "Huang Lian
+  Tang, modified", and its Book / lecture row says "Modified + Da Huang".
+  - Case 1: + Shan Yu Rou (SYR), Rou Gui (her "Gui Ling Wu Wei Gan Cao Tang + SYR").
+  - Case 2: was Da Cheng Qi Tang; her notes "1. DCHT: ch20 hqin15 bx15 zdh5 bs15 zk30 hz20 gj5 · 2. SQW" → 1. Da Chai Hu Tang · 2. Shen Qi Wan,
+    family Da Chai Hu Tang (this answers her "ask me again tomorrow").
+  - Case 3: "CPT" → Chai Po Tang (Xiao Chai Hu Tang + Ban Xia Hou Po Tang).
+  - Case 5: "Jia Zhu Jia Tang" → Ju Zhi Jiang Tang (her "JZJT"); the recipe gets her last herb, gc5.
+  - Case 7: + Rou Gui, Ge Gen, Chuan Xiong, Zhi Da Huang (MY reading against the book Gui Zhi Fu Ling Wan; her recipe has no Shao Yao).
+  - Case 9: + E Jiao, Gan Cao; later Ban Xia Xie Xin Tang + Huang Bai (her "BXXXT + HBai 5").
+  - Case 10: 1. Shi San Wei Xue Bi Tang (HQGZWWT + GZFLW + GG CX + NX + SWJBT) · 2. Shen Qi Wan; Huang Qi 50 g (was 30).
+  - Case 11: was Da Cheng Qi Tang; her "DCHT taken for 2 months ... ZK was 20" → Da Chai Hu Tang, modified: Zhi Ke 20 g.
+  - Case 15: "Huang Lian Tang + Da Huang" → Huang Lian Tang, modified: + Da Huang (her "HLT + DH").
+  - `PH_TC_FIX` moves a saved case once (`fixV`) when its name is still the first-typed one; a family she picked herself is kept.
+- **Tested** (sandbox, nothing saved): 22 checks (both families, the Ren filter, fresh and saved cases, her own family kept, Gan Cao added once,
+  the formula list has no herb, the Modified line, the By Formula names, the case grid side by side, key check). Tap audit at 1220 (67, 40)
+  and 360 (55, 29), no sideways page scroll at 360, console clean.
+- **SAVED, not live:** waits for her "push live".
