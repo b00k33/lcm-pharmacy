@@ -13527,7 +13527,10 @@ this organisation and display. use it for the compare and table and cases displa
   the table scrolls inside its card.
 - **Not built: Cases.** While this was being tested, the other session rebuilt Cases into 14 rows from her synth22 list (e7b453c0, LIVE
   150500). The mock's Cases (one full picture per case, Signs & symptoms · Pathology · Prescription) would have replaced those rows, so it
-  waits for her word on how the two meet.
+  waits for her word on how the two meet. **Her word (popup, same day):** shown A (the 14 rows, each row's signs as a picture table), B
+  (the 14 rows as they are) and C (one full picture per case) as pictures (shots/cases-A/B/C-*-2026-11-09.png, local), she picked
+  **B · Keep as it is now**. Cases stays as the other session built it; don't re-propose the picture look there.
+- **LIVE** in build 20261109-160100 (her "Yes, test + push live").
 - **Tested** (sandbox, Xiao Chai Hu Tang + Da Chai Hu Tang unless named; nothing saved):
   - Every filter on Both / Ren / Bing: the rows match the chip counts (Both 87 · 20 · 12 · 52 · 75; only-one bar 30 / 45).
   - Search ("dizz" 2 rows; none: "No signs for …"); head focus fades the 45 rows Xiao lacks; the filter motion runs and settles.
