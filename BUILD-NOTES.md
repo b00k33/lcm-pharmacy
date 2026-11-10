@@ -13718,3 +13718,10 @@ pushed.
 - **Not tested:** the Key2; a patient with many visits or a very large dispense log; a HEIC photo from a phone (the browser decides if it decodes; one that cannot be read is skipped with a toast); pasting from the phone clipboard; another device (photos do not travel).
 - **Calls made:** photos stay on this device only (not sync, not the file backup, not the relay): the Photos page and relay take every photo in the patient store, so notes would have leaked there, and a case-note photo can be a real patient's chart; if she wants them synced or backed up that is a separate build. Patient studies are inside `PHARMACY` so they sync like the rest, but they hold initials-or-name only through the display switch, the stored `name` is the full name (needed to read the record). A study's observations are the record's own wording, uncorrelated until she Accepts. The Tongue / Abdomen / Pulse lines only (not the hammer and score lines) are read in as observations.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide Families: a herb's tile is narrower than formulas (2026-11-10)
+- **Her words:** a picture of the Gui Zhi family card, "give the herb a more narrow chip to differentiate from formulas. do the same for all formulas", then "i mean herb".
+- **Read as:** every herb tile (a family head, and a herb listed On their own) is narrower than the formula tiles; no other change. `phGdfTileHtml` adds `herb` when the id is a `PH_REN_FAM_GROUPS` herb; css `.gf-t.herb { width: 62% }`, reset to auto in the phone's row layout.
+- **Tested** (sandbox): 12 herb tiles, all 154 px against 249 px for a formula tile at 1220; tap audit 76 of 76 at 1220 and 75 of 75 at 360, none off, no sideways scroll.
+- **Calls made:** left-aligned (not centred) so the herb reads as the head of the list; width a share of the card, so it stays narrower whatever the card's width.
+- **SAVED, not live:** goes out with her next "push live".
