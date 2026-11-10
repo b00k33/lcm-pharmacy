@@ -13731,3 +13731,8 @@ pushed.
 - **Done:** `phCmpCasesHtml` head `Case n` -> `Herb n` when the column's id is a `PH_REN_FAM_GROUPS` herb, else `Formula n`. Tested in the sandbox: a herb and a formula column read "Herb 1", "Formula 2".
 - **Calls made:** the view switch (Cases | Formula | Tables) keeps the name "Cases" until she says; the Cases TAB (patients' own cases) is unaffected.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Cases tables: Bing · diagnosis is the first row (2026-11-10)
+- **Her words** (relayed, synth22 item 7): "put bing diagnosis as first row". Read as: first data row, under the collapsible "How it works" row, which is not a data row. `phCmpCaseRowsHtml` row order: an, Bing · diagnosis, Ren, ... One list serves Compare > Cases, Cases and My patients, so all three change together (her "case table same as compare").
+- **Tested:** sandbox, Compare > Cases and a Case 2 table: row labels start How it works, Bing · diagnosis, Ren.
+- **SAVED, not live:** goes out with her next "push live".
