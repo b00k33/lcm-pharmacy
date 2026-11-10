@@ -15769,6 +15769,9 @@
   #pharmacyPage .ph-tc-grid .bl .srn { font-weight: 500; font-variant-numeric: tabular-nums; }
   #pharmacyPage .ph-tc-grid .kd { flex: none; }
   #pharmacyPage .ph-tc-grid input.who { width: 100%; font-size: var(--fs-12-5); }
+  #pharmacyPage .ph-tc-grid tr.day .srw { flex-wrap: wrap; row-gap: 2px; padding-bottom: 4px; }
+  #pharmacyPage .ph-tc-grid tr.day input.dd { width: 100%; font-size: var(--fs-12-5); }
+  #pharmacyPage .ph-tc-grid tr.day th, #pharmacyPage .ph-tc-grid tr.day td { height: auto; }
   /* ---- Photos of treatment notes + My patients (her 2026-11-10 "build 5 and 6") ---- */
   #pharmacyPage .ph-tc .tcx { width: 32px; height: 32px; padding: 0; border-radius: 50%; border: 1px solid var(--ph-line); background: var(--ph-white); color: var(--ph-ink); font: inherit; font-size: var(--fs-13); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: none; }
   #pharmacyPage .ph-tc .tcx svg { width: 12px; height: 12px; }
@@ -93182,14 +93185,52 @@ pale red tongue|Tongue: pale-red|r`;
     let h = `<tr class="tour${phGdTcSrcF === s.id ? " on" : ""}"><th class="sc"><div class="srw"><button type="button" class="srn" data-tc-srcf="${esc(s.id)}" aria-pressed="${phGdTcSrcF === s.id}" title="Show only this place's cases"><span>${esc(s.name)}</span><em>${vc(s.cases)}</em></button>${s.fixed ? "" : `<button type="button" class="tcx" data-tc-src-del="${esc(s.id)}" title="Remove" aria-label="Remove ${esc(s.name)}">${PH_GDF_IC.x}</button>`}</div></th><td colspan="${nc}"></td></tr>`;
     days.forEach(d => {
       const shut = phGdTcDayShut.has(s.id + "|" + d.n), all = d.blocks.flatMap(b => b.cases);
-      h += `<tr class="day"><th class="sc"><div class="srw"><button type="button" class="srn day" data-tc-dfold="${esc(s.id)}|${d.n}" aria-expanded="${!shut}"><span><i class="ch">${shut ? "▸" : "▾"}</i>Day ${d.n}${d.date ? ` · ${esc(phTcDayLab(d.date))}` : ""}</span><em>${vc(all)}</em></button></div></th>${vis.map(c => `<td>${shut && all.indexOf(c.n) >= 0 ? `<span class="dt"></span>` : ""}</td>`).join("")}</tr>`;
+      h += `<tr class="day"><th class="sc"><div class="srw"><button type="button" class="srn day" data-tc-dfold="${esc(s.id)}|${d.n}" aria-expanded="${!shut}"><span><i class="ch">${shut ? "▸" : "▾"}</i>Day ${d.n}${shut && d.date ? ` · ${esc(phTcDayLab(d.date))}` : ""}</span><em>${vc(all)}</em></button>${shut ? "" : `<input type="date" class="field-bare gf-fld dd" data-tc-ddate="${esc(s.id)}|${d.n}" value="${esc(d.date || "")}" aria-label="Date of Day ${d.n}">`}</div></th>${vis.map(c => `<td>${shut && all.indexOf(c.n) >= 0 ? `<span class="dt"></span>` : ""}</td>`).join("")}</tr>`;
       if (!shut) d.blocks.forEach((b, i) => {
         const bid = `${s.id}|${d.n}|${i}`;
         h += `<tr class="blk${phGdTcSrcF === bid ? " on" : ""}"><th class="sc"><div class="bw"><div class="bl"><button type="button" class="srn" data-tc-srcf="${esc(bid)}" aria-pressed="${phGdTcSrcF === bid}" title="Show only the cases seen in this time"><span>${esc(b.t)}</span><em>${vc(b.cases)}</em></button><button type="button" class="gf-chip kd" data-tc-kind="${esc(bid)}" title="Tap to change: Clinic, Lecture, Conference, Study group">${PH_TC_BKIND[b.k] || PH_TC_BKIND[0]}</button></div><input type="text" class="field-bare gf-fld who" data-tc-who="${esc(bid)}" value="${esc(b.who || "")}" placeholder="Teacher" autocomplete="off" aria-label="Teacher, Day ${d.n} ${esc(b.t)}"></div></th>${vis.map(c => { const y = b.cases.indexOf(c.n) >= 0; return `<td><button type="button" class="tcm${y ? " y" : ""}" data-tc-blk="${esc(bid)}|${c.n}" aria-pressed="${y}" aria-label="C#${c.n} in Day ${d.n}, ${esc(b.t)}"></button></td>`; }).join("")}</tr>`;
       });
     });
-    return h + `<tr class="ad"><th class="sc"><button type="button" class="gf-chip" data-tc-addday="${esc(s.id)}">+ Add a day</button></th><td colspan="${nc}"></td></tr>`;
+    return h + `<tr class="ad"><th class="sc"><div class="srw" style="flex-wrap:wrap"><button type="button" class="gf-chip" data-tc-addday="${esc(s.id)}">+ Add a day</button><button type="button" class="gf-chip" data-tc-ics="${esc(s.id)}" title="Save this tour's days as events you can import into your calendar (.ics)">Add to calendar</button></div></th><td colspan="${nc}"></td></tr>`;
   }
+  // ---- Add to calendar (her 2026-11-10 "include option to sync my calendar with the november tour"): the tour's days as calendar events in one .ics file, which Google, Apple and Outlook calendars all import.
+  // One event per day's morning and afternoon (kind, teacher, case numbers in it); the Nanjing tour's times are Asia/Shanghai (Nanjing) time, any other tour's are floating (the time shown, wherever the
+  // calendar is). A fixed UID per block, so importing again updates the events instead of doubling them. This is a file she imports, not a live link: a later change here needs the button again.
+  function phTcIcs(s) {
+    const tz = s.id === "nanjing-2026-11-day1" ? "Asia/Shanghai" : "", fx = t => String(t).replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\r?\n/g, "\\n");
+    const fold = l => { let o = ""; while (l.length > 70) { o += l.slice(0, 70) + "\r\n "; l = l.slice(70); } return o + l; };
+    const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z"), seq = Math.floor(Date.now() / 1000), TM = [["080000", "120000", "Morning"], ["140000", "170000", "Afternoon"]];
+    const L = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//LCM Pharmacy//Tour days//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH", "X-WR-CALNAME:" + fx(s.name)];
+    if (tz) L.push("BEGIN:VTIMEZONE", "TZID:" + tz, "BEGIN:STANDARD", "DTSTART:19700101T000000", "TZOFFSETFROM:+0800", "TZOFFSETTO:+0800", "TZNAME:CST", "END:STANDARD", "END:VTIMEZONE");
+    let n = 0;
+    phTcDays(s).forEach(d => {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d.date || "")) return;
+      d.blocks.forEach((b, i) => {
+        const day = d.date.replace(/-/g, ""), [a, z, w] = TM[i] || TM[0], dt = x => tz ? ";TZID=" + tz + ":" + day + "T" + x : ":" + day + "T" + x;
+        const cs = b.cases.slice().sort((x, y) => x - y).map(x => "C#" + x).join(", "), kind = PH_TC_BKIND[b.k] || PH_TC_BKIND[0];
+        L.push("BEGIN:VEVENT", "UID:" + s.id + "-d" + d.n + "-b" + i + "@lcm-pharmacy", "DTSTAMP:" + stamp, "SEQUENCE:" + seq, "DTSTART" + dt(a), "DTEND" + dt(z),
+          "SUMMARY:" + fx(`${s.name} · Day ${d.n} ${w} · ${kind}${b.who ? " · " + b.who : ""}`),
+          "DESCRIPTION:" + fx([kind + (b.who ? " with " + b.who : ""), cs ? "Cases: " + cs : "No cases filed yet"].join("\n")), "END:VEVENT");
+        n++;
+      });
+    });
+    L.push("END:VCALENDAR");
+    return { text: L.map(fold).join("\r\n") + "\r\n", n, tz };
+  }
+  function phTcIcsDownload(s) {
+    const r = phTcIcs(s);
+    if (!r.n) { presSavedToast("Give a day its date first"); return; }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([r.text], { type: "text/calendar;charset=utf-8" }));
+    a.download = String(s.name).replace(/[^\w -]+/g, "").trim().replace(/\s+/g, "-") + ".ics";
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    presSavedToast(`${r.n} events for your calendar${r.tz ? " · Nanjing time" : ""}`);
+  }
+  document.addEventListener("change", e => {   // a day's date is saved where it is picked (no repaint)
+    const i = e.target.closest && e.target.closest("[data-tc-ddate]"); if (!i) return;
+    const [sid, dn] = i.dataset.tcDdate.split("|"), s = phTcSources().find(x => x.id === sid), d = s && phTcDays(s).find(x => x.n === +dn);
+    if (d) { d.date = /^\d{4}-\d{2}-\d{2}$/.test(i.value) && +i.value.slice(0, 4) >= 1900 ? i.value : ""; if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); }
+  });
   document.addEventListener("change", e => {   // a teacher's name is saved where it is typed (no repaint: a tap elsewhere must still land)
     const i = e.target.closest && e.target.closest("[data-tc-who]"); if (!i) return;
     const [sid, dn, bi] = i.dataset.tcWho.split("|"), s = phTcSources().find(x => x.id === sid), d = s && phTcDays(s).find(x => x.n === +dn), b = d && d.blocks[+bi];
@@ -93646,6 +93687,7 @@ pale red tongue|Tongue: pale-red|r`;
       }
       renderPhGdBody(); return true;
     }
+    if ((el = T.closest("[data-tc-ics]"))) { const s = phTcSources().find(x => x.id === el.dataset.tcIcs); if (s) phTcIcsDownload(s); return true; }
     if ((el = T.closest("[data-tc-more]"))) { phGdTcAdd = el.dataset.tcMore; phGdTcMore = true; renderPhGdBody(); return true; }
     if ((el = T.closest("[data-tc-dx]"))) {
       const [cid, i] = el.dataset.tcDx.split("|"), c = phTcFind(cid), s = c && c.symptoms[+i];

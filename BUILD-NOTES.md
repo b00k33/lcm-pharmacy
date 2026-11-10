@@ -13783,3 +13783,11 @@ pushed.
 - **Tested** (sandbox): Xiao Chai Hu's own picture → it 100, Chai Qin 60; Huang Qin Tang's own → it 100, Chai Qin 40; both → Chai Qin leads; no Tour Case changed its leader; under Chai Hu and Huang Qin Tang, split circles in both; tap audit 78 of 78 at 1220, 38 of 38 at 360; console clean.
 - **Calls made, flag for her:** a draft table from the halves; it runs second for a strong Xiao Chai Hu-only picture (as Chai Gui Tang does).
 - **LIVE** with her "Test + push live each".
+
+## Tour days: Add to calendar (2026-11-10)
+- **Her words:** "include option to sync my calendar with the november tour".
+- **Read as:** an .ics export of the tour's days (the one calendar format every calendar app imports), not a live two-way sync: a live subscription needs a server address the app does not have, and writing into the Book33 calendar means writing another app's keys, which is not allowed. If she meant her Book33 / C22 calendar or Google Calendar specifically, that is a separate build (ask).
+- **Code** (`index.html`): `phTcIcs`, `phTcIcsDownload`, the `data-tc-ics` click, the date box (`data-tc-ddate`, saved on change, no repaint) in each open day row; css under "Tour days".
+- **Tested** (sandbox): Nanjing tour: 4 events (Day 1 and Day 2, both times), `TZID=Asia/Shanghai`, 20261109T080000-120000 and 140000-170000, a VTIMEZONE block, lines folded at 70 characters, the file made as a text/calendar blob with the toast "4 events for your calendar · Nanjing time"; a day with no date adds none (toast "Give a day its date first"); tap audit 130 of 130 at 1220. NOT tested: opening the file in a real calendar app (Google, Apple, Outlook) on her devices.
+- **Calls made:** each block is one event even when it has no cases yet (Day 2 here is a placeholder: remove the extra day before exporting if it is not real); Day 1's date is Mon 9 Nov 2026 as she said; an empty block says "No cases filed yet"; the case numbers are in the event text, no names.
+- **SAVED, not live:** goes out with her next "push live".
