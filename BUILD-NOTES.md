@@ -13694,3 +13694,18 @@ Her words: "give chai po tang half ban xia nad half chai hu colour in the circle
 - **Not tested:** the Key2; two devices adding sessions to one case at once; the progress table with several cases on show (it keeps one column a case, as before).
 - **Calls made:** a case with no sessions and no note looks exactly as before; the first column is always the case's own record (Day 1), its date is not invented (the tour's dates are not in the notes); a session is added with today's date, editable; a session gets no animation and no inventory recipe (they are the formula's, shown once).
 - **SAVED, not live:** goes out with her next "push live".
+
+## Guide: the 13 tabs grouped, 2026-11-10
+
+Her ask, with a screenshot of the flat A-Z dropdown: "help organise this into categories with sub
+categories e.g. families belong to fang bing ren, and diagnostic tools are tongue pulse abdomen
+whereas iron etc are lifestyle - use your best judgement". Mock shown, she picked it as shown.
+
+Fang Bing Ren: Cases, Compare, Families, Herbs, Sources, Triangle -- all read or write its tables.
+Diagnostic tools: Abdomen, Blood tests, Pulse, Tongue map -- what she reads a patient against.
+Lifestyle: Eating eggs, Eggs, Iron -- the teaching pages, not tools.
+
+A-Z still orders each group (her A-Z lists rule, unchanged) -- only the grouping itself was her
+judgement call to make. **Tested** in the harness: the dropdown shows the three headers in the
+right order, a tab from each group opens correctly (Cases, Iron both checked). **LIVE** once
+pushed.
