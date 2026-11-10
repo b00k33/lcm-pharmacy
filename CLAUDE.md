@@ -1468,6 +1468,12 @@ not repeated here.
 - A case's formula is its base (her 2026-11-10 "some formulas from case studies have the base formula e.g. dcht and additions so its dcht
   modified"): `formula` / `fms` name the base formula(s) only; herbs added or a dose changed are `mod`, shown as "Modified" on the Book /
   lecture row and ", modified" in the By Formula names, never a formula in the filter list. `PH_TC_FIX` moved the Day 1 names once.
+- Two colours (her 2026-11-10 "give chai po tang half ban xia and half chai hu colour in the circle and in the banner"): `PH_FBR_COLOUR_TWO`
+  splits a formula's circles and banner down the middle (`sw` / `--cs`); table lines, board and scoring keep its own colour. Chai Po Tang only.
+- A formula made of two halves (her 2026-11-10 "chai gui tang is XCHT with dgsys", her pick "Add it from its two halves"): `phFbrFromHalves`
+  builds its table at load from the two book tables, every sign at the higher weight, `or` lines merged; a DRAFT until her own table. Chai Gui
+  Tang (柴归汤, the blood-stasis Chai Hu) = Xiao Chai Hu Tang + Dang Gui Shao Yao San: under Chai Hu, and under Dang Gui Shao Yao San via `also`
+  (a family with only `also` still gets its card, `phGdfHasCard`). It runs second behind either half alone; with both pictures it leads.
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast
