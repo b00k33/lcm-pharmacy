@@ -77886,6 +77886,7 @@ or changing anything in Cliniko.
   let phGdTab = "families";   // "families" | "compare" | "tongue" | "pulse" | "abdomen" | "herbs" | "bloods" | "iron" | "eggs" | "eating" | "triangle" | "tourcases"
   let phGdTabsOpen = false;   // the Guide's 11 tabs are a dropdown now, her audit pick (over her own "more than 6 = dropdown" rule)
   let phGdSrcEdit = null;   // the Sources tab's one open row: "new" or an existing source's id
+  let phGdSrcTypeF = "";    // the Sources tab's type chip filter: "" (All), "book", "person" or "event" (her 2026-11-10 "compiling people and books and multiple source types")
   let phGdStEdit = null;   // the Sources tab's one open name row (People & other sources): "new" or an existing type key
   let phGdTcSel = null;   // Tour Cases tab: the open case's id (her 2026-11-09 "talk to b33 c4 lcm" -> named apart from Compare's own Cases view)
   let phGdTcAnim = false;   // Cases tab: the "How it works" row open; it starts collapsed (her 2026-11-10 "make this always collapsed") (her 2026-11-10: the same rows as Compare > Cases, the animation row collapsible)
@@ -91902,8 +91903,14 @@ or changing anything in Cliniko.
     PH_SOURCE_LIB_SEED.forEach(seed => { if (!lib.some(s => s.title === seed.title)) lib.push(Object.assign({ id: uid(), date: "", notes: "" }, seed)); });
     return lib;
   }
+  const PH_SRC_KINDS = [["book", "Book"], ["person", "Person"], ["event", "Event"]];
+  const phLibType = b => (b && (b.type === "person" || b.type === "event")) ? b.type : "book";
+  const phLibWhen = b => { const d = b.date ? (typeof phTcDayLab === "function" ? phTcDayLab(b.date) : b.date) : ""; return [d, b.place || ""].filter(Boolean).join(" · "); };
   function phSrcLibCite(s) {
     let c = s.title || "";
+    const t = phLibType(s);
+    if (t === "person") { if (s.role) c += (c ? " — " : "") + s.role; return c; }
+    if (t === "event") { const w = phLibWhen(s); if (w) c += (c ? " — " : "") + w; return c; }
     if (s.author) c += (c ? " — " : "") + s.author;
     if (s.translator) c += (c ? ", " : "") + "trans. " + s.translator;
     return c;
@@ -92726,11 +92733,19 @@ or changing anything in Cliniko.
   // her 2026-11-09 "add this is a source - make a source page": a plain editable list, same shape as a formula note (add,
   // edit in place, remove) -- a tab on the Guide, beside Families, since every source she cites lives there today
   function phGdSourceRowHtml2(s) {
+    const t = s.id === "new" ? (phGdSrcTypeF || "book") : phLibType(s);
     if (phGdSrcEdit === s.id) {
-      return `<div class="gf-card" style="padding:14px 16px;margin-bottom:10px">
-        <input type="text" class="field-bare" data-gd-sl-title placeholder="Title" value="${esc(s.title || "")}" style="margin-bottom:6px;width:100%">
-        <input type="text" class="field-bare" data-gd-sl-author placeholder="Author" value="${esc(s.author || "")}" style="margin-bottom:6px;width:100%">
-        <input type="text" class="field-bare" data-gd-sl-translator placeholder="Translator (optional)" value="${esc(s.translator || "")}" style="margin-bottom:6px;width:100%">
+      const inp = (a, ph, v, ex) => `<input type="text" class="field-bare" data-gd-sl-${a} placeholder="${ph}" value="${esc(v || "")}" style="margin-bottom:6px;width:100%"${ex || ""}>`;
+      return `<div class="gf-card" data-sl-t="${t}" style="padding:14px 16px;margin-bottom:10px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">${PH_SRC_KINDS.map(([k, l]) => `<button type="button" class="gf-chip${k === t ? " on" : ""}" data-gd-sl-pick="${k}" aria-pressed="${k === t}">${l}</button>`).join("")}</div>
+        <input type="text" class="field-bare" data-gd-sl-title placeholder="${t === "book" ? "Title" : "Name"}" value="${esc(s.title || "")}" style="margin-bottom:6px;width:100%">
+        <div data-gd-sl-grp="book"${t === "book" ? "" : " hidden"}>${inp("author", "Author", s.author)}${inp("translator", "Translator (optional)", s.translator)}</div>
+        <div data-gd-sl-grp="person"${t === "person" ? "" : " hidden"}>${inp("role", "Role, e.g. Teacher", s.role)}</div>
+        <div data-gd-sl-grp="event"${t === "event" ? "" : " hidden"}>
+          <input type="date" class="field-bare" data-gd-sl-date value="${esc(s.date || "")}" aria-label="Date" style="margin-bottom:6px;width:100%">
+          ${inp("place", "Place", s.place)}
+          <select class="field-bare" data-gd-sl-as aria-label="Shows in Cases as" style="margin-bottom:6px;width:100%"><option value="seminar"${s.evAs === "tour" ? "" : " selected"}>Shows in Cases as a Seminar</option><option value="tour"${s.evAs === "tour" ? " selected" : ""}>Shows in Cases as a Tour</option></select>
+        </div>
         <textarea class="field-bare" data-gd-sl-notes placeholder="Notes (optional)" rows="2" style="width:100%">${esc(s.notes || "")}</textarea>
         <div style="display:flex;gap:8px;margin-top:8px">
           <button type="button" class="gf-btn pri" data-gd-sl-save="${esc(s.id)}">Save</button>
@@ -92738,9 +92753,11 @@ or changing anything in Cliniko.
         </div>
       </div>`;
     }
+    const sub = t === "person" ? esc(s.role || "") : t === "event" ? esc(phLibWhen(s)) + (phLibWhen(s) ? " · " : "") + (s.evAs === "tour" ? "Tour" : "Seminar") : (s.author ? esc(s.author) + (s.translator ? `, trans. ${esc(s.translator)}` : "") : "");
     return `<div class="gf-card" style="padding:12px 16px;margin-bottom:10px;display:flex;justify-content:space-between;gap:10px;align-items:flex-start">
-      <div><b>${esc(s.title || "Untitled")}</b>${s.author ? `<div style="color:var(--ph-soft);font-size:var(--fs-12-5)">${esc(s.author)}${s.translator ? `, trans. ${esc(s.translator)}` : ""}</div>` : ""}${s.notes ? `<div style="color:var(--ph-faint);font-size:var(--fs-12-5);margin-top:4px">${esc(s.notes)}</div>` : ""}</div>
-      <div style="display:flex;gap:6px;flex:none">
+      <div style="min-width:0"><b>${esc(s.title || "Untitled")}</b>${sub ? `<div style="color:var(--ph-soft);font-size:var(--fs-12-5)">${sub}</div>` : ""}${s.notes ? `<div style="color:var(--ph-faint);font-size:var(--fs-12-5);margin-top:4px">${esc(s.notes)}</div>` : ""}</div>
+      <div style="display:flex;gap:6px;flex:none;align-items:center">
+        <button type="button" class="gf-chip" data-gd-sl-type="${esc(s.id)}" title="Tap to change the type" aria-label="${PH_SRC_KINDS.find(k => k[0] === t)[1]}, tap to change the type">${PH_SRC_KINDS.find(k => k[0] === t)[1]}</button>
         <button type="button" class="gf-ib" data-gd-sl-edit="${esc(s.id)}" title="Edit" aria-label="Edit">${PH_GDF_PEN}</button>
         <button type="button" class="gf-ib red" data-gd-sl-rm="${esc(s.id)}" title="Remove" aria-label="Remove">${PH_GDF_IC.x}</button>
       </div>
@@ -92770,10 +92787,12 @@ or changing anything in Cliniko.
       ${rows}`;
   }
   function phGdSourcesHtml() {
-    const list = phSourceLib();
-    const rows = list.length ? list.map(phGdSourceRowHtml2).join("") : `<div class="gf-none" style="padding:14px 0">No sources yet</div>`;
+    const all = phSourceLib(), list = all.filter(s => !phGdSrcTypeF || phLibType(s) === phGdSrcTypeF).sort((a, b) => phAz(a.title, b.title));
+    const rows = list.length ? list.map(phGdSourceRowHtml2).join("") : `<div class="gf-none" style="padding:14px 0">${phGdSrcTypeF ? `No ${PH_SRC_KINDS.find(k => k[0] === phGdSrcTypeF)[1].toLowerCase()} sources yet` : "No sources yet"}</div>`;
+    const bar = [["", "All"]].concat(PH_SRC_KINDS).map(([k, l]) => { const n = k ? all.filter(s => phLibType(s) === k).length : all.length; return `<button type="button" class="gf-chip${phGdSrcTypeF === k ? " on" : ""}" data-gd-sl-f="${k}" aria-pressed="${phGdSrcTypeF === k}">${l} ${n}</button>`; }).join("");
     return `<div class="ph-gdf"><div style="grid-column:1 / -1;padding:16px 18px;max-width:560px">
-      <p style="color:var(--ph-soft);font-size:var(--fs-12-5);margin:0 0 14px">Books, teachers and events you can cite when you reference a symptom.</p>
+      <p style="color:var(--ph-soft);font-size:var(--fs-12-5);margin:0 0 14px">Books, people and events you can cite when you reference a symptom. Tap a row's type to change it.</p>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">${bar}</div>
       ${phGdSrcEdit === "new" ? phGdSourceRowHtml2({ id: "new" }) : `<button type="button" class="gf-btn pri" data-gd-sl-new="1" style="margin-bottom:14px">${PH_GDF_IC.plus} Add a source</button>`}
       ${rows}
       ${phGdSrcTypesHtml()}
@@ -92791,16 +92810,31 @@ or changing anything in Cliniko.
       phGdSrcEdit = null; renderPhGdBody();
       return true;
     }
+    if ((el = T.closest("[data-gd-sl-f]"))) { phGdSrcTypeF = el.dataset.gdSlF || ""; phGdSrcEdit = null; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-gd-sl-type]"))) {
+      const b = phSourceLib().find(x => x.id === el.dataset.gdSlType);
+      if (b) { const o = PH_SRC_KINDS.map(k => k[0]), n = o[(o.indexOf(phLibType(b)) + 1) % o.length]; b.type = n; if (n === "event" && !b.evAs) b.evAs = "seminar"; if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); }
+      renderPhGdBody(); return true;
+    }
+    if ((el = T.closest("[data-gd-sl-pick]"))) {
+      const card = T.closest(".gf-card"), k = el.dataset.gdSlPick; card.dataset.slT = k;
+      card.querySelectorAll("[data-gd-sl-pick]").forEach(x => { const on = x.dataset.gdSlPick === k; x.classList.toggle("on", on); x.setAttribute("aria-pressed", on); });
+      card.querySelectorAll("[data-gd-sl-grp]").forEach(g => { g.hidden = g.dataset.gdSlGrp !== k; });
+      card.querySelector("[data-gd-sl-title]").placeholder = k === "book" ? "Title" : "Name";
+      return true;
+    }
     if ((el = T.closest("[data-gd-sl-save]"))) {
-      const card = T.closest(".gf-card"), id = el.dataset.gdSlSave;
+      const card = T.closest(".gf-card"), id = el.dataset.gdSlSave, ty = card.dataset.slT || "book";
       const titleEl = card.querySelector("[data-gd-sl-title]"), title = (titleEl.value || "").trim();
       if (!title) { titleEl.focus(); return true; }
-      const author = (card.querySelector("[data-gd-sl-author]").value || "").trim();
-      const translator = (card.querySelector("[data-gd-sl-translator]").value || "").trim();
-      const notes = (card.querySelector("[data-gd-sl-notes]").value || "").trim();
+      const v = a => (card.querySelector("[data-gd-sl-" + a + "]").value || "").trim();
+      const f = { title, type: ty, notes: v("notes") };
+      if (ty === "book") Object.assign(f, { author: v("author"), translator: v("translator") });
+      else if (ty === "person") f.role = v("role");
+      else Object.assign(f, { date: v("date"), place: v("place"), evAs: v("as") === "tour" ? "tour" : "seminar" });
       const lib = phSourceLib();
-      if (id === "new") lib.push({ id: uid(), title, author, translator, date: "", notes });
-      else { const s = lib.find(x => x.id === id); if (s) Object.assign(s, { title, author, translator, notes }); }
+      if (id === "new") lib.push(Object.assign({ id: uid(), author: "", translator: "", date: "", notes: "" }, f));
+      else { const s = lib.find(x => x.id === id); if (s) Object.assign(s, f); }
       if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return true; }
       phGdSrcEdit = null; renderPhGdBody();
       return true;
@@ -93164,6 +93198,7 @@ pale red tongue|Tongue: pale-red|r`;
   const phTcCc = c => c.cc || PH_TC_CC[c.n] || String(c.name).split(" -- ").pop().replace(/^./, m => m.toUpperCase());
   const phTcFms = c => c.fms ? c.fms.slice() : /^not recorded/i.test(c.formula) ? [] : String(c.formula).replace(/\([^)]*\)/g, "").replace(/\s*,\s*later\s+/i, " + ").split("+").map(s => s.trim()).filter(Boolean);
   const phTcNm = c => phGdTcBy === "fm" ? ((phTcFms(c).join(" + ") || "No formula recorded") + (c.mod ? ", modified" : "")) : phTcCc(c);   // her "dcht modified"
+  const phTcLibLive = s => { const b = s.libId && phSourceLib().find(x => x.id === s.libId); return !!b && phLibType(b) !== "person"; };
   function phTcSources() {
     if (!PHARMACY.tourSources) PHARMACY.tourSources = [];
     const l = PHARMACY.tourSources;
@@ -93171,14 +93206,18 @@ pale red tongue|Tongue: pale-red|r`;
     l.forEach(s => { if (s.fixed && / · Day 1$/.test(s.name)) s.name = s.name.replace(/ · Day 1$/, ""); phTcDays(s); });
     // Books = the Sources page's library (her synth22 2026-11-10 "merge books with sources"): every library entry is a Books row (linked by libId, its name follows the library); a grid-only book is added to the
     // library once; a library entry deleted on the Sources page takes its row with it unless the row holds cases (then the row stays and the entry comes back, nothing is lost)
+    // her 2026-11-10 source types: a Book entry is a Books row, an Event entry is a Seminar or a Tour row (its "Shows in Cases as"), a Person is never a row; a row holding cases is never dropped
     const lib = phSourceLib();
+    for (let i = l.length - 1; i >= 0; i--) if (l[i].libId && !lib.some(x => x.id === l[i].libId)) { if (l[i].cases.length) l[i].libId = ""; else l.splice(i, 1); }   // its entry was deleted: an empty row goes, a row holding cases stays and re-links by name below
     lib.forEach(b => {
-      const t = String(b.title || "").trim(); if (!t) return;
-      const g = l.find(s => s.kind === "book" && (s.libId === b.id || (!s.libId && String(s.name).toLowerCase() === t.toLowerCase())));
-      if (g) { g.libId = b.id; g.name = t; } else l.push({ id: uid(), kind: "book", name: t, cases: [], libId: b.id });
+      const t = String(b.title || "").trim(), ty = phLibType(b); if (!t) return;
+      const want = ty === "book" ? "book" : ty === "event" ? (b.evAs === "tour" ? "tour" : "seminar") : "";
+      const g = l.find(s => s.libId === b.id) || (want && l.find(s => !s.libId && !s.fixed && s.kind === want && String(s.name).toLowerCase() === t.toLowerCase()));
+      if (g) { g.libId = b.id; g.name = t; if (want && g.kind !== want) { g.kind = want; phTcDays(g); } }
+      else if (want) { const n = { id: uid(), kind: want, name: t, cases: [], libId: b.id }; l.push(n); phTcDays(n); }
     });
-    for (let i = l.length - 1; i >= 0; i--) if (l[i].kind === "book" && l[i].libId && !lib.some(b => b.id === l[i].libId)) { if (l[i].cases.length) l[i].libId = ""; else l.splice(i, 1); }
-    l.filter(s => s.kind === "book" && !s.libId).forEach(s => { const b = { id: uid(), date: "", notes: "", title: s.name, author: "", translator: "" }; lib.push(b); s.libId = b.id; });
+    for (let i = l.length - 1; i >= 0; i--) if (l[i].libId && !l[i].cases.length) { const b = lib.find(x => x.id === l[i].libId); if (b && phLibType(b) === "person") l.splice(i, 1); }   // a Person is never a row (unless it holds cases)
+    l.filter(s => !s.libId && !s.fixed && (s.kind === "book" || s.kind === "seminar" || s.kind === "tour")).forEach(s => { const b = { id: uid(), date: "", notes: "", title: s.name, author: "", translator: "", type: s.kind === "book" ? "book" : "event" }; if (s.kind !== "book") b.evAs = s.kind; lib.push(b); s.libId = b.id; });
     return l;
   }
   // ---- Tour days (her 2026-11-10 synth22: "study tours happen on multiple days and cases are collected based on the following format 8am-12pm, 2pm - 5pm sometimes clinic, lectures, or conferences, or
@@ -93280,7 +93319,7 @@ pale red tongue|Tongue: pale-red|r`;
   // a tour in the grid: its row, then each day (foldable) with its morning and afternoon, then + Add a day
   function phTcTourRows(s, vis, vns, nc, lab) {
     const days = phTcDays(s), vc = list => vis.filter(c => list.indexOf(c.n) >= 0).length;
-    let h = `<tr class="tour${phGdTcSrcF === s.id ? " on" : ""}"><th class="sc"><div class="srw"><button type="button" class="srn" data-tc-srcf="${esc(s.id)}" aria-pressed="${phGdTcSrcF === s.id}" title="Show only this place's cases"><span>${lab ? `<b class="gk">${esc(lab)}</b> ` : ""}${esc(s.name)}</span><em>${vc(s.cases)}</em></button>${s.fixed ? "" : `<button type="button" class="tcx" data-tc-src-del="${esc(s.id)}" title="Remove" aria-label="Remove ${esc(s.name)}">${PH_GDF_IC.x}</button>`}</div></th><td colspan="${nc}"></td></tr>`;
+    let h = `<tr class="tour${phGdTcSrcF === s.id ? " on" : ""}"><th class="sc"><div class="srw"><button type="button" class="srn" data-tc-srcf="${esc(s.id)}" aria-pressed="${phGdTcSrcF === s.id}" title="Show only this place's cases"><span>${lab ? `<b class="gk">${esc(lab)}</b> ` : ""}${esc(s.name)}</span><em>${vc(s.cases)}</em></button>${s.fixed || phTcLibLive(s) ? "" : `<button type="button" class="tcx" data-tc-src-del="${esc(s.id)}" title="Remove" aria-label="Remove ${esc(s.name)}">${PH_GDF_IC.x}</button>`}</div></th><td colspan="${nc}"></td></tr>`;
     days.forEach(d => {
       const shut = phGdTcDayShut.has(s.id + "|" + d.n), all = d.blocks.flatMap(b => b.cases);
       h += `<tr class="day"><th class="sc"><div class="srw"><button type="button" class="srn day" data-tc-dfold="${esc(s.id)}|${d.n}" aria-expanded="${!shut}"><span><i class="ch">${shut ? "▸" : "▾"}</i>Day ${d.n}${shut && d.date ? ` · ${esc(phTcDayLab(d.date))}` : ""}${shut ? phTcDayKinds(d) : ""}</span><em>${vc(all)}</em></button>${shut ? "" : `<input type="date" class="field-bare gf-fld dd" data-tc-ddate="${esc(s.id)}|${d.n}" value="${esc(d.date || "")}" aria-label="Date of Day ${d.n}">`}</div></th>${vis.map(c => `<td>${shut && all.indexOf(c.n) >= 0 ? `<span class="dt"></span>` : ""}</td>`).join("")}</tr>`;
@@ -93493,7 +93532,7 @@ pale red tongue|Tongue: pale-red|r`;
     const head = `<thead><tr><th class="sc"><span class="ph-tc-lb">Book · Seminar · Tour</span></th>${vis.map(c => { const on = shownIds.indexOf(c.id) >= 0; return `<th${names ? ` class="nm"` : ""}><button type="button" class="tch${on ? " on" : ""}" data-tc-toggle="${esc(c.id)}" aria-pressed="${on}" data-tip="${esc(phTcCc(c) + "\n" + ((phTcFms(c).join(" + ") || "No formula recorded") + (c.mod && phTcFms(c).length ? ", modified" : "")))}" aria-label="C#${c.n}, ${esc(phTcCc(c))}">C#${c.n}${phTcLogDot(c)}</button>${names ? `<small>${esc(phTcNm(c))}</small>` : ""}</th>`; }).join("")}</tr></thead>`;
     const body = PH_TC_KINDS.map(([k, lab, one]) => {
       const rows = srcs.filter(s => s.kind === k).sort((a, b) => phAz(a.name, b.name));
-      const rowsHtml = rows.map((s, ix) => k === "tour" ? phTcTourRows(s, vis, vns, nc, ix ? "" : lab) : `<tr class="${phGdTcSrcF === s.id ? "on" : ""}"><th class="sc"><div class="srw"><button type="button" class="srn" data-tc-srcf="${esc(s.id)}" aria-pressed="${phGdTcSrcF === s.id}" title="Show only this place's cases"><span>${ix ? "" : `<b class="gk">${esc(lab)}</b> `}${esc(s.name)}</span><em>${s.cases.filter(n => vns.indexOf(n) >= 0).length}</em></button>${s.fixed || s.libId ? "" : `<button type="button" class="tcx" data-tc-src-del="${esc(s.id)}" title="Remove" aria-label="Remove ${esc(s.name)}">${PH_GDF_IC.x}</button>`}</div></th>${vis.map(c => { const y = s.cases.indexOf(c.n) >= 0; return `<td><button type="button" class="tcm${y ? " y" : ""}" data-tc-mem="${esc(s.id)}|${c.n}" aria-pressed="${y}" aria-label="C#${c.n} in ${esc(s.name)}"></button></td>`; }).join("")}</tr>`).join("");
+      const rowsHtml = rows.map((s, ix) => k === "tour" ? phTcTourRows(s, vis, vns, nc, ix ? "" : lab) : `<tr class="${phGdTcSrcF === s.id ? "on" : ""}"><th class="sc"><div class="srw"><button type="button" class="srn" data-tc-srcf="${esc(s.id)}" aria-pressed="${phGdTcSrcF === s.id}" title="Show only this place's cases"><span>${ix ? "" : `<b class="gk">${esc(lab)}</b> `}${esc(s.name)}</span><em>${s.cases.filter(n => vns.indexOf(n) >= 0).length}</em></button>${s.fixed || phTcLibLive(s) ? "" : `<button type="button" class="tcx" data-tc-src-del="${esc(s.id)}" title="Remove" aria-label="Remove ${esc(s.name)}">${PH_GDF_IC.x}</button>`}</div></th>${vis.map(c => { const y = s.cases.indexOf(c.n) >= 0; return `<td><button type="button" class="tcm${y ? " y" : ""}" data-tc-mem="${esc(s.id)}|${c.n}" aria-pressed="${y}" aria-label="C#${c.n} in ${esc(s.name)}"></button></td>`; }).join("")}</tr>`).join("");
       const add = phGdTcAddKind === k
         ? `<tr class="ad"><th class="sc"><div class="srw"><input type="text" class="field-bare gf-fld" data-tc-src-name autocomplete="off" aria-label="Name"><button type="button" class="gf-btn" data-tc-src-save="${k}">Add</button><button type="button" class="tcx" data-tc-src-cancel="1" title="Cancel" aria-label="Cancel">${PH_GDF_IC.x}</button></div></th><td colspan="${nc}"></td></tr>`
         : `<tr class="ad"><th class="sc"><button type="button" class="gf-chip" data-tc-src-add="${k}">+ Add ${one}</button></th><td colspan="${nc}"></td></tr>`;
