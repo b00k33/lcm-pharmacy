@@ -13823,3 +13823,11 @@ pushed.
 - **Code** (`index.html`): `PH_CMP_TCM_RE`, and `out.dx` in `phCmpCaseParts` now `phCmpCaseSplit([["Western", ...], ["Chinese patterns", ...]])`; a pattern is a catalog "Signs" condition (`pat`) or matches the pattern words. Shared, so Compare > Cases, Tour Cases and any page on `phCmpCaseParts` show it.
 - **Tested** (sandbox, Compare > Cases): Gui Zhi family: Ascites and Pleural Effusion under Western, Blood Stasis under Chinese patterns, the empty half a dash; the layout matches the Ren split. NOT tested: a Tour Case's own conditions (the words rule is read, not driven); the wording rule is a plain word list, so an odd condition name can land in the wrong half (the fix is one word in `PH_CMP_TCM_RE`).
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Nanjing tour dates corrected: starts Mon 2 Nov (2026-11-10)
+- **Her words** (relayed by B33 C4 LCM bugs, from her screenshot): "nanjing study tour starts on 2nd november". Her Day 1 case notes were dated 2 Nov. My earlier "Mon 9 Nov" for Day 1 (from a relayed example, never checked against her notes) was wrong, and the days I added from her Appointments week were numbered from it.
+- **Code** (`index.html`): Day 1 seeds as 2026-11-02; `PH_TC_CAL` is Days 9, 10, 11; `phTcDays` v2 move (`s.calV2`); `phTcIcs` skips an empty block.
+- **Tested** (sandbox, a state with the earlier wrong days): Day 1 = 2026-11-02; the three days renumbered 9, 10, 11 with their dates and teachers; Days 3 to 8 created dated 3 to 9 Nov; a day that held a case was left alone (the sandbox's test Day 2); the .ics: 9 events, none empty; tap audit 503 of 503. NOT tested: her live data.
+- **Calls made:** Days 2 to 8 are empty placeholders so Day 9 does not float; teachers and kinds for Days 2 to 8 are left empty, not guessed. If she exported the .ics before this, the earlier events (Day 1 on 9 Nov, UIDs d1 b0 / d1 b1 and d2 to d4) are in her calendar: delete them before importing again.
+- **Lesson:** a date given inside a relayed example is not her word; ask or read her notes.
+- **SAVED, not live:** goes out only on her own "push live".
