@@ -13817,3 +13817,9 @@ pushed.
 - **Calls made:** all four "Signs" patterns fold, not only blood stasis (they are the same kind of fact); the lung row's name is "Lung · respiratory · immunity".
 - **Tested** (sandbox, Compare > Cases): Gui Zhi family: Blood Stasis in Bing · diagnosis; Fu Zi family: Heart and Lung rows filled with the Ren and Bing numbers; the nine rows between Pulse and Stomach in order. NOT tested: a Tour Case correlated to a "Signs" pattern (code path read, not driven); tap audit not run (no new control).
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Bing · diagnosis: Western | Chinese patterns (2026-11-10)
+- **Her words:** "bing diagnosis divide between western and chinese patterns" (a terse spec, read as a convention: two columns in the row, like Ren and Abdominal).
+- **Code** (`index.html`): `PH_CMP_TCM_RE`, and `out.dx` in `phCmpCaseParts` now `phCmpCaseSplit([["Western", ...], ["Chinese patterns", ...]])`; a pattern is a catalog "Signs" condition (`pat`) or matches the pattern words. Shared, so Compare > Cases, Tour Cases and any page on `phCmpCaseParts` show it.
+- **Tested** (sandbox, Compare > Cases): Gui Zhi family: Ascites and Pleural Effusion under Western, Blood Stasis under Chinese patterns, the empty half a dash; the layout matches the Ren split. NOT tested: a Tour Case's own conditions (the words rule is read, not driven); the wording rule is a plain word list, so an odd condition name can land in the wrong half (the fix is one word in `PH_CMP_TCM_RE`).
+- **SAVED, not live:** goes out only on her own "push live".
