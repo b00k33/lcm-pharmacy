@@ -13831,3 +13831,10 @@ pushed.
 - **Calls made:** Days 2 to 8 are empty placeholders so Day 9 does not float; teachers and kinds for Days 2 to 8 are left empty, not guessed. If she exported the .ics before this, the earlier events (Day 1 on 9 Nov, UIDs d1 b0 / d1 b1 and d2 to d4) are in her calendar: delete them before importing again.
 - **Lesson:** a date given inside a relayed example is not her word; ask or read her notes.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Tour days from the Week One timetable (2026-11-10)
+- **Her words:** "integrate the tour dates and events to the case organising", with a photo of the Week One timetable (Mon Nov 2 to Sun Nov 8: kinds, teachers and places).
+- **Code** (`index.html`): `PH_TC_BKIND` (+ Ceremony, Site visit, Case review), `PH_TC_TT` and the one-time fill in `phTcDays` (`s.ttV`), the Place input (`data-tc-at`, change handler), `phTcIcs` LOCATION and the empty-block test. The Chinese names on her timetable are not stored (pinyin only).
+- **Tested** (sandbox, a state from the earlier builds): Days 1 to 7 carry the timetable's kind, teacher and place (Day 5 and 6 Conference with no teacher; Day 4 afternoon a Lecture), a value already set (Day 1 afternoon) is left; the .ics has 20 events with LOCATION lines; 22 Place fields; tap audit 525 of 525 at 1220 and at 360, no sideways scroll. NOT tested: her live data.
+- **Calls made:** the Monday ceremony sits in Day 1's morning Place text (a block holds one kind and one teacher); Fri and Sat are Conference in both blocks ("full days"); a place longer than the field is read in the hover; week two (Nov 9 to 13) comes from her Appointments week only, send its timetable to fill the rest.
+- **SAVED, not live:** goes out only on her own "push live".
