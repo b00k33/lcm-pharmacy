@@ -13937,3 +13937,10 @@ colon-introduced symptom tail). Trimmed to the pattern alone, `cond: ["Lung nodu
 a lung nodule (2022); a floating-yang picture").
 
 **SAVED, not live:** goes out with her next "push live".
+
+## Tour Cases: By day, like OneNote (2026-11-10)
+- **Her words and picks** (relayed by the B33 C4 LCM bugs session, her synth22): "give option to view cases from the day session like one note" (OneNote: day tabs across the top, a page list down the side). Picks: a Grid | By day chip bar on the Cases tab (grid kept); all days with their dates, empty ones dimmed, plus a Not placed tab; list rows Case n + complaint; a tap opens the case beside the list (a phone: full screen with a back chip). Her later "include a row for formula": the formula is a third line on each row.
+- **Code** (`index.html`): `phGdTcView` / `phGdTcDay` / `phGdTcDayTour`, `phTcDayHtml`, the `data-tc-view` chips in `phTcModeBar`, `data-tc-dday` / `data-tc-dpick` / `data-tc-dtour` in `phTcGridClick`, `phTcHtml` branching on the view, css `.tcd-*` (rows 56px so they sit above the tap audit's 52px row floor). It reuses `phTcTableHtml`, `phTcEditHtml`, `phTcSessBarHtml`, `phTcCorrelateHtml`, `phTcIntegrateHtml`, `phTcLogDot`, `phTcFms`, `phTcCc`; no second case page.
+- **Tested** (sandbox, 15 Nanjing cases): By day opens on the first day with cases, rows show number, complaint and formula (", modified" kept), a tap moves the highlight and the page, an empty day reads No cases, a case taken out of every block appears under Not placed, a note puts the gold dot on its row, Edit repaints inside By day, Grid returns the grid; tap audit at 1220 and 360 is empty (the list and the phone's case page); no sideways scroll, no console errors. NOT tested: a real patient's photos in the rows; the Key2; the Complaint / Formula filters do not apply in By day (by design: it is a second way to look).
+- **Pages checked:** Cases tab (grid, By day, My patients bar), the case page in both views. The peer's diagnosis classifier (`phCmpCaseParts`) was not touched.
+- **SAVED, not live:** goes out only on her own "push live".
