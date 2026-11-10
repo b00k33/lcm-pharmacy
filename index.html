@@ -15772,6 +15772,11 @@
   #pharmacyPage .ph-tc-grid tr.day .srw { flex-wrap: wrap; row-gap: 2px; padding-bottom: 4px; }
   #pharmacyPage .ph-tc-grid tr.day input.dd { width: 100%; font-size: var(--fs-12-5); }
   #pharmacyPage .ph-tc-grid tr.day th, #pharmacyPage .ph-tc-grid tr.day td { height: auto; }
+  /* ---- + Add a case (her 2026-11-10): the chip under each time block, its notes box ---- */
+  #pharmacyPage .ph-tc-grid tr.adc th.sc { padding-left: 26px; }
+  #pharmacyPage .ph-tc-grid tr.adc th, #pharmacyPage .ph-tc-grid tr.adc td { height: auto; padding-top: 4px; padding-bottom: 4px; }
+  #pharmacyPage .ph-tc-grid .ncb { display: flex; flex-direction: column; gap: 6px; }
+  #pharmacyPage .ph-tc-grid .ncb textarea.gf-fld { height: auto; min-height: 96px; padding: 8px 10px; width: 100%; resize: vertical; line-height: 1.35; }
   /* ---- Photos of treatment notes + My patients (her 2026-11-10 "build 5 and 6") ---- */
   #pharmacyPage .ph-tc .tcx { width: 32px; height: 32px; padding: 0; border-radius: 50%; border: 1px solid var(--ph-line); background: var(--ph-white); color: var(--ph-ink); font: inherit; font-size: var(--fs-13); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: none; }
   #pharmacyPage .ph-tc .tcx svg { width: 12px; height: 12px; }
@@ -93134,7 +93139,7 @@ pale red tongue|Tongue: pale-red|r`;
   // follow the focus case. Nothing here scores a sign: that is still hers, in Correlate.
   const PH_TC_CC = { 1: "Lung nodule", 2: "L epididymitis", 3: "Chronic kidney disease", 4: "Vulvar eczema", 5: "R lung adenocarcinoma", 6: "Gastric cancer", 7: "Cerebral haemorrhage", 8: "Uterine fibroids", 9: "Failed IVF", 10: "Cerebral infarction", 11: "Purpura nephritis", 12: "Hep B", 13: "Stomach pain", 14: "Insomnia", 15: "Lymphoma" };
   const PH_TC_KINDS = [["tour", "Tours", "a tour"], ["seminar", "Seminars", "a seminar"], ["book", "Books", "a book"]];
-  const phTcCc = c => PH_TC_CC[c.n] || String(c.name).split(" -- ").pop().replace(/^./, m => m.toUpperCase());
+  const phTcCc = c => c.cc || PH_TC_CC[c.n] || String(c.name).split(" -- ").pop().replace(/^./, m => m.toUpperCase());
   const phTcFms = c => c.fms ? c.fms.slice() : /^not recorded/i.test(c.formula) ? [] : String(c.formula).replace(/\([^)]*\)/g, "").replace(/\s*,\s*later\s+/i, " + ").split("+").map(s => s.trim()).filter(Boolean);
   const phTcNm = c => phGdTcBy === "fm" ? ((phTcFms(c).join(" + ") || "No formula recorded") + (c.mod ? ", modified" : "")) : phTcCc(c);   // her "dcht modified"
   function phTcSources() {
@@ -93189,6 +93194,7 @@ pale red tongue|Tongue: pale-red|r`;
       if (!shut) d.blocks.forEach((b, i) => {
         const bid = `${s.id}|${d.n}|${i}`;
         h += `<tr class="blk${phGdTcSrcF === bid ? " on" : ""}"><th class="sc"><div class="bw"><div class="bl"><button type="button" class="srn" data-tc-srcf="${esc(bid)}" aria-pressed="${phGdTcSrcF === bid}" title="Show only the cases seen in this time"><span>${esc(b.t)}</span><em>${vc(b.cases)}</em></button><button type="button" class="gf-chip kd" data-tc-kind="${esc(bid)}" title="Tap to change: Clinic, Lecture, Conference, Study group">${PH_TC_BKIND[b.k] || PH_TC_BKIND[0]}</button></div><input type="text" class="field-bare gf-fld who" data-tc-who="${esc(bid)}" value="${esc(b.who || "")}" placeholder="Teacher" autocomplete="off" aria-label="Teacher, Day ${d.n} ${esc(b.t)}"></div></th>${vis.map(c => { const y = b.cases.indexOf(c.n) >= 0; return `<td><button type="button" class="tcm${y ? " y" : ""}" data-tc-blk="${esc(bid)}|${c.n}" aria-pressed="${y}" aria-label="C#${c.n} in Day ${d.n}, ${esc(b.t)}"></button></td>`; }).join("")}</tr>`;
+        h += phTcAddRow(bid, nc);
       });
     });
     return h + `<tr class="ad"><th class="sc"><div class="srw" style="flex-wrap:wrap"><button type="button" class="gf-chip" data-tc-addday="${esc(s.id)}">+ Add a day</button><button type="button" class="gf-chip" data-tc-ics="${esc(s.id)}" title="Save this tour's days as events you can import into your calendar (.ics)">Add to calendar</button></div></th><td colspan="${nc}"></td></tr>`;
@@ -93236,6 +93242,107 @@ pale red tongue|Tongue: pale-red|r`;
     const [sid, dn, bi] = i.dataset.tcWho.split("|"), s = phTcSources().find(x => x.id === sid), d = s && phTcDays(s).find(x => x.n === +dn), b = d && d.blocks[+bi];
     if (b) { b.who = i.value.trim(); if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); }
   });
+  // ---- + Add a case (her 2026-11-10 "Yes, design it", relayed by C22; mock mocks/tour-add-case-mock-2026-11-10.html; her picks: C "paste her notes", Add straight away, the case sits in the block
+  // it was added under, remove = ask first then Undo, every case editable in its card). Under each time block of a tour day a "+ Add a case" chip opens one notes box; Add reads the notes at once into a
+  // case (complaint, formula, herbs with grams, diagnosis, observations) with the next number (numbers carry on across days and tours), puts it in that block, and shows it. Nothing is scored:
+  // every observation starts un-correlated, as the seeded cases did. The reading is plain text rules, labelled lines first ("Formula: ...", "Herbs: ...", "Diagnosis: ...", "Observations: ..."),
+  // else the first sentence is the complaint, "Name 9g" pieces are herbs, a capitalised name ending Tang / Wan / San / Yin / Gao / Dan / Fang is the formula, the rest are observations.
+  let phGdTcNew = "", phGdTcEd = "";   // the block whose notes box is open ("<tour>|<day>|<block>"); the case whose details are open to edit
+  function phTcParse(raw) {
+    const o = { name: "", cond: [], formula: "", fms: null, fam: null, recipe: [], symptoms: [] }, fms = [], obs = [];
+    const herbRe = /([A-Za-z][A-Za-z' ]*?[A-Za-z])\s*(\d+(?:\.\d+)?)\s*g\b/g, fmRe = /((?:[A-Z][A-Za-z']*\s+){1,5}(?:Tang|Wan|San|Yin|Gao|Dan|Fang))\b/g;
+    const clean = t => t.replace(/\([\s,;]*\)/g, "").replace(/\s+,/g, ",").replace(/\s{2,}/g, " ").replace(/^[\s,;:.()\-–—]+|[\s,;:.()\-–—]+$/g, "");
+    const take = txt => {   // herbs and formula names out of free text; what is left over comes back
+      txt = txt.replace(herbRe, (m, n, g) => { if (!o.recipe.some(r => r[0].toLowerCase() === n.trim().toLowerCase())) o.recipe.push([n.trim(), g + "g"]); return ""; });
+      txt = txt.replace(fmRe, (m, f) => { if (fms.indexOf(f) < 0) fms.push(f); return ""; });
+      return txt;
+    };
+    const pieces = (t, sep) => t.split(sep).map(clean).filter(Boolean);
+    const cap = t => t.charAt(0).toUpperCase() + t.slice(1);
+    const lab = /^(complaint|chief complaint|cc|formula|rx|prescription|herbs?|recipe|diagnosis|diagnoses|dx|observations?|signs?|symptoms?)\s*[:\-–—]\s*(.*)$/i;
+    let first = true;
+    String(raw || "").split(/\r?\n/).map(t => t.trim()).filter(Boolean).forEach(line => {
+      const m = lab.exec(line);
+      if (!m) {
+        const ps = pieces(take(line), /[.;]\s+|[.;]$/);
+        if (first && !o.name && ps.length) o.name = ps.shift();
+        ps.forEach(t => obs.push(t)); first = false; return;
+      }
+      first = false;
+      const k = m[1].toLowerCase(), v = m[2].trim(); if (!v) return;
+      if (/^(complaint|chief complaint|cc)$/.test(k)) o.name = clean(v);
+      else if (/^(formula|rx|prescription)$/.test(k)) { const left = clean(take(v)); if (left && !fms.length) fms.push(left); }
+      else if (/^(herbs?|recipe)$/.test(k)) take(v);
+      else if (/^(diagnosis|diagnoses|dx)$/.test(k)) pieces(v, /;/).forEach(t => o.cond.push(cap(t)));
+      else pieces(v, /[.;]\s+|[.;]$/).forEach(t => obs.push(t));
+    });
+    o.symptoms = obs.map(cap);
+    o.formula = fms.join(" + ");
+    if (fms.length > 1) o.fms = fms.slice();
+    if (fms.length === 1) { const id = Object.keys(PH_FORMULAS).find(k => String(phGdfName(k)).toLowerCase() === fms[0].toLowerCase()); if (id) o.fam = id; }
+    if (o.name) o.name = cap(o.name);
+    return o;
+  }
+  function phTcAddCase(bid, raw) {
+    const [sid, dn, bi] = bid.split("|"), s = phTcSources().find(x => x.id === sid), d = s && phTcDays(s).find(x => x.n === +dn), b = d && d.blocks[+bi];
+    const p = phTcParse(raw); if (!b || !(p.name || p.formula || p.recipe.length || p.cond.length || p.symptoms.length)) return null;
+    const list = phTourCases(), n = list.reduce((m, c) => Math.max(m, c.n || 0), 0) + 1;
+    const c = { id: uid(), n, tour: sid, added: 1, name: p.name || p.formula || ("Case " + n), cond: p.cond, formula: p.formula || "Not recorded", fam: p.fam, recipe: p.recipe, mod: "", fms: p.fms,
+      symptoms: p.symptoms.map(t => ({ text: t, sign: null, side: null, w: null, skip: false, newsign: false })) };
+    list.push(c); b.cases.push(n); phTcSyncCases(s);
+    phGdTcFc = []; phGdTcFf = []; phGdTcSrcF = ""; phGdTcSels = [c.id]; phGdTcSel = c.id; phGdTcSess = ""; phGdTcAdd = null; phGdTcNew = ""; phGdTcEd = "";
+    if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+    return c;
+  }
+  const phTcSubName = c => phTcNm(c) === c.name ? "" : `<small class="ph-tc-sub">${esc(c.name)}</small>`;
+  const phTcAddRow = (bid, nc) => phGdTcNew === bid
+    ? `<tr class="adc"><th class="sc"><div class="ncb"><textarea class="field-bare gf-fld" data-tc-newbox rows="5" autocomplete="off" aria-label="Case notes"></textarea><div class="srw"><button type="button" class="gf-btn pri" data-tc-newsave="${esc(bid)}">Add case</button><button type="button" class="tcx" data-tc-newcancel="1" title="Cancel" aria-label="Cancel">${PH_GDF_IC.x}</button></div></div></th><td colspan="${nc}"></td></tr>`
+    : `<tr class="adc"><th class="sc"><button type="button" class="gf-chip" data-tc-addcase="${esc(bid)}">+ Add a case</button></th><td colspan="${nc}"></td></tr>`;
+  // the open case's details, to correct in place: the chip, then its fields (complaint, formula, modified, herbs a line, diagnosis a line, observations a line)
+  function phTcEditHtml(c) {
+    const open = phGdTcEd === c.id, chip = `<button type="button" class="gf-chip${open ? " on" : ""}" data-tc-edit="${esc(c.id)}" aria-pressed="${open}">Edit C#${c.n}</button>`;
+    if (!open) return `<div class="ph-cmp ph-tc-flat" style="margin-top:14px"><div class="ph-tc-fc">${chip}</div></div>`;
+    const fld = (lab, inner, wide) => `<label class="ph-tc-sf${wide ? " w" : ""}"><span>${lab}</span>${inner}</label>`, inp = (a, v) => `<input type="text" class="field-bare gf-fld" ${a} value="${esc(v)}" autocomplete="off">`;
+    const ta = (a, v, r) => `<textarea class="field-bare gf-fld" ${a} rows="${r}">${esc(v)}</textarea>`;
+    return `<div class="ph-cmp ph-tc-flat" style="margin-top:14px"><div class="ph-tc-fc">${chip}</div>
+      <div class="ph-tc-sp" data-tc-ep="${esc(c.id)}">
+        ${fld("Complaint", inp("data-tc-e-cc", phTcCc(c)))}${fld("Formula", inp("data-tc-e-formula", /^not recorded/i.test(c.formula) ? "" : c.formula))}${fld("Modified", inp("data-tc-e-mod", c.mod || ""))}
+        ${fld("Herbs", ta("data-tc-e-rx", (c.recipe || []).map(r => (r[0] + " " + (r[1] || "")).trim()).join("\n"), 5), true)}
+        ${fld("Diagnosis", ta("data-tc-e-dx", (c.cond || []).join("\n"), 3), true)}
+        ${fld("Observations", ta("data-tc-e-obs", (c.symptoms || []).map(x => x.text).join("\n"), 6), true)}
+        <div class="ph-tc-sa"><button type="button" class="gf-btn pri" data-tc-e-save="1">Save</button><button type="button" class="gf-btn" data-tc-e-cancel="1">Cancel</button>${c.added ? `<button type="button" class="gf-btn" data-tc-e-del="${esc(c.id)}">Remove case</button>` : ""}</div>
+      </div></div>`;
+  }
+  function phTcEditSave(sp) {
+    const c = phTcFind(sp.dataset.tcEp), q = a => sp.querySelector(a), lines = t => t.split(/\n+/).map(x => x.trim()).filter(Boolean); if (!c) return;
+    const cc = q("[data-tc-e-cc]").value.trim(); if (cc && cc !== phTcCc(c)) { c.cc = cc; if (c.added) c.name = cc; }
+    const f = q("[data-tc-e-formula]").value.trim(); if (f !== (/^not recorded/i.test(c.formula) ? "" : String(c.formula || ""))) { c.formula = f || "Not recorded"; c.fms = null; }
+    c.mod = q("[data-tc-e-mod]").value.trim();
+    c.recipe = lines(q("[data-tc-e-rx]").value).map(t => { const m = /^(.*?)[\s,:]+(\d+(?:\.\d+)?)\s*g$/i.exec(t); return m ? [m[1].trim(), m[2] + "g"] : [t, ""]; });
+    c.cond = lines(q("[data-tc-e-dx]").value);
+    const old = c.symptoms || [];
+    c.symptoms = lines(q("[data-tc-e-obs]").value).map(t => old.find(x => String(x.text).toLowerCase() === t.toLowerCase()) || { text: t, sign: null, side: null, w: null, skip: false, newsign: false });
+    phGdTcEd = ""; if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+  }
+  function phTcRemoveCase(c) {   // a case she added: out of the list and every place's cases; Undo puts it all back
+    const list = phTourCases(), idx = list.indexOf(c), srcs = phTcSources();
+    const snap = srcs.map(s => ({ s, cases: (s.cases || []).slice(), blocks: s.kind === "tour" ? phTcDays(s).map(d => d.blocks.map(b => b.cases.slice())) : null }));
+    list.splice(idx, 1);
+    srcs.forEach(s => {
+      if (s.kind === "tour") { phTcDays(s).forEach(d => d.blocks.forEach(b => { const j = b.cases.indexOf(c.n); if (j >= 0) b.cases.splice(j, 1); })); phTcSyncCases(s); }
+      else if (s.cases) s.cases = s.cases.filter(x => x !== c.n);
+    });
+    phGdTcEd = ""; phGdTcSels = null; phGdTcSel = null; phGdTcSess = ""; phGdTcAdd = null;
+    if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+    presSavedToast(`Removed · C#${c.n}`, { undo: () => {
+      list.splice(Math.min(idx, list.length), 0, c);
+      snap.forEach(x => { x.s.cases = x.cases.slice(); if (x.blocks) phTcDays(x.s).forEach((d, i) => d.blocks.forEach((b, j) => { if (x.blocks[i] && x.blocks[i][j]) b.cases = x.blocks[i][j].slice(); })); });
+      phGdTcSels = [c.id]; phGdTcSel = c.id;
+      if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+      renderPhGdBody();
+    } });
+    renderPhGdBody();
+  }
   function phTcVisible() {
     const src = phTcSrcFilter();
     return phTourCases().slice().sort((a, b) => a.n - b.n).filter(c => (!phGdTcFc.length || phGdTcFc.indexOf(phTcCc(c)) >= 0) && (!phGdTcFf.length || phTcFms(c).some(f => phGdTcFf.indexOf(f) >= 0)) && (!src || src.cases.indexOf(c.n) >= 0));
@@ -93246,7 +93353,7 @@ pale red tongue|Tongue: pale-red|r`;
   function phTcTableHtml(cs) {
     if (cs.length === 1 && ((cs[0].sessions || []).length || cs[0].note || phTcPhOf(cs[0].id).length)) return phTcProgressHtml(cs[0]);
     const anim = phGdTcAnim === true, cols = cs.map(c => ({ style: phTcColStyle(c) })), parts = cs.map(c => phCmpCaseParts(phTcSrc(c), "", anim));
-    const heads = cs.map((c, i) => `<th style="${cols[i].style}"><span class="cn">C#${c.n}</span>${esc(phTcNm(c))}<small class="ph-tc-sub">${esc(c.name)}</small>${phTcPlaceHtml(c)}
+    const heads = cs.map((c, i) => `<th style="${cols[i].style}"><span class="cn">C#${c.n}</span>${esc(phTcNm(c))}${phTcSubName(c)}${phTcPlaceHtml(c)}
         <div style="margin-top:6px;font-weight:400"><label style="font-size:var(--fs-11);color:var(--ph-soft);margin-right:6px">Formula family</label><select class="field-bare gf-chip" data-tc-fam="${esc(c.id)}" style="font-size:var(--fs-12-5)"><option value=""${c.fam ? "" : " selected"}>Not matched yet</option>${Object.keys(PH_FORMULAS).map(id => `<option value="${esc(id)}"${c.fam === id ? " selected" : ""}>${esc(phGdfName(id))}</option>`).join("")}</select></div>
       </th>`).join("");
     return `<div class="ph-cmp-wrap"><table class="ph-cmp-cs" style="--n:${cs.length}"><colgroup><col class="s">${cs.map(() => "<col>").join("")}</colgroup>
@@ -93411,7 +93518,7 @@ pale red tongue|Tongue: pale-red|r`;
     const chg = vs.map((v, i) => { const set = new Set(); if (i) Object.keys(parts[i]).forEach(k => { if (k !== "an" && k !== "inv" && parts[i][k] !== parts[i - 1][k]) set.add(k); }); return set; });
     const heads = vs.map((v, i) => v !== c
       ? `<th style="${cols[i].style}"><span class="cn">${esc(phTcDate(v.date))}</span>${esc(v.label || "Follow-up")}${v.formula ? `<small class="ph-tc-sub">${esc(v.formula)}</small>` : ""}</th>`
-      : `<th style="${cols[0].style}"><span class="cn">${esc(phTcWhen(c))}</span>${esc(phTcNm(c))}<small class="ph-tc-sub">${esc(c.name)}</small>${phTcPlaceHtml(c)}
+      : `<th style="${cols[0].style}"><span class="cn">${esc(phTcWhen(c))}</span>${esc(phTcNm(c))}${phTcSubName(c)}${phTcPlaceHtml(c)}
         <div style="margin-top:6px;font-weight:400"><label style="font-size:var(--fs-11);color:var(--ph-soft);margin-right:6px">Formula family</label><select class="field-bare gf-chip" data-tc-fam="${esc(c.id)}" style="font-size:var(--fs-12-5)"><option value=""${c.fam ? "" : " selected"}>Not matched yet</option>${Object.keys(PH_FORMULAS).map(id => `<option value="${esc(id)}"${c.fam === id ? " selected" : ""}>${esc(phGdfName(id))}</option>`).join("")}</select></div></th>`).join("");
     const notes = `<tr><th class="rh" scope="row">Notes</th>${vs.map((v, i) => `<td style="${cols[i].style}">${esc(v.note || "")}</td>`).join("")}</tr>`;
     const anyPh = vs.some(v => phTcPhOf(v.id).length), photos = anyPh ? `<tr><th class="rh" scope="row">Photos</th>${vs.map((v, i) => `<td style="${cols[i].style}"><div class="ph-tc-ths">${phTcThumbs(v.id, false)}</div></td>`).join("")}</tr>` : "";
@@ -93499,6 +93606,7 @@ pale red tongue|Tongue: pale-red|r`;
       ${phTcModeBar()}
       <div class="ph-cmp">${phTcBarHtml(vis, cases.length)}${vis.length ? phTcGridHtml(vis, shownIds) : `<div class="gf-none" style="padding:16px 18px">No cases match</div>`}</div>
       ${focus ? `<div style="margin-top:14px${multi ? "" : ";max-width:720px"}">${phTcTableHtml(shown)}</div>
+      ${phTcEditHtml(focus)}
       <div>${focusBar}${sessBar}${phTcCorrelateHtml(target)}${phTcIntegrateHtml(target)}</div>` : ""}
       ${phTcViewerHtml()}
     </div></div>`;
@@ -93688,6 +93796,21 @@ pale red tongue|Tongue: pale-red|r`;
       renderPhGdBody(); return true;
     }
     if ((el = T.closest("[data-tc-ics]"))) { const s = phTcSources().find(x => x.id === el.dataset.tcIcs); if (s) phTcIcsDownload(s); return true; }
+    if ((el = T.closest("[data-tc-addcase]"))) { phGdTcNew = phGdTcNew === el.dataset.tcAddcase ? "" : el.dataset.tcAddcase; renderPhGdBody(); const i = document.querySelector("[data-tc-newbox]"); if (i) i.focus(); return true; }
+    if (T.closest("[data-tc-newcancel]")) { phGdTcNew = ""; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-tc-newsave]"))) {
+      const i = document.querySelector("[data-tc-newbox]"), c = i && phTcAddCase(el.dataset.tcNewsave, i.value);
+      if (!c) { if (i) i.focus(); return true; }
+      renderPhGdBody(); presSavedToast(`✓ C#${c.n} · ${phTcCc(c)}`); return true;
+    }
+    if ((el = T.closest("[data-tc-edit]"))) { phGdTcEd = phGdTcEd === el.dataset.tcEdit ? "" : el.dataset.tcEdit; renderPhGdBody(); return true; }
+    if (T.closest("[data-tc-e-cancel]")) { phGdTcEd = ""; renderPhGdBody(); return true; }
+    if (T.closest("[data-tc-e-save]")) { const sp = T.closest("[data-tc-ep]"); if (sp) phTcEditSave(sp); renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-tc-e-del]"))) {
+      const c = phTcFind(el.dataset.tcEDel);
+      if (c && c.added) phAsk({ message: `Remove C#${c.n} from the tour? Undo brings it back.`, yes: "Remove", danger: true }).then(ok => { if (ok) phTcRemoveCase(c); });
+      return true;
+    }
     if ((el = T.closest("[data-tc-more]"))) { phGdTcAdd = el.dataset.tcMore; phGdTcMore = true; renderPhGdBody(); return true; }
     if ((el = T.closest("[data-tc-dx]"))) {
       const [cid, i] = el.dataset.tcDx.split("|"), c = phTcFind(cid), s = c && c.symptoms[+i];
