@@ -13838,3 +13838,10 @@ pushed.
 - **Tested** (sandbox, a state from the earlier builds): Days 1 to 7 carry the timetable's kind, teacher and place (Day 5 and 6 Conference with no teacher; Day 4 afternoon a Lecture), a value already set (Day 1 afternoon) is left; the .ics has 20 events with LOCATION lines; 22 Place fields; tap audit 525 of 525 at 1220 and at 360, no sideways scroll. NOT tested: her live data.
 - **Calls made:** the Monday ceremony sits in Day 1's morning Place text (a block holds one kind and one teacher); Fri and Sat are Conference in both blocks ("full days"); a place longer than the field is read in the hover; week two (Nov 9 to 13) comes from her Appointments week only, send its timetable to fill the rest.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Tour days from the Week Two timetable (2026-11-10)
+- **Her words:** a photo of the Week Two timetable (Mon Nov 9 to Thu Nov 12), sent after the Week One build.
+- **Code** (`index.html`): `PH_TC_TT2` and the second one-time fill in `phTcDays` (`s.tt2V`, separate from `s.ttV` so a device that already ran Week One still gets Week Two); `phTcIcs` counts a non-Clinic block.
+- **Tested** (sandbox): Days 8 to 11 carry the timetable's kind, teacher and place (Day 8 afternoon a Site visit with no teacher, Day 9 afternoon a Case review, Day 11 afternoon a Lecture); the .ics has 22 events including the site visit. Tap audit not re-run (no new control since the Week One run). NOT tested: her live data.
+- **Calls made:** Thursday's Dr Mei Lifang block is now a Lecture (her earlier "dr mei is clinic" fits Sunday's clinic; this one the timetable calls a Special Lecture): tap its kind chip if she wants it Clinic. Her Appointments-week days kept their teachers; only empty places and a Clinic kind were filled.
+- **SAVED, not live:** goes out only on her own "push live".
