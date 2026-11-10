@@ -13970,3 +13970,29 @@ a lung nodule (2022); a floating-yang picture").
 - **Tested** (sandbox): tour notes 136 of 163 find a sign (was 134): Sweating that does not stop = Sweat: profuse, Scared of cold = Cold & heat: sensitive to cold, Farts a lot = Abdominal: gas, foul-smelling. Case 1's Tag: Sign found 17, No sign found yet 3 (was 16 / 4). The complaint reader, 40 everyday wordings: reduced / bad appetite = Appetite: poor; SOB / short of breath; tired / fatigue = Energy: low; can't sleep, nightmares, trouble falling asleep, wakes up at night to pee, heart racing, ringing in ears, light headed, stuffy / runny nose, period pain, heavy / no periods, PMS irritability, burping, throwing up, reflux, bloated, soft stools, diarrhea, piles, hives, itching, pins and needles, swollen ankles (Swelling signs), excessive sweating, sweats a lot, pees a lot (Urine: copious), chest tightness, brain fog, low libido, erectile dysfunction, weight loss, high blood pressure, always hungry, anxious, angry, blurry vision: each lands on its sign. Guide Families search: "bloated" finds the same 22 families as "bloating"; "farts" finds the gas family. No console errors. No layout change (no tap audit needed).
 - **Still no sign for** (the 27 tour notes left, for her): mouth ulcers, white / grey hair, bad breath, faecal incontinence, restless legs, emphysema, prostate hyperplasia, lung nodules, herpes zoster, milia, deformed joints, thick calves, blinking a lot, high WBC, urine occult blood, slower reactions; and notes that are not symptoms (fair / good appetite, normal blood sugar, bowel movement 1-2x a day, character words). Herb codes SDH and MX still hers to name.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Pulse types: the classical pulses in the chart's measures, a drawn Wide chip, 2026-11-10
+
+Her ask (a picture of her own pulse chart, Concavity tab): "i need to describe pulse positions radius thickness etc. in
+relation to pulse types e.g. there are also pulse synonyms like wide large pulse which correspond with wide radius or large
+in terms of high pounding". Guide artifact GJZFtHcSvjTWVPRRG9AmAJ, her 8 picks: Q1 A a table in Guide › Pulse · Q2 A the 28
+classical pulses + Large · Q3 B Large as two rows (Large · wide, Large · pounding) · Q4 A a drawn Wide chip on Radius · Q5 A
+Thick is not Wide (Hammer's Blood quality), it moves to Texture · Q6 A synonyms small under the name · Q7 A English first,
+pinyin small · Q8 A each row drawable with Define.
+
+- **Wide** (`PH_PULSE_SHAPES` id `wide`): Normal's arch drawn thick (stroke 4), the opposite of Thin's dotted arch. A box holds
+  one width (`phPulseIsWidth` in `phPulseCellToggle`, like one strength). Pulse in action widens the line for it as for Thick.
+- **Radius** tab: Thin, Wide, Blocked, Empty, Inflated, Muddy, Restricted. **Texture** gains Thick (A–Z).
+- **Guide › Pulse** opens on a two-chip switch, Pulse types | Pulses in Fang Bing Ren (view state, `phPrView`). Pulse types =
+  `PH_PULSE_TYPES` (30 rows: 28 classical + Large twice), A–Z. Each row is drawn on the chart's own boxes
+  (`phPulseTypeMarks`); the Depth / Radius / Intensity / Concavity / Texture columns are READ from that drawing
+  (`phPulseTypeCols`), so a row she redraws with Define describes itself. Rate and rhythm pulses (Slow, Rapid, Knotted…)
+  have no box, only their words. "Your call" notes where the chart cannot draw it (Hidden below Organ, Hollow's empty middle,
+  Leather's empty inside).
+- A type's own drawing is saved under `PHARMACY.pulseDefs["type:<name>"]`, apart from the Fang Bing Ren definitions, so
+  redrawing classical Weak never changes what ticks the FBR Weak sign.
+- The FBR "Your call" notes for Large now say Large = Wide or ↑↑ Pounding (see Pulse types); the FBR sign ticking is unchanged.
+
+The 30 drawings are my clinical read, hers to correct.
+
+**SAVED, not live:** goes out with her next "push live".
