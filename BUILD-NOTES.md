@@ -13725,3 +13725,9 @@ pushed.
 - **Tested** (sandbox): 12 herb tiles, all 154 px against 249 px for a formula tile at 1220; tap audit 76 of 76 at 1220 and 75 of 75 at 360, none off, no sideways scroll.
 - **Calls made:** left-aligned (not centred) so the herb reads as the head of the list; width a share of the card, so it stays narrower whatever the card's width.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Compare > Cases: column heads say Herb / Formula, not Case (2026-11-10)
+- **Her words** (relayed, synth22): "these are not cases, these are formulas" + "and herb family". Item 2 of six; items 1 and 3-6 (Families as rows; subjective | objective split of Abdominal and Ren; Nausea under Throat) are mock-first and wait for her pick.
+- **Done:** `phCmpCasesHtml` head `Case n` -> `Herb n` when the column's id is a `PH_REN_FAM_GROUPS` herb, else `Formula n`. Tested in the sandbox: a herb and a formula column read "Herb 1", "Formula 2".
+- **Calls made:** the view switch (Cases | Formula | Tables) keeps the name "Cases" until she says; the Cases TAB (patients' own cases) is unaffected.
+- **SAVED, not live:** goes out with her next "push live".
