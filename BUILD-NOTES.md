@@ -13920,3 +13920,20 @@ new fields, so they are unaffected.
 - **Code** (`index.html`): `phPulseSeedDef`, `phPulseDef` (hers wins over the built-in), `phPulseDefHit(def, list, any)` (`q|*` keys), `phPulseMarksText(marks, any)`, the Any depth chip and `anyDepth` in `phPrEd` / the save, the Defined / Yours label on the card, Back to the first drawing only when she has her own.
 - **Tested** (sandbox): the built-in Thin is six boxes at Qi, any depth; Thin drawn at Organ ticks pulse_thin, an empty chart does not; Place draws the six Qi boxes and ticks it; Define opens with Any depth on and no revert button; her own save with Any depth off/on changes ticking as expected. NOT tested: tap audit on the new chip (same `.pr-chip` as the others, 32px).
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Tour Case 1: the Floating-yang condition carried its own symptom list, 2026-11-10
+
+Her ask: "night sweat is not a chinese pattern, its a patient symptom. chinese patterns
+include things like blood stasis damp heat etc. review the symptoms again to organise
+correctly" -- a screenshot of Case 1's Bing diagnosis row showing "Floating-yang picture:
+night sweats, dizziness, tinnitus, palpitations" filed whole under Chinese patterns.
+
+Checked the seed: Case 1's own `symptoms` list already carries Night sweats, Dizziness,
+Tinnitus and Palpitations as their own entries, to be correlated and scored individually.
+The second `cond` string had them pasted on again after the pattern name -- a duplication
+in the seed, not a classification bug (every other case's `cond` entries are plain, no
+colon-introduced symptom tail). Trimmed to the pattern alone, `cond: ["Lung nodule (2022)",
+"Floating-yang picture"]`, matching the case's own `core` narrative ("His conditions ...
+a lung nodule (2022); a floating-yang picture").
+
+**SAVED, not live:** goes out with her next "push live".
