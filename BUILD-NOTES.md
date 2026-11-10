@@ -13763,3 +13763,9 @@ pushed.
 - **Tested** (sandbox): the row list; Ban Xia's vomiting and nausea both under Mouth & throat, Stomach row Acid Reflux / Belching / Heartburn; Da Huang: Hyperlipidemia under Medical findings, Infertility under Sex & fertility, its rest row no longer carries them; columns A-Z after picking; tap audit 13 of 13.
 - **Calls made:** (a) Appetite and Sex & fertility each have their own row (pick 2), so Appetite is not also in the Ren split (pick 6 named it): one place each, not two; (b) the lab folds, Heat and Sex are display-level in these tables only, because the same labels drive the patient's FBR board (diagnosis signs are treated specially there) and moving them there is a clinical-screen change she did not ask for; vomiting and the pms_breast wording changed in the catalog, like nausea; (c) dry heaving stays under Stomach (not named); (d) the singleton subjects the audit listed as low priority (Hair, Teeth, Local area, After alcohol) were left alone.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Families chips: the herb chip centred, names start at the left (2026-11-10)
+- **Her words** (synth22 item 3, on a Families picture): "centre the chips, move all text to the left of the chip"; her pick "A · At the right edge" (numbers stay at the right edge). Mock: mocks/tour-days-synth22-mock-2026-11-10.html, item 3.
+- **Code** (`index.html`, CSS only): `.gf-t.herb` + `align-self: center`; `.gf-t { text-align: left; }` (a button centres its text by default, so the name sat in the middle).
+- **Tested** (sandbox, every family open): 51 chips, every name starts at the left, all 10 herb chips centred to the pixel; tap audit 75 of 75 at 1220, 37 of 37 at 360; phone row unchanged (chips sized to their names, one line); console clean.
+- **LIVE** with her "Test + push live each".

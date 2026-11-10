@@ -1474,6 +1474,9 @@ not repeated here.
   builds its table at load from the two book tables, every sign at the higher weight, `or` lines merged; a DRAFT until her own table. Chai Gui
   Tang (柴归汤, the blood-stasis Chai Hu) = Xiao Chai Hu Tang + Dang Gui Shao Yao San: under Chai Hu, and under Dang Gui Shao Yao San via `also`
   (a family with only `also` still gets its card, `phGdfHasCard`). It runs second behind either half alone; with both pictures it leads.
+- Families chips (her 2026-11-10 "centre the chips, move all text to the left of the chip", pick A): the herb chip sits in the middle of its card
+  (at least 62% wide, wider for a long name); in every chip the name starts at the left and the numbers stay at the right edge. Phone: chips in
+  a row, sized to their names, unchanged.
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast
