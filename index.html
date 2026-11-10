@@ -15755,6 +15755,20 @@
   #pharmacyPage .ph-cmp-cs .sp .zl.one { grid-template-columns: minmax(0, 1fr) 28px; }
   #pharmacyPage .ph-cmp-cs .sp .zl.two, #pharmacyPage .ph-cmp-cs .sp .zl.zh { grid-template-columns: minmax(0, 1fr) 26px 26px; }
   #pharmacyPage .ph-cmp-cs .sp .zn { padding: 3px 5px; }
+  /* ---- Tour days (her 2026-11-10, pick A "Days inside the tour"): a tour, its days, each day's morning and afternoon ---- */
+  #pharmacyPage .ph-tc-grid tr.day th.sc { padding-left: 14px; }
+  #pharmacyPage .ph-tc-grid tr.day th.sc .srn span { font: 700 var(--fs-11-5) var(--font-body); letter-spacing: .07em; text-transform: uppercase; color: var(--ph-ink); }
+  #pharmacyPage .ph-tc-grid tr.day td { background: var(--ph-paper); }
+  #pharmacyPage .ph-tc-grid tr.day th.sc { background: var(--ph-paper); }
+  #pharmacyPage .ph-tc-grid .ch { display: inline-block; width: 14px; font-style: normal; color: var(--ph-soft); }
+  #pharmacyPage .ph-tc-grid .dt { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--ph-herb); }
+  #pharmacyPage .ph-tc-grid tr.blk th.sc { padding-left: 26px; font-weight: 500; }
+  #pharmacyPage .ph-tc-grid tr.blk th, #pharmacyPage .ph-tc-grid tr.blk td { height: auto; padding-top: 5px; padding-bottom: 5px; }
+  #pharmacyPage .ph-tc-grid .bw { display: flex; flex-direction: column; gap: 4px; }
+  #pharmacyPage .ph-tc-grid .bl { display: flex; align-items: center; gap: 6px; }
+  #pharmacyPage .ph-tc-grid .bl .srn { font-weight: 500; font-variant-numeric: tabular-nums; }
+  #pharmacyPage .ph-tc-grid .kd { flex: none; }
+  #pharmacyPage .ph-tc-grid input.who { width: 100%; font-size: var(--fs-12-5); }
   /* ---- Photos of treatment notes + My patients (her 2026-11-10 "build 5 and 6") ---- */
   #pharmacyPage .ph-tc .tcx { width: 32px; height: 32px; padding: 0; border-radius: 50%; border: 1px solid var(--ph-line); background: var(--ph-white); color: var(--ph-ink); font: inherit; font-size: var(--fs-13); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; flex: none; }
   #pharmacyPage .ph-tc .tcx svg { width: 12px; height: 12px; }
@@ -93120,10 +93134,65 @@ pale red tongue|Tongue: pale-red|r`;
     if (!PHARMACY.tourSources) PHARMACY.tourSources = [];
     const l = PHARMACY.tourSources;
     if (!l.some(s => s.id === "nanjing-2026-11-day1")) l.push({ id: "nanjing-2026-11-day1", kind: "tour", name: "Nanjing Study Tour Nov 2026 · Day 1", cases: phTourCases().filter(c => c.tour === "nanjing-2026-11-day1").map(c => c.n), fixed: true });
+    l.forEach(s => { if (s.fixed && / · Day 1$/.test(s.name)) s.name = s.name.replace(/ · Day 1$/, ""); phTcDays(s); });
     return l;
   }
+  // ---- Tour days (her 2026-11-10 synth22: "study tours happen on multiple days and cases are collected based on the following format 8am-12pm, 2pm - 5pm sometimes clinic, lectures, or conferences, or
+  // study group"; relayed by C22, mock mocks/tour-days-synth22-mock-2026-11-10.html, her pick A "Days inside the tour"). A tour source has days: [{n, date, blocks:[{t, k, who, cases:[n]}]}]; each day has a morning
+  // (8am-12pm) and an afternoon (2pm-5pm), a block has a kind (Clinic > Lecture > Conference > Study group), a teacher's short name, and the case numbers seen in it, one block per case within a tour.
+  // s.cases stays the union of its blocks (the filters and the Places count read it). Day 1 of the Nanjing tour = Mon 9 Nov 2026, all fifteen cases in its morning Clinic, taught by Dr Huang Huang. The time
+  // blocks are called Morning / Afternoon in speech, because "session" already means a case's later visit (c.sessions).
+  const PH_TC_BKIND = ["Clinic", "Lecture", "Conference", "Study group"], PH_TC_BTIME = ["8am–12pm", "2pm–5pm"];
+  let phGdTcDayShut = new Set();   // view state: the "<tourId>|<day>" rows folded shut
+  function phTcDays(s) {
+    if (!s || s.kind !== "tour") return [];
+    if (!s.days) {
+      const fixed = s.id === "nanjing-2026-11-day1", mk = (t, cases, who) => ({ t, k: 0, who: who || "", cases });
+      s.days = [{ n: 1, date: fixed ? "2026-11-09" : "", blocks: [mk(PH_TC_BTIME[0], (s.cases || []).slice(), fixed ? "Dr Huang Huang" : ""), mk(PH_TC_BTIME[1], [])] }];
+    }
+    return s.days;
+  }
+  const phTcSyncCases = s => { s.cases = [...new Set(phTcDays(s).flatMap(d => d.blocks.flatMap(b => b.cases)))].sort((a, b) => a - b); };
+  const phTcOrd = n => n + (n % 100 >= 11 && n % 100 <= 13 ? "th" : (["th", "st", "nd", "rd"][n % 10] || "th"));
+  const phTcDayLab = date => { const t = new Date(date + "T00:00:00"); return isNaN(t) ? "" : t.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short" }).replace(",", ""); };
+  function phTcSrcFilter() {   // the place kept as the filter: a whole source ("<id>") or one block of a tour ("<id>|<day>|<block>")
+    if (!phGdTcSrcF) return null;
+    const [sid, dn, bi] = String(phGdTcSrcF).split("|"), s = phTcSources().find(x => x.id === sid); if (!s) return null;
+    if (dn == null) return { name: s.name, cases: s.cases };
+    const d = phTcDays(s).find(x => x.n === +dn), b = d && d.blocks[+bi]; if (!b) return null;
+    return { name: `${s.name} · Day ${d.n} · ${b.t}`, cases: b.cases };
+  }
+  function phTcPlace(c) {   // where a case was seen: the first tour with a block holding it
+    const tours = phTcSources().filter(x => x.kind === "tour").sort((a, b) => phAz(a.name, b.name));
+    for (const s of tours) for (const d of phTcDays(s)) for (const b of d.blocks) if (b.cases.indexOf(c.n) >= 0) return { s, d, b };
+    return null;
+  }
+  function phTcWhen(c) {   // her 2026-11-10 "Mon 9th Nov C1": the case's first column reads date then case
+    const p = phTcPlace(c), t = p && p.d.date ? new Date(p.d.date + "T00:00:00") : null;
+    return t && !isNaN(t) ? `${t.toLocaleDateString("en-AU", { weekday: "short" })} ${phTcOrd(t.getDate())} ${t.toLocaleDateString("en-AU", { month: "short" })} C${c.n}` : `C#${c.n}`;
+  }
+  const phTcPlaceHtml = c => { const p = phTcPlace(c); return p ? `<small class="ph-tc-sub">Day ${p.d.n} · ${esc(p.b.t)} · ${PH_TC_BKIND[p.b.k] || ""}${p.b.who ? " · " + esc(p.b.who) : ""}</small>` : ""; };
+  // a tour in the grid: its row, then each day (foldable) with its morning and afternoon, then + Add a day
+  function phTcTourRows(s, vis, vns, nc) {
+    const days = phTcDays(s), vc = list => vis.filter(c => list.indexOf(c.n) >= 0).length;
+    let h = `<tr class="tour${phGdTcSrcF === s.id ? " on" : ""}"><th class="sc"><div class="srw"><button type="button" class="srn" data-tc-srcf="${esc(s.id)}" aria-pressed="${phGdTcSrcF === s.id}" title="Show only this place's cases"><span>${esc(s.name)}</span><em>${vc(s.cases)}</em></button>${s.fixed ? "" : `<button type="button" class="tcx" data-tc-src-del="${esc(s.id)}" title="Remove" aria-label="Remove ${esc(s.name)}">${PH_GDF_IC.x}</button>`}</div></th><td colspan="${nc}"></td></tr>`;
+    days.forEach(d => {
+      const shut = phGdTcDayShut.has(s.id + "|" + d.n), all = d.blocks.flatMap(b => b.cases);
+      h += `<tr class="day"><th class="sc"><div class="srw"><button type="button" class="srn day" data-tc-dfold="${esc(s.id)}|${d.n}" aria-expanded="${!shut}"><span><i class="ch">${shut ? "▸" : "▾"}</i>Day ${d.n}${d.date ? ` · ${esc(phTcDayLab(d.date))}` : ""}</span><em>${vc(all)}</em></button></div></th>${vis.map(c => `<td>${shut && all.indexOf(c.n) >= 0 ? `<span class="dt"></span>` : ""}</td>`).join("")}</tr>`;
+      if (!shut) d.blocks.forEach((b, i) => {
+        const bid = `${s.id}|${d.n}|${i}`;
+        h += `<tr class="blk${phGdTcSrcF === bid ? " on" : ""}"><th class="sc"><div class="bw"><div class="bl"><button type="button" class="srn" data-tc-srcf="${esc(bid)}" aria-pressed="${phGdTcSrcF === bid}" title="Show only the cases seen in this time"><span>${esc(b.t)}</span><em>${vc(b.cases)}</em></button><button type="button" class="gf-chip kd" data-tc-kind="${esc(bid)}" title="Tap to change: Clinic, Lecture, Conference, Study group">${PH_TC_BKIND[b.k] || PH_TC_BKIND[0]}</button></div><input type="text" class="field-bare gf-fld who" data-tc-who="${esc(bid)}" value="${esc(b.who || "")}" placeholder="Teacher" autocomplete="off" aria-label="Teacher, Day ${d.n} ${esc(b.t)}"></div></th>${vis.map(c => { const y = b.cases.indexOf(c.n) >= 0; return `<td><button type="button" class="tcm${y ? " y" : ""}" data-tc-blk="${esc(bid)}|${c.n}" aria-pressed="${y}" aria-label="C#${c.n} in Day ${d.n}, ${esc(b.t)}"></button></td>`; }).join("")}</tr>`;
+      });
+    });
+    return h + `<tr class="ad"><th class="sc"><button type="button" class="gf-chip" data-tc-addday="${esc(s.id)}">+ Add a day</button></th><td colspan="${nc}"></td></tr>`;
+  }
+  document.addEventListener("change", e => {   // a teacher's name is saved where it is typed (no repaint: a tap elsewhere must still land)
+    const i = e.target.closest && e.target.closest("[data-tc-who]"); if (!i) return;
+    const [sid, dn, bi] = i.dataset.tcWho.split("|"), s = phTcSources().find(x => x.id === sid), d = s && phTcDays(s).find(x => x.n === +dn), b = d && d.blocks[+bi];
+    if (b) { b.who = i.value.trim(); if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); }
+  });
   function phTcVisible() {
-    const src = phGdTcSrcF ? phTcSources().find(s => s.id === phGdTcSrcF) : null;
+    const src = phTcSrcFilter();
     return phTourCases().slice().sort((a, b) => a.n - b.n).filter(c => (!phGdTcFc.length || phGdTcFc.indexOf(phTcCc(c)) >= 0) && (!phGdTcFf.length || phTcFms(c).some(f => phGdTcFf.indexOf(f) >= 0)) && (!src || src.cases.indexOf(c.n) >= 0));
   }
   const phTcShown = vis => { let s = (phGdTcSels || []).filter(id => vis.some(c => c.id === id)); if (!s.length && vis[0]) s = [vis[0].id]; return vis.filter(c => s.indexOf(c.id) >= 0); };
@@ -93132,7 +93201,7 @@ pale red tongue|Tongue: pale-red|r`;
   function phTcTableHtml(cs) {
     if (cs.length === 1 && ((cs[0].sessions || []).length || cs[0].note || phTcPhOf(cs[0].id).length)) return phTcProgressHtml(cs[0]);
     const anim = phGdTcAnim === true, cols = cs.map(c => ({ style: phTcColStyle(c) })), parts = cs.map(c => phCmpCaseParts(phTcSrc(c), "", anim));
-    const heads = cs.map((c, i) => `<th style="${cols[i].style}"><span class="cn">C#${c.n}</span>${esc(phTcNm(c))}<small class="ph-tc-sub">${esc(c.name)}</small>
+    const heads = cs.map((c, i) => `<th style="${cols[i].style}"><span class="cn">C#${c.n}</span>${esc(phTcNm(c))}<small class="ph-tc-sub">${esc(c.name)}</small>${phTcPlaceHtml(c)}
         <div style="margin-top:6px;font-weight:400"><label style="font-size:var(--fs-11);color:var(--ph-soft);margin-right:6px">Formula family</label><select class="field-bare gf-chip" data-tc-fam="${esc(c.id)}" style="font-size:var(--fs-12-5)"><option value=""${c.fam ? "" : " selected"}>Not matched yet</option>${Object.keys(PH_FORMULAS).map(id => `<option value="${esc(id)}"${c.fam === id ? " selected" : ""}>${esc(phGdfName(id))}</option>`).join("")}</select></div>
       </th>`).join("");
     return `<div class="ph-cmp-wrap"><table class="ph-cmp-cs" style="--n:${cs.length}"><colgroup><col class="s">${cs.map(() => "<col>").join("")}</colgroup>
@@ -93146,8 +93215,8 @@ pale red tongue|Tongue: pale-red|r`;
     const lst = [...grp.entries()].sort((a, b) => phAz(a[0], b[0])), picks = by === "fm" ? phGdTcFf : phGdTcFc;
     const menu = phGdTcMenu ? `<div class="ph-cmp-addl" data-tc-menu-wrap role="listbox">${lst.map(([v, ns]) => `<button type="button" class="ph-cmp-addi${picks.indexOf(v) >= 0 ? " on" : ""}" data-tc-fpick="${by}|${esc(v)}" role="option" aria-selected="${picks.indexOf(v) >= 0}"><i class="tk"></i><span>${esc(v)}</span><em>${ns.map(n => "C#" + n).join(" ")}</em></button>`).join("")}</div>` : "";
     const chip = (attr, v, lab) => `<button type="button" class="gf-chip ph-cmp-chip on" ${attr}="${esc(v)}" title="Remove">${esc(lab)}<span class="x">${PH_GDF_IC.x}</span></button>`;
-    const src = phGdTcSrcF ? phTcSources().find(s => s.id === phGdTcSrcF) : null;
-    const chips = phGdTcFc.map(v => chip("data-tc-fpick", "cc|" + v, v)).concat(phGdTcFf.map(v => chip("data-tc-fpick", "fm|" + v, v)), src ? [chip("data-tc-srcf", src.id, src.name)] : []).join("");
+    const src = phTcSrcFilter();
+    const chips = phGdTcFc.map(v => chip("data-tc-fpick", "cc|" + v, v)).concat(phGdTcFf.map(v => chip("data-tc-fpick", "fm|" + v, v)), src ? [chip("data-tc-srcf", phGdTcSrcF, src.name)] : []).join("");
     const any = phGdTcFc.length || phGdTcFf.length || src;
     return `<div class="ph-cmp-bar"><b class="ph-tc-lb">By</b><div class="gf-seg" role="group" aria-label="Name and filter cases by">${[["cc", "Complaint"], ["fm", "Formula"]].map(([k, l]) => `<button type="button" data-tc-by="${k}" class="${by === k ? "on" : ""}" aria-pressed="${by === k}">${l}</button>`).join("")}</div>
       <span class="ph-cmp-add"><button type="button" class="gf-chip" data-tc-menu="1" aria-haspopup="listbox" aria-expanded="${!!phGdTcMenu}">${by === "fm" ? "Formula" : "Complaint"}${picks.length ? " · " + picks.length : ""} ▾</button>${menu}</span>${chips}
@@ -93159,7 +93228,7 @@ pale red tongue|Tongue: pale-red|r`;
     const head = `<thead><tr><th class="sc"><span class="ph-tc-lb">Book · Seminar · Tour</span></th>${vis.map(c => { const on = shownIds.indexOf(c.id) >= 0; return `<th${names ? ` class="nm"` : ""}><button type="button" class="tch${on ? " on" : ""}" data-tc-toggle="${esc(c.id)}" aria-pressed="${on}" title="${esc(phTcCc(c))} · ${esc(phTcFms(c).join(" + ") || "no formula recorded")}">C#${c.n}</button>${names ? `<small>${esc(phTcNm(c))}</small>` : ""}</th>`; }).join("")}</tr></thead>`;
     const body = PH_TC_KINDS.map(([k, lab, one]) => {
       const rows = srcs.filter(s => s.kind === k).sort((a, b) => phAz(a.name, b.name));
-      const rowsHtml = rows.map(s => `<tr class="${phGdTcSrcF === s.id ? "on" : ""}"><th class="sc"><div class="srw"><button type="button" class="srn" data-tc-srcf="${esc(s.id)}" aria-pressed="${phGdTcSrcF === s.id}" title="Show only this place's cases"><span>${esc(s.name)}</span><em>${s.cases.filter(n => vns.indexOf(n) >= 0).length}</em></button>${s.fixed ? "" : `<button type="button" class="tcx" data-tc-src-del="${esc(s.id)}" title="Remove" aria-label="Remove ${esc(s.name)}">${PH_GDF_IC.x}</button>`}</div></th>${vis.map(c => { const y = s.cases.indexOf(c.n) >= 0; return `<td><button type="button" class="tcm${y ? " y" : ""}" data-tc-mem="${esc(s.id)}|${c.n}" aria-pressed="${y}" aria-label="C#${c.n} in ${esc(s.name)}"></button></td>`; }).join("")}</tr>`).join("");
+      const rowsHtml = rows.map(s => k === "tour" ? phTcTourRows(s, vis, vns, nc) : `<tr class="${phGdTcSrcF === s.id ? "on" : ""}"><th class="sc"><div class="srw"><button type="button" class="srn" data-tc-srcf="${esc(s.id)}" aria-pressed="${phGdTcSrcF === s.id}" title="Show only this place's cases"><span>${esc(s.name)}</span><em>${s.cases.filter(n => vns.indexOf(n) >= 0).length}</em></button>${s.fixed ? "" : `<button type="button" class="tcx" data-tc-src-del="${esc(s.id)}" title="Remove" aria-label="Remove ${esc(s.name)}">${PH_GDF_IC.x}</button>`}</div></th>${vis.map(c => { const y = s.cases.indexOf(c.n) >= 0; return `<td><button type="button" class="tcm${y ? " y" : ""}" data-tc-mem="${esc(s.id)}|${c.n}" aria-pressed="${y}" aria-label="C#${c.n} in ${esc(s.name)}"></button></td>`; }).join("")}</tr>`).join("");
       const add = phGdTcAddKind === k
         ? `<tr class="ad"><th class="sc"><div class="srw"><input type="text" class="field-bare gf-fld" data-tc-src-name autocomplete="off" aria-label="Name"><button type="button" class="gf-btn" data-tc-src-save="${k}">Add</button><button type="button" class="tcx" data-tc-src-cancel="1" title="Cancel" aria-label="Cancel">${PH_GDF_IC.x}</button></div></th><td colspan="${nc}"></td></tr>`
         : `<tr class="ad"><th class="sc"><button type="button" class="gf-chip" data-tc-src-add="${k}">+ Add ${one}</button></th><td colspan="${nc}"></td></tr>`;
@@ -93297,7 +93366,7 @@ pale red tongue|Tongue: pale-red|r`;
     const chg = vs.map((v, i) => { const set = new Set(); if (i) Object.keys(parts[i]).forEach(k => { if (k !== "an" && k !== "inv" && parts[i][k] !== parts[i - 1][k]) set.add(k); }); return set; });
     const heads = vs.map((v, i) => v !== c
       ? `<th style="${cols[i].style}"><span class="cn">${esc(phTcDate(v.date))}</span>${esc(v.label || "Follow-up")}${v.formula ? `<small class="ph-tc-sub">${esc(v.formula)}</small>` : ""}</th>`
-      : `<th style="${cols[0].style}"><span class="cn">C#${c.n} · Day 1</span>${esc(phTcNm(c))}<small class="ph-tc-sub">${esc(c.name)}</small>
+      : `<th style="${cols[0].style}"><span class="cn">${esc(phTcWhen(c))}</span>${esc(phTcNm(c))}<small class="ph-tc-sub">${esc(c.name)}</small>${phTcPlaceHtml(c)}
         <div style="margin-top:6px;font-weight:400"><label style="font-size:var(--fs-11);color:var(--ph-soft);margin-right:6px">Formula family</label><select class="field-bare gf-chip" data-tc-fam="${esc(c.id)}" style="font-size:var(--fs-12-5)"><option value=""${c.fam ? "" : " selected"}>Not matched yet</option>${Object.keys(PH_FORMULAS).map(id => `<option value="${esc(id)}"${c.fam === id ? " selected" : ""}>${esc(phGdfName(id))}</option>`).join("")}</select></div></th>`).join("");
     const notes = `<tr><th class="rh" scope="row">Notes</th>${vs.map((v, i) => `<td style="${cols[i].style}">${esc(v.note || "")}</td>`).join("")}</tr>`;
     const anyPh = vs.some(v => phTcPhOf(v.id).length), photos = anyPh ? `<tr><th class="rh" scope="row">Photos</th>${vs.map((v, i) => `<td style="${cols[i].style}"><div class="ph-tc-ths">${phTcThumbs(v.id, false)}</div></td>`).join("")}</tr>` : "";
@@ -93427,7 +93496,7 @@ pale red tongue|Tongue: pale-red|r`;
       if (s && !s.fixed) phAsk({ message: `Remove ${s.name}? The cases stay.`, yes: "Remove", danger: true }).then(ok => {
         if (!ok) return;
         const i = PHARMACY.tourSources.indexOf(s); if (i >= 0) PHARMACY.tourSources.splice(i, 1);
-        if (phGdTcSrcF === s.id) phGdTcSrcF = "";
+        if (phGdTcSrcF === s.id || String(phGdTcSrcF).indexOf(s.id + "|") === 0) phGdTcSrcF = "";
         if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
         renderPhGdBody();
       });
@@ -93547,6 +93616,32 @@ pale red tongue|Tongue: pale-red|r`;
     }
     if ((el = T.closest("[data-tc-pv]"))) { phGdTcPv = el.dataset.tcPv; renderPhGdBody(); return true; }
     if (T.closest("[data-tc-pv-x]")) { phGdTcPv = ""; renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-tc-dfold]"))) { const k = el.dataset.tcDfold; if (phGdTcDayShut.has(k)) phGdTcDayShut.delete(k); else phGdTcDayShut.add(k); renderPhGdBody(); return true; }
+    if ((el = T.closest("[data-tc-kind]"))) {
+      const [sid, dn, bi] = el.dataset.tcKind.split("|"), s = phTcSources().find(x => x.id === sid), d = s && phTcDays(s).find(x => x.n === +dn), b = d && d.blocks[+bi];
+      if (b) { b.k = ((b.k || 0) + 1) % PH_TC_BKIND.length; if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); }
+      renderPhGdBody(); return true;
+    }
+    if ((el = T.closest("[data-tc-blk]"))) {
+      const [sid, dn, bi, nn] = el.dataset.tcBlk.split("|"), n = +nn, s = phTcSources().find(x => x.id === sid), d = s && phTcDays(s).find(x => x.n === +dn), b = d && d.blocks[+bi];
+      if (b) {
+        const had = b.cases.indexOf(n) >= 0;
+        phTcDays(s).forEach(x => x.blocks.forEach(y => { const j = y.cases.indexOf(n); if (j >= 0) y.cases.splice(j, 1); }));   // one time per case within a tour
+        if (!had) b.cases.push(n);
+        phTcSyncCases(s); if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+      }
+      renderPhGdBody(); return true;
+    }
+    if ((el = T.closest("[data-tc-addday]"))) {
+      const s = phTcSources().find(x => x.id === el.dataset.tcAddday);
+      if (s) {
+        const ds = phTcDays(s), last = ds[ds.length - 1], t = last && last.date ? new Date(last.date + "T00:00:00") : null;
+        if (t && !isNaN(t)) t.setDate(t.getDate() + 1);
+        ds.push({ n: (last ? last.n : 0) + 1, date: t && !isNaN(t) ? [t.getFullYear(), String(t.getMonth() + 1).padStart(2, "0"), String(t.getDate()).padStart(2, "0")].join("-") : "", blocks: PH_TC_BTIME.map(x => ({ t: x, k: 0, who: "", cases: [] })) });
+        if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
+      }
+      renderPhGdBody(); return true;
+    }
     if ((el = T.closest("[data-tc-more]"))) { phGdTcAdd = el.dataset.tcMore; phGdTcMore = true; renderPhGdBody(); return true; }
     if ((el = T.closest("[data-tc-dx]"))) {
       const [cid, i] = el.dataset.tcDx.split("|"), c = phTcFind(cid), s = c && c.symptoms[+i];
