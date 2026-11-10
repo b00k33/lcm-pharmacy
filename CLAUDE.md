@@ -1480,7 +1480,8 @@ not repeated here.
 - Chai Qin Tang (her 2026-11-10 "add Chai Qin Tang", her answer "XCHT + HQT"): `phFbrFromHalves("chaiqin", ...)` from Xiao Chai Hu Tang and
   Huang Qin Tang (柴芩汤), under Chai Hu, and under Huang Qin Tang via `also` (Huang Qin Tang stays its own family, her 2026-10-14). Two colours
   (her pick "Two colours, like Chai Po Tang"): its Chai Hu shade and Huang Qin Tang's red; words take the colour that reads best on both halves
-  (`phGdfFgBoth`). Not in the Chai Hu kinds ("Together" in Quick assess) until she names its kind: the kind names the person, her word.
+  (`phGdfFgBoth`). Her 2026-11-10 "Chai Qin Tang is the heat Chai Hu": one of the Chai Hu kinds ("Together" in Quick assess), and its page opens
+  "The heat Chai Hu".
 - A new Medical history count reads `phHxApplicableItems`, so it matches the
   page.
 - Never `phFlashShow` on a patient page, a sheet or a dialog: the one toast

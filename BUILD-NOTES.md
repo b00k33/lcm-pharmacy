@@ -13791,3 +13791,8 @@ pushed.
 - **Tested** (sandbox): Nanjing tour: 4 events (Day 1 and Day 2, both times), `TZID=Asia/Shanghai`, 20261109T080000-120000 and 140000-170000, a VTIMEZONE block, lines folded at 70 characters, the file made as a text/calendar blob with the toast "4 events for your calendar · Nanjing time"; a day with no date adds none (toast "Give a day its date first"); tap audit 130 of 130 at 1220. NOT tested: opening the file in a real calendar app (Google, Apple, Outlook) on her devices.
 - **Calls made:** each block is one event even when it has no cases yet (Day 2 here is a placeholder: remove the extra day before exporting if it is not real); Day 1's date is Mon 9 Nov 2026 as she said; an empty block says "No cases filed yet"; the case numbers are in the event text, no names.
 - **SAVED, not live:** goes out with her next "push live".
+
+## Chai Qin Tang is the heat Chai Hu (2026-11-10)
+- **Her words:** "Chai Qin Tang is the heat Chai Hu".
+- **Code** (`index.html`): the Chai Hu kinds list (`combos` in `phFbrComboHtml`) + `{ id: "chaiqin", of: ["xiaochaihu", "huangqintang"], kind: "the heat Chai Hu" }`; `PH_BTJ.chaiqin.arch` and its `core` line name it.
+- **Tested** (sandbox): with Xiao Chai Hu Tang and Huang Qin Tang both fitting and Chai Qin Tang not leading, Quick assess shows "Together · Chai Qin Tang · the heat Chai Hu"; when Chai Qin Tang leads, no hint (as for the other kinds); console clean.
