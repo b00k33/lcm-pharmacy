@@ -93169,6 +93169,16 @@ pale red tongue|Tongue: pale-red|r`;
     const l = PHARMACY.tourSources;
     if (!l.some(s => s.id === "nanjing-2026-11-day1")) l.push({ id: "nanjing-2026-11-day1", kind: "tour", name: "Nanjing Study Tour Nov 2026 · Day 1", cases: phTourCases().filter(c => c.tour === "nanjing-2026-11-day1").map(c => c.n), fixed: true });
     l.forEach(s => { if (s.fixed && / · Day 1$/.test(s.name)) s.name = s.name.replace(/ · Day 1$/, ""); phTcDays(s); });
+    // Books = the Sources page's library (her synth22 2026-11-10 "merge books with sources"): every library entry is a Books row (linked by libId, its name follows the library); a grid-only book is added to the
+    // library once; a library entry deleted on the Sources page takes its row with it unless the row holds cases (then the row stays and the entry comes back, nothing is lost)
+    const lib = phSourceLib();
+    lib.forEach(b => {
+      const t = String(b.title || "").trim(); if (!t) return;
+      const g = l.find(s => s.kind === "book" && (s.libId === b.id || (!s.libId && String(s.name).toLowerCase() === t.toLowerCase())));
+      if (g) { g.libId = b.id; g.name = t; } else l.push({ id: uid(), kind: "book", name: t, cases: [], libId: b.id });
+    });
+    for (let i = l.length - 1; i >= 0; i--) if (l[i].kind === "book" && l[i].libId && !lib.some(b => b.id === l[i].libId)) { if (l[i].cases.length) l[i].libId = ""; else l.splice(i, 1); }
+    l.filter(s => s.kind === "book" && !s.libId).forEach(s => { const b = { id: uid(), date: "", notes: "", title: s.name, author: "", translator: "" }; lib.push(b); s.libId = b.id; });
     return l;
   }
   // ---- Tour days (her 2026-11-10 synth22: "study tours happen on multiple days and cases are collected based on the following format 8am-12pm, 2pm - 5pm sometimes clinic, lectures, or conferences, or
@@ -93331,7 +93341,7 @@ pale red tongue|Tongue: pale-red|r`;
   // case (complaint, formula, herbs with grams, diagnosis, observations) with the next number (numbers carry on across days and tours), puts it in that block, and shows it. Nothing is scored:
   // every observation starts un-correlated, as the seeded cases did. The reading is plain text rules, labelled lines first ("Formula: ...", "Herbs: ...", "Diagnosis: ...", "Observations: ..."),
   // else the first sentence is the complaint, "Name 9g" pieces are herbs, a capitalised name ending Tang / Wan / San / Yin / Gao / Dan / Fang is the formula, the rest are observations.
-  let phGdTcNew = "", phGdTcEd = "";   // the block whose notes box is open ("<tour>|<day>|<block>"); the case whose details are open to edit
+  let phGdTcNew = "", phGdTcEd = "", phGdTcPageOpen = false;   // + the case page: open on the case(s) she tapped, with a way back to the grid (her synth22 2026-11-10 "give a separate case page so its not at the bottom of this page")   // the block whose notes box is open ("<tour>|<day>|<block>"); the case whose details are open to edit
   function phTcParse(raw) {
     const o = { name: "", cond: [], formula: "", fms: null, fam: null, recipe: [], symptoms: [] }, fms = [], obs = [];
     const herbRe = /([A-Za-z][A-Za-z' ]*?[A-Za-z])\s*(\d+(?:\.\d+)?)\s*g\b/g, fmRe = /((?:[A-Z][A-Za-z']*\s+){1,5}(?:Tang|Wan|San|Yin|Gao|Dan|Fang))\b/g;
@@ -93374,7 +93384,7 @@ pale red tongue|Tongue: pale-red|r`;
     const c = { id: uid(), n, tour: sid, added: 1, name: p.name || p.formula || ("Case " + n), cond: p.cond, formula: p.formula || "Not recorded", fam: p.fam, recipe: p.recipe, mod: "", fms: p.fms,
       symptoms: p.symptoms.map(t => ({ text: t, sign: null, side: null, w: null, skip: false, newsign: false })) };
     list.push(c); b.cases.push(n); phTcSyncCases(s);
-    phGdTcFc = []; phGdTcFf = []; phGdTcSrcF = ""; phGdTcSels = [c.id]; phGdTcSel = c.id; phGdTcSess = ""; phGdTcAdd = null; phGdTcNew = ""; phGdTcEd = "";
+    phGdTcFc = []; phGdTcFf = []; phGdTcSrcF = ""; phGdTcSels = [c.id]; phGdTcSel = c.id; phGdTcSess = ""; phGdTcAdd = null; phGdTcNew = ""; phGdTcEd = ""; phGdTcPageOpen = true;
     if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
     return c;
   }
@@ -93427,7 +93437,7 @@ pale red tongue|Tongue: pale-red|r`;
       if (s.kind === "tour") { phTcDays(s).forEach(d => d.blocks.forEach(b => { const j = b.cases.indexOf(c.n); if (j >= 0) b.cases.splice(j, 1); })); phTcSyncCases(s); }
       else if (s.cases) s.cases = s.cases.filter(x => x !== c.n);
     });
-    phGdTcEd = ""; phGdTcSels = null; phGdTcSel = null; phGdTcSess = ""; phGdTcAdd = null;
+    phGdTcEd = ""; phGdTcSels = null; phGdTcSel = null; phGdTcSess = ""; phGdTcAdd = null; phGdTcPageOpen = false;
     if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL);
     presSavedToast(`Removed · C#${c.n}`, { undo: () => {
       list.splice(Math.min(idx, list.length), 0, c);
@@ -93445,6 +93455,7 @@ pale red tongue|Tongue: pale-red|r`;
   });
   const phTcLogDot = c => ((c.sessions || []).length || c.note || (typeof phTcPhOf === "function" && phTcPhOf(c.id).length)) ? `<i class="lgd" title="Has a session, note or photo logged"></i>` : "";
   const phTcDayKinds = d => { const k = []; d.blocks.forEach(b => { if (b.cases.length || b.who || b.at || b.k) { const n = PH_TC_BKIND[b.k] || PH_TC_BKIND[0]; if (k.indexOf(n) < 0) k.push(n); } }); return k.length ? `<small class="kdl">${esc(k.join(", "))}</small>` : ""; };
+  const phTcPageTop = () => { const e = document.querySelector("#pharmacyPage .ph-tc"); if (e && e.scrollIntoView) e.scrollIntoView({ block: "start" }); };
   function phTcVisible() {
     const src = phTcSrcFilter();
     return phTourCases().slice().sort((a, b) => a.n - b.n).filter(c => (!phGdTcFc.length || phGdTcFc.indexOf(phTcCc(c)) >= 0) && (!phGdTcFf.length || phTcFms(c).some(f => phGdTcFf.indexOf(f) >= 0)) && (!src || src.cases.indexOf(c.n) >= 0));
@@ -93482,7 +93493,7 @@ pale red tongue|Tongue: pale-red|r`;
     const head = `<thead><tr><th class="sc"><span class="ph-tc-lb">Book · Seminar · Tour</span></th>${vis.map(c => { const on = shownIds.indexOf(c.id) >= 0; return `<th${names ? ` class="nm"` : ""}><button type="button" class="tch${on ? " on" : ""}" data-tc-toggle="${esc(c.id)}" aria-pressed="${on}" data-tip="${esc(phTcCc(c) + "\n" + ((phTcFms(c).join(" + ") || "No formula recorded") + (c.mod && phTcFms(c).length ? ", modified" : "")))}" aria-label="C#${c.n}, ${esc(phTcCc(c))}">C#${c.n}${phTcLogDot(c)}</button>${names ? `<small>${esc(phTcNm(c))}</small>` : ""}</th>`; }).join("")}</tr></thead>`;
     const body = PH_TC_KINDS.map(([k, lab, one]) => {
       const rows = srcs.filter(s => s.kind === k).sort((a, b) => phAz(a.name, b.name));
-      const rowsHtml = rows.map((s, ix) => k === "tour" ? phTcTourRows(s, vis, vns, nc, ix ? "" : lab) : `<tr class="${phGdTcSrcF === s.id ? "on" : ""}"><th class="sc"><div class="srw"><button type="button" class="srn" data-tc-srcf="${esc(s.id)}" aria-pressed="${phGdTcSrcF === s.id}" title="Show only this place's cases"><span>${ix ? "" : `<b class="gk">${esc(lab)}</b> `}${esc(s.name)}</span><em>${s.cases.filter(n => vns.indexOf(n) >= 0).length}</em></button>${s.fixed ? "" : `<button type="button" class="tcx" data-tc-src-del="${esc(s.id)}" title="Remove" aria-label="Remove ${esc(s.name)}">${PH_GDF_IC.x}</button>`}</div></th>${vis.map(c => { const y = s.cases.indexOf(c.n) >= 0; return `<td><button type="button" class="tcm${y ? " y" : ""}" data-tc-mem="${esc(s.id)}|${c.n}" aria-pressed="${y}" aria-label="C#${c.n} in ${esc(s.name)}"></button></td>`; }).join("")}</tr>`).join("");
+      const rowsHtml = rows.map((s, ix) => k === "tour" ? phTcTourRows(s, vis, vns, nc, ix ? "" : lab) : `<tr class="${phGdTcSrcF === s.id ? "on" : ""}"><th class="sc"><div class="srw"><button type="button" class="srn" data-tc-srcf="${esc(s.id)}" aria-pressed="${phGdTcSrcF === s.id}" title="Show only this place's cases"><span>${ix ? "" : `<b class="gk">${esc(lab)}</b> `}${esc(s.name)}</span><em>${s.cases.filter(n => vns.indexOf(n) >= 0).length}</em></button>${s.fixed || s.libId ? "" : `<button type="button" class="tcx" data-tc-src-del="${esc(s.id)}" title="Remove" aria-label="Remove ${esc(s.name)}">${PH_GDF_IC.x}</button>`}</div></th>${vis.map(c => { const y = s.cases.indexOf(c.n) >= 0; return `<td><button type="button" class="tcm${y ? " y" : ""}" data-tc-mem="${esc(s.id)}|${c.n}" aria-pressed="${y}" aria-label="C#${c.n} in ${esc(s.name)}"></button></td>`; }).join("")}</tr>`).join("");
       const add = phGdTcAddKind === k
         ? `<tr class="ad"><th class="sc"><div class="srw"><input type="text" class="field-bare gf-fld" data-tc-src-name autocomplete="off" aria-label="Name"><button type="button" class="gf-btn" data-tc-src-save="${k}">Add</button><button type="button" class="tcx" data-tc-src-cancel="1" title="Cancel" aria-label="Cancel">${PH_GDF_IC.x}</button></div></th><td colspan="${nc}"></td></tr>`
         : `<tr class="ad"><th class="sc"><button type="button" class="gf-chip" data-tc-src-add="${k}">+ Add ${one}</button></th><td colspan="${nc}"></td></tr>`;
@@ -93704,10 +93715,12 @@ pale red tongue|Tongue: pale-red|r`;
     const focus = shown.find(c => c.id === phGdTcSel) || shown[0];
     const sessOk = !multi && focus && phGdTcSess && (focus.sessions || []).some(x => x.id === phGdTcSess), target = sessOk ? phTcFind(phGdTcSess) : focus, sessBar = !multi && focus ? phTcSessBarHtml(focus, sessOk ? phGdTcSess : "") : "";
     const focusBar = multi ? `<div class="ph-cmp ph-tc-flat" style="margin-top:18px"><div class="ph-tc-fc"><b class="ph-tc-lb">Correlate</b>${shown.map(c => `<button type="button" class="gf-chip${c.id === focus.id ? " on" : ""}" data-tc-focus="${esc(c.id)}">C#${c.n}</button>`).join("")}</div></div>` : "";
+    const pageOn = phGdTcPageOpen && focus;
+    const pageHead = `<div class="ph-cmp ph-tc-flat"><div class="ph-tc-fc"><button type="button" class="gf-btn" data-tc-back="1">‹ Cases</button>${vis.map(c => `<button type="button" class="gf-chip${shownIds.indexOf(c.id) >= 0 ? " on" : ""}" data-tc-toggle="${esc(c.id)}" aria-pressed="${shownIds.indexOf(c.id) >= 0}">C#${c.n}</button>`).join("")}${vis.length > 1 ? `<button type="button" class="gf-chip" data-tc-showall="1">Side by side · all ${vis.length}</button>` : ""}</div></div>`;
     return `<div class="ph-gdf"><div class="ph-tc" style="grid-column:1 / -1;padding:16px 18px;min-width:0">
       ${phTcModeBar()}
-      <div class="ph-cmp">${phTcBarHtml(vis, cases.length)}${vis.length ? phTcGridHtml(vis, shownIds) : `<div class="gf-none" style="padding:16px 18px">No cases match</div>`}</div>
-      ${focus ? `<div style="margin-top:14px${multi ? "" : ";max-width:720px"}">${phTcTableHtml(shown)}</div>
+      ${pageOn ? pageHead : `<div class="ph-cmp">${phTcBarHtml(vis, cases.length)}${vis.length ? phTcGridHtml(vis, shownIds) : `<div class="gf-none" style="padding:16px 18px">No cases match</div>`}</div>`}
+      ${pageOn ? `<div style="margin-top:14px${multi ? "" : ";max-width:720px"}">${phTcTableHtml(shown)}</div>
       ${phTcEditHtml(focus)}
       <div>${focusBar}${sessBar}${phTcCorrelateHtml(target)}${phTcIntegrateHtml(target)}</div>` : ""}
       ${phTcViewerHtml()}
@@ -93723,10 +93736,9 @@ pale red tongue|Tongue: pale-red|r`;
   function phTcGridClick(T) {
     let el;
     if ((el = T.closest("[data-tc-toggle]"))) {
-      const id = el.dataset.tcToggle, v = phTcShown(phTcVisible()).map(c => c.id), i = v.indexOf(id);
-      if (i >= 0) { if (v.length > 1) v.splice(i, 1); } else v.push(id);
-      phGdTcSels = v; phGdTcSel = i >= 0 ? v[v.length - 1] : id; phGdTcAdd = null; renderPhGdBody(); return true;
+      const id = el.dataset.tcToggle; phGdTcSels = [id]; phGdTcSel = id; phGdTcAdd = null; phGdTcEd = ""; phGdTcSess = ""; phGdTcPageOpen = true; renderPhGdBody(); phTcPageTop(); return true;
     }
+    if (T.closest("[data-tc-back]")) { phGdTcPageOpen = false; phGdTcAdd = null; renderPhGdBody(); phTcPageTop(); return true; }
     if ((el = T.closest("[data-tc-focus]"))) { phGdTcSel = el.dataset.tcFocus; phGdTcAdd = null; renderPhGdBody(); return true; }
     if ((el = T.closest("[data-tc-by]"))) { phGdTcBy = el.dataset.tcBy === "fm" ? "fm" : "cc"; phGdTcMenu = false; renderPhGdBody(); return true; }
     if (T.closest("[data-tc-menu]")) { phGdTcMenu = !phGdTcMenu; renderPhGdBody(); return true; }
@@ -93736,7 +93748,7 @@ pale red tongue|Tongue: pale-red|r`;
       renderPhGdBody(); return true;
     }
     if (T.closest("[data-tc-fclear]")) { phGdTcFc = []; phGdTcFf = []; phGdTcSrcF = ""; phGdTcMenu = false; renderPhGdBody(); return true; }
-    if (T.closest("[data-tc-showall]")) { phGdTcSels = phTcVisible().map(c => c.id); phGdTcSel = phGdTcSels[0] || phGdTcSel; renderPhGdBody(); return true; }
+    if (T.closest("[data-tc-showall]")) { phGdTcSels = phTcVisible().map(c => c.id); phGdTcSel = phGdTcSels[0] || phGdTcSel; phGdTcAdd = null; phGdTcPageOpen = true; renderPhGdBody(); phTcPageTop(); return true; }
     if ((el = T.closest("[data-tc-srcf]"))) { phGdTcSrcF = phGdTcSrcF === el.dataset.tcSrcf ? "" : el.dataset.tcSrcf; renderPhGdBody(); return true; }
     if ((el = T.closest("[data-tc-mem]"))) {
       const [sid, n] = el.dataset.tcMem.split("|"), s = phTcSources().find(x => x.id === sid);
