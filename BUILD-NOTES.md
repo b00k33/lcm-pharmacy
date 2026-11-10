@@ -13996,3 +13996,9 @@ pinyin small · Q8 A each row drawable with Define.
 The 30 drawings are my clinical read, hers to correct.
 
 **SAVED, not live:** goes out with her next "push live".
+
+## Tour herb codes SDH and MX named (2026-11-10)
+- **Her words:** "shu di huang mang xiao" (the two codes left for her: SDH in Case 9, MX in Case 15).
+- **Code:** `PH_TC_HERB_CODE` + SDH: "Shu Di Huang", MX: "Mang Xiao" (the recipe keeps what she typed).
+- **Tested** (sandbox): Case 9 reads Huang Lian, Huang Qin, Huang Bai, Bai Shao, E Jiao, Chuan Xiong, Shu Di Huang, Zhi Zi, Dang Gui, Gan Cao; Case 15 reads Huang Lian, Rou Gui, Sheng Shai Shen, Ban Xia, Gan Jiang, Gan Cao, Zhi Da Huang, Mang Xiao, Hong Zao; no code left unknown; no console errors.
+- **SAVED, not live:** goes out only on her own "push live".
