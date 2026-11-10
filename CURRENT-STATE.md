@@ -903,6 +903,7 @@ capitals, saved as written").
 columns; a tap on a number opens the same box with the five dots, − and × on top (`phGdfEdOpen`, one at a time; a dot sets it and
 closes it, the number pops). The card's top bar keeps every part whole and scrolls sideways. BUILD-NOTES "Guide card: Edit laid out
 like Study".
+**A herb's tile is narrower than the formula tiles under it** (her 2026-11-10 "give the herb a more narrow chip to differentiate from formulas", then "i mean herb": every herb): the family head and each herb On their own get `.gf-t.herb` (62% of the card, left-aligned; `phGdfTileHtml`); on the phone's pick bar tiles are already their own width, so it changes nothing there.
 Details and tests: [Guide Families].
 **The card's picture (her picks 2026-11-04; LIVE build 20261105-003400; BUILD-NOTES "Guide cards: the person, and the formula's story"):** `phFsHtml`, the `phFs*` functions.
 - **A herb family is a person** (`PH_FS_PEOPLE`: Ban Xia, Chai Hu, Da Huang, Fu Zi, Gui Zhi, Huang Bo, Huang Lian, Huang Qi, Ma Huang, Shi Gao), her words "animations for gui zhi should only focus on the person, only the formulas show pathology". The card plays only its Ren rows: the body on its own build (`phFsBuild`), no burners (`PH_FP.person`), no stops, no herbs, no conditions (a Diagnosis row never plays, its tile stays: integrate33 run 23), tiles for Ren rows only. Its rows of signs under the card stay as they are.
