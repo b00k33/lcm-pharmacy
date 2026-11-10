@@ -1454,6 +1454,8 @@ not repeated here.
   ink over them; a tap on a block sets that weight, a tap on the top shaded block again takes the sign off, Undo on the toast; the words
   keep a pen that renames the row (`phGdfMergeLabEdit`). The dot-row tables are gone. The Cases view keeps the other session's 14 rows with R / B lines and dots (her synth22
   list): shown three pictures (A those rows as picture tables, B as they are, C one full picture per case), she picked B, 2026-11-09.
+  Her 2026-11-10 "give personality its own row": Ren is two rows in Cases and in Tour Cases, "Ren · physical & visual" then
+  "Ren · personality & lifestyle" (`out.vis`, `out.per`, row class `ren` = no inner scroll); the Ren total stays on the first.
 - Tour Case formulas (her 2026-11-10 "if there are cases with new formulas, add it to fang bing ren using the case info to add that fang bing
   ren details", then her popup picks): a Day 1 case whose formula Fang Bing Ren lacked has a formula of its own, built from that case only:
   each observation its match list (`PH_TC_MATCH`) reads as a catalog sign, at 3 (the weight Accept gives), on the side it matched; `src: [n]`

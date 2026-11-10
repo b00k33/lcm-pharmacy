@@ -13845,3 +13845,8 @@ pushed.
 - **Tested** (sandbox): Days 8 to 11 carry the timetable's kind, teacher and place (Day 8 afternoon a Site visit with no teacher, Day 9 afternoon a Case review, Day 11 afternoon a Lecture); the .ics has 22 events including the site visit. Tap audit not re-run (no new control since the Week One run). NOT tested: her live data.
 - **Calls made:** Thursday's Dr Mei Lifang block is now a Lecture (her earlier "dr mei is clinic" fits Sunday's clinic; this one the timetable calls a Special Lecture): tap its kind chip if she wants it Clinic. Her Appointments-week days kept their teachers; only empty places and a Clinic kind were filled.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Cases: Personality gets its own row (2026-11-10)
+- **Her words:** on a picture of Compare › Cases, the Ren cell's two columns (Physical & visual | Personality & lifestyle): "give personality its own row".
+- **Code** (`index.html`): `phCmpCaseParts` makes `vis` (the Ren total, then the Physical & visual signs) and a new `per` (Work & hobbies, Age); `phCmpCaseRowsHtml` draws them as two rows, "Ren · physical & visual" and "Ren · personality & lifestyle", class `ren`, whose boxes do not scroll inside (`tr.ren .bx`), as the split cell did. Compare › Cases, the Tour Cases table and a case's over-time table all draw these rows, so all three change; the over-time table marks a changed `per` cell like any other.
+- **Tested** (sandbox): three formulas in Compare › Cases at 1220 and 360: the two rows in order after Bing · diagnosis, every sign shown (Xiao Chai Hu's physical cell in full, no inner scroll), tap audit 13 of 13 at both widths, no sideways page scroll at 360; Tour Cases shows the same two rows; console clean.
