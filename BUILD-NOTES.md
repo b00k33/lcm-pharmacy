@@ -13850,3 +13850,24 @@ pushed.
 - **Her words:** on a picture of Compare › Cases, the Ren cell's two columns (Physical & visual | Personality & lifestyle): "give personality its own row".
 - **Code** (`index.html`): `phCmpCaseParts` makes `vis` (the Ren total, then the Physical & visual signs) and a new `per` (Work & hobbies, Age); `phCmpCaseRowsHtml` draws them as two rows, "Ren · physical & visual" and "Ren · personality & lifestyle", class `ren`, whose boxes do not scroll inside (`tr.ren .bx`), as the split cell did. Compare › Cases, the Tour Cases table and a case's over-time table all draw these rows, so all three change; the over-time table marks a changed `per` cell like any other.
 - **Tested** (sandbox): three formulas in Compare › Cases at 1220 and 360: the two rows in order after Bing · diagnosis, every sign shown (Xiao Chai Hu's physical cell in full, no inner scroll), tap audit 13 of 13 at both widths, no sideways page scroll at 360; Tour Cases shows the same two rows; console clean.
+
+## Families: the body-area grid reads as the Cases table's own rows, 2026-11-10
+
+Her ask, several rounds of "mock this page like cases table display" then "yes build it":
+Study + Area group + Cover off (her own screenshot) now draws the same row shape as
+Compare's Cases tab and Tour Cases for this one formula -- Bing diagnosis, Ren split into
+physical & visual / personality & lifestyle, the named groups, Signs the rest -- built from
+`phCmpCol`/`phCmpCaseSrc`/`phCmpCaseBox`/`phCmpCaseSplit` (new: `phGdfCaseGroups`,
+`phGdfCaseHtml`), so a sign reads the same everywhere.
+
+Two things hers alone: the rows sort by their own highest score, highest first, Bing ·
+diagnosis last (it carries no score of its own); and a right-hand Animations column, a
+small thumb beside any sign that has one (`phKsHas`), empty beside any that doesn't, in the
+same subject/row shape as the body column so the two line up (`phGdfAniBox`/`phGdfAniSplit`).
+
+Edit mode and the Importance / Cover-signs / Cover-weights states are unchanged (still
+`phGdfMergedHtml`'s grid). Shared, additive only: `phCmpCaseSrc`'s signs now also carry each
+side's own key (`kr`/`kb`), used here for `phKsHas`; Compare and Tour Cases don't read the
+new fields, so they are unaffected.
+
+**SAVED, not live:** goes out with her next "push live".
