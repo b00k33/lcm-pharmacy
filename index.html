@@ -94677,7 +94677,13 @@ pale red tongue|Tongue: pale-red|r`;
     "faint": "Faint: the chart's nearest chip is Feeble-Absent.", "large, flooding": "Large and flooding: no chip. Hammer's Flooding Excess is the nearest.", "slippery, large": "Large: no chip. Drawn Slippery only.",
     "strong, excessive": "Excessive: no chip. Drawn Robust pounding; Hammer's Flooding Excess is the nearest.", "wiry, firm, large but empty": "Firm and large: no chip. Drawn Wiry and Empty only.", "weak": "Yielding: no chip. Drawn Weak." };
   // a pulse she has defined (Define on its card) draws from her own boxes; otherwise from my first drawing (skipDef: that drawing, for the editor to start from)
-  const phPulseDef = t => { const d = (PHARMACY.pulseDefs || {})[String(t).toLowerCase()]; return d && d.marks ? d : null; };
+  // a built-in definition (hers to change with Define; hers wins): Thin = the chart's Thin on Cun, Guan and Chi of both wrists, shown at Qi, ticking at any depth (her picks, 2026-11-10 "define thin pulse")
+  const phPulseSeedDef = t => {
+    if (String(t).toLowerCase() !== "thin") return null;
+    const marks = {}; ["R", "L"].forEach(side => PH_PULSE_CHART[side].forEach(c => { if (PH_PULSE_POS_COL[side][c.id]) marks[`${side}:${c.id}:qi`] = { quality: "Thin", shape: "thin" }; }));
+    return { title: "Thin", marks, anyDepth: true, seed: true };
+  };
+  const phPulseDef = t => { const d = (PHARMACY.pulseDefs || {})[String(t).toLowerCase()]; return d && d.marks ? d : phPulseSeedDef(t); };
   const phPulseMerge = (marks, src) => Object.keys(src || {}).forEach(k => { const cur = phPulseQuals(marks[k]); phPulseQuals(src[k]).forEach(q => { if (!cur.some(x => x.quality === q.quality)) cur.push({ quality: q.quality, shape: q.shape }); }); if (!cur.length) return; const one = x => ({ quality: x.quality, shape: x.shape }); marks[k] = Object.assign(one(cur[0]), cur.length > 1 ? { more: cur.slice(1).map(one) } : {}); });
   function phPulseRefOf(keys, skipDef) {
     const marks = {}, names = [], extra = [], gaps = [], defd = [], seen = new Set();
@@ -94695,8 +94701,8 @@ pale red tongue|Tongue: pale-red|r`;
     });
     return { marks, names, extra, gaps, defd, title: names.length > 2 ? names.length + " pulses" : names.join(" + "), any: Object.keys(marks).length > 0 };
   }
-  const phPulseMarksText = marks => { const qs = [], lv = []; Object.keys(marks).forEach(k => { phPulseQuals(marks[k]).forEach(q => { if (!qs.includes(q.quality)) qs.push(q.quality); }); const l = PH_PULSE_LEVELS.find(x => x.id === k.split(":")[2]); if (l && !lv.includes(l.label)) lv.push(l.label); }); return qs.length ? qs.join(" · ") + " · " + lv.join(", ") + " depth" : ""; };
-  const phPulseLine = key => { const d = phPulseDef(phPulseTitle(key)); if (d) return phPulseMarksText(d.marks); const i = phPulseRefInfo(key); return i.chips.length ? i.chips.map(id => phPulseQObj(id).quality).join(" · ") + " · " + PH_PULSE_LEVELS.find(l => l.id === i.level).label + " depth" : ""; };
+  const phPulseMarksText = (marks, any) => { const qs = [], lv = []; Object.keys(marks).forEach(k => { phPulseQuals(marks[k]).forEach(q => { if (!qs.includes(q.quality)) qs.push(q.quality); }); const l = PH_PULSE_LEVELS.find(x => x.id === k.split(":")[2]); if (l && !lv.includes(l.label)) lv.push(l.label); }); return qs.length ? qs.join(" · ") + " · " + (any ? "any depth" : lv.join(", ") + " depth") : ""; };
+  const phPulseLine = key => { const d = phPulseDef(phPulseTitle(key)); if (d) return phPulseMarksText(d.marks, d.anyDepth); const i = phPulseRefInfo(key); return i.chips.length ? i.chips.map(id => phPulseQObj(id).quality).join(" · ") + " · " + PH_PULSE_LEVELS.find(l => l.id === i.level).label + " depth" : ""; };
   const phPulseLines = keys => { const seen = new Set(), many = new Set(keys.map(phPulseTitle)).size > 1; return keys.map(k => { const t = phPulseTitle(k), l = phPulseLine(k); if (!l || seen.has(t)) return ""; seen.add(t); return many ? t + ": " + l : l; }).filter(Boolean); };
   // the little drawing: both wrists, Cun / Guan / Chi, four depths; a drawn box lights (big: with its own drawing in it)
   const phPulseMiniHtml = (marks, big) => `<span class="pr-mini${big ? " big" : ""}" aria-hidden="true">${["R", "L"].map(side => `<span class="h">${PH_PULSE_CHART[side].filter(c => PH_PULSE_POS_COL[side][c.id]).map(c => `<span class="col">${PH_PULSE_LEVELS.map(l => { const m = marks[`${side}:${c.id}:${l.id}`]; return `<i class="${m ? "on" : ""}">${m && big && phPulseQuals(m).some(q => q.shape) ? phPulseCellInnerHtml(m, true, 0) : ""}</i>`; }).join("")}</span>`).join("")}</span>`).join("")}</span>`;
@@ -94749,11 +94755,11 @@ pale red tongue|Tongue: pale-red|r`;
   // description AND a described pulse can be placed on the chart; the 19 Fang Bing Ren pulses; a drawn pulse that matches a definition ticks its sign). A pulse she has defined
   // (Define on its card) ticks when every quality of her drawing is on the chart at the depth she drew it (any box, either wrist: Fang Bing Ren pulses carry no side or position;
   // Floating also counts from any box drawn at Skin, Deep from the depth rule, as the chips do); a pulse she has not defined keeps the word match it always had ----
-  function phPulseDefHit(def, list) {
+  function phPulseDefHit(def, list, any) {
     const need = new Set(), have = new Set(); let skin = false, deep = false;
-    Object.keys(def || {}).forEach(k => { const lv = k.split(":")[2]; phPulseQuals(def[k]).forEach(q => need.add(String(q.quality).toLowerCase() + "|" + lv)); });
+    Object.keys(def || {}).forEach(k => { const lv = k.split(":")[2]; phPulseQuals(def[k]).forEach(q => need.add(String(q.quality).toLowerCase() + "|" + (any ? "*" : lv))); });
     (list || []).forEach(ms => {
-      Object.keys(ms || {}).forEach(k => { const qs = phPulseQuals(ms[k]), lv = k.split(":")[2]; qs.forEach(q => have.add(String(q.quality).toLowerCase() + "|" + lv)); if (qs.length && lv === "skin") skin = true; });
+      Object.keys(ms || {}).forEach(k => { const qs = phPulseQuals(ms[k]), lv = k.split(":")[2]; qs.forEach(q => { have.add(String(q.quality).toLowerCase() + "|" + lv); have.add(String(q.quality).toLowerCase() + "|*"); }); if (qs.length && lv === "skin") skin = true; });
       if (phPulseAutoDepth(ms).deep.length) deep = true;
     });
     if (!need.size) return false;
@@ -94762,7 +94768,7 @@ pale red tongue|Tongue: pale-red|r`;
   }
   // one pulse sign against one drawn chart (p = { pulse: marks, hammer })
   function phPulseSignHit(key, p) {
-    const d = phPulseDef(phPulseTitle(key)); if (d && Object.keys(d.marks).length) return phPulseDefHit(d.marks, [p.pulse || {}]);
+    const d = phPulseDef(phPulseTitle(key)); if (d && Object.keys(d.marks).length) return phPulseDefHit(d.marks, [p.pulse || {}], d.anyDepth);
     const spec = phPulseSpec(key); if (!spec) return false;
     const words = phFbrPulseWords(p), has = list => (list || []).some(w => words.some(cw => cw.includes(w)));
     return has(spec.words) && (!spec.also || has(spec.also));
@@ -94796,7 +94802,7 @@ pale red tongue|Tongue: pale-red|r`;
     const num = (sd, w) => w ? `${sd} ${w < 0 ? "−" : ""}${Math.abs(w)}` : "";
     return `<div class="pr-ref"><h3 class="pr-h">Pulses in Fang Bing Ren</h3><p class="pr-p">Each pulse drawn the way the Pulse chart draws it. Tap a chart to see it large and step through the others.</p><div class="pr-grid">${L.map(p => {
       const e = phPulseRefOf(p.keys), line = p.keys.map(phPulseLine).find(Boolean) || "";
-      return `<div class="gf-card pr-c"><div class="pr-ch"><b>${esc(p.title)}</b>${phKsSdHtml({ sd: p.sd })}<button type="button" class="pr-chip pr-defb${e.defd.length ? " on" : ""}" data-pr-def="${esc(p.title)}" data-keys="${esc(p.keys.join(","))}" title="${e.defd.length ? "Defined by you. Tap to change it" : "Draw this pulse on your chart"}">${e.defd.length ? "Yours" : "Define"}</button></div>
+      return `<div class="gf-card pr-c"><div class="pr-ch"><b>${esc(p.title)}</b>${phKsSdHtml({ sd: p.sd })}<button type="button" class="pr-chip pr-defb${e.defd.length ? " on" : ""}" data-pr-def="${esc(p.title)}" data-keys="${esc(p.keys.join(","))}" title="${e.defd.length ? "Defined by you. Tap to change it" : "Draw this pulse on your chart"}">${e.defd.length ? (phPulseDef(p.title) && phPulseDef(p.title).seed ? "Defined" : "Yours") : "Define"}</button></div>
         <button type="button" class="pr-thumb" data-gdf-ani="pc" data-keys="${esc(p.keys.join(","))}" title="${esc(p.title)}" aria-label="Pulse chart: ${esc(p.title)}">${e.any ? phPulseMiniHtml(e.marks, true) : `<span class="pr-none">Not a box on the chart</span>`}</button>
         ${line ? `<div class="pr-t">${esc(line)}</div>` : ""}${e.extra.map(x => `<div class="pr-t">${esc(x)}</div>`).join("")}${e.gaps.map(x => `<div class="pr-gap"><b>Your call</b> ${esc(x)}</div>`).join("")}
         <div class="pr-f">${p.fms.map(f => `<span>${esc(f.name)} <em>${[num("Ren", f.r), num("Bing", f.b)].filter(Boolean).join(" · ")}</em></span>`).join("")}</div></div>`;
@@ -94805,7 +94811,7 @@ pale red tongue|Tongue: pale-red|r`;
   // ---- defining a pulse on her own chart (her 2026-11-10 "help me define the pulses using my pulse chart"; her picks: draw it on the real chart, start from my drawing,
   // the patient ticking stays as it is). Define opens the Pulse page's own two wrists: pick a quality, tap the boxes (the chart's own rules: one strength a box,
   // Small compressed up to three), Save keeps it as that pulse's definition (PHARMACY.pulseDefs, by the pulse's name) and the card, the pane and the sheet redraw from it ----
-  let phPrEd = null;   // { title, keys, marks, brush, grp } the open editor (view state; nothing is saved until Save)
+  let phPrEd = null;   // { title, keys, marks, any, brush, grp } the open editor (view state; nothing is saved until Save)
   const phPrCopy = m => JSON.parse(JSON.stringify(m || {}));
   function phPrEdPaint() {
     let host = document.getElementById("phPrDef");
@@ -94817,7 +94823,7 @@ pale red tongue|Tongue: pale-red|r`;
     host.innerHTML = `<div class="ph-lk-backdrop" data-pr-cancel="1"></div><div class="ph-lk-card ph-pp-card pr-ed" role="dialog" aria-label="Define ${esc(E.title)}"><div class="ph-lk-card-hd"><h3>Define · ${esc(E.title)}</h3><button type="button" data-pr-cancel="1" aria-label="Close">✕</button></div>
       <div class="pr-edtool"><div class="pr-edrow">${tabs}</div><div class="pr-edrow">${chips}</div><p class="pr-p">${E.brush ? "Tap a box to draw it there; tap it again to take it off." : "Pick a quality, then tap the boxes it sits in."}</p></div>
       <div class="pr-edchart">${phPulseBigHtml(E.marks)}</div>
-      <div class="pr-edrow pr-edacts"><button type="button" class="pr-chip on" data-pr-save="1">Save</button><button type="button" class="pr-chip" data-pr-cancel="1">Cancel</button>${phPulseDef(E.title) ? `<button type="button" class="pr-chip" data-pr-revert="1">Back to the first drawing</button>` : ""}</div></div>`;
+      <div class="pr-edrow pr-edacts"><button type="button" class="pr-chip${E.any ? " on" : ""}" data-pr-any="1" aria-pressed="${!!E.any}" title="Ticks wherever its qualities are drawn, whatever the depth">Any depth</button><button type="button" class="pr-chip on" data-pr-save="1">Save</button><button type="button" class="pr-chip" data-pr-cancel="1">Cancel</button>${(PHARMACY.pulseDefs || {})[E.title.toLowerCase()] ? `<button type="button" class="pr-chip" data-pr-revert="1">Back to the first drawing</button>` : ""}</div></div>`;
     host.hidden = false;
   }
   function phPrRepaintCards() {
@@ -94828,7 +94834,7 @@ pale red tongue|Tongue: pale-red|r`;
     const T = e.target; let el; if (!T || !T.closest) return false;
     if ((el = T.closest("[data-pr-def]"))) {
       const keys = (el.dataset.keys || "").split(",").filter(Boolean), title = el.dataset.prDef, d = phPulseDef(title);
-      phPrEd = { title, keys, marks: phPrCopy(d ? d.marks : phPulseRefOf(keys, true).marks), brush: "", grp: PH_PULSE_GROUPS[0].label };
+      phPrEd = { title, keys, marks: phPrCopy(d ? d.marks : phPulseRefOf(keys, true).marks), any: !!(d && d.anyDepth), brush: "", grp: PH_PULSE_GROUPS[0].label };
       phPrEdPaint(); return true;
     }
     if (!phPrEd) return false;
@@ -94839,8 +94845,9 @@ pale red tongue|Tongue: pale-red|r`;
       if (!phPrEd.brush) { presSavedToast("Pick a quality first"); return true; }
       phPulseCellToggle(phPrEd.marks, el.dataset.prCell, phPrEd.brush); phPrEdPaint(); return true;
     }
+    if (T.closest("[data-pr-any]")) { phPrEd.any = !phPrEd.any; phPrEdPaint(); return true; }
     if (T.closest("[data-pr-save]")) {
-      (PHARMACY.pulseDefs || (PHARMACY.pulseDefs = {}))[phPrEd.title.toLowerCase()] = { title: phPrEd.title, marks: phPrCopy(phPrEd.marks), at: Date.now() };
+      (PHARMACY.pulseDefs || (PHARMACY.pulseDefs = {}))[phPrEd.title.toLowerCase()] = { title: phPrEd.title, marks: phPrCopy(phPrEd.marks), anyDepth: !!phPrEd.any, at: Date.now() };
       if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); else presSavedToast("Saved " + phPrEd.title);
       phPrEd = null; phPrEdPaint(); phPrRepaintCards(); return true;
     }
@@ -121746,7 +121753,7 @@ pale red tongue|Tongue: pale-red|r`;
       return hasOld(sp.words) && (!sp.also || hasOld(sp.also));
     }
     // a pulse she defined on her chart (Define on its card in the Guide) ticks on her drawing: every quality at the depth she drew it
-    if (/^(pulse_|p_)/.test(key) && chartWords.pulseMarks) { const d = phPulseDef(phPulseTitle(key)); if (d && Object.keys(d.marks).length) return phPulseDefHit(d.marks, chartWords.pulseMarks); }
+    if (/^(pulse_|p_)/.test(key) && chartWords.pulseMarks) { const d = phPulseDef(phPulseTitle(key)); if (d && Object.keys(d.marks).length) return phPulseDefHit(d.marks, chartWords.pulseMarks, d.anyDepth); }
     const spec = PH_FBR_CHART_PREFILL.find(x => x.key === key && x.kind === kind);
     if (!spec || !chartWords.length) return false;
     // a sign reads ONE chart: belly signs the abdomen words, p_ / pulse_ signs the pulse words, everything else the tongue words
