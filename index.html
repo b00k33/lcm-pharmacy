@@ -92216,7 +92216,7 @@ or changing anything in Cliniko.
   // ---- the left list ----
   function phGdfHits(q) {
     const toks = q.toLowerCase().split(/\s+/).filter(Boolean), m = {};
-    const has = txt => toks.every(t => txt.indexOf(t) >= 0);
+    const has = txt => toks.every(t => txt.indexOf(t) >= 0) || phSynHas(txt, q);   // similar wording too
     phGdfAllIds().forEach(id => {
       let n = 0;
       ["r", "b"].forEach(s => phGdfRows(id, s).forEach(r => { if (has(r.lab.toLowerCase())) n++; }));
@@ -93252,20 +93252,10 @@ pale red tongue|Tongue: pale-red|r`;
     return labs.size === 1 ? [a.find(x => x.side === "b") || a[0]] : [];
   }
   // her synth22 2026-11-10 "symptoms need to have some similar phrasing grouped so they are synonymous e.g. bad appetite = poor/low/weak appetite": when no exact wording matches, a note and each
-  // catalog sign are read as words with the same-meaning words made one (PH_TC_SYN); a sign matches when all its words are in the note and the note names its subject (or its words are
-  // specific enough alone). Only the most specific matches, one per wording; still only pre-filled, nothing scores until she accepts.
-  const PH_TC_SYN = [["poor", "poor low reduced decreased diminished bad little lack lacking loss lost weak weakness lessened"], ["high", "high excessive excess profuse increased heavy lots much"],
-    ["frequent", "frequent frequently often"], ["tired", "tired tiredness fatigue fatigued lethargy lethargic exhausted exhaustion weary"], ["sleep", "sleep asleep sleeping slept"],
-    ["urine", "urine urination urinate urinating urinary pee"], ["bowel", "bowel bowels stool stools motion motions"], ["dream", "dream dreams dreaming"],
-    ["pain", "pain pains painful ache aches aching sore soreness discomfort hurt hurts"], ["sweat", "sweat sweats sweating sweaty perspiration"], ["dizzy", "dizzy dizziness vertigo lightheaded"],
-    ["thirst", "thirst thirsty"], ["cold", "cold coldness chilly"], ["night", "night nightly nocturnal"], ["breath", "breath breathless breathing"], ["palpitation", "palpitation palpitations"],
-    ["knee", "knee knees"], ["leg", "leg legs"], ["hand", "hand hands"], ["foot", "foot feet"], ["dry", "dry dryness"], ["loose", "loose runny watery"], ["hard", "hard difficult difficulty trouble"],
-    ["anxious", "anxious anxiety worry worried nervous"], ["irritable", "irritable irritability angry anger"], ["bloat", "bloat bloated bloating distension distention"]];
-  const PH_TC_SYN_MAP = new Map(); PH_TC_SYN.forEach(([k, ws]) => ws.split(" ").forEach(w => PH_TC_SYN_MAP.set(w, k)));
-  const PH_TC_STOP = new Set("a an the and or of to in on at with then that does do not is are be it its after before very some more less times time day days per x her his she he".split(" "));
-  // a few phrases read as the catalog's wording first: many dreams = vivid dreams; tiredness also says low energy; insomnia = poor sleep
-  const PH_TC_PHRASE = [[/\b(frequent|many|lots of|a lot of|excessive|much) dreams?\b|\bdreams? (a lot|often)\b|dream-disturbed/gi, "vivid dreams"], [/\b(fatigue\w*|tired\w*|letharg\w*|exhaust\w*)\b/gi, "$1 low energy"], [/\binsomnia\b/gi, "poor sleep"], [/\bsob\b/gi, "shortness of breath"]];
-  const phTcToks = t => String(t || "").toLowerCase().replace(/\([^)]*\)/g, " ").split(/[^a-z]+/).filter(w => w && !PH_TC_STOP.has(w)).map(w => PH_TC_SYN_MAP.get(w) || (w.length > 4 && /s$/.test(w) && !/ss$/.test(w) ? (PH_TC_SYN_MAP.get(w.slice(0, -1)) || w.slice(0, -1)) : w));
+  // catalog sign are read through the app's one similar-wording system (phSynToks, by phCsToks; words in brackets left out, a tiredness word also says low energy); a sign matches when all
+  // its words are in the note and the note names its subject (or its words are specific enough alone). Only the most specific matches, one per wording; still only pre-filled, nothing
+  // scores until she accepts.
+  const phTcToks = t => phSynToks(String(t || "").replace(/\([^)]*\)/g, " "), 1);
   let PH_TC_SYN_IDX = null; const PH_TC_SYN_MEMO = new Map();
   function phTcSynMatch(t) {
     if (!t) return [];
@@ -93277,7 +93267,7 @@ pale red tongue|Tongue: pale-red|r`;
         if (d.length) PH_TC_SYN_IDX.push({ key: r[0], side, label: phSignLabel(r[0]), d: new Set(d), sj, parts: ds.split(/,|\bor\b/).map(phTcToks).filter(p => p.length) });
       }));
     }
-    const note = PH_TC_PHRASE.reduce((x, [re, to]) => x.replace(re, to), t), have = new Set(phTcToks(note)), all = ws => [...ws].every(w => have.has(w));
+    const have = new Set(phTcToks(t)), all = ws => [...ws].every(w => have.has(w));
     const hits = [];
     PH_TC_SYN_IDX.forEach(x => {
       const named = x.sj.some(w => have.has(w));
@@ -94576,7 +94566,7 @@ pale red tongue|Tongue: pale-red|r`;
     const q = phGdSearch.trim().toLowerCase(), f = phCmp.filter, sds = side === "rb" ? ["r", "b"] : [side], m = cols.length * sds.length;
     let rows = phCmpSignFilter(all, f);
     if (phCmp.edit && phCmp.keep) { const kp = phCmp.keep, held = r => r.kr.some(k => k && kp.has("r:" + k)) || r.kb.some(k => k && kp.has("b:" + k)); rows = all.filter(r => rows.indexOf(r) >= 0 || held(r)); }   // a row she just edited stays, even when its new weight takes it out of this filter
-    if (q) rows = rows.filter(r => (r.subj + ": " + r.descr).toLowerCase().indexOf(q) >= 0);
+    if (q) rows = rows.filter(r => phSynHas(r.subj + ": " + r.descr, q));
     const ovl = phCmpOvlHtml(all, cols, f);
     if (!rows.length) return ovl + `<p class="ph-cmp-none">No ${side === "rb" ? "" : (side === "r" ? "Ren" : "Bing") + " "}${phCmpWhat(f, cols)}${q ? ` for “${esc(phGdSearch.trim())}”` : ""}</p>`;
     const sdLab = sd => sd === "r" ? "Ren" : "Bing";
@@ -94803,7 +94793,7 @@ pale red tongue|Tongue: pale-red|r`;
   // a source's cells, one per row key
   function phCmpCaseParts(src, q, anim) {
     const used = new Set(["Diagnosis"].concat(PH_CMP_CASE_GRP.flatMap(g => g[1]))), usedR = new Set([...used, ...PH_CMP_REN_VIS, ...PH_CMP_REN_PER]), out = {};
-    let all = src.signs.map(phCmpFixSubj); if (q) all = all.filter(r => (r.subj + ": " + r.descr).toLowerCase().indexOf(q) >= 0);
+    let all = src.signs.map(phCmpFixSubj); if (q) all = all.filter(r => phSynHas(r.subj + ": " + r.descr, q));
     out.an = anim ? (src.fid ? phFpThumbHtml(src.fid, "cmp:" + src.id) : phCmpCaseDash) : "";
     // her synth22 2026-11-10: a case note not tagged to a sign yet (`un`) sits in its row by its words, plain, no score; a row with nothing in it is left out (`_e`)
     const unVis = r => r.un && PH_CMP_REN_VIS.indexOf(r.subj) >= 0 && r.subj !== "Skin" && r.subj !== "Hair", ren = all.filter(r => r.r || unVis(r)), box = (rs, sds) => phCmpCaseBox(rs, sds, false); out._e = {};
@@ -115411,7 +115401,7 @@ pale red tongue|Tongue: pale-red|r`;
     const pk = phPatientKey(name), opts = phCxsOptions(name, q), all = phCxSqAll === pk + "|" + q, shown = all ? opts : opts.slice(0, 8);
     const rec = phPatientPeek(name) || {}, tp = phTriToday(rec), inCx = new Set();
     try { phCxSignList(name, rec).forEach(r => r.keys.forEach(x => inCx.add(x))); } catch (e) { /* no rows yet */ }
-    const toks = phCsToks(q), re = toks.length ? new RegExp(`(${toks.join("|")})`, "gi") : null;
+    const toks = phCsToks(q), hw = toks.length ? phSynAlts(toks.concat(String(q).toLowerCase().split(/[^a-z]+/).filter(w => w.length > 2))) : [], re = hw.length ? new RegExp(`(${hw.join("|")})`, "gi") : null;
     const hi = s => re ? String(s).split(re).map((x, i) => i % 2 ? `<b>${esc(x)}</b>` : esc(x)).join("") : esc(s);
     const seg = (kind, key) => {
       const v = (kind === "d" ? tp.d : tp.p)[key];
@@ -122534,10 +122524,10 @@ pale red tongue|Tongue: pale-red|r`;
     if (fk) { add(fk, fbrKey); return out; }
     const toks = phCsToks(text); if (!toks.length) return out;
     const pool = PH_BING_SIGNS.map(r => ["d", r]).concat(PH_REN_SIGNS.map(r => ["p", r]));
-    const txt = r => (r[1] + " " + (PH_BING_ALIAS[r[0]] || "") + " " + (PH_BING_ALIAS[String(r[0]).replace(/_(tend|now)$/, "")] || "")).toLowerCase();
+    const txt = r => phSynCanonStr(r[1] + " " + (PH_BING_ALIAS[r[0]] || "") + " " + (PH_BING_ALIAS[String(r[0]).replace(/_(tend|now)$/, "")] || ""));   // similar wording (phSynToks)
     if (!phFbrCcDf) phFbrCcDf = new Map();
-    const idf = t => { if (!phFbrCcDf.has(t)) phFbrCcDf.set(t, pool.filter(x => txt(x[1]).includes(t)).length); return Math.log((pool.length + 1) / (phFbrCcDf.get(t) + 1)); };
-    const sc = pool.map(([k, r]) => { const L = txt(r), lab = r[1].toLowerCase(); let s = 0, inLab = 0; toks.forEach(t => { if (L.includes(t)) { s += idf(t); if (lab.includes(t)) inLab++; } }); return { k, r, s, inLab }; })
+    const idf = t => { if (!phFbrCcDf.has(t)) phFbrCcDf.set(t, pool.filter(x => txt(x[1]).includes(" " + t)).length); return Math.log((pool.length + 1) / (phFbrCcDf.get(t) + 1)); };
+    const sc = pool.map(([k, r]) => { const L = txt(r), lab = phSynCanonStr(r[1]); let s = 0, inLab = 0; toks.forEach(t => { if (L.includes(" " + t)) { s += idf(t); if (lab.includes(" " + t)) inLab++; } }); return { k, r, s, inLab }; })
       .filter(x => x.s > 0).sort((a, b) => b.s - a.s || b.inLab - a.inLab || a.r[1].length - b.r[1].length || (a.k === "d" ? -1 : 1));
     if (!sc.length) return out;
     const top = sc[0], subj = phSignSubj(top.r[1]);
@@ -126212,14 +126202,159 @@ pale red tongue|Tongue: pale-red|r`;
     ldh_high: "ldh high ldh raised ldh elevated ldh lactate dehydrogenase"
   };
   // her 2026-10-12 ask ("list symptoms based on search bar"): the complaint box now filters the Bing AND Ren
+  // ==== Similar wording, one system for the whole app (her 2026-11-10 "do an audit of the whole app for all cases all symptoms in fang bing ren and create a large similar wording
+  // system to connect the synonymous phrases together"). Every place that matches written or typed words to the Fang Bing Ren signs reads BOTH sides (her words and the sign's
+  // label + everyday words) through phSynToks, so words with the same meaning count as one: a phrase first (phSynPhrases: "short of breath" = shortness of breath, "scared of
+  // cold" = sensitive to cold, "farts" = abdominal gas), then each word becomes its group's first word (phSynGroups: the catalog's own word; "bad / low / reduced / weak" =
+  // poor, "fatigue / tired / lethargy" = exhausted, "diarrhea" = diarrhoea). Read by: the Tour Cases note matcher (phTcSynMatch), the sign search boxes (phCsToks /
+  // phCsScore, the complaint box, phCxsOptions), the chief-complaint reader (phFbrCcSigns), the Guide Families search (phGdfHits) and the Compare / case-table filters
+  // (phSynHas). Nothing saved changes, only how words are read; a sign is never merged with another. Function declarations + `var` caches, so any caller may run first.
+  function phSynGroups() {
+    return [
+      // amounts and how often
+      "poor low reduced decreased diminished lessened bad little lack lacking lacks loss lost losing weak weakness weakened weaker",
+      "high elevated increased", "profuse copious excessive abundant plentiful heaps", "frequent frequently often frequency",
+      "episodic intermittent occasional occasionally sometimes periodic periodically", "recurrent recurring repeated", "scanty scant sparse",
+      "worse worsens worsening aggravated", "cannot unable inability",
+      // energy, sleep, mind
+      "tired tiredness fatigue fatigued lethargy lethargic weary weariness drained", "exhausted exhaustion", "energy vitality stamina",
+      "sleep asleep sleeping slept sleeps", "dream dreams dreaming dreamt",
+      "anxiety anxious worry worries worried worrying apprehensive", "irritable irritability angry anger cranky grumpy snappy temper",
+      "restless restlessness fidgety", "forgetful forgetfulness forgets forgetting", "concentrate concentration concentrating focus",
+      "tearful teary crying cries", "stress stressed stressful", "startles startle startled jumpy",
+      // body words, the plurals a lone -s does not catch
+      "knee knees", "leg legs", "hand hands", "foot feet", "joint joints", "eye eyes", "ear ears", "lip lips", "gum gums", "breast breasts", "rib ribs", "hip hips",
+      "limb limbs", "muscle muscles", "finger fingers", "teeth tooth", "shoulder shoulders", "abdominal abdomen belly tummy", "lie lying",
+      // pain and feelings
+      "pain pains painful ache aches aching achy sore soreness discomfort hurt hurts hurting", "tender tenderness", "headache headaches",
+      "dizziness dizzy vertigo lightheaded lightheadedness giddy giddiness woozy", "numb numbness", "heavy heaviness", "stiff stiffness", "tight tightness",
+      "spasm spasms spasming cramp cramps cramping crampy", "swollen swelling swellings oedema edema", "dry dryness dried chapped",
+      "itchy itch itches itching itchiness pruritus", "averse aversion dislike dislikes hate hates dread dreads intolerant intolerance",
+      // cold, heat, sweat, thirst
+      "cold coldness chilly", "chills chill chilled shivering shivers rigors", "fever fevers febrile", "sweat sweats sweating sweaty perspiration perspire perspiring perspires",
+      "thirst thirsty", "night nights nightly nocturnal nighttime overnight", "flushed flushing flushes",
+      // breathing, chest
+      "breath breathless breathlessness breathing breathe breathes", "palpitations palpitation", "wheezing wheeze wheezes wheezy", "cough coughs coughing",
+      "phlegm sputum mucus mucous catarrh", "sneezing sneeze sneezes", "congested congestion", "oppression oppressive",
+      // digestion, bowels, urine
+      "urine urination urinate urinating urinates urinary pee pees peed peeing wee wees weeing micturition", "incontinence incontinent leaking leakage",
+      "bowel bowels stool stools faeces feces faecal fecal poo poos defecation defecate", "loose runny watery", "hard difficult difficulty trouble troubles struggle struggles struggling",
+      "constipation constipated", "diarrhoea diarrhea", "distention distension distended distending bloat bloats bloated bloating",
+      "vomiting vomit vomits vomited emesis", "nausea nauseous nauseated queasy queasiness", "belching belch belches burp burps burping eructation",
+      "hiccups hiccup hiccough hiccoughs", "flatulence gas fart farts farting farted flatus flatulent", "smelly smell smelling foul stinky offensive malodorous odorous", "haemorrhoids hemorrhoids haemorrhoid hemorrhoid piles",
+      // skin, colour
+      "hives urticaria wheals welts", "eczema dermatitis", "acne pimples pimple zits breakouts", "red redness reddish ruddy", "purple purplish violet", "pale pallor",
+      "yellow yellowish", "blurred blurry blurriness", "bleeding bleed bleeds bled",
+      // periods, fertility
+      "periods period menses menstruation menstrual menstruating", "clots clot clotting clotty", "infertility infertile subfertility",
+      "miscarry miscarriage miscarriages miscarried",
+      // build, pulse
+      "obesity obese overweight", "emaciated emaciation wasting skinny underweight cachexia", "rapid fast quick", "slippery rolling", "floating superficial", "thin thready",
+      "wiry taut",
+      // UK and US spellings (the catalog's own first)
+      "haemorrhage hemorrhage haemorrhagic hemorrhagic", "anaemia anemia anaemic anemic", "hyperlipidemia hyperlipidaemia dyslipidemia dyslipidaemia",
+      "amenorrhoea amenorrhea", "discolouration discoloration", "lustre luster", "tumour tumor tumours tumors", "colour color", "grey gray greying graying",
+      "diabetes diabetic"];
+  }
+  // phrases read before single words (the most specific first), each written as the catalog says it
+  function phSynPhrases() {
+    if (PH_SYN_PH) return PH_SYN_PH;
+    return PH_SYN_PH = [
+      [/\b(sweat\w*|perspir\w*) (that )?(does not|doesn't|won't|will not|never) stop\b|\bnon ?stop sweat\w*|\bconstant(ly)? sweat\w*|\bsweat\w* (all the time|constantly|a lot|heavily|profusely)\b|\b(heavy|excessive|profuse) sweat\w*/g, " sweat profuse "],
+      [/\bsob\b|\bshort(ness)? of breath\b|\bbreathless(ness)?\b|\bout of breath\b|\bdyspn\w*|\bwinded\b/g, " shortness of breath "],
+      [/\bringing (in )?(the |both |her |his |my )?ears?\b|\bears? ringing\b|\bbuzzing in (the |both )?ears?\b/g, " tinnitus "],
+      [/\blight ?headed(ness)?\b/g, " dizziness "],
+      [/\bhead ?aches?\b|\bhead pain\b|\bpain in the head\b|\bheads? hurts?\b/g, " headache "],
+      [/\bheart (racing|pounding|fluttering|flutters?|skipping)\b|\b(racing|pounding|fluttering) heart\b|\b(skipped|missed) (heart ?)?beats?\b/g, " palpitations "],
+      [/\bchest (tightness|tight|heaviness|pressure)\b|\btight chest\b|\btightness in (the )?chest\b/g, " chest oppression "],
+      [/\b(stuffy|blocked|stuffed up|stuffed) nose\b|\bnose blocked\b|\bnasal congestion\b/g, " nose congested "],
+      [/\bnose ?bleeds?\b|\bbleeding nose\b|\bepistaxis\b/g, " nose bleeds "],
+      [/\bbad breath\b|\bhalitosis\b/g, " halitosis "],
+      [/\bcanker sores?\b|\baphthous ulcers?\b|\bulcers? in the mouth\b/g, " mouth ulcers "],
+      [/\b(scared|afraid|fearful|frightened|fears?|hates?|dislikes?|dreads?|intolerant|intolerance|averse|aversion|sensitivity|sensitive) (of |to )?(the )?cold\b|\bcold (intolerance|intolerant|sensitive|sensitivity|aversion)\b|\bfeels? the cold\b|\balways (feels? )?cold\b|\b(feels?|gets?) cold easily\b/g, " sensitive to cold "],
+      [/\bheat (intolerance|intolerant|sensitive)\b|\bintolerant (of|to) heat\b|\b(hates?|dislikes?|can't stand|cannot stand) (the )?heat\b|\bsensitive to heat\b/g, " averse to heat "],
+      [/\b(trouble|difficulty|difficult|hard|struggles?|struggling|problems?) (with )?(falling|getting|to fall|to get) (asleep|to sleep)\b|\btakes? (a )?long (time )?to (fall asleep|get to sleep)\b|\bsleep onset( insomnia)?\b/g, " hard to fall asleep "],
+      [/\b(wakes?|waking|woken|wake) (up )?(often|frequently|easily|during the night|in the night|at night|through the night|early|in the early morning)\b|\bearly (morning )?waking\b|\bnight waking\b|\bbroken sleep\b/g, " wakes in the night "],
+      [/\binsomnia\b|\bcan't sleep\b|\bcannot sleep\b|\bunable to sleep\b|\b(trouble|difficulty|problems?) sleeping\b|\bsleep(s|ing)? (badly|poorly)\b|\bdisturbed sleep\b|\blight sleep(er)?\b|\bunrefreshing sleep\b|\brestless sleep\b/g, " poor sleep "],
+      [/\bnightmares?\b|\b(frequent|many|lots of|a lot of|excessive|much|vivid|bad|disturbing|intense) dreams?\b|\bdreams? (a lot|often|frequently)\b|\bdream ?disturbed( sleep)?\b|\bdreaming a lot\b/g, " vivid dreams "],
+      [/(low|flat|down|depressed|sad) mood|mood (is )?(low|flat|down)|feeling (down|low|flat|blue)/g, " low mood "],
+      [/\bpoor memory\b|\bmemory (loss|poor|bad|problems?|issues?)\b|\bforgets (things|a lot)\b/g, " forgetful "],
+      [/\bbrain fog\w*|\bfoggy (head|brain|mind)\b|\bmental fog\b|\b(poor|lack of|trouble|difficulty) (focus\w*|concentrat\w*)|\b(can't|cannot|unable to) (focus|concentrate)\b/g, " hard to concentrate "],
+      [/\bracing (mind|thoughts)\b|\bmind (racing|races)\b|\boverthink\w*|\bover thinking\b/g, " racing thoughts "],
+      [/\bhairs? (falling out|thinning|loss)\b|\b(losing|thinning) hair\b|\balopecia\b|\bhair ?fall\b/g, " hair loss "],
+      [/\bpins and needles\b|\btingl\w*/g, " tingling numb "],
+      [/\bhypertension\b|\bhtn\b|\bhigh (bp|blood pressure)\b|\b(bp|blood pressure) (high|elevated|raised)\b|\belevated (bp|blood pressure)\b/g, " high blood pressure "],
+      [/\bhypotension\b|\blow (bp|blood pressure)\b|\b(bp|blood pressure) low\b/g, " low blood pressure "],
+      [/\b(high|raised|elevated) (cholesterol|lipids?|triglycerides|ldl)\b|\b(cholesterol|lipids?|ldl) (high|raised|elevated)\b|\bhypercholesterol\w*/g, " hyperlipidemia "],
+      [/\bhigh (blood )?sugars?\b|\b(blood )?sugars? (high|raised|elevated)\b|\bt2dm\b|\bt1dm\b/g, " diabetes "],
+      [/\butis?\b|\burinary tract infections?\b|\bbladder infections?\b|\bcystitis\b/g, " urinary tract infection "],
+      [/\bnocturia\b|\b(gets? up|getting up|wakes? up|waking up|up) (at night )?(\d+ ?(x|times) )?(to|for the) (pee|urinate|wee|toilet)\b|\bnight ?time urination\b|\burinat\w* at night\b|\b(pees?|wees?) at night\b/g, " urine at night nocturia "],
+      [/\bweak (urine |urinary )?stream\b|\b(urinary )?hesitancy\b|\bdribbl\w*|\b(trouble|difficulty|hard|struggles?) (passing urine|urinating|to urinate|peeing|to pee)\b/g, " urine difficult to pass "],
+      [/\bleak\w* (urine|when (coughing|sneezing|laughing))\b|\b(urinary|urine) (leak\w*|incontinen\w*)|\bincontinen\w* of urine\b|\bstress incontinence\b/g, " urine incontinence "],
+      [/\b(soft|runny|watery|mushy|unformed|sloppy) (stools?|bowels?|motions?|poo)\b|\bloose (bowels?|motions?|poo)\b/g, " loose stools "],
+      [/\b(farts?|farting|farted|flatulen\w*|flatus|passing wind|breaking wind|windy|trapped wind)\b/g, " abdominal gas "],
+      [/\b(acid reflux|reflux|gerd|gord|regurgitat\w*)\b/g, " acid reflux "],
+      [/\bthrow(s|ing|n)? up\b|\bthrew up\b/g, " vomiting "],
+      [/\b(period|menstrual|menses) (pain|cramps?|cramping)\b|\bpainful (periods?|menses|menstruation)\b|\bdysmenorrh\w*|\bcramps? (with|during|before) (the |her )?periods?\b/g, " periods painful "],
+      [/\bmenorrhagia\b|\bheavy (periods?|flow|menses|menstrual bleeding)\b/g, " periods heavy bleeding "],
+      [/\bamenorrh\w*|\bno periods?\b|\bmissed periods?\b|\bperiods? (stopped|absent|missing|have stopped)\b|\black of periods?\b/g, " periods absent amenorrhoea "],
+      [/\b(pms|pmt|premenstrual( syndrome| tension)?)\b|\bbefore (the |her |a |each )?periods?\b/g, " premenstrual periods "],
+      [/\bleucorrh\w*|\bleukorrh\w*/g, " vaginal discharge "],
+      [/\berectile dysfunction\b|\bed\b|\berection problems?\b/g, " impotence "],
+      [/\bsex drive\b|\bdesire for sex\b|\bsexual desire\b/g, " libido "],
+      [/\btrouble (conceiving|getting pregnant)\b|\b(can't|cannot|unable to) (conceive|get pregnant)\b/g, " infertility "],
+      [/\bpregnancy loss\b|\blost (a |the )?(baby|pregnancy)\b/g, " miscarriage "],
+      [/\blower ?back\b|\blow back\b|\blumbago\b|\blumbar\b/g, " lower back "],
+      [/\bupper (abdomen|belly|tummy)\b|\bpit of the stomach\b/g, " epigastric "],
+      [/\blower (abdomen|tummy)\b|\bbelow the navel\b|\bpelvic area\b/g, " lower belly "],
+      [/\b(always|constantly|very) hungry\b|\bhungry all the time\b|\b(increased|big|huge|large|strong|ravenous|insatiable) appetite\b|\bappetite (increased|big|huge|strong)\b|\bexcessive hunger\b/g, " appetite vigorous "],
+      [/\b(no|loss of|lost|lack of|without) appetite\b|\bappetite (loss|lost)\b|\bnot hungry\b|\bnever hungry\b/g, " appetite poor "],
+      [/\bweight loss\b|\blosing weight\b|\blost weight\b/g, " losing weight build "],
+      [/\bcomes and goes\b|\bon and off\b|\boff and on\b|\b(every )?now and then\b|\bfrom time to time\b/g, " episodic "],
+      [/\bcan't\b|\bcan not\b|\bunable to\b/g, " cannot "],
+      [/\ba lot\b|\blots\b|\btoo much\b|\bso much\b/g, " profuse "]];
+  }
+  var PH_SYN_PH, PH_SYN_M, PH_SYN_ALT, PH_SYN_STOP, PH_SYN_CS, PH_SYN_LQ, PH_SYN_LT;
+  function phSynMap() {
+    if (!PH_SYN_M) { const m = new Map(), alt = new Map(); phSynGroups().forEach(g => { const ws = g.split(" "); alt.set(ws[0], ws); ws.forEach(w => m.set(w, ws[0])); }); PH_SYN_ALT = alt; PH_SYN_M = m; }
+    return PH_SYN_M;
+  }
+  // a plural reads as the singular: -es after sh / ch / x / z / ss, else a lone -s on a longer word (not -us, -is, -ss)
+  function phSynStem(w) { return /(sh|ch|x|z|ss)es$/.test(w) ? w.slice(0, -2) : w.length > 4 && /[^su]s$/.test(w) && !/is$/.test(w) ? w.slice(0, -1) : w; }
+  function phSynWord(w) { const m = phSynMap(); if (m.has(w)) return m.get(w); const s = phSynStem(w); return m.get(s) || s; }
+  // her words -> the words they mean. `note`: also read a tiredness word as "low energy" (a case note's "fatigue" is the Energy: low sign)
+  function phSynToks(t, note) {
+    if (!PH_SYN_STOP) PH_SYN_STOP = new Set("a an the and or of to in on at with then that does do is are be it its after very some more less times time day days per her his she he him feel feels feeling felt has have had having also get gets got been was were this there their when which while but so as by for from into my your our them they".split(" "));
+    let s = " " + String(t || "").toLowerCase().replace(/[‘’`]/g, "'").replace(/[-\/_]+/g, " ").replace(/\s+/g, " ") + " ";
+    phSynPhrases().forEach(([re, to]) => { s = s.replace(re, to); });
+    if (note) s = s.replace(/\b(fatigue\w*|tired\w*|letharg\w*|exhaust\w*|weary|drained)\b/g, "$1 energy poor");
+    return s.split(/[^a-z]+/).filter(w => w.length > 1 && !PH_SYN_STOP.has(w)).map(phSynWord);
+  }
+  // the same words as one string, remembered (a sign's label + everyday words are read once)
+  function phSynCanonStr(s) {
+    if (!PH_SYN_CS || PH_SYN_CS.size > 6000) PH_SYN_CS = new Map();
+    const k = String(s || ""); let v = PH_SYN_CS.get(k);
+    if (v === undefined) { v = " " + phSynToks(k).join(" ") + " "; PH_SYN_CS.set(k, v); }
+    return v;
+  }
+  // a filter box: the typed text as she typed it, or every typed word (read as its meaning) starting a word of the text
+  function phSynHas(txt, q) {
+    const ql = String(q || "").toLowerCase().trim(); if (!ql) return true;
+    const tl = String(txt || "").toLowerCase(); if (tl.indexOf(ql) >= 0) return true;
+    if (PH_SYN_LQ !== ql) { PH_SYN_LQ = ql; PH_SYN_LT = phSynToks(ql).filter(w => w.length > 2); }
+    const qt = PH_SYN_LT; if (!qt.length) return false;
+    const tt = phSynCanonStr(tl); return qt.every(w => tt.indexOf(" " + w) >= 0);
+  }
+  // every word that reads as one of these (for bold highlights in a list)
+  function phSynAlts(toks) { phSynMap(); const out = new Set(); toks.forEach(t => { out.add(t); (PH_SYN_ALT.get(t) || []).forEach(w => out.add(w)); }); return [...out].sort((a, b) => b.length - a.length); }
   // lists themselves down to the signs that match what she typed (instead of offering a few chips above them).
-  // A sign scores one point per typed word its label / everyday-words alias contains; only the best-scoring
+  // A sign scores one point per typed word that starts a word of its label / everyday-words alias; only the best-scoring
   // signs stay, so "chest pain" shows the chest-pain signs, not every sign that mentions pain.
-  // a plural finds the singular sign too (her synth22 2026-10-21: "Headaches" is "Head: headache"): -es after sh / ch / x / z / ss, else a lone -s on a longer word
-  function phCsToks(q) { return String(q || "").toLowerCase().split(/[^a-z]+/).filter(t => t.length > 2).map(t => /(sh|ch|x|z|ss)es$/.test(t) ? t.slice(0, -2) : t.length > 4 && /[^s]s$/.test(t) ? t.slice(0, -1) : t); }
+  // a plural finds the singular sign too (her synth22 2026-10-21: "Headaches" is "Head: headache"); since 2026-11-10 both sides are read through phSynToks (similar wording)
+  function phCsToks(q) { return phSynToks(q).filter(t => t.length > 2); }
   function phCsScore(r, toks) {
-    const label = (r[1] + " " + (PH_BING_ALIAS[r[0]] || "") + " " + (PH_BING_ALIAS[String(r[0]).replace(/_(tend|now)$/, "")] || "")).toLowerCase();
-    return toks.reduce((s, t) => s + (label.includes(t) ? 1 : 0), 0);
+    const label = phSynCanonStr(r[1] + " " + (PH_BING_ALIAS[r[0]] || "") + " " + (PH_BING_ALIAS[String(r[0]).replace(/_(tend|now)$/, "")] || ""));
+    return toks.reduce((s, t) => s + (label.includes(" " + t) ? 1 : 0), 0);   // a typed word starts a word of the sign (since 2026-11-10: "gas" no longer finds "gastric")
   }
   // her 2026-10-28 ("i need to be able to search a formula from the fang bing ren list"): the same box finds a formula by its name typed from the start of
   // any of its words ("chai hu", "wen dan") or by its initials ("xcht"); spaces and capitals do not count. null while fewer than 2 letters are typed.
