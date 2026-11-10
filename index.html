@@ -15757,6 +15757,17 @@
   #pharmacyPage .ph-cmp-cs .sp .zl.two, #pharmacyPage .ph-cmp-cs .sp .zl.zh { grid-template-columns: minmax(0, 1fr) 26px 26px; }
   #pharmacyPage .ph-cmp-cs .sp .zn { padding: 3px 5px; }
   #pharmacyPage .ph-cmp-cs tr.ren .bx { max-height: none; overflow: visible; }   /* the two Ren rows show every sign, as the split cell did */
+  /* her 2026-11-10 "yes build it": the Families page, one formula, the same Cases rows -- narrower (no --n multiply), sorted
+     by their own highest score, and a right-hand Animations column (phKsHas on each sign's own key) mirroring the body rows */
+  #pharmacyPage .ph-cmp-cs.fam { width: 100%; }
+  #pharmacyPage .ph-cmp-cs.fam col.s { width: 150px; }
+  #pharmacyPage .ph-cmp-cs.fam col.ani { width: 56px; }
+  #pharmacyPage .ph-cmp-cs.fam th.ani, #pharmacyPage .ph-cmp-cs.fam td.ani { border-right: 0; }
+  #pharmacyPage .ph-cmp-cs.fam thead th.ani { background: var(--ph-paper); color: var(--ph-soft); font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .06em; text-transform: uppercase; text-align: center; }
+  #pharmacyPage .ph-cmp-cs.fam .zl.ani { grid-template-columns: 1fr; justify-items: center; }
+  #pharmacyPage .ph-cmp-cs.fam .zl.zh.ani { visibility: hidden; }
+  #pharmacyPage .ph-cmp-cs.fam .gf-ani-th { display: flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: color-mix(in srgb, var(--ph-herb) 18%, var(--ph-white)); color: var(--ph-herb-deep); }
+  #pharmacyPage .ph-cmp-cs.fam .gf-ani-th svg { width: 9px; height: 9px; }
   /* ---- Tour days (her 2026-11-10, pick A "Days inside the tour"): a tour, its days, each day's morning and afternoon ---- */
   #pharmacyPage .ph-tc-grid tr.day th.sc { padding-left: 14px; }
   #pharmacyPage .ph-tc-grid tr.day th.sc .srn span { font: 700 var(--fs-11-5) var(--font-body); letter-spacing: .07em; text-transform: uppercase; color: var(--ph-ink); }
@@ -91790,6 +91801,7 @@ or changing anything in Cliniko.
   }
   const PH_GDF_PEN = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2 10l.6-2.4L8 2.2a1 1 0 011.4 0l.4.4a1 1 0 010 1.4L4.4 9.4 2 10z" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>';
   const PH_GDF_BOOK = '<svg class="icn" aria-hidden="true"><use href="#i-book"></use></svg>';
+  const PH_GDF_PLAY = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M3.5 2.3v7.4l6-3.7z" fill="currentColor"/></svg>';
   // the wording of one sign, edited in the row itself: the Subject stays as it is, the field holds the descriptor only. Enter or leaving the field saves,
   // Escape puts it back, an empty field = back to the built-in wording. One component for the Guide card and for Compare.
   function phGdfLabEdit(host, key) {
@@ -92446,7 +92458,8 @@ or changing anything in Cliniko.
     let body = "";
     if (quizOn) body = phGdfQuizHtml();
     else if (note && !phGdfNoteData(phGdfNoteId(id)).ren.length && !phGdfNoteData(phGdfNoteId(id)).bing.length && !edit) body = `<div class="gf-xt" style="margin-top:16px">No rows yet</div>`;
-    else if (!note && phGdfGroup === "area" && (edit || phGdfCover === "off")) body = phGdfMergedHtml(id, edit);
+    else if (!note && phGdfGroup === "area" && edit) body = phGdfMergedHtml(id, edit);
+    else if (!note && phGdfGroup === "area" && phGdfCover === "off") body = phGdfCaseHtml(id);
     else body = sw + `<div class="gf-cols">${phGdfColHtml(id, "r", edit)}${phGdfColHtml(id, "b", edit)}</div>`;
     const famNote = note ? null : phGdfFamNoteId(id), extra = quizOn ? "" : note ? phGdfNoteExtrasHtml(id, edit) : phGdfNotesBlockHtml(id, edit) + (famNote ? phGdfNoteExtrasHtml("n:" + famNote, edit) : "");
     const picInner = !note && !quizOn && !edit ? (PH_FP.SC[id] || PH_FS_PEOPLE.has(id) ? `<div class="gf-pp">${phFsCardHtml(id)}</div>` : phPpGdfHtml(id)) : "";
@@ -94485,14 +94498,63 @@ pale red tongue|Tongue: pale-red|r`;
     const m = new Map();
     ["r", "b"].forEach(sd => phGdfMergedRows(c.id, sd).filter(r => r.w).forEach(r => {
       const key = r.area + "|" + (r.subj + "|" + r.descr).toLowerCase();
-      let e = m.get(key); if (!e) { e = { ar: r.area, subj: r.subj, descr: r.descr, r: 0, b: 0, or: false }; m.set(key, e); }
-      e[sd] = r.w; if (r.or) e.or = true;
+      let e = m.get(key); if (!e) { e = { ar: r.area, subj: r.subj, descr: r.descr, r: 0, b: 0, or: false, kr: "", kb: "" }; m.set(key, e); }
+      e[sd] = r.w; if (r.or) e.or = true; e[sd === "r" ? "kr" : "kb"] = r.k;
     }));
     return { id: c.id, signs: [...m.values()], dx: null, fid: phFpIdFor(c.name) || phFpIdFor(c.rname), invHtml: phCmpInvHtml(c) || `<span class="no">Not in your formulas</span>`, bkHtml: phCmpBookHtml(c) };
   }
   function phCmpCasesHtml(cols) {
     const q = phGdSearch.trim().toLowerCase(), anim = phCmp.anim === true, parts = cols.map(c => phCmpCaseParts(phCmpCaseSrc(c), q, anim));
     return `<div class="ph-cmp-wrap"><table class="ph-cmp-cs" style="--n:${cols.length}"><colgroup><col class="s">${cols.map(() => "<col>").join("")}</colgroup><thead><tr><th class="rh"></th>${cols.map((c, i) => `<th data-cmp-col="${i}" style="${c.style}"><span class="cn">${PH_REN_FAM_GROUPS.some(g => g.herb === c.id) ? "Herb" : "Formula"} ${i + 1}${phCmpGrip(i, c.name, cols.length)}</span>${esc(c.name)}</th>`).join("")}</tr></thead><tbody>${phCmpCaseRowsHtml(parts, cols, anim, "data-cmp-anim")}</tbody></table></div>`;
+  }
+  // her 2026-11-10 "yes build it": the Families page's own body-area grid, read instead through the Cases table's row
+  // shape -- Study + Area group + Cover off (phGdfCardHtml below), reusing phCmpCol/phCmpCaseSrc/phCmpCaseBox/phCmpCaseSplit
+  // so a sign reads the same way everywhere. Unlike Compare and Tour Cases (one fixed row order, several formulas across),
+  // a Families row carries its own sign list so it can sort by its own highest score, highest first, no-score (Bing ·
+  // diagnosis) last; and a right-hand Animations column, a thumbnail beside any sign that has one (phKsHas), empty beside
+  // any that doesn't -- the exact same subject/row shape as the body column, so the two line up.
+  const phGdfAniTh = r => (phKsHas(r.kr) || phKsHas(r.kb)) ? `<span class="gf-ani-th" title="Has an animation">${PH_GDF_PLAY}</span>` : "";
+  function phGdfAniBox(rs, sds) {
+    if (!rs.length) return "";
+    const cap = sds.length > 1 ? `<div class="zl zh ani"><span></span></div>` : "";
+    const lines = list => [...new Set(list.map(r => r.subj))].sort(phAz).map(subj => (subj ? `<div class="zs">&nbsp;</div>` : "")
+      + list.filter(r => r.subj === subj).sort((a, b) => phAz(a.descr, b.descr)).map(r => `<div class="zl ${sds.length > 1 ? "two" : "one"} ani">${phGdfAniTh(r)}</div>`).join("")).join("");
+    return cap + `<div class="bx">${lines(rs)}</div>`;
+  }
+  const phGdfAniSplit = halves => `<div class="sp">${halves.map(rs => `<div><div class="sl">&nbsp;</div>${phGdfAniBox(rs, ["r", "b"])}</div>`).join("")}</div>`;
+  function phGdfCaseGroups(src) {
+    const used = new Set(["Diagnosis"].concat(PH_CMP_CASE_GRP.flatMap(g => g[1]))), usedR = new Set([...used, ...PH_CMP_REN_VIS, ...PH_CMP_REN_PER]);
+    const all = src.signs.map(phCmpFixSubj), ren = all.filter(r => r.r), score = rs => rs.reduce((m, r) => Math.max(m, Math.abs(r.r) || 0, Math.abs(r.b) || 0), 0);
+    const g = [], push = (lab, rs, cls, body, anim) => { if (rs.length) g.push({ lab, score: score(rs), cls, body, anim }); };
+    const visRs = ren.filter(r => PH_CMP_REN_VIS.indexOf(r.subj) >= 0);
+    push("Ren &middot; physical &amp; visual", visRs, "ren", `<div class="gl">Ren<em>${ren.length}</em></div>` + phCmpCaseBox(visRs, ["r"], false), phGdfAniBox(visRs, ["r"]));
+    const perRs = ren.filter(r => PH_CMP_REN_PER.indexOf(r.subj) >= 0);
+    push("Ren &middot; personality &amp; lifestyle", perRs, "ren", phCmpCaseBox(perRs, ["r"], false), phGdfAniBox(perRs, ["r"]));
+    PH_CMP_CASE_GRP.forEach(grp => {
+      const rs = all.filter(r => grp[1].indexOf(r.subj) >= 0); if (!rs.length) return;
+      if (grp[0] === "Abdominal") {
+        const subj = rs.filter(r => !phCmpAbdObj(r.descr)), obj = rs.filter(r => phCmpAbdObj(r.descr));
+        push(grp[0], rs, "", phCmpCaseSplit([["Subjective &middot; she reports", phCmpCaseBox(subj, ["r", "b"], false)], ["Objective &middot; on palpation", phCmpCaseBox(obj, ["r", "b"], false)]]), phGdfAniSplit([subj, obj]));
+      } else push(grp[0], rs, "", phCmpCaseBox(rs, ["r", "b"], false), phGdfAniBox(rs, ["r", "b"]));
+    });
+    const srRs = all.filter(r => r.r && !usedR.has(r.subj));
+    push("Signs &middot; Ren, the rest", srRs, "", phCmpCaseBox(srRs, ["r"], true), phGdfAniBox(srRs, ["r"]));
+    const sbRs = all.filter(r => r.b && !used.has(r.subj));
+    push("Signs &middot; Bing, the rest", sbRs, "", phCmpCaseBox(sbRs, ["b"], true), phGdfAniBox(sbRs, ["b"]));
+    const dxRs = all.filter(r => r.subj === "Diagnosis" && (r.r > 0 || r.b > 0));
+    const dx = dxRs.slice().sort((a, b) => phAz(a.descr, b.descr)).map(r => r.descr).filter((d, i, a) => a.findIndex(x => x.toLowerCase() === d.toLowerCase()) === i);
+    if (dx.length) {
+      const tcmSet = new Set(all.filter(r => r.pat).map(r => String(r.descr).toLowerCase())), isTcm = d => tcmSet.has(String(d).toLowerCase()) || PH_CMP_TCM_RE.test(d);
+      const dxBox = l => l.length ? `<div class="bx">${l.map(d => `<div class="cs"><span class="nm">${esc(phSymCase(d))}</span></div>`).join("")}</div>` : phCmpCaseDash;
+      g.push({ lab: "Bing &middot; diagnosis", score: -1, cls: "", body: phCmpCaseSplit([["Western", dxBox(dx.filter(d => !isTcm(d)))], ["Chinese patterns", dxBox(dx.filter(isTcm))]]), anim: "" });
+    }
+    return g.sort((a, b) => b.score - a.score);
+  }
+  function phGdfCaseHtml(id) {
+    const groups = phGdfCaseGroups(phCmpCaseSrc(phCmpCol(id)));
+    if (!groups.length) return `<div class="gf-xt" style="margin-top:16px">No rows yet</div>`;
+    const rows = groups.map(g => `<tr${g.cls ? ` class="${g.cls}"` : ""}><th class="rh" scope="row">${g.lab}</th><td>${g.body}</td><td class="ani">${g.anim}</td></tr>`).join("");
+    return `<div class="ph-cmp-wrap"><table class="ph-cmp-cs fam"><colgroup><col class="s"><col><col class="ani"></colgroup><thead><tr><th class="rh"></th><th></th><th class="ani">Animations</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
   function phCmpCopyText() {
     const ids = phCmpIds(), cols = ids.map(phCmpCol), names = cols.map(c => c.name), lines = [];
