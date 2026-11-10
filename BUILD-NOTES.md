@@ -14002,3 +14002,21 @@ The 30 drawings are my clinical read, hers to correct.
 - **Code:** `PH_TC_HERB_CODE` + SDH: "Shu Di Huang", MX: "Mang Xiao" (the recipe keeps what she typed).
 - **Tested** (sandbox): Case 9 reads Huang Lian, Huang Qin, Huang Bai, Bai Shao, E Jiao, Chuan Xiong, Shu Di Huang, Zhi Zi, Dang Gui, Gan Cao; Case 15 reads Huang Lian, Rou Gui, Sheng Shai Shen, Ban Xia, Gan Jiang, Gan Cao, Zhi Da Huang, Mang Xiao, Hong Zao; no code left unknown; no console errors.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Guide › Pulse: only the Fang Bing Ren pulses, as one table, 2026-11-10
+
+Her word after seeing the Pulse types table: "i just want to define pulses in the fang bing ren formulas". Her picks: A,
+the 28 classical rows go and the table's rows become the 19 Fang Bing Ren pulses; keep the drawn Wide chip (Thick stays in
+Texture).
+
+- `PH_PULSE_TYPES`, its "type:" definitions, `phPrView` and the Pulse types | FBR switch are gone; the Define editor is back
+  to its one key (the pulse's name). A "type:" definition saved on a device that took build 20261110-205500 is never read.
+- `phGdPulseRefHtml` is now the table: Pulse (with its Ren / Bing dots) · Chart (the small chart, a tap opens it large and
+  steps through the others, `data-gdf-ani="pc"`; then Define / Defined / Yours) · Depth · Radius · Intensity · Concavity ·
+  Texture (`phPulseMeasures`, READ from the drawing, hers once defined) · Rate, rhythm and the "Your call" notes · Formulas
+  with their Ren / Bing numbers. The card grid is no longer drawn.
+- The Large notes now read "Large: Define it as Wide or as ↑↑ Pounding".
+- Tap audit (1220 and 360, editor open): clean. The small chart button `.pt-th` carries `data-keep-size` (a picture of the
+  chart, like the Animation pane's picture buttons).
+
+**SAVED, not live:** goes out with her next "push live".
