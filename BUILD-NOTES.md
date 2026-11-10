@@ -13750,3 +13750,9 @@ pushed.
 - **Tested** (sandbox): table 51 Bing, 40 Ren; Xiao Chai Hu's own picture → Xiao Chai Hu 100, Chai Gui 56; Dang Gui Shao Yao San's own → it 100, Chai Gui 46; both pictures → Chai Gui leads; no Tour Case changed its leader; tap audit 38 of 38 at 1220, 37 of 37 at 360; no tile cut; console clean.
 - **Calls made, flag for her:** a draft table from the halves, not a book's; Chai Gui runs second for a strong Xiao Chai Hu-only or Dang Gui Shao Yao San-only picture.
 - **SAVED, not live:** goes out with her "push live".
+
+## Cases tables: the How it works row starts collapsed (2026-11-10)
+- **Her words:** "make this always collapsed" (a picture of the Compare > Cases table with the animation row open).
+- **Read as:** collapsed by default, in the three tables that draw the row (Compare > Cases, Cases, My patients); she can still open it for a visit (view state, never saved), so "always" = every time the page loads. If she means it can never open, say so and the toggle goes.
+- **Code:** `phCmp.anim` and `phGdTcAnim` read `=== true` (default off); the two toggles flip with `!== true`.
+- **SAVED, not live:** goes out with her next "push live".
