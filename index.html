@@ -15821,6 +15821,14 @@
   #pharmacyPage .pr-chip { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); color: var(--ph-ink); font: 600 var(--fs-13) var(--font-body); white-space: nowrap; cursor: pointer; }
   #pharmacyPage .pr-chip:hover:not(.on) { background: var(--ph-herb-tint); }
   #pharmacyPage .pr-chip.on { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
+  /* ---- the chart connected to the described pulses (her 2026-11-10) ---- */
+  #pharmacyPage .pr-desc { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+  #pharmacyPage .pr-dh { font: 700 var(--fs-11) var(--font-body); letter-spacing: .07em; text-transform: uppercase; color: var(--ph-soft); }
+  #pharmacyPage .pr-dm { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 8px 10px; border: 1px solid var(--ph-line); border-radius: 10px; background: var(--ph-white); font-size: var(--fs-12-5); }
+  #pharmacyPage .pr-dm .t { color: var(--ph-ink); }
+  #pharmacyPage .pr-dm .f { color: var(--ph-soft); flex: 1 1 200px; min-width: 0; }
+  #pharmacyPage .pr-dm .pr-chip { margin-left: auto; }
+  #pharmacyPage .pr-pl { display: flex; flex-wrap: wrap; gap: 6px; }
   /* ---- Tour days (her 2026-11-10, pick A "Days inside the tour"): a tour, its days, each day's morning and afternoon ---- */
   #pharmacyPage .ph-tc-grid tr.day th.sc { padding-left: 14px; }
   #pharmacyPage .ph-tc-grid tr.day th.sc .srn span { font: 700 var(--fs-11-5) var(--font-body); letter-spacing: .07em; text-transform: uppercase; color: var(--ph-ink); }
@@ -69301,6 +69309,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       }
       // the photo delete's Undo is the one toast's Undo now (phRenUndoRestore, 2026-11-01)
       if (phRcClick(e)) return;    // Results that count, on the Guide's Blood tests tab since 2026-10-29 (her pick)
+      if (phPrPlaceClick(e)) return;   // placing a described pulse on a chart (her 2026-11-10)
       if (phPrDefClick(e)) return;   // defining a pulse on her chart (her 2026-11-10)
       if (phGdfAniClick(e)) return;   // a picture in the Families Animation pane or the pulse reference (her 2026-11-10)
       if (phGdfClick(e)) return;   // the Families tab (study + edit); the tabs, tongue map, pulse and the old notes' edit / delete modals stay below
@@ -91061,7 +91070,7 @@ or changing anything in Cliniko.
     const linked = PH_PULSE_GROUPS.map(g => { const ids = g.q.filter(id => phPulseChipLinks()[id]); return ids.length ? `<div class="ph-tng2-seg wrap"><span class="ph-tng2-wr"><span class="ph-tgz-segl">${esc((PH_PULSE_GRP_SHORT[g.label] || g.label).toLowerCase())}</span>${ids.map(id => chip(id, drawn.has(id.toLowerCase()) || !!autoOn[id])).join("")}</span></div>` : ""; }).join("");
     const panel = below === "hm" ? phVisitHammerHtml(p.hammer, kb, "constit", true, true)
       : below === "note" ? (phVisitPulseNoteBoxHtml(marks, refs) || `<span class="faint">Nothing charted</span>`)
-      : below === "fbr" ? `<div class="ph-pls-fbr">${linked}</div>`
+      : below === "fbr" ? `${phPulsePlaceHtml()}<div class="ph-pls-fbr">${linked}</div>`
       : `${phVisitPulseScoresHtml(marks, prior && prior.marks)}${(autoD.deep.length || cellQs.flat().some(q => /deep|sunken/i.test(q.quality))) && (cellQs.flat().some(q => /slow|weak|empty|feeble|soft|flat/i.test(q.quality)) || (r0 > 20 && r0 < 60)) ? phPpYangThumbHtml("yang_kid", name, "pls:yang") : ""}${phPulseRateLineHtml(rec, p.hammer)}${phPulseKbBlockHtml(kb.grid, PH_PULSE_KB_LABEL)}`;
     const belowTabs = `<div class="ph-fbr-switch ph-pls-tabs"><span class="seg" role="tablist" aria-label="Pulse details">${tab("data-pls-below", "sum", "Summary", below === "sum")}${tab("data-pls-below", "hm", "Rate &amp; rhythm", below === "hm", cnt(hmN))}${tab("data-pls-below", "note", "Note", below === "note")}${tab("data-pls-below", "fbr", "Fang Bing Ren", below === "fbr", fb.n ? `<span class="n gold">${fb.n} ticked</span>` : "", [...new Set(fb.labels)].join("\n"))}</span></div>`;
     setTimeout(phPulseStickyTop, 0);   // the quality bar sits under the patient's name band when that band stays in view
@@ -91074,6 +91083,7 @@ or changing anything in Cliniko.
           ${phVisitPulseHalfHtml("R", marks, showP ? prior.marks : null, refs, "data-constit-pulse-cell", "data-constit-pulse-ref", tplOn, over("R"))}
           ${phVisitPulseHalfHtml("L", marks, showP ? prior.marks : null, refs, "data-constit-pulse-cell", "data-constit-pulse-ref", tplOn, over("L"))}
         </div>
+        ${phPulseDescHtml(p)}
         <div class="ph-pls-below">${belowTabs}<div class="ph-pls-panel" role="tabpanel">${panel}</div></div>
         ${phPulsePopHtml(marks)}
       </div>
@@ -94715,7 +94725,7 @@ pale red tongue|Tongue: pale-red|r`;
   // a tap on a picture: the sheet opens on it, stepping through every picture of the same table (or the pulse reference), in the order on the page
   function phGdfAniClick(e) {
     const el = e.target && e.target.closest && e.target.closest("[data-gdf-ani]"); if (!el) return false;
-    const host = el.closest(".pr-ref, table.fam") || el.parentNode, L = []; let at = 0;
+    const host = el.closest(".pr-ref, table.fam, .pr-desc") || el.parentNode, L = []; let at = 0;
     host.querySelectorAll("[data-gdf-ani]").forEach(b => {
       const t = b.dataset.gdfAni, keys = (b.dataset.keys || "").split(",").filter(Boolean);
       const it = t === "ks" ? { k: "kg", g: { keys: [b.dataset.ksKey], sd: new Set(b.dataset.sd === "rb" ? ["r", "b"] : [b.dataset.sd]), w: +b.dataset.w || 0 } } : t === "pc" ? { k: "pc", keys } : { k: "ac", keys };
@@ -94734,6 +94744,52 @@ pale red tongue|Tongue: pale-red|r`;
       const f2 = e.fm.get(fid) || { id: fid, name: phGdfName(fid), r: 0, b: 0 }; f2[sd] = w; e.fm.set(fid, f2);
     })));
     return [...m.values()].map(e => ({ keys: e.keys, sd: e.sd, title: phPulseTitle(e.keys[0]), fms: [...e.fm.values()].sort((a, b) => Math.max(Math.abs(b.r), Math.abs(b.b)) - Math.max(Math.abs(a.r), Math.abs(a.b)) || phAz(a.name, b.name)) })).sort((a, b) => phAz(a.title, b.title));
+  }
+  // ---- connect the chart to the described pulses (her 2026-11-10 "connect the visual chart to currently described pulses, e.g. thin pulse"; her picks: the chart shows the
+  // description AND a described pulse can be placed on the chart; the 19 Fang Bing Ren pulses; a drawn pulse that matches a definition ticks its sign). A pulse she has defined
+  // (Define on its card) ticks when every quality of her drawing is on the chart at the depth she drew it (any box, either wrist: Fang Bing Ren pulses carry no side or position;
+  // Floating also counts from any box drawn at Skin, Deep from the depth rule, as the chips do); a pulse she has not defined keeps the word match it always had ----
+  function phPulseDefHit(def, list) {
+    const need = new Set(), have = new Set(); let skin = false, deep = false;
+    Object.keys(def || {}).forEach(k => { const lv = k.split(":")[2]; phPulseQuals(def[k]).forEach(q => need.add(String(q.quality).toLowerCase() + "|" + lv)); });
+    (list || []).forEach(ms => {
+      Object.keys(ms || {}).forEach(k => { const qs = phPulseQuals(ms[k]), lv = k.split(":")[2]; qs.forEach(q => have.add(String(q.quality).toLowerCase() + "|" + lv)); if (qs.length && lv === "skin") skin = true; });
+      if (phPulseAutoDepth(ms).deep.length) deep = true;
+    });
+    if (!need.size) return false;
+    for (const n of need) { if (have.has(n)) continue; const q = n.split("|")[0]; if ((q === "floating" && skin) || (q === "deep" && deep)) continue; return false; }
+    return true;
+  }
+  // one pulse sign against one drawn chart (p = { pulse: marks, hammer })
+  function phPulseSignHit(key, p) {
+    const d = phPulseDef(phPulseTitle(key)); if (d && Object.keys(d.marks).length) return phPulseDefHit(d.marks, [p.pulse || {}]);
+    const spec = phPulseSpec(key); if (!spec) return false;
+    const words = phFbrPulseWords(p), has = list => (list || []).some(w => words.some(cw => cw.includes(w)));
+    return has(spec.words) && (!spec.also || has(spec.also));
+  }
+  // the chart's own page: the described pulses this chart matches, each with its words, its formulas and a tap to see it large
+  function phPulseDescHtml(p) {
+    let L = []; try { L = phPulseRefAll().filter(q => q.keys.some(k => phPulseSignHit(k, p))); } catch (e) { L = []; }
+    if (!L.length) return "";
+    return `<div class="pr-desc"><div class="pr-dh">Described pulses on this chart</div>${L.map(q => {
+      const line = q.keys.map(phPulseLine).find(Boolean) || "";
+      return `<div class="pr-dm"><b>${esc(q.title)}</b>${phKsSdHtml({ sd: q.sd })}${line ? `<span class="t">${esc(line)}</span>` : ""}<span class="f">${q.fms.slice(0, 3).map(f => esc(f.name)).join(" · ")}${q.fms.length > 3 ? ` · +${q.fms.length - 3}` : ""}</span><button type="button" class="pr-chip" data-gdf-ani="pc" data-keys="${esc(q.keys.join(","))}" title="See ${esc(q.title)} on the chart">Chart</button></div>`;
+    }).join("")}</div>`;
+  }
+  // the Fang Bing Ren tab: put a described pulse on this chart in one tap (its drawing, yours if you defined it; what is already drawn stays)
+  function phPulsePlaceHtml() {
+    const L = phPulseRefAll().filter(q => phPulseRefOf(q.keys).any); if (!L.length) return "";
+    return `<div class="pr-desc"><div class="pr-dh">Place a described pulse on the chart</div><div class="pr-pl">${L.map(q => `<button type="button" class="pr-chip" data-pr-place="${esc(q.title)}" data-keys="${esc(q.keys.join(","))}" title="Draws ${esc(q.title)} on today's chart">${esc(q.title)}</button>`).join("")}</div></div>`;
+  }
+  function phPrPlaceClick(e) {
+    const el = e.target && e.target.closest && e.target.closest("[data-pr-place]"); if (!el) return false;
+    const rec = phPatientRec(presHxScreenName); if (!rec) return true;
+    const keys = (el.dataset.keys || "").split(",").filter(Boolean), r = phPulseRefOf(keys), p = phHxConstitPulse(rec);
+    Object.keys(r.marks).forEach(k => phPulseQuals(r.marks[k]).forEach(q => { if (!phPulseQuals(p.pulse[k]).some(x => String(x.quality).toLowerCase() === String(q.quality).toLowerCase())) phPulseCellToggle(p.pulse, k, q.shape || q.quality); }));
+    p.at = Date.now();
+    if (savePharmacy() === false) presSavedToast(PH_PAT_SAVE_FAIL); else presSavedToast("Drew " + el.dataset.prPlace + " on the chart");
+    renderHxScreen();
+    return true;
   }
   function phGdPulseRefHtml() {
     const L = phPulseRefAll(); if (!L.length) return "";
@@ -121494,7 +121550,8 @@ pale red tongue|Tongue: pale-red|r`;
     let pulseHist = phPulseHistLatest(rec);
     if (pulseHist && pulseHist === rec.constitPulse) pulseHist = phHxConstitPulseRead(rec);   // the live chart while stale (fills a missing hammer on a copy)
     if (pulseHist && (!pulseVisit || keyOf(new Date(pulseHist.at)) > (((rec.acuSessions || []).find(s => rec.visitFnd && rec.visitFnd[s.id] === pulseVisit) || {}).date || ""))) pulseVisit = pulseHist;
-    if (pulseVisit) pw.push(...phFbrPulseWords(pulseVisit));
+    const pm = [];   // the drawn boxes (a defined pulse ticks on these, phPulseDefHit)
+    if (pulseVisit) { pw.push(...phFbrPulseWords(pulseVisit)); pm.push(pulseVisit.pulse || {}); }
     // her 2026-10-21 ("link all the tongue signs to fang bing ren"): the chart she is marking on the Tongue page (rec.tongueExam)
     // counts at once, the abdomen's 2026-10-12 rule below: Ren takes it whenever it has marks, Bing only when the tongue was done
     // today, else the latest logged visit as before (before this, Tongue-page ticks stayed dark until a session filed them)
@@ -121514,11 +121571,11 @@ pale red tongue|Tongue: pale-red|r`;
     const abdVisit = abdLive ? null : phFndLast(rec, "abdomen");   // the newest earlier day with a finding, any store (2026-10-29)
     if (abdLive || abdVisit) aw.push(...phAbdChartWordsOf(abdLive || abdVisit.abd));
     if (kind === "p") {
-      pw.push(...phFbrPulseWords(phHxConstitPulseRead(rec)));
+      pw.push(...phFbrPulseWords(phHxConstitPulseRead(rec))); pm.push(phHxConstitPulseRead(rec).pulse || {});
       tw.push(...phFbrConstitTongueWords(phHxConstitTongueRead(rec)));
     }
     const words = pw.concat(tw, aw);
-    words.pulse = pw; words.tongue = tw; words.abd = aw;
+    words.pulse = pw; words.tongue = tw; words.abd = aw; words.pulseMarks = pm;
     // the tongue chart's chips for the ONE link list (phTngSignChips, her 2026-10-21); the old pre-v2 chart (constitTongue) has words only
     words.tongueKeys = tngKeys;
     words.tongueOld = kind === "p" ? phFbrConstitTongueWords(phHxConstitTongueRead(rec)) : [];
@@ -121688,6 +121745,8 @@ pale red tongue|Tongue: pale-red|r`;
       const hasOld = list => list.some(w => old.some(cw => cw.includes(w)));
       return hasOld(sp.words) && (!sp.also || hasOld(sp.also));
     }
+    // a pulse she defined on her chart (Define on its card in the Guide) ticks on her drawing: every quality at the depth she drew it
+    if (/^(pulse_|p_)/.test(key) && chartWords.pulseMarks) { const d = phPulseDef(phPulseTitle(key)); if (d && Object.keys(d.marks).length) return phPulseDefHit(d.marks, chartWords.pulseMarks); }
     const spec = PH_FBR_CHART_PREFILL.find(x => x.key === key && x.kind === kind);
     if (!spec || !chartWords.length) return false;
     // a sign reads ONE chart: belly signs the abdomen words, p_ / pulse_ signs the pulse words, everything else the tongue words
