@@ -14189,3 +14189,39 @@ symptoms and conditions it is indicated for". Her picks: **C · Both** (inside t
   reduced motion, the Key2. The local MP4 of this film in `refs/films/` is now the older, shorter film (not re-recorded).
 
 **SAVED, not live:** goes out with her next "push live".
+
+## Ban Xia Hou Po Tang's film: bolder herb marks on the body, captions, pattern-effect marks, 2026-11-12
+
+Three words from her on the live film (build 20261112-005200), each with a picture. On Fu Ling's turn in Formula at work
+(1:10): "looks good but make it more obvious animation wise". On the whole formula's four pictures: "use captions to
+describe what the formula does". Then: "include animations of ht e tcm pattern effect e.g. clear phlegm". Built without a
+round of questions (a tweak to a film she said looks good; code7 "fix clunky fast").
+
+- **A herb's turn on the body is obvious now** (`PH_FS_WORKFX[id]`, only `banxiahoupotang`): while a herb chip or a pair
+  works, the chapter marks play large on the body itself at the place it works, over a soft pulsing teal circle (`halo`):
+  Ban Xia · Hou Po = chevrons running throat to stomach, Zi Su Ye · Sheng Jiang = arcs opening across the chest, Fu Ling =
+  blue drops falling from the middle to the bladder. A pair shows both its herbs' marks. They are drawn on the film's one
+  overlay (`.fs-stage > .fs-fx`), placed through the camera each frame (`camNow`: the scene's own 340 x 240 numbers to the
+  stage's 384 x 240), so they stay on the organ during the slow push. The scene's own small marks (5 units wide; the reason
+  for her word) still play under them. A shot's marks are `sh.fxw`.
+- **Captions** (her word): on a single herb's turn the band under the picture now says what it does in pattern words
+  (`PH_FS_WORKFX[id][herb][3]`, `sh.cap`): "Ban Xia · Hou Po: transform phlegm, send the rebellious qi down" · "Zi Su Ye ·
+  Sheng Jiang: move the qi, open the chest and throat" · "Fu Ling: drain the damp, so no new phlegm forms". The label on
+  the body stays (her 11/5 pick "On the body"); her newer word adds the band line. Each of the whole formula's four
+  pictures has its own caption, a white 6px tag at its foot (`.fs-cap`, `PH_FS_ALLFX[id]`): "Dissolves the knot of qi and
+  phlegm" · "Moves qi, opens the chest" · "Clears phlegm" · "Sends stomach qi back down". Cover › Signs blurs them like
+  the band. All of these words are Claude's DRAFT (the card's Draft pills).
+- **Pattern-effect marks** (her "e.g. clear phlegm"): two new marks, `clearph` (grey phlegm flecks break up, sink away and
+  fade, over and over) and `melt` (the knot's green threads draw back from the middle, its flecks drift out and fade). The
+  whole formula's four pictures each play their effect while they ease (melt, open, clearph, down: `L.fx`, made with the
+  grid, stepped in the `all` branch). In the chapters Ban Xia · Hou Po's turn is now `melt+down` on the throat and
+  `clearph+down` on the phlegm picture.
+- **`phFsFxMake(el, type, keep)` / `phFsFxStep(F, t, o, still, x, y, s)`**: a set can hold several marks ("halo+down"),
+  `keep` adds a set beside the ones there (a pair), `s` is its size; `FX` in `phFsMount` is a list.
+- Tested on a test copy: the film sought every 0.4 s, 0:00 to 4:18, no error; the three herb turns, both pairs, the whole
+  formula and two chapter shots looked at as frames (marks on the right organ, captions inside their pictures); Wen Dan
+  Tang (no entry) unchanged, no captions; tap audit clean on the card at 1366 and 360; at 360 each caption stays inside its
+  picture (two lines) and the band keeps its height. NOT tested: real-time playback and frame rate, Full screen, reduced
+  motion, the Key2. The other 30 formulas have none of this (her "Ban Xia Hou Po Tang first").
+
+**SAVED, not live:** goes out with her next "push live".
