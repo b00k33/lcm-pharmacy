@@ -14074,3 +14074,36 @@ picture lined up with its sign; A, a small body picture beside each row name; th
   draw other tables, untouched), Edit.
 
 **SAVED, not live:** goes out with her next "push live".
+
+## The learning table on a case's table and Compare, 2026-11-11
+
+Her synth22 item 5 ("improve animation column width throughout the app") and her pick "Yes, all three": the formula page's
+picture column also on a Tour case's table and on Compare's Formula cards view. Tour Cases is the "B33 C4 LCM" session's
+code; it confirmed it had no unsaved work there before this was built.
+
+- **`lt`, the table's mode** (a new last argument of `phCmpCaseParts` and `phCmpCaseRowsHtml`; `phTcTableHtml` and
+  `phCmpCasesHtml` pass it; the table's class is `ph-cmp-cs lt`, plus `ltm` for several columns; the formula page is
+  `ph-cmp-cs fam lt`). The CSS block of the earlier note is now scoped to `.lt`, not `.fam`.
+  - `"one"` (one case, or one formula in Compare): the formula page's shape. Each line ends in its own picture (`phLtCell`,
+    shared with `phGdfCaseGroups`), Ren / Bing once under the column's heading (`PH_LT_CAP`), a one-subject row says its name
+    once, no scroll box inside a row, Pulse and Abdominal keep one chart.
+  - `"many"` (two cases side by side, two or more formulas): the columns share ONE picture column at the right
+    (`<col class="ani">`, 130px, it stays in view while the columns scroll sideways, like the row names). A row's pictures are
+    one stack there (`phLtRowPics`: the row's pulse or abdomen chart, else each sign's picture once, A-Z; signs that share one
+    drawing show it once, by `phKsDesc`). The cells keep their own Ren / Bing caps and scroll boxes, as before.
+  - Every row name carries its body picture (`phRbRowHtml`), as on the formula page.
+- **A case's signs now carry their keys** (`phTcSrc`: `kr` / `kb` from the tagged sign), so `phGdfAniTh` finds the picture.
+- **A note she has not tagged yet borrows the picture of the sign its words match** (`phTcSrc`'s `unN`: the first of
+  `phTcMatchAll(text)` that has a picture; the same match the Tag sheet pre-fills). A picture only: no score, nothing saved,
+  and it follows her tag once she accepts or changes it. Told her. Without it a case's column was almost empty (her notes
+  are mostly untagged: 0 of 13 pictures on Case 2, 10 of 13 with it).
+- A case with later sessions, a note or photos (`phTcProgressHtml`) is unchanged: no picture column there yet.
+- A one-column table has `min-width: 460px` (fits a case beside the list, and a formula beside the open family list, at
+  1220px; the phone scrolls it inside its own box).
+- Tested on a test copy: all 15 seed cases open (one column, 3 to 12 pictures each), two cases side by side, Compare with one,
+  two and three formulas, the formula page again; no errors, no empty picture, a picture tap opens the sheet from each, tap
+  audit clean at 1220 / 1366 and 360 on each table, no sideways page scroll at 360, no table scroll at 1220. A first build
+  had a `//` comment inside a one-line arrow function and the page did not boot: caught by the boot check. NOT tested: her
+  real cases and tags, a case with sessions, the Compare search box, Edit.
+
+**SAVED, not live:** goes out with her next "push live".
