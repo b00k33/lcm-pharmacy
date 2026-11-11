@@ -14225,3 +14225,65 @@ round of questions (a tweak to a film she said looks good; code7 "fix clunky fas
   motion, the Key2. The other 30 formulas have none of this (her "Ban Xia Hou Po Tang first").
 
 **SAVED, not live:** goes out with her next "push live".
+
+## Every formula's film: condition chapters, bold herb marks, captions, pattern-effect marks, 2026-11-12
+
+Her word after Ban Xia Hou Po Tang's film went live (build 20261112-013100): "do the same for all formulas". Built
+without a round of questions: she asked for the same treatment, and it is the "Both" she picked on 11/11 with "Ban Xia
+Hou Po Tang first". The 30 other formula films now have what that one has.
+
+- **One table, `PH_FS_ADV[id] = { w, a, c }`** (31 formulas; `phFsAdv(id)` reads it, an id with no entry gets an empty
+  one). It replaces `PH_FS_COND`, `PH_FS_WORKFX` and `PH_FS_ALLFX`. `w[chip] = [marks, the band's words, place?, size?]`
+  is a herb chip at work on the body; `a[sign] = [mark, caption, place?]` is one of the whole formula's pictures;
+  `c[] = { n, main, more?, at?, at0?, form: [mark, words], herbs: { chip: [marks, words] }, eased }` is a chapter. Ban Xia
+  Hou Po Tang's entry keeps its words and its hand-set places.
+- **A mark finds its own place** (no hand-set points for 30 films). On the body: the dot of the herb's own label
+  (`svg.__labs`, the leader's circle; `bodyFx` in `phFsShots`), unless `w` gives a place (Huang Lian Jie Du Tang's three
+  burner chips do). On a sign's picture: `phFsAtOf(L, key)` = the scene's spot in `PH_FS_AT` (25 scenes; four numbers
+  when the picture moves as it eases), else the middle of the picture's own glow (`.ksfx ellipse`, mapped from the
+  picture's viewBox to the 384 x 240 overlay the way the picture is fitted), else the middle. A tongue or a pulse chart
+  takes no marks, only its caption.
+- **Fifteen new marks** beside the twelve there (27 in all, `phFsFxMake` / `phFsFxStep`). The trouble: `pool` (water,
+  damp), `clot` (blood stasis), `heat` (flames rise), `cold` (frost closes in), `leak` (sweat or fluids not held),
+  `flutter` (a jittering line: heart or spirit unsettled), `empty` (grey rings shrink: qi, blood or essence low). A herb
+  or the formula: `lift`, `unclot`, `cool` (the fire dies back under cool waves), `warm` (a glow, its rays going out),
+  `build` (plus signs flow in, the middle fills), `calm` (a jagged line smooths to a slow wave), `seal` (a broken ring
+  closes), `moisten` (drops fall in and spread). Their colours are marks (the colour law): `PH_FS_FXC`.
+- **A line of words stays up long enough to read** (`read(words, min)` in `phFsShots`: 1.6 s + .24 s a word, never less
+  than the shot's own time). Ban Xia Hou Po Tang's film is 4:25 for it (was 4:18). The others: 2:03 (Wai Tai Fu Ling Yin,
+  two chapters), 2:27 (Xiao Jian Zhong Tang, two), 2:58 to 3:38 (three chapters), 4:10 (Xue Fu Zhu Yu Tang, four).
+- **The card.** The chapter chips row ("Conditions", `phFsCondHtml`) is on every formula's film and always carries the
+  Draft pill, Gui Zhi Tang's too (its first words are read, `PH_FS_READ`; these are new). Her own Diagnosis rows line
+  under it is named "Diagnoses" when a film has chapters, so two rows are not both "Conditions" (`phFsDxHtml`). `.adv`
+  is on whenever a formula has an entry. A chapter's second sign is skipped when it shares the first one's picture.
+  **Cover › Signs** now blurs the chapter chips too (a chapter's name is its signs); a blurred chip still jumps.
+- **The words are Claude's DRAFT, all of them:** 94 chapters (89 new; two to five a formula), each a grouping of her own
+  rows under a name Claude chose, with a How it forms line, a line for each herb chip (273) and an Eased line; a caption
+  for every herb chip's turn (112) and every whole-formula picture (121). Only Wai Tai Fu Ling Yin's second chapter uses
+  a sign outside that formula's own rows (`appetite_poor_tend`; it has four rows). No pronoun names the person.
+- **A second reader checked the words** (an independent medical read of the table against each formula's standard
+  composition and actions): no errors; ten weak points, nine changed. Yu Ping Feng San: Fang Feng disperses, it does not
+  seal (`open`; "so none is sealed in"), and the puffiness caption says the qi firms the flesh (the formula has no
+  draining herb). Ban Xia Xie Xin Tang: "Warms the middle, dries damp" and "the clear sinks". Huang Lian Tang: Huang
+  Lian's heat is in the chest (Shang Han Lun 173). Shen Qi Wan: "refill the yin and essence that drain away". Si Ni San:
+  the cold hands warm by `open`, not `warm` (no warm herb; the contrast with Si Ni Tang). Xiao Chai Hu Tang: "Frees the
+  pivot, appetite returns". Chai Ling Tang: "the held damp". Left for her: Shen Qi Wan's chips name Shu Di, Shan Yao, Ze
+  Xie, Fu Ling (the Jin Gui text has dried Di Huang; Shan Zhu Yu and Mu Dan Pi are on no chip). Those are the app's
+  existing chips, not this build's words.
+- **From reading the frames** (a contact sheet of every film's key frames): Yu Ping Feng San's "Catches every cold"
+  forms with `press` (arrows in), not `leak` (hollow drops over the lungs read as bleeding); the `empty` rings are darker
+  and thicker; the 23 longest How it forms lines were shortened to about 19 words.
+- **The phone at 360:** a picture's caption stays two lines (13 were three, over a 155 x 97 picture: shortened, e.g.
+  "Bladder qi moves the water") and a line of words stays three (two were four and made the band grow: shortened, five
+  more for margin). A caption fits two lines at about 28 characters, a line of words three lines at about 105.
+- **Tap audit:** it found the herb bar 28px tall on a card whose herb chips fit one row (Yin Chen Hao Tang, Yu Ping Feng
+  San; the same on the live build). On a computer those chips are now 30px, so the bar is the Guide's 32px
+  (`@media (min-width: 641px)` beside the card's own rule; a wrapped bar is 62px, was 54px; the phone is unchanged).
+- Tested on a test copy: all 31 films sought every 0.45 s from start to end, no error; every herb chip has marks and a
+  caption, every mark name is one the engine draws; the key frames of all 31 films looked at (marks on the right organ,
+  captions present); on all 31 cards at 1366 and at 360 the tap audit is clean, the band keeps its height on every line
+  (two lines at most at 1366, three at 360), every caption sits inside its picture, nothing spills out of the card;
+  Cover › Signs through its own button blurs the chips; a person's card is unchanged. NOT tested: real-time playback and
+  frame rate, Full screen, reduced motion, the Key2 (the 360 checks ran in the Browser pane's phone size).
+
+**SAVED, not live:** goes out with her next "push live".
