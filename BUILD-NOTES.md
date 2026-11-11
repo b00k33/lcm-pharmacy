@@ -14142,3 +14142,50 @@ ticks **B** (out; a "Compare with" chip on the open case), days **A** (only days
   cases, a tour with cases on several days, a place that is not a tour, keyboard-only use of the lists.
 
 **SAVED, not live:** goes out with her next "push live".
+
+## Ban Xia Hou Po Tang's film: a chapter for each condition, 2026-11-11
+
+Her synth22 item 6, on the Ban Xia Hou Po Tang card: "make a more advanced video/animation of how this formula works on the
+symptoms and conditions it is indicated for". Her picks: **C · Both** (inside the body first, then a chapter per condition) and
+**Ban Xia Hou Po Tang first** (the others on her word). Her word to save it: "save the film and show me".
+
+- **What plays.** The four stops as before (Person, Trouble, Formula at work, Settled: 1:46, unchanged), then five chapters,
+  one a condition: Plum-pit Throat · Anxiety, Tight Chest · Nausea, Vomiting · Cough with Phlegm · Bloating. 4:18 in all
+  (was 1:50). A chapter (29.8 s) plays on that condition's own sign picture, full stage: its title; **How it forms** (the
+  picture comes up as the trouble does, a mark shows the cause); her own row words; one more sign she feels; each herb chip
+  in its turn (Ban Xia · Hou Po, Zi Su Ye · Sheng Jiang, Fu Ling: the picture eases a third each, the herb's chip lights, a
+  mark shows what the herb does); **Eased**.
+- **Told her plainly:** the first part is the same film. Nothing "deeper inside the body" was added to it; the new
+  inside-the-organ work is the five chapters. The five conditions are Claude's grouping of the formula's Bing signs (it has
+  no Diagnosis rows, so `phFsStory().dx` is empty); every word of a chapter is Claude's DRAFT (a Draft pill beside the chips).
+- **`PH_FS_COND[id]`** (only `banxiahoupotang` today) = the chapters: `n` name, `main` the sign whose picture it plays on,
+  `more` one more sign, `at` where the marks sit on that picture (a share of the stage), `at0` where they sit once the
+  picture has settled when the picture itself moves as it eases (the throat close-up slides to the middle: its viewBox is
+  `62 + 44a`), `form` [mark, words], `herbs` {herb chip: [mark, words]}, `eased`. A formula with no entry plays as before.
+- **Shots** (`phFsShots`): a condition's chapter is stop 10, 11, ... in `CH` (its name through `phSymCase`). Every shot now
+  has **`sk`** = the body scene's stop in that shot (default = its `stop`); a chapter walks 0, 1, 2 inside itself. New shot
+  kind **`cond`**: `a0` to `a1` = how strong the trouble is across the shot, `fx` = [mark, at, at0], `inK` / `outK` = the
+  picture holds from the shot before / to the next (no fade between a chapter's own shots), `c0` = the picture's clock start.
+  The "one more sign" is an ordinary `sign` shot. A sign that is not one of the film's groups (Cough, weight 3) gets a loose
+  group (`{ keys, pl, loose }`) and its row label as words.
+- **Player** (`phFsMount`): `kOf` now glides the scene's stop wherever a shot changes `sk` (the same result as before for
+  the other films: it changed only at a chapter's first shot); `sh.sk` replaces `sh.stop` where the scene's state or a
+  picture's strength is read. The chapter chips are `[data-fp-stop="10"...]`, so `phFsJump`, the lit chip and the scrub
+  bar's segments (nine) needed no change.
+- **The marks** (`phFsFxMake`, `phFsFxStep`; `<svg class="fs-fx">`, 384 x 240, over the pictures; only in a film with
+  chapters, the card's class `adv`): knot (green qi threads wind in, grey flecks stick), gather (flecks), up (rust
+  chevrons), press (four arrows in), swell (rings) = the trouble; down (teal chevrons), open (arcs spreading), drain (blue
+  drops) = a herb; clear (a green ring) = eased. Made once a shot (inside `.fs-player`, so the page watchers skip it), a
+  frame only writes transforms and opacity. A tapped tile clears them. Reduced motion: one still pose.
+- **The card:** a "Conditions" row of five chips under the Person · Trouble · Formula at work · Settled bar (`phFsCondHtml`,
+  `.fs-cond`); the words band is two lines tall on this card (`.gf-fs.adv .fs-sub`, 58px) so a sentence does not move the
+  controls; full screen leaves room for the extra row.
+- **Tested on a test copy:** the film sought every 0.4 s from 0:00 to 4:18 with no error and no empty picture (17 pictures
+  made); a condition chip jumps and lights; a stop chip, a herb chip and a sign tile still work (a tile clears the marks);
+  Wen Dan Tang (no chapters) plays as before, 1:58, no chips; a herb family card still opens. Tap audit clean on the card at
+  1366, 1220 and 360; no sideways page scroll at 360. Eighteen frames looked at (each chapter's How it forms and first
+  herb; all of the throat chapter). A first build left the throat's marks behind when the picture slid: `at0` fixed it.
+- **NOT tested:** real-time playback and frame rate (the test pane has no frames; frames were made by seeking), Full screen,
+  reduced motion, the Key2. The local MP4 of this film in `refs/films/` is now the older, shorter film (not re-recorded).
+
+**SAVED, not live:** goes out with her next "push live".
