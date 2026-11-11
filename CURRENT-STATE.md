@@ -89,7 +89,7 @@ types + Home Visit/Break + "Other — type it…".
 line of focus, the plan as a pill in its family colour, a status dot; the card: plan buttons, cycle day, focus and goal in full)
 [The Appointments List: a lean list with a card beside it]. At ≤900px the compact one-line row and the phone stack are the older
 code. A single-day List appends the day stats + "Herbs to prepare today" and the cross-patient **Today's IVF work** list.
-**"Up next" card** (900px or less; above that the toolbar's Next): the next booking today, countdown ring, cycle/IVF gauge, visit ring, herb-jar state, "✉ Send online form". No
+**No "Up next" card** (her 2026-11-11 pick "Gone"): a computer has the toolbar's Next ring; at 900px or less the next visit is only its own block, outlined in gold (`phApptNxMark`, `.ph-appt-block.nx`), and Start visit, Profile, Edit and the online form are in the booking popup. No
 lens chips (Everyone/Herbs/Cycle & IVF/New to you/Home visits); at Acupreg only, a practitioner chip row (Everyone · Anni ·
 Charlie · Christine · Linh) dims the other bookings, each booking's practitioner taken from the weekday [Practitioners on the
 Acupreg calendar].

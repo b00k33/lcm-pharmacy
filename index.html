@@ -4133,6 +4133,8 @@
   #pharmacyPage .ph-apptcal-wrap.cmp .ph-appt-block.done.dim { opacity: .18; filter: saturate(.2); }
   #pharmacyPage .ph-appt-block.now { box-shadow: inset 0 0 0 2px rgba(255,255,255,.85), 0 0 0 1px #fff; }
   #pharmacyPage .ph-appt-block.now:not(.ck) { box-shadow: inset 0 0 0 2px var(--ph-gold), 0 0 0 1px #fff; }
+  /* the next visit, on a window with no toolbar (900px and under): its own block outlined in gold (her 2026-11-11 pick C: the Next visit card is gone) */
+  #pharmacyPage .ph-appt-block.nx { box-shadow: inset 0 0 0 3px var(--ph-gold), 0 0 0 1px #fff; }
   /* the Lens (and search): a match gets a white + gold ring, the rest step back */
   #pharmacyPage .ph-appt-block.match { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--ph-gold); z-index: 18; }
   #pharmacyPage .ph-appt-block.dim { opacity: .18; filter: saturate(.2); }
@@ -43515,7 +43517,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     }
     const inkt = ck && !/--ck-ink:\s*#fff/i.test(ck) ? " inkt" : "";
     const drop = phApptBlkFresh(a.id, enter);
-    const cls = `ph-appt-block ${sz}${kind ? " " + kind : ""}${ck ? " ck" : ""}${inkt}${phCkIsAway(a.service) ? " away" : ""}${phMeOk() && phTripAwayOn(a) ? " trip-away" : ""}${clock ? " " + clock : ""}${phApptCalOpenId === a.id ? " sel" : ""}${enter ? " enter" : ""}${drop}${dim}`;
+    const cls = `ph-appt-block ${sz}${kind ? " " + kind : ""}${ck ? " ck" : ""}${inkt}${phCkIsAway(a.service) ? " away" : ""}${phMeOk() && phTripAwayOn(a) ? " trip-away" : ""}${clock ? " " + clock : ""}${phApptCalOpenId === a.id ? " sel" : ""}${enter ? " enter" : ""}${drop}${dim}${phApptNxCur && phApptNxCur === a.id ? " nx" : ""}`;
     const dl = enter ? `--dl:${(dayIdx || 0) * 60 + (idx || 0) * 45}ms;` : "";
     const sub = [a.service, planTag].filter(Boolean).join(" · ");
     return `<div class="${cls}" style="${phApptCalBlockStyle(it)}${ck}${dl}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}"${spanAttr} data-live="appt:${esc(a.id)}" data-live-sig="${esc(a.date)}|${esc(a.time || "")}|${esc(a.service || "")}" title="${esc(a.patient)}${sub ? " — " + esc(sub) : ""}" aria-label="${who}, ${esc(phCkTime12(a.time))}">${prog}${inner}</div>`;
@@ -44739,7 +44741,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // and a same-value write would wake it again.
   function phApptUpNextTick() {
     const card = document.querySelector("#pharmacyPage .ph-un[data-ph-un]");
-    if (!card) { phApsRailTick(); return; }   // 5 to 7 days: the rail's ring (APPOINTMENTS COLUMN)
+    if (!card) { phApsRailTick(); phApptNxMark(); return; }   // the toolbar's ring on a computer; the next block's gold outline on a narrow window
     const pick = phApptUpNextPick();
     if (!pick) {
       // the quiet "no one else" line: patch its words only when they change
@@ -44771,21 +44773,17 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (!wrap) return;
     // the desktop column (APPOINTMENTS COLUMN): the card, the bar and the open panel repaint together
     if (phApsPaint(wrap)) { if (typeof phPinApptZones === "function") phPinApptZones(); return; }
-    const html = phApptUpNextHtml();
+    // 900px and under has no card (her 2026-11-11 "i dont need that display at the top like that, unecessary", pick C "Gone"):
+    // the next visit is only its own block, outlined in gold. phApptUpNextHtml is no longer drawn anywhere.
     const card = wrap.querySelector(".ph-un[data-ph-un]");
-    if (card) { if (html) card.outerHTML = html; else card.remove(); }
-    else {
-      // the right column (desktop) holds the card; the old place above the grid
-      // stays for a page that has no column (the List view, a phone)
-      const side = wrap.querySelector(".ph-apptpage-side");
-      if (side) { if (html) side.innerHTML = html; }
-      else {
-        const at = wrap.querySelector(".ph-apptlens") || wrap.querySelector(".ph-apptcal-wrap");
-        if (!at || !html) return;
-        at.insertAdjacentHTML("beforebegin", html);
-      }
-    }
+    if (card) card.remove();
+    phApptNxMark();
     if (typeof phPinApptZones === "function") phPinApptZones();
+  }
+  function phApptNxMark() {
+    const rail = !!document.querySelector("#pharmacyPage .ph-aps-rail"), pick = rail ? null : phApptUpNextPick(), id = pick ? pick.a.id : "";
+    document.querySelectorAll("#pharmacyPage .ph-appt-block.nx").forEach(b => { if (b.dataset.phApptPop !== id) b.classList.remove("nx"); });
+    if (id) document.querySelectorAll(`#pharmacyPage .ph-appt-block[data-ph-appt-pop="${CSS.escape(id)}"]`).forEach(b => b.classList.add("nx"));
   }
   /* ============================================================
      APPOINTMENTS COLUMN · UP NEXT + HERBS · PATIENT · ME (her 10 picks, 2026-10-26, appt-column-mock-2026-10-26.html;
@@ -60445,7 +60443,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         <label class="ph-atb-search"><svg aria-hidden="true"><use href="#i-search"/></svg><input type="search" class="ph-tl-search ph-apptcal-search" data-ph-apptcal-q="1" value="${esc(phApptCalQ)}" placeholder="Search patient" aria-label="Search appointments"><button type="button" class="ph-atb-srchx" data-ph-apptcal-srch="0" aria-label="Close search" title="Close search"><svg aria-hidden="true"><use href="#i-x"/></svg></button></label>
       </div>`;
   }
+  let phApptNxCur = "";   // the next visit's id while the window has no toolbar (900px and under): its block is drawn with the gold outline
   function phApptCalGridHtml() {
+    const nxPick = window.innerWidth > 900 ? null : phApptUpNextPick(); phApptNxCur = nxPick ? nxPick.a.id : "";
     const days = phApptCalVisibleDays();
     const n = days.length;
     const slide = phApptCalSlide; phApptCalSlide = 0;
@@ -60581,7 +60581,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       ${view === "list" ? phApptCalListHtml(days, selKey) : (window.innerWidth > 900
         // desktop: her toolbar beside the grid, on every week (HER TOOLBAR AND BODY); a tapped booking opens its popup
         ? `<div class="ph-apptpage rail"><div class="ph-apptpage-cal">${gridHtml}</div><div class="ph-apptpage-side">${phApsHtml()}</div></div>`
-        : (isCurrent || phApptUpNextFocus ? phApptUpNextHtml() : "") + gridHtml)}
+        : gridHtml)}
     </div>`;
   }
   // ==== APPOINTMENTS MOTION + FEWER REPEATS (her 2026-11-05 "minimise any repeating information ... give it some dramatic

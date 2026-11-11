@@ -14020,3 +14020,22 @@ Texture).
   chart, like the Animation pane's picture buttons).
 
 **SAVED, not live:** goes out with her next "push live".
+
+## Appointments: the Next visit card is gone on a narrow window, 2026-11-11
+
+Her synth22 item 1, with a picture of the card at about 710px: "i dont need that display at the top like that, unecessary.
+improve it." Her pick C on `mocks/synth22-plan-guide-2026-11-11.html`: "Gone", the next visit is only its block in the
+calendar, with a gold outline. (A computer already had no card since 2026-11-05: the toolbar's Next ring.)
+
+- 900px and under no longer draws `phApptUpNextHtml` above the grid (the phone too; the "No one else today" line went with
+  it). `phApptUpNextHtml` is kept but nothing calls it; `phApptUpNextShow` only clears a leftover card and marks the block.
+- The next visit's block carries `.nx` (`inset 0 0 0 3px var(--ph-gold)`): set when the grid is drawn (`phApptNxCur`, read by
+  the block's class list) and kept right by the minute tick (`phApptNxMark`, called from `phApptUpNextTick`). Never on a
+  computer (the rail is there).
+- Start visit, Profile, Edit, Call, Text, Email and the online form are still one tap away: the block opens the booking popup.
+- Tested on a test copy with made-up bookings at 710, 360 and 1220px: no card, the outline on the next booking, it moves to
+  the following one when the first is past, no outline and the Next ring at 1220, the popup opens with Start visit, no errors.
+  NOT tested: her real bookings, a booking that spans days, the List view (it never had the card at these widths).
+- No control added or resized, so the tap audit was not run.
+
+**SAVED, not live:** goes out with her next "push live".
