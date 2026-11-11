@@ -14039,3 +14039,38 @@ calendar, with a gold outline. (A computer already had no card since 2026-11-05:
 - No control added or resized, so the tap audit was not run.
 
 **SAVED, not live:** goes out with her next "push live".
+
+## The learning table: a wider picture column and a body picture on each row name (formula pages), 2026-11-11
+
+Her synth22 items 2 and 5: "improve the width of the animation and make this page more learning friendly. im a visual autistic
+learning who memorises images well when the information is organised and makes sense" and "improve animation column width
+throughout the app". Her picks on `mocks/synth22-plan-guide-2026-11-11.html`: B, a wider picture column on the right, each
+picture lined up with its sign; A, a small body picture beside each row name; the same column on a case's table and Compare
+(not built in this step: the next one).
+
+- **A sign's picture is the last cell of its own line** (`phCmpCaseBox`'s new 4th argument `{ pic, solo }`; `.zl.pc`, the picture
+  track 120px, the picture 96 x 60 so the whole scene shows; it was 32 x 32 and cropped). The old Animations column was a second
+  box that mirrored the lines and scrolled on its own, so a picture could slide away from its sign. The line down the column's
+  left edge is the cell's own background (`.pcx`). A line with no picture stays 32px.
+- **Ren / Bing are said once**, in the table head (every line now keeps both number columns; a Ren-only line leaves Bing blank).
+  The head does not stay in view while the page scrolls: the page's frame (`.ph-shell-content`, `.gf-card`) is a scroll box, so
+  `position: sticky` has nothing to hold on to. Told her.
+- **A row with one subject says its name once** (`solo`: no "• PULSE" under PULSE). A row with several subjects keeps them
+  (Tongue: Tongue coat).
+- **No scroll box inside a row** on these pages (`.fam .bx` has no max height): every sign shows.
+- **Pulse and Abdominal** keep their chart, larger (104 x 92), in the picture column beside all the row's lines (`.pcw` / `.pch`,
+  `phGdfAniSide`). Abdominal with no chart lists its signs' pictures there. Its two halves stack when the row is under 470px
+  (a container query on `.pcw`: the family list open at 1220px).
+- **Row names carry a body picture** (`phRbHtml`, `phRbRowHtml`, `.rb-pic` 40px): the one body (`PH_BODY_GEOM.svg`, drawn once
+  into `#phRbDefs`, every row a `<use>`) cropped to the row's place (`PH_FBB_SUBJ` of the row's first subject, `PH_FBB_PLACE`
+  spots), the place lit in teal; a whole-person subject (Cold & heat, Fever, Sweat, Energy) shows its `PH_FBB_WHOLE` icon; Ren ·
+  physical shows the whole figure; the two "the rest" rows, Bing · diagnosis and Medical findings have none. `.rb-pic` carries
+  `data-keep-size` (a picture, not a control).
+- `phGdfAniBox` and `phGdfAniSplit` are gone; the `.zl.ani` and `col.ani` rules are unused now.
+- A narrow screen scrolls the table inside its own box (`min-width: 470px`).
+- Tested on a test copy (Ban Xia Hou Po Tang, Gui Zhi, Chai Hu, Da Chai Hu Tang): no errors, no empty picture, a picture tap
+  opens the sheet, tap audit clean at 1220 and 360, no sideways page scroll at 360, the table fits at 1220 with the family list
+  open and folded. Pictures taken with headless Edge. NOT tested: her real devices, Group = Importance and the Cover views (they
+  draw other tables, untouched), Edit.
+
+**SAVED, not live:** goes out with her next "push live".
