@@ -14107,3 +14107,38 @@ code; it confirmed it had no unsaved work there before this was built.
   real cases and tags, a case with sessions, the Compare search box, Edit.
 
 **SAVED, not live:** goes out with her next "push live".
+
+## Guide › Cases: no ticks, days with cases, the formula's person, 2026-11-11
+
+Her synth22 items 3 and 4 ("the tick round buttons dont serve a purpose", "improve the design of this page for me. im a
+visual autistic learning who memorises images well when the information is organised and makes sense") and her three picks:
+ticks **B** (out; a "Compare with" chip on the open case), days **A** (only days with cases + "All days"), case list **A**
+(the formula's person). Tour Cases is the "B33 C4 LCM" session's code; it had confirmed no unsaved work there.
+
+- **The round ticks are gone** (`.tcd-tk`, `.tcd-r`, `.tcd-tkbar`, the `data-tc-tick` tap). Side by side is picked from the
+  open case: a chip **"Compare with… ▾"** at the end of the case bar (`phTcCaseBarHtml(c, t, cmp)`; the chip is built in
+  `phTcDayHtml`) opens a list of the other cases by number, a tick box each (the Complaint filter's own list, `.ph-cmp-addl`);
+  a pick puts that case beside the open one and the list stays open for more (`data-tc-cwpick`; the same `phGdTcTick`, the
+  open case first). The chip then reads "Compare with · N ▾" in teal and a chip **"Close compare"** follows it
+  (`data-tc-tick-clear`, as before). Unpicking the last one = one case again. "Working on" is unchanged. In the list the
+  open case is the teal row and a case beside it has a teal outline (`.tcd-pg.cw`).
+- **Day chips** (`phTcDayHtml`): a day is a chip only once it holds a case, plus the day she is on; **"All days ▾"** after
+  them lists every day with its count (a tap goes to that day, `data-tc-dday`), and is not drawn when every day has a case.
+  "Not placed" as before. The row wraps now, it does not scroll sideways (a list has to open under it).
+- **`phGdTcPop`** = which of the two lists is open, `"days"` or `"cw"`; a tap outside or Esc closes it (`phTcClick`,
+  `phTcKey`). Both lists open from their row's left edge, under the row (the chip's wrapper is `position: static` inside
+  `.tcd-tabs` / `.tcd-cb`), so they stay on the screen at every width; the Compare list is at most 440px or the row's width,
+  a long formula line ends in "…".
+- **A case's row** = its formula's person, then "n · complaint" in bold and the formula under it (was "Case n", complaint,
+  formula on three lines). **`phTcPerHtml(fam)`**: the one body (`PH_BODY_GEOM.svg`) with the formula's own build
+  (`phFsBuild`, the build of the formula's film), head and shoulders (`viewBox 40 -2 140 168`), 40 x 48. Drawn once a family
+  into a hidden holder (`#phTcPerDefs`, one `<g id="phTcPer_<family>">` each) and reused by every row through `<use>`, so 15
+  rows cost 12 drawings. A case with no family yet shows the usual person. The picture carries `data-keep-size` (a picture,
+  not a tap target; the whole row is the tap).
+- Tested on a test copy (15 seed cases, one tour of 11 days, Day 1 holding all 15): the list, All days → an empty day (it
+  shows as a chip while she is on it) → back; Compare with one, two, then unpicking both; Close compare; Esc and a tap
+  outside close a list; a tap on another case ends the compare; Places and My patients still open; no errors. Tap audit clean
+  at 1220 and 360 with each list open and with two cases side by side; no sideways page scroll at 360. NOT tested: her real
+  cases, a tour with cases on several days, a place that is not a tour, keyboard-only use of the lists.
+
+**SAVED, not live:** goes out with her next "push live".
