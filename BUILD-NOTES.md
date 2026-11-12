@@ -14800,3 +14800,29 @@ rest are small. Only points that stood were changed.
   Pictures: `mocks/abd-synth22-2026-11-12/step5-s5-feel.png`, `step5-s5-ten.png`. **Not tested:** her real records.
 - **Wording DRAFT:** the strength words (very soft, weak · soft · middle · firm · hard, strong) and the new marks' names are mine until
   she reads them. **SAVED, not live:** goes out only on her own "push live".
+
+## Abdomen synth22, step 5b: her teachers' belly rules as DRAFT weights (2026-11-13)
+- **Her pick:** "Yes, as Draft (Recommended)": "Added to the formulas' weights, marked Draft until you read them. Ma Huang gets a minus
+  for a soft lower belly." The rules (plan guide `mocks/abd-synth22-2026-11-12/guide.html`): a soft belly with the throat lump →
+  Ban Xia Hou Po Tang; a tight belly → Da Chai Hu Tang; a soft lower belly → Shen Qi Wan, never Ma Huang; a soft, swollen belly → Huang Qi.
+- **Built** (`index.html`, `PH_FORMULAS` and one chart link; each line marked `DRAFT` in the code):
+  - **Da Chai Hu Tang:** Bing + `abd_resist_pain` 5 (Abdominal: pain, worse on pressure) and `abd_rigid_spasm` 4 (rigid or spasming);
+    Ren + `abd_resist_tend` 5 (tender on pressure) and `tight_belly` 4 (tight muscles). Pain worse on pressure and tender on pressure
+    are each one `or` line with the epigastric tenderness Da Chai Hu already weighs (one chart tap ticks both, so it scores once).
+  - **Ban Xia Hou Po Tang:** + `abd_wall_weak_now` 3 (Bing) and `abd_wall_weak_tend` 3 (Ren), Abdominal: weak, soft wall; the throat
+    lump is already 5.
+  - **Ma Huang:** − 3 for `lowabd_soft_now` (Bing) and `lowabd_weak_numb_tend` (Ren), Abdominal: lower belly weak, soft or numb, the
+    same size as its other cautions (thin −3, sweats easily −3). It shows "Against" on its Guide page. A minus, not a bar: her other
+    signs can still lead to it.
+  - **Shen Qi Wan:** no change, it already weighs the soft lower belly 5 on both sides (her 2026-10-14 table).
+  - **Huang Qi:** no number changed, it already weighs a weak, soft wall 3 and a large, full belly 5; the chart's new **Puffy, damp** mark
+    (step 5a) now ticks "Abdominal: large, full" (`abd:puffy` joins `abd_large_full_tend`'s words), so it also counts for Yue Bi Jia
+    Zhu (3 there).
+  - **Not built:** "Abdominal: hot to the touch" points to no formula: hers to fill.
+- **Tested** (sandbox, made-up signs and the made-up patient, 1220): tight + resistant belly, Da Chai Hu 9th → 4th; epigastric tender
+  + pain on pressure, Da Chai Hu's score the same as tender alone (the `or` holds); soft belly + throat lump, Ban Xia Hou Po 3rd → 1st;
+  soft lower belly with Ma Huang's own signs, Ma Huang 10 → 7 on each side; the test patient's chart with Puffy at the lower belly ticks
+  large, full and Huang Qi goes 29th → 19th (Puffy taken off: back to 29th). The four formulas' Guide pages show the new lines (Ma Huang's
+  lower belly −3 −3); Fang Bing Ren draws with no errors; its size check lists the same kinds of flags as the saved page before this step
+  (the tick cells, 14 before, 15 after: one more row on the board), none from this step. **Not tested:** her real records.
+- **DRAFT for her to read:** every number above. **SAVED, not live:** goes out only on her own "push live".
