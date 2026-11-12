@@ -14659,3 +14659,24 @@ rest are small. Only points that stood were changed.
   marks drawn; Tongue: 10 Oct beside "Not examined today"; the size check clean on the sheet and the three strips at 1220 and 360; at
   360 the sheet is one column inside the screen. **Not tested:** her real records.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Vertical space audit + rule (2026-11-13)
+- **Her words:** "make the Importance view more space saving too - add a rule to prioritis vertical space saving for the whole app", then "do an audit about vertical space saving".
+- **Rule:** CLAUDE.md "Fit the screen" > "Vertical space first, every page, desktop and phone".
+- **Audit** (sandbox on f427cbaf, 8 test patients + 16 appointments seeded; 1220x900 and 360x740; a script listed paddings >= 28px, margins >= 24px, one-line boxes >= 46px tall and empty boxes >= 40px; then each page looked at):
+
+| Page | Width | Before | After | Change |
+|---|---|---|---|---|
+| Guide, a formula, Importance | 1220 | 1074px (Gui Zhi) | 738px | rows 30 -> 22px, 13px words; OR a tag on each row (the "or" line between rows gone); column head, Weight/Symptom labels and Key/Strong/Supports heads tighter |
+| Guide, a formula, Importance | 360 | about 1100px | 804px | the same |
+| Patient profile list | 360 | first patient at y 331 | y 236 | filter chips one sideways-scrolling row (72 -> 32px); an empty Scheduled dispenses is only "+ Schedule a dispense" (95 -> 32px) |
+| Appointments, one day | 360 | hours start at y 148 | y 100 | the day head ("FRI 13", 48px) hidden; the toolbar's date button says the day |
+| Patient profile list | 1220 | - | - | already tight (one-line rows, Scheduled dispenses hidden when empty, Schedule beside Sort): no change |
+| Inventory | 360 / 1220 | - | - | one strip of counts, one line of chips, two-line rows with their status chip: no change |
+| Dashboard | 360 / 1220 | - | - | sections are one line each when empty: no change |
+| Guide, a formula, Area | both | - | - | two columns since 38b425ba |
+
+- **Left as they are (her own picks):** the phone's patient herb line wraps to two lines (her 2026-09-07); Appointments' hour height (Calm week); the locked session grid.
+- **Not measured this round:** a patient's own pages (Care Plan, Today's visit, Last visits, Abdomen / Tongue / Pulse). The C22 session is rebuilding Last visits and the Abdomen page (her synth22 steps 2a / 2b), so they wait until that lands. Also Formula refill, Communications and the Records pages, which need more seeded data.
+- **Tested:** tap audit (HEAD's script) at 360 on Patient profile (one pre-existing line: the search box's round corners, the app's field shape) and on the Guide card (off empty); no sideways scroll; no console errors.
+- **SAVED, not live:** goes out only on her own "push live".
