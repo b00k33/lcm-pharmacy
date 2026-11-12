@@ -14583,3 +14583,18 @@ rest are small. Only points that stood were changed.
 - **Built** (`index.html`): `phGdfCaseHtml` gives the wrap `gf2w` and the table `gf2`, plus a second header cell `th.pcx.c2` (aria-hidden) so each column has its Ren / Bing head. CSS block `.ph-cmp-cs.lt.gf2` (before `.ph-cmp-cs.ltm`): the table, thead and tbody are blocks; tbody `columns: 2`; each row a card (`break-inside: avoid`, 1px line, 6px corners), its `th.rh` the card's band (--ph-paper); sign lines 22px, 13px words, weights 24px, pictures 26x20 (pulse and abdomen panes too), `.zs` / `.za` sub-bands tightened, the `td.pcx` divider line off. `container: gf2 / inline-size` on the wrap; under 460px one column and one header. Only the Area + Cover Off view uses `phGdfCaseHtml`; Importance and the Cover views are unchanged.
 - **Tested** (sandbox, on 7db69faa with the teaching notes): Gui Zhi at 1220x900 with the formula list folded: 2 columns, 35 sign lines on screen (9 before); list open (table 509px): still 2 columns, one line wraps ("Physical Work, Very Active"); 360px: 1 column, no sideways scroll. A thumbnail tap opens the film (Heart: palpitations). Tap audit (HEAD's script, `.gf-ani-th` is on its KEEP list since 2026-11-10) at 1220 and 360: off empty. No console errors.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Abdomen synth22, step 1: no "+ name" chips on the Guide (2026-11-12)
+- **Her words** (her synth22 batch on the Abdomen chart, closed "ok done"): "Not necessary to have +linh chips like this for this page or any
+  page other than her profile." The plan guide with all seven of her notes and her 13 picks: `mocks/abd-synth22-2026-11-12/guide.html`
+  (local only); memory `project_lcm_abdomen_synth22_2026_11_12`. Steps: 1 chips off · 2 two halves (chart ⅔, the marking bar and the
+  signs on the right) + photo below + open big · 3 belly signs with pictures · 4 bulge as one curve · 5 the new marks. One step a save.
+- **Built** (`index.html`): the Guide's Abdomen rows lose "+ / ✓ <name>" (`phGdAbdRowHtml(r)`, its `[data-gd-sign]` click and
+  `phGdSignTick` gone); the Guide's Pulse notes lose "+ <name>" / "+ <name> · pick a box" (`phGdPulseNoteRowHtml(n, hit)`,
+  `phGdPulseMarkOf` gone); the `.ph-gd-acts` / `.ph-gd-mark` rules gone (the two size blocks keep `.ph-gd-today`). Marking stays on the
+  chart itself (the Guide draws the record's live chart), ticking on the Fang Bing Ren page. The Tongue map had no such chip.
+- **Tested** (sandbox, a made-up patient with a belly chart today and one on 10 Oct): Guide › Abdomen draws its 38 rows and Guide ›
+  Pulse its 42 notes with no chip and no console error; the size check (`tap-audit.js`, root `#phGuideWrap`) at 1220 and at 360: Pulse
+  clean; Abdomen one line, the card's Summary "Clear" (999px corners, 21.6px on a phone), older than this step: step 2 rebuilds that
+  card and fixes it. **Not tested:** her real records.
+- **SAVED, not live:** goes out only on her own "push live".
