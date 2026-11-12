@@ -1492,8 +1492,9 @@ not repeated here.
   Each also has a `PH_BTJ` row, its herb in `PH_REN_FAM_GROUPS` (last in the list; five have no herb here and sit "On their own") and its
   lines in `PH_FBR_AVOID` by the formula's own herbs (a herb one case only added is not counted). The tables, captions and card rows are
   written by a script from the hand list (mocks/hh-22-formulas-2026-11-12/: `match-new.txt`, `gen2.pl`, `build2.sh`; local only): to change
-  one, change the list and run it again. All of it is a DRAFT reading of her notes, hers to correct in Edit. Waiting on her word: whether
-  Chu Fan Tang and Ba Wei Chu Fan Tang are one formula; whether "mouth ulcers" becomes a sign (the catalog has none).
+  one, change the list and run it again. All of it is a DRAFT reading of her notes, hers to correct in Edit. Her 2026-11-13 words: Chu Fan
+  Tang and Ba Wei Chu Fan Tang are ONE formula (one page, `baweichufan`, both cases; never split them again; 69 formulas, 27 case
+  tables); "mouth ulcers" is a Bing sign (`mouth_ulcers_now`), in a table only where a case's note says it is there.
 - Two colours (her 2026-11-10 "give chai po tang half ban xia and half chai hu colour in the circle and in the banner"): `PH_FBR_COLOUR_TWO`
   splits a formula's circles and banner down the middle (`sw` / `--cs`); table lines, board and scoring keep its own colour. Chai Po Tang only.
 - A formula made of two halves (her 2026-11-10 "chai gui tang is XCHT with dgsys", her pick "Add it from its two halves"): `phFbrFromHalves`
