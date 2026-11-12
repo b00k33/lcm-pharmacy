@@ -14767,3 +14767,36 @@ rest are small. Only points that stood were changed.
 
 - **Audits** (HEAD's titlebar-audit.js and tap-audit.js): every page's bar clean at 360 and 1220; no page scrolls sideways; no console errors. Already there before, not vertical: the refill row's tick (`.tk`, 20px); the Records segment buttons (26px segments in a joined 31px bar, deliberate); search boxes' round corners (the app's field shape).
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Abdomen synth22, step 5a: four new marks, Strength 1–5, "checked, none" (2026-11-13)
+- **Her words:** "audit abdominal charting vs case notes" (= apply). The audit (plan guide `mocks/abd-synth22-2026-11-12/guide.html`,
+  note 4) set her 141 Nanjing cases and six notes against the chart. Her picks: new marks Resistance, Lump or organ felt, Puffy damp,
+  Sweaty skin (all four); Strength A, one 1–5 bar (old soft = 2, medium = 3, hard = 4); checked-none "Second tap = none" (Fang Bing Ren
+  reads No). The teachers' belly rules (Draft weights) are step 5b.
+- **Built** (`index.html`): **marks** `PH_ABD_FEEL` + `resist` "resistance" and `lump` "lump or organ", `PH_ABD_SEEN` + `puffy` "puffy,
+  damp" (sits by row, as Seen does), `PH_ABD_TEMP` + `sweaty` "sweaty skin" (after the scale; `phAbdTempOnly` keeps one temperature per
+  place among cold / cool / warm only). Each draws on the front chart (`phAbdGResist` a firm hatch below the place's centre, `phAbdGLump`
+  a ring with its centre, `phAbdGPuffy` a pale cloud, `phAbdGSweat` three drops; the grey last-visit copy too) and reads in "Reads as",
+  the chart words (`abd:resist` …) and Find's table. **Fang Bing Ren:** `abd:resist` joins the words of `abd_resist_tend` /
+  `abd_resist_pain` ("tender on pressure", with tender and hard), `abd:resist@hypo` those of `chest_hypo_tend` / `chest_hypo_full` (a
+  resistant hypochondrium is the classical fullness under the ribs). Lump, puffy and sweaty reach no sign yet (puffy feeds the Huang Qi
+  rule in 5b). **Strength 1–5:** `PH_ABD_TENSION` is five values, 1/5 very soft, weak (`vsoft`, new) · 2/5 soft (`soft`) · 3/5 middle
+  (`medium`) · 4/5 firm (`hard`) · 5/5 hard, strong (`vhard`, new), each with its zone colour; the Tension group's chips show the number
+  (the words in the hover and aria-label) as one joined bar in a row (`.ph-abd3-row2.ten`) with "1 soft · weak → 5 hard · strong" under
+  it. Old charts keep their keys, so they read 2 / 3 / 4 with nothing rewritten. `phAbdTenBand`: 1 reads as soft and 5 as hard wherever a
+  sign or clue reads soft / hard (the chart words add `abd:tension:soft` / `hard`, `phAbdChartPicks`, the chips' sign links); the side
+  view's wall sags 1.45 / bulges .9. **Checked, none:** the chart keeps `none: [mark]` (`phAbd2Blank` / `phAbd2Read`; a chart with only
+  a none is not empty). A sign put on places: tap 1 picks it to paint, tap 2 with nothing placed = checked, none (the chip soft with ⊘,
+  aria-pressed "mixed"), tap 3 clears; water (one tap) runs on → none → off; flat, whole abdomen distended and strength stay on / off.
+  Marking the sign on a place takes it off none; Clear and Clear place (whole) clear it. "Reads as" ends "no gas sounds". Fang Bing Ren:
+  `phFbrChartNoSet` (memoised per render) gives the signs whose every word is a mark checked as none (a strength word is never none; a
+  found mark wins); their rows read No (`phFbrRowHtml`, `phFbrMergeCellHtml`; hover "Checked, none on the abdomen chart — tap it to make
+  it Yes"), count as answered, and leave the Ask. Her own tap always wins.
+- **Tested** (sandbox, the made-up patient, 1220 and 360): the groups list the new chips A–Z (Temp: cold, cool, warm, sweaty skin); the
+  Tension bar shows 1–5 with the old soft lit on 2; tapping 1 saves `vsoft`, the words read soft too and "weak, soft wall" ticks;
+  Resistance on epi saves, draws and ticks "tender on pressure"; gas picked then tapped again = none (⊘), Fang Bing Ren's "Bowels:
+  rumbling, gurgling" reads No on both Bing and Ren with its hover, a third tap clears; water on → none → off → on; "Reads as" carries
+  "4/5 firm" and "no gas sounds"; the size check clean on the card with Tension, Feel and Sounds open at both widths; no errors.
+  Pictures: `mocks/abd-synth22-2026-11-12/step5-s5-feel.png`, `step5-s5-ten.png`. **Not tested:** her real records.
+- **Wording DRAFT:** the strength words (very soft, weak · soft · middle · firm · hard, strong) and the new marks' names are mine until
+  she reads them. **SAVED, not live:** goes out only on her own "push live".
