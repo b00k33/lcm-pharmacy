@@ -92739,7 +92739,9 @@ or changing anything in Cliniko.
       + (Z.ans !== null ? `<div class="gf-res ${Z.ans === Z.truth ? "ok" : "no"}">${Z.ans === Z.truth ? "Right — " : "Not quite — "}${truthTxt}.</div><div class="gf-acts"><button type="button" class="gf-btn pri" data-gdf-qnext="1">${Z.i + 1 >= Z.items.length ? "See result" : "Next"}</button></div>` : "")
       + `</div>`;
   }
-  const phGdfTcCasesHtml = id => { const cs = phTourCases().filter(c => c.fam === id).sort((a, b) => a.n - b.n); return cs.length ? `<div class="gf-tcs"><b>Cases</b>${cs.map(c => `<button type="button" class="gf-chip" data-gdf-tc="${esc(c.id)}">C${c.n} · ${esc(phTcCc(c))}</button>`).join("")}</div>` : ""; };
+  // phTcSources() first (2026-11-12): the tour's note cases (PH_TC_HH) are filed when its days are read, which only the Cases page did; a formula's page now lists its cases on a device
+  // that has not opened Cases yet (seen on a fresh device: Yue Bi Jia Zhu Tang's page showed none of its six)
+  const phGdfTcCasesHtml = id => { phTcSources(); const cs = phTourCases().filter(c => c.fam === id).sort((a, b) => a.n - b.n); return cs.length ? `<div class="gf-tcs"><b>Cases</b>${cs.map(c => `<button type="button" class="gf-chip" data-gdf-tc="${esc(c.id)}">C${c.n} · ${esc(phTcCc(c))}</button>`).join("")}</div>` : ""; };
   function phGdfCardHtml(id) {
     const note = phGdfIsNote(id), c = phGdfCol(id), edit = phGdfMode === "edit", pale = c.bg === "#FFFFFF" || c.bg === "#D3DEE2";
     const grp = note ? null : phGdfGroupOf(id), isHerb = !!grp && grp.herb === id, j = PH_BTJ[id] || {};
@@ -92755,7 +92757,7 @@ or changing anything in Cliniko.
       + `<span class="gf-sp"></span>`
       + (!note ? `<span class="gf-cv"><span class="gf-lbl">Group</span><div class="gf-seg xs"><button type="button" data-gdf-group="area" class="${phGdfGroup === "area" ? "on" : ""}">Area</button><button type="button" data-gdf-group="weight" class="${phGdfGroup === "weight" ? "on" : ""}">Importance</button></div></span>` : "")
       + (!edit ? `<span class="gf-cv"><span class="gf-lbl">Cover</span><div class="gf-seg xs"><button type="button" data-gdf-cover="off" class="${phGdfCover === "off" ? "on" : ""}">Off</button><button type="button" data-gdf-cover="signs" class="${phGdfCover === "signs" ? "on" : ""}">Signs</button><button type="button" data-gdf-cover="weights" class="${phGdfCover === "weights" ? "on" : ""}">Weights</button></div></span>` : "")
-      + (!edit && !note ? `<select class="field-bare gf-chip" id="phGdfCmp" title="Compare with another formula" aria-label="Compare with another formula"><option value="">Compare with…</option>${Object.keys(PH_FORMULAS).filter(x => x !== id).map(x => `<option value="${x}"${phGdfCmp === x ? " selected" : ""}>${esc(phGdfName(x))}</option>`).join("")}</select>` : "")
+      + (!edit && !note ? `<select class="field-bare gf-chip" id="phGdfCmp" title="Compare with another formula" aria-label="Compare with another formula"><option value="">Compare with…</option>${Object.keys(PH_FORMULAS).filter(x => x !== id).sort(phAzBy(phGdfName)).map(x => `<option value="${x}"${phGdfCmp === x ? " selected" : ""}>${esc(phGdfName(x))}</option>`).join("")}</select>` : "")
       + (!edit && !note ? `<button type="button" class="gf-btn" data-gdf-quiz="1" data-id="${esc(id)}">Quiz me</button>` : "")
 
       + `<button type="button" class="gf-chip${phGdfLearnedOn(id) ? " on" : ""}" data-gdf-learned="${esc(id)}" aria-pressed="${phGdfLearnedOn(id)}">${phGdfLearnedOn(id) ? PH_GDF_IC.ckBig : ""}Learned</button></div>`;
@@ -93219,6 +93221,10 @@ or changing anything in Cliniko.
       symptoms: ["Abdominal distension", "Occasional headache", "Dry mouth", "Severe constipation (needs glycerin enema)", "Abdominal pain (needs a painkiller pump)", "Hard to urinate, 30 minutes to pass urine", "Coldness in the lower limbs", "Low blood pressure", "Low blood sugar", "Soft below the navel", "Pale red tongue"] },
   ];
   const PH_TC_NEWFAM = { 1: [null, "guilingwuwei"], 3: [null, "chaipo"], 6: [null, "zhuyeshigao"], 7: [null, "guizhifuling"], 9: [null, "wenqingyin"], 10: ["huangqi", "shisanwei"] };   // case n: [the family it had, its own formula]
+  // her 2026-11-12 pick "Yes, all 22": a note case (PH_TC_HH) saved before its lead formula had a table links to that formula once. Which cases: the ones a formula's `src` names
+  // ("hh-" + the row's key). A family she picked herself stays, the same rule as PH_TC_NEWFAM
+  let PH_TC_HHFAM = null;
+  const phTcHhFam = () => PH_TC_HHFAM || (PH_TC_HHFAM = new Map(Object.keys(PH_FORMULAS).flatMap(id => (PH_FORMULAS[id].src || []).filter(x => typeof x === "string").map(x => [x, id]))));
   // her 2026-11-10 "some formulas from case studies have the base formula e.g. dcht and additions so its dcht modified": a case names its base formula(s)
   // (`formula`, and `fms` when the words are not a plain "A + B" list); herbs added to a base, or a dose changed, are its `mod` ("modified"), never a
   // formula of their own. Read again against her Day 1 notes: Cases 2 and 11 are DCHT (her "1. DCHT: ch20 hqin15 bx15 zdh5 bs15 zk30 hz20 gj5", "Dr HH
@@ -93247,26 +93253,26 @@ or changing anything in Cliniko.
   // complaint), then the case as the Day 1 seed has it, read the same way: the patient's findings are the observations, her conditions and earlier prescriptions the diagnosis lines, the teachers'
   // teaching lines stay in her notes. A recipe keeps her shorthand, as "Full name (CODE)" where the code is not on the herb list or could read two ways (SG = Shi Gao beside Ma Huang, Su Geng in
   // Ban Xia Hou Po Tang, as in Ba Wei Chu Fan Tang); a case with two prescriptions lists each under its own "1." / "2." line (so no total). A family only where the formula is one (a named variant
-  // goes to its base: Ji Sheng Shen Qi Wan to Shen Qi Wan, Huang Lian Wen Dan Tang to Wen Dan Tang); a lead formula not in Fang Bing Ren leaves the case unlinked, as Case 5. Names drop her
+  // goes to its base: Ji Sheng Shen Qi Wan to Shen Qi Wan, Huang Lian Wen Dan Tang to Wen Dan Tang); a lead formula Fang Bing Ren lacked was left unlinked, as Case 5, until 2026-11-12 (her pick "Yes, all 22"): each of those 22 formulas now has a table from its cases, and its 41 rows name it as their family (PH_FORMULAS `src`, phTcHhFam). Names drop her
   // "looks like" comparisons. Every wording here is my reading of her notes, hers to correct in Edit (each case is `added`, so it can also be removed).
   const PH_TC_HH = [
     { k: "z1", d: 1, b: 1, cc: "Hyperlipidaemia", name: "Woman, 64 -- hyperlipidaemia, high blood pressure", formula: "Si Ni San + Ban Xia Hou Po Tang", fms: ["Si Ni San", "Ban Xia Hou Po Tang"], fam: "sinisan", mod: "+ Cang Zhu, Ze Xie (Ze Xie Tang), Sheng Mai Ya, Zhi Zi, Chi Shao, Chuan Xiong, Jie Geng",
       cond: ["Hyperlipidaemia", "High blood pressure"],
       recipe: [["CH", "15g"], ["ZK", "15g"], ["BS", "15g"], ["GC", "3g"], ["BX", "15g"], ["HP", "15g"], ["FL", "15g"], ["Su Geng (SG)", "15g"], ["Cang Zhu (CZ)", "15g"], ["Ze Xie (ZX)", "60g"], ["Sheng Mai Ya", "30g"], ["ZZ", "15g"], ["Chi Shao", "30g"], ["CX", "30g"], ["Jie Geng (JG)", "15g"]],
       symptoms: ["Gets nervous easily, very detailed in her work", "Tense muscles", "String-like (wiry) pulse", "Chest fullness", "Anxious"] },
-    { k: "z2", d: 1, b: 1, cc: "Abdominal distension", name: "Woman, 40 -- recurrent abdominal distension, weight gain", formula: "Yue Bi Jia Zhu Tang", fam: null, mod: "Cang Zhu as the Zhu; + Ban Xia, Hou Po, Fu Ling, Su Geng, Qing Pi, Chen Pi; Jing Jie, Fang Feng for the urticaria",
+    { k: "z2", d: 1, b: 1, cc: "Abdominal distension", name: "Woman, 40 -- recurrent abdominal distension, weight gain", formula: "Yue Bi Jia Zhu Tang", fam: "yuebijiazhu", mod: "Cang Zhu as the Zhu; + Ban Xia, Hou Po, Fu Ling, Su Geng, Qing Pi, Chen Pi; Jing Jie, Fang Feng for the urticaria",
       cond: ["Recurrent abdominal distension (2 years)", "Diffuse thyroid changes with nodules", "Pyelonephritis", "Gastric ulcer (history)", "Urticaria set off by fatigue", "Previously Da Chai Hu Tang + Ban Xia Hou Po Tang (for fatigue, weight gain, good appetite): bloating after it"],
       recipe: [["Ma Huang (MH)", "30g"], ["Shi Gao (SG)", "50g"], ["BX", "15g"], ["Su Geng (SG)", "15g"], ["HP", "30g"], ["FL", "15g"], ["GC", "5g"], ["Qing Pi", "15g"], ["CP", "30g"], ["GJ", "5g"], ["Da Zao (DZ)", "30g"], ["Cang Zhu (CZ)", "15g"], ["Jing Jie (JJ)", "30g"], ["Fang Feng (FF)", "15g"]],
       symptoms: ["Sleep adequate, frequent dreams", "Bowel movements regular", "Marked fatigue from work", "72.5 kg, finds it hard to lose weight", "Mother also overweight", "Good appetite", "Blood pressure not high", "Doesn't like cold drinks, likes warm drinks", "Sweats with exercise, not when walking", "Robust, tight neck and shoulders", "Abdominal strength 4/5"] },
-    { k: "z3", d: 1, b: 1, cc: "Scant periods", name: "Woman, 30 -- scant periods 1 year, 21 months postpartum", formula: "Yue Bi Jia Zhu Tang + Dang Gui Shao Yao San", fms: ["Yue Bi Jia Zhu Tang", "Dang Gui Shao Yao San"], fam: null,
+    { k: "z3", d: 1, b: 1, cc: "Scant periods", name: "Woman, 30 -- scant periods 1 year, 21 months postpartum", formula: "Yue Bi Jia Zhu Tang + Dang Gui Shao Yao San", fms: ["Yue Bi Jia Zhu Tang", "Dang Gui Shao Yao San"], fam: "yuebijiazhu",
       cond: ["Scant menstruation for 1 year, 21 months postpartum", "R ureteral stone with hydronephrosis", "Last formula (a Ma Huang formula): no improvement"],
       recipe: [],
       symptoms: ["Black hair, robust, red cheeks", "Light sleep at night", "Fair appetite", "Tongue pale red with thin white coating", "Pulse deep, taut, forceful", "No tenderness", "Gained 10 kg since giving birth", "Abdominal tension 5/5", "Abdomen firm and distended", "Red eyelids, red lips, red mucous membranes", "Sweats a lot, sweats easily", "Used to like cold drinks"] },
-    { k: "z4", d: 1, b: 1, cc: "Can't lose weight", name: "Woman -- can't lose weight, preparing for pregnancy, low mood", formula: "Ba Wei Chu Fan Tang + Huang Qin Tang + Bai He Zhi Mu Tang", fms: ["Ba Wei Chu Fan Tang", "Huang Qin Tang", "Bai He Zhi Mu Tang"], fam: null,
+    { k: "z4", d: 1, b: 1, cc: "Can't lose weight", name: "Woman -- can't lose weight, preparing for pregnancy, low mood", formula: "Ba Wei Chu Fan Tang + Huang Qin Tang + Bai He Zhi Mu Tang", fms: ["Ba Wei Chu Fan Tang", "Huang Qin Tang", "Bai He Zhi Mu Tang"], fam: "baweichufan",
       cond: ["Trying to lose weight but can't", "Preparing for pregnancy (married 3 years)", "Liver cyst", "Irregular cycle since young", "Mild dysmenorrhoea (painkillers 1-2 times a year)", "On an antidepressant (falls asleep better)"],
       recipe: [["HQIN", "10g"], ["ZK", "20g"], ["BX", "20g"], ["ZZ", "15g"], ["FL", "20g"], ["HP", "20g"], ["Su Geng (SG)", "20g"], ["Lian Qiao (LQ)", "15g"], ["Bai He", "10g"], ["Zhi Mu", "10g"], ["BS", "50g"], ["GC", "5g"], ["Da Zao (DZ)", "20g"]],
       symptoms: ["Talks fast, eyes move fast, eyebrows furrowed", "Doesn't sweat much", "Poor mood, depressed and easily irritable", "Easily teary", "Constipation", "LMP 30 days ago", "163 cm, 61 kg", "Appetite normal, affected by mood", "Big pressure and stress the past 2 days", "Red tongue", "Acne on her jaw", "Red mucous membranes", "White sallow face", "No dizziness or car sickness", "Hard to fall asleep", "Cold feet", "Oily face", "Small thimble-like dents in the nails", "Feels fatigued and weak", "Bloated after 1-2 bites last year, now again", "Good nutritional status", "Fear of heights", "Keeps talking about her health, looks very concerned"] },
-    { k: "z5", d: 1, b: 1, cc: "Eczema and urticaria", name: "Woman, 54 -- eczema 8 years, urticaria 1 year", formula: "Fang Feng Tong Sheng San (Ban Zhang, half)", fam: null, mod: "Dang Gui, Shao Yao, Chuan Xiong taken out (no period to regulate); Tao He Cheng Qi Tang inside it",
+    { k: "z5", d: 1, b: 1, cc: "Eczema and urticaria", name: "Woman, 54 -- eczema 8 years, urticaria 1 year", formula: "Fang Feng Tong Sheng San (Ban Zhang, half)", fam: "fangfengtongsheng", mod: "Dang Gui, Shao Yao, Chuan Xiong taken out (no period to regulate); Tao He Cheng Qi Tang inside it",
       cond: ["Eczema 8 years, no result from Western or Chinese medicine", "Urticaria (the past year)", "Anti-allergic injection ineffective", "Spleen and damp treatment did not work; treating it as urticaria helped", "Previously Gui Zhi Jia Long Gu Mu Li Tang (GZJGLMLT) for another issue: worked really well"],
       recipe: [["Ma Huang (MH)", "15g"], ["Shi Gao (SG)", "80g"], ["XR", "15g"], ["GC", "5g"], ["Jing Jie (JJ)", "30g"], ["Fang Feng (FF)", "15g"], ["Bo He (BH)", "10g"], ["Lian Qiao (LQ)", "15g"], ["Jie Geng (JG)", "15g"], ["ZDH", "15g"], ["Cang Zhu (CZ)", "15g"], ["GZ", "10g"], ["MX", "5g"], ["TR", "15g"], ["CX", "15g"]],
       symptoms: ["Intense itching, the entire upper body broke out", "Face a bit brown", "Eczema on the scalp and back of the neck", "Furrowed brow", "Skin very hot, burning like intense sun exposure", "Palms sweat often", "Strong abdominal muscles", "Fat red tongue", "No mucous membrane issues", "Good appetite"] },
@@ -93286,11 +93292,11 @@ or changing anything in Cliniko.
       cond: ["Fatty liver", "Insulin resistance (high visceral fat)", "Male-type hair loss", "Eczema", "Previously Yue Bi Jia Zhu Tang + Wu Ling San, Jing Jie, Fang Feng"],
       recipe: [["Ma Huang (MH)", "20g"], ["Shi Gao (SG)", "80g"], ["GC", "5g"], ["GJ", "5g"], ["Da Zao (DZ)", "30g"], ["ZDH", "30g"], ["XR", "15g"], ["Yi Yi Ren (YYR)", "60g"], ["HBAI", "10g"], ["Cang Zhu (CZ)", "15g"], ["Niu Xi (NX)", "30g"], ["Tianyuju", "2g"]],
       symptoms: ["Finds the herbs very hard to drink", "Palpitations every night for 6 hours since the dose went up", "Weight up from 85 to 89 kg", "Lots of flatulence", "No diarrhoea"] },
-    { k: "z10", d: 1, b: 1, cc: "Constipation", name: "Woman, 30 -- constipation 3 years", formula: "Yue Bi Jia Zhu Tang", fam: null, mod: "+ Hou Po, Zhi Ke, Bai Shao",
+    { k: "z10", d: 1, b: 1, cc: "Constipation", name: "Woman, 30 -- constipation 3 years", formula: "Yue Bi Jia Zhu Tang", fam: "yuebijiazhu", mod: "+ Hou Po, Zhi Ke, Bai Shao",
       cond: ["Constipation 3 years: no urge, difficulty passing stool"],
       recipe: [["Ma Huang (MH)", "25g"], ["Shi Gao (SG)", "80g"], ["GC", "5g"], ["GJ", "5g"], ["Da Zao (DZ)", "30g"], ["ZK", "30g"], ["HP", "30g"], ["BS", "50g"], ["Cang Zhu (CZ)", "15g"]],
       symptoms: ["56.7 kg", "Sleeps well, no snoring", "Intolerant of heat, sweats easily, prefers cold drinks", "Tongue pale red with thin white coating and tooth marks", "Pulse deep, taut, forceful", "Abdomen firm and distended, 4+", "Afternoon palpitations on Yue Bi Jia Zhu Tang + Hou Po", "Lost 2 kg on it", "Dry mouth after the herbs"] },
-    { k: "z11", d: 1, b: 1, cc: "Irregular periods", name: "Woman, 46 -- irregular periods 1 year, hair loss", formula: "Geng Nian Fang", fam: null,
+    { k: "z11", d: 1, b: 1, cc: "Irregular periods", name: "Woman, 46 -- irregular periods 1 year, hair loss", formula: "Geng Nian Fang", fam: "gengnianfang",
       cond: ["Irregular menstrual periods for 1 year (ovarian function may not be optimal)"],
       recipe: [["GZ", "10g"], ["BS", "15g"], ["GC", "5g"], ["Gan Jiang", "5g"], ["Da Zao (DZ)", "15g"], ["FL", "30g"], ["Fu Zi", "15g"], ["Sheng Long Gu", "15g"], ["Duan Mu Li", "15g"], ["Bai Zhu (BZ)", "15g"], ["Lu Jiao Pian", "15g"], ["Yin Yang Huo", "10g"], ["Ba Ji Tian", "10g"], ["Xian Mao", "10g"]],
       symptoms: ["Red face", "Hair loss", "Herbs have helped", "Fatigue", "Trouble sleeping", "Still good energy"] },
@@ -93302,7 +93308,7 @@ or changing anything in Cliniko.
       cond: ["Brainstem cerebral infarction 4 years ago: full recovery of the limbs on Da Chai Hu Tang + Gui Zhi Fu Ling Wan"],
       recipe: [],
       symptoms: ["Red face", "Tai chi master", "Dark lips", "No cramps"] },
-    { k: "z14", d: 1, b: 1, cc: "Palpitations, AF", name: "Man, 76 -- palpitations, atrial fibrillation", formula: "San Huang Xie Xin Tang + Gui Zhi Fu Ling Wan", fms: ["San Huang Xie Xin Tang", "Gui Zhi Fu Ling Wan"], fam: null,
+    { k: "z14", d: 1, b: 1, cc: "Palpitations, AF", name: "Man, 76 -- palpitations, atrial fibrillation", formula: "San Huang Xie Xin Tang + Gui Zhi Fu Ling Wan", fms: ["San Huang Xie Xin Tang", "Gui Zhi Fu Ling Wan"], fam: "sanhuangxiexin",
       cond: ["Atrial fibrillation"],
       recipe: [],
       symptoms: ["Palpitations", "Red eyelids, big eye bags", "Good appetite"] },
@@ -93314,7 +93320,7 @@ or changing anything in Cliniko.
       cond: [],
       recipe: [],
       symptoms: ["Wants to lose weight"] },
-    { k: "z17", d: 1, b: 1, cc: "Allergic rhinitis", name: "Woman, 70 kg -- allergic rhinitis 4 years", formula: "Ge Gen Tang", fam: null, mod: "+ Gan Jiang, Xi Xin",
+    { k: "z17", d: 1, b: 1, cc: "Allergic rhinitis", name: "Woman, 70 kg -- allergic rhinitis 4 years", formula: "Ge Gen Tang", fam: "gegentang", mod: "+ Gan Jiang, Xi Xin",
       cond: ["Allergic rhinitis for 4 years, every March and October"],
       recipe: [["GG", "30g"], ["Ma Huang (MH)", "30g"], ["Chi Shao", "15g"], ["Gui Zhi", "15g"], ["Gan Cao", "5g"], ["Gan Jiang", "10g"], ["Da Zao", "30g"], ["Zhi Ke", "30g"], ["Cang Zhu", "15g"], ["Jing Jie", "30g"], ["Shi Gao", "80g"], ["Zhi Ma Huang", "20g"], ["Bai Shao", "80g"], ["Zhi Da Huang", "30g"]],
       symptoms: ["70 kg", "Wants to lose weight, at any cost"] },
@@ -93322,11 +93328,11 @@ or changing anything in Cliniko.
       cond: ["Breast nodules", "Ovarian cysts", "Fatty liver", "Mitral regurgitation", "Metabolism problem"],
       recipe: [["GZ", "15g"], ["FL", "20g"], ["Zhu Ling (ZL)", "15g"], ["Ze Xie (ZX)", "50g"], ["Cang Zhu (CZ)", "15g"], ["BX", "15g"], ["HP", "15g"], ["Su Geng (SG)", "15g"], ["HNX", "10g"], ["Chi Shao", "15g"]],
       symptoms: ["Swollen tongue", "Deep pulse"] },
-    { k: "z19", d: 1, b: 1, cc: "Dysmenorrhoea", name: "Woman, 38 -- dysmenorrhoea", formula: "Jie Yu Tang (JYT)", fam: null, mod: "+ Zhi Zi 15 g",
+    { k: "z19", d: 1, b: 1, cc: "Dysmenorrhoea", name: "Woman, 38 -- dysmenorrhoea", formula: "Jie Yu Tang (JYT)", fam: "jieyutang", mod: "+ Zhi Zi 15 g",
       cond: ["Dysmenorrhoea", "Stye"],
       recipe: [],
       symptoms: ["Foreign-body sensation in the throat", "Bowel movement every 2-3 days", "Very red eyelids"] },
-    { k: "z20", d: 1, b: 1, cc: "Allergic rhinitis", name: "Woman -- allergic rhinitis, sneezing, itchy nose", formula: "Mai Men Dong Tang", fam: null, mod: "+ Bai He, Bei Sha Shen, Jie Geng, Lu Gen, Jing Jie, Fang Feng",
+    { k: "z20", d: 1, b: 1, cc: "Allergic rhinitis", name: "Woman -- allergic rhinitis, sneezing, itchy nose", formula: "Mai Men Dong Tang", fam: "maimendong", mod: "+ Bai He, Bei Sha Shen, Jie Geng, Lu Gen, Jing Jie, Fang Feng",
       cond: ["Allergic rhinitis", "Recent cold", "Heat, cold and dampness"],
       recipe: [["Mai Dong (MD)", "10g"], ["Bai He", "10g"], ["GC", "10g"], ["BX", "10g"], ["Da Zao (DZ)", "10g"], ["Dang Shen", "10g"], ["Bei Sha Shen", "10g"], ["Jie Geng", "15g"], ["Lu Gen", "30g"], ["Jing Jie", "15g"], ["Fang Feng", "15g"]],
       symptoms: ["Sneezing, itchy nose (very itchy, now settled)", "No cough", "Nose a bit dry", "Throat felt dry, not sore", "Hair a bit thin though thick, maybe hair loss from heat"] },
@@ -93346,7 +93352,7 @@ or changing anything in Cliniko.
       cond: ["Rectal carcinoma (4 cm): 30 sessions of radiation, 3 cycles of chemotherapy", "Lung metastatic lesions have disappeared", "Previously Chai Ling Tang for general weakness after chemotherapy, occult blood in the urine"],
       recipe: [],
       symptoms: ["Oedema of both lower limbs", "Soft abdomen", "Pale red tongue with thick coating", "Empty, large pulse", "Hair has never been dry"] },
-    { k: "a4", d: 2, b: 0, cc: "Rheumatoid arthritis", name: "Woman, middle-aged -- rheumatoid arthritis, broad face", formula: "Chai Hu Gui Zhi Tang", fam: null,
+    { k: "a4", d: 2, b: 0, cc: "Rheumatoid arthritis", name: "Woman, middle-aged -- rheumatoid arthritis, broad face", formula: "Chai Hu Gui Zhi Tang", fam: "chaihuguizhi",
       cond: ["Rheumatoid arthritis (methotrexate, 4 tablets a week)", "Breast fibroadenoma, removed (2005)", "More lung nodules", "Frequent oral ulcers (history)", "Dental caries", "Haemorrhoids"],
       recipe: [],
       symptoms: ["Low mood", "Palpitations", "Dry eyes", "Blurred vision", "Headache", "Appetite normal", "Pain in the hands and ankles", "Energy and emotions better on Chai Hu Gui Zhi Tang", "V-shaped tongue", "Bowel movements 2-3 a day", "Tongue red, thin and stiff", "Average build", "Allergic conditions"] },
@@ -93362,7 +93368,7 @@ or changing anything in Cliniko.
       cond: ["Lesions in the colorectum (colonic erosion), high-grade intraepithelial neoplasia", "Bloods: low albumin, high CRP", "Severe anaemia", "Earlier: 1. Da Chai Hu Tang 2. Huang Qin Tang + Bai Tou Weng Tang + E Jiao, Gan Cao (tummy no longer hurts)"],
       recipe: [["Bai Tou Weng", "10g"], ["Qin Pi", "10g"], ["Huang Lian", "5g"], ["Huang Bai", "5g"], ["E Jiao", "15g"], ["Sheng Gan Cao", "5g"]],
       symptoms: ["Sallow, face a bit puffy", "GI discomfort", "Mild pain in the left upper abdomen", "Recent lower limb swelling", "Legs feel weak, she lies in bed", "Eats when she is hungry", "Abdomen: bloated noise", "Stools well formed", "Doesn't sweat", "Pulse very big", "Red tongue"] },
-    { k: "a8", d: 2, b: 0, cc: "Rheumatoid arthritis", name: "Woman, 61 -- rheumatoid arthritis 16 years", formula: "Chai Hu Gui Zhi Tang", fam: null, mod: "+ Bai Zhu, Fu Ling (for the cholesterol)",
+    { k: "a8", d: 2, b: 0, cc: "Rheumatoid arthritis", name: "Woman, 61 -- rheumatoid arthritis 16 years", formula: "Chai Hu Gui Zhi Tang", fam: "chaihuguizhi", mod: "+ Bai Zhu, Fu Ling (for the cholesterol)",
       cond: ["Rheumatoid arthritis, diagnosed 16 years ago", "Bloods: RF 184", "Allergic rhinitis", "High cholesterol (atorvastatin)", "Upadacitinib improved the morning stiffness"],
       recipe: [["CH", "10g"], ["HQIN", "5g"], ["BX", "10g"], ["DS", "10g"], ["GZ", "10g"], ["BS", "10g"], ["GJ", "5g"], ["ZGC", "5g"], ["HZ", "20g"], ["Bai Zhu", "15g"], ["Fu Ling", "20g"]],
       symptoms: ["Thin, bright white sallow complexion", "Aversion to wind and cold", "Wind exposure sets off her nose", "Lips a bit dry and red", "Sleep not good, with chest tightness and pain", "Tongue pale red with cracks", "Dizziness", "Blood lipids disrupted after Western medicine", "Sore joints", "Gui Zhi constitution"] },
@@ -93386,11 +93392,11 @@ or changing anything in Cliniko.
       cond: ["Mid-to-late stage ovarian cancer, after surgery; chemotherapy stopped (tumour markers up), now bevacizumab", "Diabetes 18 years, hyperglycaemia, hypertension"],
       recipe: [["1. Wen Dan Tang", ""], ["BX", "15g"], ["FL", "30g"], ["CP", "20g"], ["GC", "5g"], ["ZK", "20g"], ["ZR", "10g"], ["GJ", "5g"], ["HZ", "20g"], ["Bai He", "30g"], ["2. Huang Qin Tang", ""], ["HQIN", "20g"], ["BS", "15g"], ["GC", "5g"], ["HZ", "20g"]],
       symptoms: ["Normal appetite and sleep", "One bowel movement a day, little bits, watery", "Throat a bit uncomfortable, foreign-body sensation rising upward", "Voice sounds strained and high-pitched", "Shoulders feel tight", "Tongue fat, moist, red, clean (thin coating)", "Nutritional status still good", "No phlegm in the throat", "A bit bloated when eating", "A little dry mouth", "Abdomen: gas noise", "Doesn't sweat much", "No oral ulcers", "A lot of nightmares", "Father: gastric ulcer"] },
-    { k: "a14", d: 2, b: 0, cc: "Nasopharyngeal carcinoma", name: "Man -- nasopharyngeal carcinoma", formula: "1. Xiao Xian Xiong Tang + San Huang Xie Xin Tang · 2. Qian Jin Wei Jing Tang", fms: ["Xiao Xian Xiong Tang", "San Huang Xie Xin Tang", "Qian Jin Wei Jing Tang"], fam: null,
+    { k: "a14", d: 2, b: 0, cc: "Nasopharyngeal carcinoma", name: "Man -- nasopharyngeal carcinoma", formula: "1. Xiao Xian Xiong Tang + San Huang Xie Xin Tang · 2. Qian Jin Wei Jing Tang", fms: ["Xiao Xian Xiong Tang", "San Huang Xie Xin Tang", "Qian Jin Wei Jing Tang"], fam: "xiaoxianxiong",
       cond: ["Nasopharyngeal carcinoma", "First Zhu Ye Shi Gao Tang (Mai Dong 50, Qing Ban Xia 15, Sheng Shai Shen 15, Sheng Gan Cao 10, Dan Zhu Ye 20, Sheng Shi Gao 30, Jing Mi)", "Then Xiao Xian Xiong Tang + Ju Zhi Jiang Tang + Fu Ling Xing Ren Gan Cao Tang + Ban Xia, Jie Geng"],
       recipe: [["1. Xiao Xian Xiong Tang + San Huang Xie Xin Tang", ""], ["HL", "10g"], ["Gua Lou Pi", "20g"], ["Gua Lou Ren", "30g"], ["Jiang Ban Xia (JBX)", "20g"], ["ZDH", "10g"], ["Jie Geng (JG)", "15g"], ["GC", "10g"], ["HQIN", "15g"], ["ZZ", "10g"], ["2. Qian Jin Wei Jing Tang", ""], ["Yi Yi Ren", "30g"], ["Lu Gen", "30g"], ["Dong Gua Ren", "30g"], ["Tao Ren", "15g"]],
       symptoms: ["Clean, shiny tongue", "Wakes at 3am", "Dirty phlegm with blood", "Fear of cold", "Cannot eat: nausea as soon as he sees a meal", "Few bowel movements (eats little), stools dry", "Abdomen: hard rectus abdominis"] },
-    { k: "a15", d: 2, b: 0, cc: "Acne", name: "Man, 25 -- acne 9 years", formula: "Gan Cao Xie Xin Tang", fam: null, mod: "+ Fu Ling 30",
+    { k: "a15", d: 2, b: 0, cc: "Acne", name: "Man, 25 -- acne 9 years", formula: "Gan Cao Xie Xin Tang", fam: "gancaoxiexin", mod: "+ Fu Ling 30",
       cond: ["Acne and seborrhoeic dermatitis for 9 years (Western medicine, compound sulfur ointments)"],
       recipe: [["GC", "10g"], ["ZGC", "10g"], ["BX", "15g"], ["HL", "5g"], ["HQIN", "15g"], ["DS", "15g"], ["GJ", "5g"], ["HZ", "20g"], ["FL", "30g"]],
       symptoms: ["Dark red acne on the sides of the cheeks and jawline", "Black hair", "Face a bit darker", "Eats a lot, little physical activity", "Good appetite, better when the weather is colder", "Sleeps well", "Pimples come to a head recently", "Bowel movements good, formed", "Mouth ulcers every 1-2 months", "Set off by chilli and greasy food", "Fat, tender red tongue with tooth marks", "Looks a bit anxious", "Father: gout and shingles", "Mother: facial acne as a teenager"] },
@@ -93402,7 +93408,7 @@ or changing anything in Cliniko.
       cond: ["Hashimoto's 5 years ago, now hyperthyroidism", "Osteoporosis", "Dust allergy with itchy eyes"],
       recipe: [["CH", "15g"], ["HQIN", "10g"], ["BX", "15g"], ["DS", "10g"], ["GJ", "5g"], ["HZ", "20g"], ["GZ", "15g"], ["Bai Zhu (BZ)", "20g"], ["FL", "30g"], ["Zhu Ling (ZL)", "30g"], ["Ze Xie (ZX)", "30g"], ["HP", "15g"], ["SY", "10g"]],
       symptoms: ["Palpitations", "Chest tightness", "Fatigue", "Recurrent colds and fever over the past 2 years", "Decreased vision", "Dryness and stinging in the R eye", "Frequent nightmares", "Irregular bowel movements, diarrhoea set off by anxiety", "Clear nasal discharge", "Tight sensation in the throat", "Face swelling", "Pleasant, switched on, roundish fast-moving eyes", "Pulse thin and weak", "L foot feels a bit swollen", "Father: gastric cancer"] },
-    { k: "a18", d: 2, b: 0, cc: "Cirrhosis", name: "Man, middle-aged -- cirrhosis 42 years, intermittent ascites", formula: "1. San Huang Xie Xin Tang · 2. Huang Qin Tang", fms: ["San Huang Xie Xin Tang", "Huang Qin Tang"], fam: null,
+    { k: "a18", d: 2, b: 0, cc: "Cirrhosis", name: "Man, middle-aged -- cirrhosis 42 years, intermittent ascites", formula: "1. San Huang Xie Xin Tang · 2. Huang Qin Tang", fms: ["San Huang Xie Xin Tang", "Huang Qin Tang"], fam: "sanhuangxiexin",
       cond: ["Cirrhosis 42 years ago, intermittent ascites", "Bleeding", "Splenomegaly 38 years", "Gallbladder stones with cholecystitis", "Simple renal cysts", "Hearing loss"],
       recipe: [["1. San Huang Xie Xin Tang (soak 25 minutes)", ""], ["Sheng Da Huang", "5g"], ["HL", "5g"], ["HQIN", "10g"], ["2. Huang Qin Tang", ""], ["HQIN", "15g"], ["BS", "15g"], ["GC", "5g"], ["HZ", "20g"]],
       symptoms: ["Skinny, eyes have spirit, dark face, thick hair", "Good appetite", "Difficulty falling asleep, needs an afternoon nap", "Bowel movements twice a day, somewhat loose but formed", "Bloated when the ascites flares, otherwise not bad", "Ascites flares bring abdominal infection and fever", "No bitter mouth", "A hot type", "No mouth ulcer now, used to often"] },
@@ -93410,7 +93416,7 @@ or changing anything in Cliniko.
       cond: ["Myelofibrosis (2019), ruxolitinib; chemotherapy stopped, now targeted therapy", "Chronic heart failure, massive ascites", "Atrial fibrillation", "Splenomegaly extending below the umbilicus", "Stasis dermatitis (improved on Huang Qi)"],
       recipe: [["HQI", "40g"], ["Bai Zhu (BBZ)", "30g"], ["Fang Feng (FF)", "15g"], ["HZ", "30g"], ["Nuo Mi", "(15 doses)"]],
       symptoms: ["Marked fatigue, cannot walk fast", "Blurred vision", "Weight loss", "Frequent nocturia", "Very large appetite", "Bowel movements 1-2 a day", "Anaemic, pale eyelids, large eye bags", "Pale, tender tongue", "Diffuse purplish ecchymosis under the tongue", "Weak pulse with irregular rhythm", "Soft abdomen", "Hyperpigmentation of both limbs, purple skin on the legs", "No sweating", "Face oedema improved", "Can walk now", "Lower limb swelling improved", "No bloating"] },
-    { k: "a20", d: 2, b: 0, cc: "Trigeminal neuralgia", name: "Woman, 42 -- trigeminal neuralgia, anaemia", formula: "Huang Lian E Jiao Tang + Huang Qin Tang", fms: ["Huang Lian E Jiao Tang", "Huang Qin Tang"], fam: null, mod: "+ SDH, Gan Cao",
+    { k: "a20", d: 2, b: 0, cc: "Trigeminal neuralgia", name: "Woman, 42 -- trigeminal neuralgia, anaemia", formula: "Huang Lian E Jiao Tang + Huang Qin Tang", fms: ["Huang Lian E Jiao Tang", "Huang Qin Tang"], fam: "huanglianejiao", mod: "+ SDH, Gan Cao",
       cond: ["Trigeminal neuralgia: pain in the R gum with fatigue or emotional ups and downs", "Anaemia", "Bloods: Hb 84 g/L", "Uterine fibroid"],
       recipe: [["Huang Lian", "5g"], ["Huang Qin", "15g"], ["Bai Shao", "20g"], ["E Jiao", "10g"], ["Sheng Gan Cao", "10g"], ["Hong Zao", "20g"]],
       symptoms: ["White face, black hair, looks sad", "Red lips, red tongue", "Eats a lot but hard to digest", "Tongue coating tends to be thick and white", "Wakes easily, hard to fall back asleep", "Heavy flow on days 1-2", "Period lasts more than 10 days, cycle 25 days", "Dry red lips", "Slippery pulse", "Belly soft with navel pulsation", "Doesn't sweat much", "Not scared of cold", "Hands a bit cold today", "Mouth ulcers often", "Poor sleep from the pain", "Easily gets heat (shang huo)", "Yellow hands", "Bowel movements sometimes dry, sometimes loose", "Dry hands"] },
@@ -93442,7 +93448,7 @@ or changing anything in Cliniko.
       cond: ["Weakness in the lower limbs for 1 month: tired after walking 10 minutes", "Stomach discomfort for 2 weeks"],
       recipe: [["BX", "15g"], ["HL", "5g"], ["Huang Qin (HQ)", "10g"], ["DG", "15g"], ["GC", "5g"], ["HZ", "15g"], ["Sheng Jiang (SJ)", "5g"], ["HP", "15g"], ["FL", "30g"], ["Su Geng (SG)", "15g"]],
       symptoms: ["Dizziness after getting out of bed", "Throat red", "Bad breath", "Hard to fall asleep", "Chen Pi tea makes her overheated", "Mouth ulcers from stress, can bleed", "Pulse thin and taut", "Bowel movement every day", "Foreign body in the throat", "Navel pulsation, soft tummy", "Red eyelids", "Tongue feels dry in enclosed spaces, on hot sunny days in the car", "Can't do spicy food"] },
-    { k: "l6", d: 2, b: 1, cc: "Chronic cough", name: "Woman, 55 -- chronic cough (long-term smoker), Hep B", formula: "Zhi Shi Xie Bai Gui Zhi Tang + Gui Zhi Fu Ling Wan", fms: ["Zhi Shi Xie Bai Gui Zhi Tang", "Gui Zhi Fu Ling Wan"], fam: null,
+    { k: "l6", d: 2, b: 1, cc: "Chronic cough", name: "Woman, 55 -- chronic cough (long-term smoker), Hep B", formula: "Zhi Shi Xie Bai Gui Zhi Tang + Gui Zhi Fu Ling Wan", fms: ["Zhi Shi Xie Bai Gui Zhi Tang", "Gui Zhi Fu Ling Wan"], fam: "zhishixiebaiguizhi",
       cond: ["Long-term smoker with a chronic cough, worse with a cold", "Hep B", "Chronic gastritis, acid reflux, hiccups"],
       recipe: [["ZK", "20g"], ["Zhi Shi (ZS)", "20g"], ["Xie Bai (XB)", "20g"], ["GZ", "15g"], ["HP", "20g"], ["Gua Lou (GL)", "20g"], ["FL", "30g"], ["BS", "15g"], ["TR", "15g"], ["DP", "15g"], ["ZZ", "15g"]],
       symptoms: ["Cough and white phlegm improved and resolved", "Bowel movements regular now", "Strong appetite, never feels full, but overeating bloats her", "Lots of dreams", "Sweats with exertion", "Hand numbness with physical work", "Sensitive to cold", "Tongue: thick, yellow, dry coating, full sublingual veins", "Legs a bit swollen", "Gets angry easily, fiery", "Frowning eyebrows", "Red eyes", "Short of breath, chest fullness", "Dull complexion, dark purple lips"] },
@@ -93466,7 +93472,7 @@ or changing anything in Cliniko.
       cond: ["High blood pressure for 4-5 years, unstable", "Hashimoto's (history)"],
       recipe: [],
       symptoms: ["Diarrhoea on the 2nd day of the herbs", "Dizziness better overall, a little on waking", "Palpitations improved after talking to a friend about an emotional issue", "Purple lips", "Hard to fall asleep", "Tongue greasy and dirty", "Gas noise"] },
-    { k: "l12", d: 2, b: 1, cc: "Internal heat, skin", name: "Woman, 41 -- tall and skinny; internal heat, neurodermatitis, acne", formula: "Fang Feng Tong Sheng San (Ban Zhang, half)", fam: null, mod: "Dang Gui, Chuan Xiong taken out (menstruation normal)",
+    { k: "l12", d: 2, b: 1, cc: "Internal heat, skin", name: "Woman, 41 -- tall and skinny; internal heat, neurodermatitis, acne", formula: "Fang Feng Tong Sheng San (Ban Zhang, half)", fam: "fangfengtongsheng", mod: "Dang Gui, Chuan Xiong taken out (menstruation normal)",
       cond: ["Chronic pharyngitis", "Fatty infiltration of the liver", "Superficial gastritis", "Hypertension, high LDL", "Neurodermatitis, acne", "Previously Huang Lian Jie Du Tang + Bai He Hua Shi Tang"],
       recipe: [["Jing Jie (JJ)", "15g"], ["Fang Feng (FF)", "15g"], ["Lian Qiao (LQ)", "15g"], ["Ma Huang (MH)", "5g"], ["Shi Gao (SG)", "30g"], ["ZDH", "5g"], ["GC", "5g"], ["XR", "10g"]],
       symptoms: ["Warm palms", "Dry, itchy eyes", "Wakes up with a dry mouth and itchy throat", "Red throat, sticky tongue coating", "Gained 7 kg in half a year", "Bowel movements less regular than before", "Itchy eczema like sha on her back", "Inflammation in her eyes", "Eyes a bit puffy", "Menstruation normal", "A bit robust", "Well-developed muscles, prominent chest and waistline", "Dry skin with lots of hair", "Prone to skin issues and facial inflammation (eyes, throat, nose)"] },
@@ -93482,7 +93488,7 @@ or changing anything in Cliniko.
       cond: ["Earlier rash, treated with modified Xiao Chai Hu Tang"],
       recipe: [["CH", "15g"], ["HQIN", "10g"], ["BX", "15g"], ["DS", "10g"], ["GC", "5g"], ["Sheng Jiang (SJ)", "5g"], ["HZ", "15g"], ["GZ", "15g"], ["GL", "30g"], ["Long Gu (LG)", "30g"], ["Mu Li (ML)", "30g"]],
       symptoms: ["Difficulty falling asleep, better but still not great", "Lots of dreams", "Navel pulsation", "Digestion feels poor"] },
-    { k: "l16", d: 2, b: 1, cc: "Neurodermatitis", name: "Man, 45 -- neurodermatitis 3-5 years", formula: "Fang Feng Tong Sheng San (Ban Zhang, half)", fam: null,
+    { k: "l16", d: 2, b: 1, cc: "Neurodermatitis", name: "Man, 45 -- neurodermatitis 3-5 years", formula: "Fang Feng Tong Sheng San (Ban Zhang, half)", fam: "fangfengtongsheng",
       cond: ["Neurodermatitis for 3-5 years", "Athlete's foot"],
       recipe: [],
       symptoms: ["Gets bloated", "Short sleep, wakes at 3-4am", "Bowel movements daily, normal", "Early white hair", "Red face, red lips", "Wiry rapid pulse", "Heaviness and distension in the lower abdomen", "Rash used to weep", "Doesn't sweat easily", "Rash worse in warm weather", "Dry, flaky skin on the lower limbs", "Abdomen: gas sound, no tightness under the ribs"] },
@@ -93506,7 +93512,7 @@ or changing anything in Cliniko.
       cond: ["Raised urine protein", "Slightly high ALT", "Earlier Yin Chen Wu Ling San (Yin Chen 30, Bai Zhu 30, Zhu Ling 30, Ze Xie 30, Gui Zhi 20, Fu Ling 30)"],
       recipe: [["1. Yu Ping Feng San", ""], ["HQI", "30g"], ["Bai Zhu (BZ)", "20g"]],
       symptoms: [] },
-    { k: "m2", d: 3, b: 0, cc: "Joint pain after pneumonia", name: "Man -- pneumonia with fever, bone and joint pain; mycobacterial infection", formula: "Chai Hu Gui Zhi Tang", fam: null,
+    { k: "m2", d: 3, b: 0, cc: "Joint pain after pneumonia", name: "Man -- pneumonia with fever, bone and joint pain; mycobacterial infection", formula: "Chai Hu Gui Zhi Tang", fam: "chaihuguizhi",
       cond: ["Pneumonia with fever, fatigue, collapse", "Mycobacterial infection similar to tuberculosis", "Pancreatic issue", "On 4 types of medication", "No three highs"],
       recipe: [["CH", "15g"], ["HQIN", "10g"], ["BX", "15g"], ["DS", "10g"], ["GZ", "15g"], ["GC", "5g"], ["BS", "15g"], ["GJ", "5g"], ["HZ", "20g"]],
       symptoms: ["Bone and joint pain", "Morning stiffness, relieved by movement", "Lower limb oedema at night", "Thin white tongue", "Tense rectus abdominis", "Sweaty abdominal skin", "Appetite fine (none at all before)", "Itchy scalp", "Pain in the L upper quadrant", "Bowel movements normal", "Sleep OK", "Lower back pain", "Sweating", "Scared of cold", "Tired walking", "Dreams a little", "Moderately thin, tends to depression", "Averse to greasy food", "Abdomen neither soft nor hard, the muscles can be felt", "Allergies affecting the skin, allergic conjunctivitis", "Low-grade fever"] },
@@ -93514,7 +93520,7 @@ or changing anything in Cliniko.
       cond: ["Coronary heart disease", "Parkinson's disease", "Intractable constipation", "Anxiety", "Hoarse voice", "Previously Xue Fu Zhu Yu Tang"],
       recipe: [["1. Wen Dan Tang + Fu Ling Yin", ""], ["BX", "15g"], ["FL", "30g"], ["CP", "30g"], ["GC", "5g"], ["ZK", "30g"], ["ZR", "10g"], ["GJ", "5g"], ["HZ", "20g"], ["HP", "20g"], ["Su Geng (SG)", "20g"], ["DS", "15g"], ["Bai Zhu (BZ)", "15g"]],
       symptoms: ["Pain on the R side of the chest", "Sleep OK", "Poor appetite", "Chest tightness", "Red face", "Sweating", "Hand tremors", "Dizziness", "Palpitations", "Lots of dreams", "Stools formed but a bit dry", "Has yelled out in her sleep when upset", "May suddenly lose her voice when a melody goes higher", "No urge for food", "Not bloated after eating a lot", "Coating at the back of the tongue"] },
-    { k: "m4", d: 3, b: 0, cc: "Abdominal pain", name: "Man, middle-aged -- abdominal pain, low blood pressure", formula: "1. Fu Zi Li Zhong Tang + Rou Gui · 2. Fu Zi Li Zhong Wan (alternating)", fms: ["Fu Zi Li Zhong Tang", "Fu Zi Li Zhong Wan"], fam: null,
+    { k: "m4", d: 3, b: 0, cc: "Abdominal pain", name: "Man, middle-aged -- abdominal pain, low blood pressure", formula: "1. Fu Zi Li Zhong Tang + Rou Gui · 2. Fu Zi Li Zhong Wan (alternating)", fms: ["Fu Zi Li Zhong Tang", "Fu Zi Li Zhong Wan"], fam: "fuzilizhong",
       cond: ["Abdominal pain (can be from kidney stones)", "Low blood pressure, orthostatic dizziness", "Hypoglycaemia", "Carotid stent", "Lumbar disc herniation, surgery recently", "Mild anaemia", "Yang qi deficiency, a cold deficient constitution"],
       recipe: [["Fu Zi (FZ)", "10g"], ["DS", "20g"], ["Bai Zhu (BZ)", "20g"], ["GJ", "10g"], ["ZGC", "10g"], ["RG", "10g"]],
       symptoms: ["Speaks moderately fast, with force", "Forceless pulse", "Fatigue", "Ice-cold hands and feet", "Cold sweats", "Thick white tongue coating", "Hard to fall asleep", "Stool formed", "Recurrent diarrhoea when young", "Back pain"] },
@@ -93554,7 +93560,7 @@ or changing anything in Cliniko.
       cond: ["Atherosclerosis", "Lung nodules", "High cholesterol", "Previously Zhen Wu Tang + Chuan Xiong, Ze Xie, alternating with Ji Sheng Shen Qi Wan"],
       recipe: [["1. Dang Gui Shao Yao San (to protect the brain)", ""], ["DG", "10g"], ["CX", "20g"], ["Chi Shao", "20g"], ["Bai Zhu (BZ)", "20g"], ["BZ", "15g"], ["Cang Zhu (CZ)", "15g"], ["Ze Xie (ZX)", "30g"], ["2. Ji Sheng Shen Qi Wan", "10g a day"]],
       symptoms: ["Dizziness not noticeable, feels something on the L side of his head", "Yellow, greasy tongue coating", "Dribbling urine", "Walking strength not as good as before", "Tummy soft", "Bowel movements on the dry side", "Father: cerebral infarction", "Mother: cerebral infarction, hypertension"] },
-    { k: "m14", d: 3, b: 0, cc: "Cystic acne, weight", name: "Young man -- bad cystic acne, lost 20 kg", formula: "1. Yue Bi Jia Zhu Tang + Ze Xie Tang · 2. Fang Feng Tong Sheng San", fms: ["Yue Bi Jia Zhu Tang", "Ze Xie Tang", "Fang Feng Tong Sheng San"], fam: null, mod: "Ma Huang down from 15",
+    { k: "m14", d: 3, b: 0, cc: "Cystic acne, weight", name: "Young man -- bad cystic acne, lost 20 kg", formula: "1. Yue Bi Jia Zhu Tang + Ze Xie Tang · 2. Fang Feng Tong Sheng San", fms: ["Yue Bi Jia Zhu Tang", "Ze Xie Tang", "Fang Feng Tong Sheng San"], fam: "yuebijiazhu", mod: "Ma Huang down from 15",
       cond: ["Bad cystic acne", "Lost 20 kg on Fang Feng Tong Sheng San alternating with Yue Bi Jia Zhu Tang + Ze Xie Tang"],
       recipe: [["1. Yue Bi Jia Zhu Tang + Ze Xie Tang", ""], ["Ma Huang (MH)", "5g"], ["GC", "5g"], ["Shi Gao (SG)", "50g"], ["Cang Zhu (CZ)", "30g"], ["Fu Zi (FZ)", "10g"], ["GJ", "10g"], ["HZ", "20g"], ["Ze Xie (ZX)", "60g"], ["2. Fang Feng Tong Sheng San", "10g a day"]],
       symptoms: ["Stools on the drier side", "Wakes easily at night, hard to fall asleep"] },
@@ -93566,7 +93572,7 @@ or changing anything in Cliniko.
       cond: ["Myelofibrosis, autoimmune thrombocytopenia", "On prednisone", "High WBC", "Previously Fu Zi Xie Xin Tang", "Shi Quan Da Bu Tang thought of, not used yet (no Huang Qi yet)"],
       recipe: [["Shu Di Huang", "30g"], ["Sheng Di Huang", "30g"], ["Shan Yao", "50g"], ["Shan Zhu Rou", "20g"], ["MDP", "15g"], ["FL", "15g"], ["Ze Xie (ZX)", "20g"], ["Fu Zi (FZ)", "5g"], ["RG", "5g"]],
       symptoms: ["White, thick hair", "Feels really itchy", "Good appetite", "No numbness in the hands or feet", "Not very tired", "Difficulty urinating", "Bowel movements: the first part fine, then a bit loose"] },
-    { k: "m17", d: 3, b: 0, cc: "Eczema, weight", name: "Man, 23 -- rashes on back and limbs, eczema since young", formula: "1. Yue Bi Jia Zhu Tang · 2. Fang Feng Tong Sheng San", fms: ["Yue Bi Jia Zhu Tang", "Fang Feng Tong Sheng San"], fam: null,
+    { k: "m17", d: 3, b: 0, cc: "Eczema, weight", name: "Man, 23 -- rashes on back and limbs, eczema since young", formula: "1. Yue Bi Jia Zhu Tang · 2. Fang Feng Tong Sheng San", fms: ["Yue Bi Jia Zhu Tang", "Fang Feng Tong Sheng San"], fam: "yuebijiazhu",
       cond: ["Eczema since young", "Rashes on the back and limbs, better on Fang Feng Tong Sheng San and Yue Bi Jia Zhu Tang", "Lost 10 kg since treatment began (1.5 years ago)"],
       recipe: [["1. Yue Bi Jia Zhu Tang", ""], ["Ma Huang (MH)", "10g"], ["Shi Gao (SG)", "30g"], ["GC", "5g"], ["Cang Zhu (CZ)", "20g"], ["GJ", "5g"]],
       symptoms: ["Gained weight over the past 5 years", "Thick coating at the back of the tongue", "Appetite OK", "Oily hair", "Red eyelids"] },
@@ -93574,15 +93580,15 @@ or changing anything in Cliniko.
       cond: ["Malignant lung tumour (2023), surgery; L mastectomy; chemotherapy", "Low WBC and neutrophils, unchanged for 1.5 months", "Thyroid nodules"],
       recipe: [["CH", "15g"], ["HQIN", "10g"], ["BX", "15g"], ["DS", "15g"], ["GZ", "10g"], ["Bai Zhu (BZ)", "20g"], ["FL", "30g"], ["Zhu Ling (ZL)", "30g"], ["Ze Xie (ZX)", "30g"], ["GJ", "5g"], ["HZ", "20g"], ["GC", "5g"], ["BS", "30g"]],
       symptoms: ["Gets hungry easily", "Constipation, very dry stools", "Rapid weight gain on chemotherapy", "Numbness in the limbs", "Short of breath, can't climb stairs", "Sweating OK", "Very smelly urine if she drinks only a little"] },
-    { k: "m19", d: 3, b: 0, cc: "Pulmonary nodules", name: "Woman, 56 -- pulmonary nodules (halved)", formula: "1. Bai He Di Huang Tang + Bai He Zhi Mu Tang + Gan Mai Da Zao Tang · 2. Er Zhi Wan", fms: ["Bai He Di Huang Tang", "Bai He Zhi Mu Tang", "Gan Mai Da Zao Tang", "Er Zhi Wan"], fam: null,
+    { k: "m19", d: 3, b: 0, cc: "Pulmonary nodules", name: "Woman, 56 -- pulmonary nodules (halved)", formula: "1. Bai He Di Huang Tang + Bai He Zhi Mu Tang + Gan Mai Da Zao Tang · 2. Er Zhi Wan", fms: ["Bai He Di Huang Tang", "Bai He Zhi Mu Tang", "Gan Mai Da Zao Tang", "Er Zhi Wan"], fam: "baihedihuang",
       cond: ["Multiple small nodules in both lungs, halved from 1.6 to 0.8", "Cervical spondylosis", "Previously Chai Qin Tang without Sheng Jiang; Xiao Chai Hu Tang + Wai Tai Fu Ling Yin"],
       recipe: [["1. Bai He Di Huang Tang + Bai He Zhi Mu Tang + Gan Mai Da Zao Tang", ""], ["Bai He", "50g"], ["Shu Di", "30g"], ["Zhi Mu", "15g"], ["Huai Xiao Mai", "50g"], ["ZGC", "5g"], ["HZ", "20g"], ["2. Er Zhi Wan (pills, by ratio)", ""], ["Nu Zhen Zi", "1 part"], ["Han Lian Cao", "1 part"], ["Bai Shao", "2 parts"], ["Zhi Gan Cao", "1 part"], ["Gou Qi", "2 parts"]],
       symptoms: ["No night sweats, no cough now", "Restricted backward movement of the shoulder", "Soreness in the R shoulder after a cold", "Insomnia, no drowsiness in the day", "Dry stools"] },
-    { k: "m20", d: 3, b: 0, cc: "Weight, nose", name: "Girl, 12 -- weight, nose problems", formula: "1. Yue Bi Jia Zhu Tang · 2. Fang Feng Tong Sheng San (pills)", fms: ["Yue Bi Jia Zhu Tang", "Fang Feng Tong Sheng San"], fam: null, mod: "Ma Huang down from 10 to 5",
+    { k: "m20", d: 3, b: 0, cc: "Weight, nose", name: "Girl, 12 -- weight, nose problems", formula: "1. Yue Bi Jia Zhu Tang · 2. Fang Feng Tong Sheng San (pills)", fms: ["Yue Bi Jia Zhu Tang", "Fang Feng Tong Sheng San"], fam: "yuebijiazhu", mod: "Ma Huang down from 10 to 5",
       cond: ["Weight not changed, not overweight, 10 cm taller"],
       recipe: [["1. Yue Bi Jia Zhu Tang", ""], ["Ma Huang (MH)", "5g"], ["GC", "5g"], ["Cang Zhu (CZ)", "20g"], ["Shi Gao (SG)", "30g"], ["GJ", "5g"], ["HZ", "20g"]],
       symptoms: ["Nose much better, nosebleeds improved", "No longer thirsty", "Red throat, red tongue", "Clear nasal discharge (a whole pack of tissues)", "Aversion to heat", "Profuse sweating", "Occasional snoring", "Normal appetite and bowel movements", "No diarrhoea on Fang Feng Tong Sheng San"] },
-    { k: "m21", d: 3, b: 0, cc: "Chemotherapy side effects", name: "Man, b.1977 -- cancer on chemotherapy (pemetrexed)", formula: "Fu Zi Li Zhong Wan", fam: null, mod: "+ Fu Ling",
+    { k: "m21", d: 3, b: 0, cc: "Chemotherapy side effects", name: "Man, b.1977 -- cancer on chemotherapy (pemetrexed)", formula: "Fu Zi Li Zhong Wan", fam: "fuzilizhong", mod: "+ Fu Ling",
       cond: ["Cancer, still on chemotherapy (pemetrexed): bone marrow suppression, thrombocytopenia, anaemia, neutropenia", "Previously Fu Zi Li Zhong Tang, Chai Ling Tang"],
       recipe: [["DS", "20g"], ["Bai Zhu (BZ)", "20g"], ["GJ", "10g"], ["GC", "5g"], ["Fu Pian", "10g"], ["FL", "30g"]],
       symptoms: ["Dark complexion", "Dark tongue", "Tympanic abdomen", "Hollow pulse", "Diarrhoea only the past 2 days", "Likes strong flavours"] },
@@ -93594,11 +93600,11 @@ or changing anything in Cliniko.
       cond: ["Lung nodules", "Type 2 diabetes", "On Da Chai Hu Tang since 2018"],
       recipe: [],
       symptoms: ["Blurry eyesight", "No bitter mouth, but dry", "Blood pressure a bit high", "Wiry, slippery pulse", "Blood sugar a bit high"] },
-    { k: "p1", d: 3, b: 1, cc: "Lower abdominal pain, ulcers", name: "Woman, b.1986 -- dull lower abdominal pain, mouth ulcers, postpartum", formula: "Gan Cao Xie Xin Tang", fam: null, mod: "+ Huang Bai, Fu Ling",
+    { k: "p1", d: 3, b: 1, cc: "Lower abdominal pain, ulcers", name: "Woman, b.1986 -- dull lower abdominal pain, mouth ulcers, postpartum", formula: "Gan Cao Xie Xin Tang", fam: "gancaoxiexin", mod: "+ Huang Bai, Fu Ling",
       cond: ["Postpartum", "UTI last time"],
       recipe: [],
       symptoms: ["Has dreams, many dreams", "Dull pain in the lower abdomen", "Normal appetite", "Gastric distension", "Hands on waking better than before", "Mouth ulcers", "Morning stiffness (last time)", "Hot palms", "Yellow hands"] },
-    { k: "p2", d: 3, b: 1, cc: "Pancreatic cancer, bloating", name: "Woman, b.1953 -- pancreatic surgery (May 2023), liver cancer ablation", formula: "Liu Jun Zi Tang", fam: null,
+    { k: "p2", d: 3, b: 1, cc: "Pancreatic cancer, bloating", name: "Woman, b.1953 -- pancreatic surgery (May 2023), liver cancer ablation", formula: "Liu Jun Zi Tang", fam: "liujunzi",
       cond: ["Pancreatic surgery (May 2023)", "Cancer in her liver, radiofrequency ablation", "Mai Men Dong Tang since 2024 alongside chemotherapy"],
       recipe: [["Dang Shen", "15g"], ["Bai Zhu", "15g"], ["Fu Ling", "20g"], ["Zhi Gan Cao", "5g"], ["Jiang Ban Xia", "15g"], ["Chen Pi", "20g"], ["Gan Jiang", "5g"], ["Hong Zao", "50g"]],
       symptoms: ["Itchy scalp from chemotherapy", "No mouth ulcers", "Complexion pretty good", "No longer anaemic", "Some bloating", "Soft tummy", "Tongue a bit moist", "Likes sweets", "Poor stomach motility"] },
@@ -93642,7 +93648,7 @@ or changing anything in Cliniko.
       cond: ["Endometriosis / adenomyosis", "Irregular vaginal bleeding, resolved after an injection of leuprorelin acetate", "Anaemia (bled a lot, large blood clots)", "A15 D6", "Pelvic congestion; more anxiety than blood stasis"],
       recipe: [],
       symptoms: ["Chubby", "Mind not clear", "Bowel movements every 2 days, loose", "Double eyelids, shiny face", "Dreams at times", "Hands not yellow", "No itchy skin", "Gets anxious easily", "Hair still black, good nutritional status", "Period relatively heavy, painless but with clots", "Smooth skin", "Tongue tip purplish and dark", "Lower abdomen just a little pain", "Stools on the looser side", "Tummy very hot", "Mouth ulcers"] },
-    { k: "p12", d: 3, b: 1, cc: "Sleep, alopecia areata", name: "Woman, b.1979 -- sleep problems (on antidepressants), alopecia areata", formula: "Bai He Fang", fam: null,
+    { k: "p12", d: 3, b: 1, cc: "Sleep, alopecia areata", name: "Woman, b.1979 -- sleep problems (on antidepressants), alopecia areata", formula: "Bai He Fang", fam: "baihefang",
       cond: ["Sleep problem, on antidepressants", "Alopecia areata", "TCM: blood deficiency", "Previously Chai Gui Tang (hands and feet were cold then)"],
       recipe: [["Bai He", "50g"], ["Zhi Mu", "20g"], ["Shu Di", "20g"], ["Fu Ling", "50g"], ["Liu Yi San", "20g"], ["Huai Xiao Mai", "50g"], ["Hong Zao", "30g"], ["Suan Zao Ren", "50g"], ["Chuan Xiong", "10g"]],
       symptoms: ["Menstrual cycle regular now", "Cold lower limbs, at night the cold hurts to the bone", "Sweats under a cotton quilt as though bathing", "Clearing her throat, phlegm in the throat", "Dry, hard stools", "Occasional eczema", "Scanty menstruation, light flow", "A bald patch of hair on the back of her head", "Bowel movements regular", "No chest tightness, bad dreams or palpitations", "Cold feet", "Yellow, greasy coating", "Bright face", "Hands slightly yellow", "Dry feet, heels OK"] },
@@ -93654,11 +93660,11 @@ or changing anything in Cliniko.
       cond: ["Insomnia since menopause", "Diabetes, high glucose", "Low blood pressure", "Previously Gui Zhi Jia Ling Zhu Fu Tang + Long Gu, Mu Li"],
       recipe: [["HL", "5g"], ["RG", "10g"], ["DS", "15g"], ["Sheng Shai Shen", "10g"], ["Jiang Ban Xia", "20g"], ["GJ", "5g"], ["Gan Cao", "5g"], ["Da Zao (DZ)", "20g"]],
       symptoms: ["Difficulty falling asleep, easily woken", "Pain in the R shoulder", "Muscle pain, woken by pain every morning", "Prone to colds, phlegm in the throat when sick", "Thickened, fissured skin on the palms", "Dull pale tongue", "Dry palms", "Scared of cold", "Stomach not good, gets bloated", "Soft tummy", "Cold feet at times", "Weak pulse"] },
-    { k: "p16", d: 3, b: 1, cc: "Atopic dermatitis", name: "Girl, 12 -- atopic dermatitis after a vaccine", formula: "Bai Hu Jia Ren Shen Tang", fam: null,
+    { k: "p16", d: 3, b: 1, cc: "Atopic dermatitis", name: "Girl, 12 -- atopic dermatitis after a vaccine", formula: "Bai Hu Jia Ren Shen Tang", fam: "baihujiarenshen",
       cond: ["Atopic dermatitis after a vaccine, from the cubital to the popliteal fossa", "Splenomegaly", "Allergic to dust mites, cats and eggs", "On dupilumab"],
       recipe: [["Sheng Shi Gao", "50g"], ["Zhi Mu", "50g"], ["GC", "10g"], ["Sheng Shai Shen", "10g"], ["Jing Mi", "a handful"]],
       symptoms: ["Sense of rising heat, needs the air-con at 16 °C", "Dermatitis noticeable on the neck", "Prone to nosebleeds as a child", "Likes cold and sweet food", "1-2 bowel movements a day, a bit dry", "Appetite normal", "Cool lower limbs", "Rash on the face and front of the neck", "Doesn't sweat easily, clothes don't get damp", "Slippery pulse"] },
-    { k: "p17", d: 3, b: 1, cc: "Recurrent fever", name: "Girl, 15 -- recurrent fever, Epstein-Barr", formula: "Chai Hu Gui Zhi Tang", fam: null,
+    { k: "p17", d: 3, b: 1, cc: "Recurrent fever", name: "Girl, 15 -- recurrent fever, Epstein-Barr", formula: "Chai Hu Gui Zhi Tang", fam: "chaihuguizhi",
       cond: ["Recurrent fever every 2 months (mosquito bites, getting cold), slowly less often on Chai Hu Gui Zhi Tang", "Epstein-Barr virus", "Splenomegaly", "Rhinitis"],
       recipe: [["CH", "20g"], ["HQIN", "15g"], ["BX", "15g"], ["DS", "15g"], ["GZ", "15g"], ["BS", "15g"], ["GC", "10g"], ["GJ", "5g"], ["HZ", "20g"]],
       symptoms: ["White face", "Throat a bit red", "No sore joints", "Always has phlegm, runny nose and sneezing", "Small rashes recently"] },
@@ -93674,7 +93680,7 @@ or changing anything in Cliniko.
       cond: ["Urinary incontinence", "Previously Ban Xia Xie Xin Tang + Fu Ling, Chu Fan Tang, Bai He Fang (insomnia not changed)"],
       recipe: [["HL", "5g"], ["RG", "10g"], ["BX", "15g"], ["DS", "15g"], ["GJ", "5g"], ["GC", "5g"], ["HZ", "20g"]],
       symptoms: ["Severe ankle pain", "Dreams often, dreams about deceased family members", "Insomnia, can only sleep 4-5 hours", "Heart rate on the high side", "Red throat, thick tongue coating", "Bowel movements 1-2 a day, sometimes on the dry side", "Upper body afraid of heat", "Tummy soft", "Mother and father: diabetes"] },
-    { k: "q2", d: 4, b: 0, cc: "Generalised oedema", name: "Woman, b.1962 -- generalised oedema 10 years, 45 kg", formula: "1. San Huang Xie Xin Tang · 2. Si Wei Jian Bu Tang + Gui Zhi Fu Ling Wan", fms: ["San Huang Xie Xin Tang", "Si Wei Jian Bu Tang", "Gui Zhi Fu Ling Wan"], fam: null,
+    { k: "q2", d: 4, b: 0, cc: "Generalised oedema", name: "Woman, b.1962 -- generalised oedema 10 years, 45 kg", formula: "1. San Huang Xie Xin Tang · 2. Si Wei Jian Bu Tang + Gui Zhi Fu Ling Wan", fms: ["San Huang Xie Xin Tang", "Si Wei Jian Bu Tang", "Gui Zhi Fu Ling Wan"], fam: "sanhuangxiexin",
       cond: ["Generalised oedema for 10 years", "Senile brain changes, lacunar infarcts, changes in the lobes and basal ganglia", "Bloods: blood sugar normal", "Previously San Huang Xie Xin Tang alternating with Gui Zhi Fu Ling Wan + Si Wei Jian Bu Tang"],
       recipe: [["1. San Huang Xie Xin Tang (steep in boiling water 15 minutes)", ""], ["Da Huang (DH)", "15g"], ["HQIN", "10g"], ["HL", "5g"], ["2. Si Wei Jian Bu Tang + Gui Zhi Fu Ling Wan", ""], ["Niu Xi (NX)", "30g"], ["Chuan Shi Hu", "30g"], ["Chi Shao", "15g"], ["Bai Shao", "15g"], ["Dan Shen", "15g"], ["Gui Zhi", "15g"], ["Dan Pi", "15g"], ["Fu Ling", "20g"]],
       symptoms: ["Skinny-ish, 45 kg", "Red tongue with white coating", "Hands and feet cold in winter", "Vivid dreams", "Stools hard and dry", "Throat so dry that food gets stuck", "No cramps", "Oedema on the legs, worse at night", "Nosebleeds, fire coming out of the nose", "Insomnia", "Walking better than before"] },
@@ -93686,11 +93692,11 @@ or changing anything in Cliniko.
       cond: ["Haemorrhage of the L ocular fundus: central retinal vein occlusion of the L eye", "Diabetes"],
       recipe: [["HQI", "30g"], ["RG", "10g"], ["Chi Shao", "15g"], ["Ge Gen", "30g"], ["Chuan Xiong", "15g"], ["Fu Ling", "15g"], ["Dan Pi", "15g"], ["Tao Ren", "15g"], ["Chuan Shi Hu", "30g"], ["Dan Shen", "15g"], ["Huai Niu Xi", "30g"], ["Gan Jiang", "5g"], ["Hong Zao", "15g"]],
       symptoms: ["Looks haggard, eye bags", "Soft tummy", "Gets hungry easily, strong appetite", "Dizziness", "Insomnia", "Weak legs", "Dizziness when sweating", "Constipation", "Stomach distension"] },
-    { k: "q5", d: 4, b: 0, cc: "T-cell lymphoma", name: "Man, b.1951 -- peripheral T-cell lymphoma, 17 rounds of chemotherapy", formula: "Shu Yu Wan (1 dose split over 3 days)", fam: null,
+    { k: "q5", d: 4, b: 0, cc: "T-cell lymphoma", name: "Man, b.1951 -- peripheral T-cell lymphoma, 17 rounds of chemotherapy", formula: "Shu Yu Wan (1 dose split over 3 days)", fam: "shuyuwan",
       cond: ["Peripheral T-cell lymphoma: 17 rounds of chemotherapy with no improvement", "Anaemia", "High uric acid", "Qi and blood deficiency"],
       recipe: [["Sheng Shai Shen", "10g"], ["Bai Zhu", "10g"], ["Fu Ling", "15g"], ["Gan Cao", "15g"], ["Dang Gui", "10g"], ["Chuan Xiong", "10g"], ["Bai Shao", "10g"], ["Shu Di Huang", "20g"], ["Mai Men Dong", "20g"], ["E Jiao", "5g"], ["Chai Hu", "10g"], ["Fang Feng", "10g"], ["Xing Ren", "10g"], ["Jie Geng", "10g"], ["Bai Lian", "10g"], ["Shen Qu", "15g"], ["Dou Juan", "15g"], ["Gan Jiang", "10g"], ["Hong Zao", "50g"]],
       symptoms: ["Loss of appetite", "Bitter taste in the mouth", "Red, tender tongue with teeth marks (red and pale)", "Weight still normal (175 cm, 76 kg)", "Upper abdominal discomfort and bloating after eating", "Very quiet, says little", "Aversion to heat", "Nocturia 4-5 times"] },
-    { k: "q6", d: 4, b: 0, cc: "Anxiety, insomnia", name: "Woman, 40s -- anxiety after retinal detachment surgery", formula: "1. Bai He Fang + Gan Mai Da Zao Tang · 2. Suan Zao Ren Tang · 3. Ling Gui Zhu Gan Tang", fms: ["Bai He Fang", "Gan Mai Da Zao Tang", "Suan Zao Ren Tang", "Ling Gui Zhu Gan Tang"], fam: null,
+    { k: "q6", d: 4, b: 0, cc: "Anxiety, insomnia", name: "Woman, 40s -- anxiety after retinal detachment surgery", formula: "1. Bai He Fang + Gan Mai Da Zao Tang · 2. Suan Zao Ren Tang · 3. Ling Gui Zhu Gan Tang", fms: ["Bai He Fang", "Gan Mai Da Zao Tang", "Suan Zao Ren Tang", "Ling Gui Zhu Gan Tang"], fam: "baihefang",
       cond: ["Retinal detachment surgery (after a cold), then 2 months of anxiety about it", "Previously Chai Hu Jia Long Gu Mu Li Tang; Suan Zao Ren Tang felt OK"],
       recipe: [["1. Bai He Fang + Gan Mai Da Zao Tang", ""], ["Bai He", "50g"], ["Sheng Di Huang", "20g"], ["Zhi Mu", "15g"], ["Liu Yi San", "20g"], ["Fu Ling", "50g"], ["Huai Xiao Mai", "50g"], ["Hong Zao", ""], ["2. Suan Zao Ren Tang", ""], ["Suan Zao Ren (SZR)", "40g"], ["CX", "15g"], ["FL", "30g"], ["Zhi Mu (ZM)", "10g"], ["ZGC", "5g"], ["3. Ling Gui Zhu Gan Tang (for her eyes)", ""], ["Fu Ling", "50g"], ["Gui Zhi", "15g"], ["Bai Zhu", "20g"], ["Zhi Gan Cao", "5g"]],
       symptoms: ["Can't sleep, doesn't want to eat", "Talks very fast", "Furrowed brow", "Anxiety", "Thick tongue coating", "Feels cold after eating", "Red eyelids", "Red, dry tongue with greasy coating", "Water sounds in her stomach", "Navel pulsation", "Soft tummy", "Slippery pulse", "Can't get food down", "Hands and arms feel cold", "Sleep not good", "Feels cold, palms hot", "Frequent urination with the anxiety", "Scared of heat and scared of cold", "Prefers warm water", "No chest tightness"] },
@@ -93710,7 +93716,7 @@ or changing anything in Cliniko.
       cond: ["Stage 3 renal insufficiency and bilateral renal hypoplasia for 6 years", "Tested allergic to rice, milk, eggs, wheat and pomelo (no symptoms seen)", "Previously Xiao Jian Zhong Tang from Dr Liu (for recurring dry stools, helped)"],
       recipe: [["HL", "3g"], ["RG", "10g"], ["DS", "10g"], ["BX", "10g"], ["GJ", "5g"], ["GC", "5g"], ["HZ", "15g"], ["ZDH", "3g"]],
       symptoms: ["Her dry, granular stools improved", "Normal appetite, sleeps well, one well-formed bowel movement a day", "Abdominal pain and vomiting after a cold, wants to put her fingers down her throat", "No mouth ulcers", "Some bubbles in her urine", "Water sounds in her stomach", "Doesn't catch colds easily", "Skinny, a little underweight", "Red lips", "Yellow face, bright eyes", "A bit of coating at the back of the tongue", "Navel pulsation, splashing sound"] },
-    { k: "q11", d: 4, b: 0, cc: "Nervous diarrhoea", name: "Woman, 25 -- diarrhoea when nervous, sleep", formula: "Jie Yu Tang (JYT; 3 days on, 2 off)", fam: null,
+    { k: "q11", d: 4, b: 0, cc: "Nervous diarrhoea", name: "Woman, 25 -- diarrhoea when nervous, sleep", formula: "Jie Yu Tang (JYT; 3 days on, 2 off)", fam: "jieyutang",
       cond: [],
       recipe: [],
       symptoms: ["White face, black thin oily hair, red lips, looks shy", "Diarrhoea when nervous", "Falls asleep quicker on Jie Yu Tang"] },
@@ -93722,15 +93728,15 @@ or changing anything in Cliniko.
       cond: ["Coronary artery disease (both a physical and an emotional heart issue)", "Allergies to weather and dust: nasal congestion, difficulty breathing, hives", "Thyroid nodules, breast hyperplasia", "Hypertension"],
       recipe: [["BX", "20g"], ["FL", "40g"], ["CP", "20g"], ["GC", "5g"], ["ZK", "20g"], ["ZR", "10g"], ["GJ", "5g"], ["HZ", ""]],
       symptoms: ["White face", "Bowel movements normal", "Middle-strength belly", "Normal facial expression, good nutrition", "Says she gets sick 6-7 times a day", "Scared of heights", "Only bloated if she eats cold food"] },
-    { k: "q14", d: 4, b: 0, cc: "Raynaud's", name: "Woman, older -- Raynaud's, headache, cough", formula: "Chai Hu Gui Zhi Tang", fam: null, mod: "+ Hou Po, Su Geng, Fu Ling (Xing Ren left out this time)",
+    { k: "q14", d: 4, b: 0, cc: "Raynaud's", name: "Woman, older -- Raynaud's, headache, cough", formula: "Chai Hu Gui Zhi Tang", fam: "chaihuguizhi", mod: "+ Hou Po, Su Geng, Fu Ling (Xing Ren left out this time)",
       cond: ["Raynaud's, with cold or sunlight exposure", "Earlier Chai Hu Gui Zhi Tang + Xing Ren 15, Hou Po 20, Su Geng 15, Fu Ling 20: the hoarseness, bad cough and Raynaud's improved"],
       recipe: [],
       symptoms: ["Headache, severe since September", "Numbness, tingling and cramps in the legs", "Occasional abdominal distension", "Hand swelling in the morning at times, better with movement", "Insomnia", "Hands became dark in September", "Eye allergy, eyes dry and itchy at times", "Neck feels cold", "Obvious varicose vein on the R", "No sneezing in the morning", "Itchy L arm"] },
-    { k: "q15", d: 4, b: 0, cc: "Behçet's disease", name: "Man, about 45 -- Behçet's disease, ankylosing spondylitis", formula: "Gan Cao Xie Xin Tang", fam: null, mod: "+ Ge Gen 50 (for the diarrhoea)",
+    { k: "q15", d: 4, b: 0, cc: "Behçet's disease", name: "Man, about 45 -- Behçet's disease, ankylosing spondylitis", formula: "Gan Cao Xie Xin Tang", fam: "gancaoxiexin", mod: "+ Ge Gen 50 (for the diarrhoea)",
       cond: ["Behçet's disease (2019) and ankylosing spondylitis, improved with injection"],
       recipe: [["GC", "10g"], ["ZGC", "10g"], ["HL", "5g"], ["HQIN", "15g"], ["BX", "15g"], ["DS", "20g"], ["GJ", "5g"], ["GG", "50g"], ["HZ", "20g"]],
       symptoms: ["Still loose stools 5-8 times a day", "Mouth ulcers at times, anal ulcer", "Skin problem", "Urticaria in cold weather"] },
-    { k: "q16", d: 4, b: 0, cc: "Chest tightness, low mood", name: "Woman, b.1975 -- chest tightness lying flat, grief after losing a child", formula: "Chu Fan Tang", fam: null,
+    { k: "q16", d: 4, b: 0, cc: "Chest tightness, low mood", name: "Woman, b.1975 -- chest tightness lying flat, grief after losing a child", formula: "Chu Fan Tang", fam: "chufantang",
       cond: ["The loss of a child brought on her emotions"],
       recipe: [],
       symptoms: ["Chest tightness when lying flat", "Numb tongue", "Mood swings", "Dizziness and headache", "Gastric distension and stomach pain", "Blurred vision", "Many dreams", "Heart feels as though scratched by a cat", "Stools stick to the toilet", "Frequent blinking", "Facial spots", "Red tongue, dark red", "Looks anxious"] },
@@ -93738,15 +93744,15 @@ or changing anything in Cliniko.
       cond: ["Colorectal cancer, surgery over a year ago; after chemotherapy, aching limbs and fatigue", "Lumbar disc herniation, cholecystitis, hypertension", "Parents: hypertension; mother: diabetes"],
       recipe: [["Shu Di Huang", "50g"], ["Shan Yao", "50g"], ["Shan Yu Rou", "20g"], ["Mu Dan Pi", "15g"], ["Fu Ling", "20g"], ["Ze Xie", "120g"], ["Fu Zi", "5g"], ["Rou Gui", "10g"], ["Huai Niu Xi", "20g"], ["Che Qian Zi", "20g"]],
       symptoms: ["Looks dazed", "Squatting, finger flexion and extension limited", "Oral and topical medicines ineffective", "Says normal appetite, but doesn't feel hungry", "Sometimes bloating", "Urinary urgency, can't hold his urine", "Nocturia 3-4 times", "Irregular bowel movements", "Red, dark red face", "Cracked tongue", "Lower abdomen soft", "Can't walk easily, not dry"] },
-    { k: "q18", d: 4, b: 0, cc: "Fatigue, sweating", name: "Man, middle-aged -- fatigue and profuse sweating, chronic gastritis", formula: "Ge Gen Qin Lian Tang + San Huang Si Ni Tang", fms: ["Ge Gen Qin Lian Tang", "San Huang Si Ni Tang"], fam: null, mod: "+ Da Huang, Rou Gui; Fu Zi, Gan Jiang for the yang deficiency",
+    { k: "q18", d: 4, b: 0, cc: "Fatigue, sweating", name: "Man, middle-aged -- fatigue and profuse sweating, chronic gastritis", formula: "Ge Gen Qin Lian Tang + San Huang Si Ni Tang", fms: ["Ge Gen Qin Lian Tang", "San Huang Si Ni Tang"], fam: "gegenqinlian", mod: "+ Da Huang, Rou Gui; Fu Zi, Gan Jiang for the yang deficiency",
       cond: ["Chronic gastritis, decreased stomach function", "Yang deficiency (big soft tummy, sexual problems)"],
       recipe: [["GG", "60g"], ["HL", "5g"], ["HQIN", "10g"], ["GC", "5g"], ["RG", "10g"], ["ZDH", "5g"], ["Fu Pian", "10g"], ["GJ", "5g"]],
       symptoms: ["Brown face, thick hair, looks robust", "Fatigue", "Profuse sweating ever since a dish with chopped chilli", "Somnolence", "Good appetite", "Stools on the loose side 2-3 times a day", "Stomach pain after cold", "Dark complexion", "Pale red tongue", "Large, slippery pulse", "Red rashes on the upper arms and back"] },
-    { k: "q19", d: 4, b: 0, cc: "Skin reaction to osimertinib", name: "Woman, 46 -- brain tumour surgery, itchy skin on osimertinib", formula: "Da Huang Gan Cao Jie Du Tang (DHGCJDT)", fam: null,
+    { k: "q19", d: 4, b: 0, cc: "Skin reaction to osimertinib", name: "Woman, 46 -- brain tumour surgery, itchy skin on osimertinib", formula: "Da Huang Gan Cao Jie Du Tang (DHGCJDT)", fam: "dahuanggancaojiedu",
       cond: ["Brain tumour found after dizziness, surgery", "Osimertinib for 2 years: itchy, scaly, red skin"],
       recipe: [["G", "10g"], ["ZC", "10g"], ["ZDH", "5g"], ["HL", "5g"], ["HBAI", "5g"]],
       symptoms: ["Emotions more stable since surgery", "Middle abdominal strength", "No mouth ulcers", "Red tongue", "Skin issue", "Still a regular period", "Slippery pulse"] },
-    { k: "q20", d: 4, b: 0, cc: "Cold knees", name: "Woman -- cold knees and limbs, high blood pressure, hypothyroidism", formula: "Geng Nian Fang (Gui Zhi Jia Ling Zhu Fu Tang)", fms: ["Geng Nian Fang"], fam: null, mod: "+ Long Gu, Mu Li, Dang Gui, Xian Ling Pi, Ba Ji Tian",
+    { k: "q20", d: 4, b: 0, cc: "Cold knees", name: "Woman -- cold knees and limbs, high blood pressure, hypothyroidism", formula: "Geng Nian Fang (Gui Zhi Jia Ling Zhu Fu Tang)", fms: ["Geng Nian Fang"], fam: "gengnianfang", mod: "+ Long Gu, Mu Li, Dang Gui, Xian Ling Pi, Ba Ji Tian",
       cond: ["High blood pressure for 6 years", "Hypothyroidism", "High cholesterol", "Hormone levels may be going down"],
       recipe: [["GZ", "10g"], ["RG", "5g"], ["BS", "15g"], ["Long Gu (LG)", "15g"], ["Mu Li (ML)", "15g"], ["Zhi Fu Pian", "10g"], ["Bai Zhu", "20g"], ["Fu Ling", "20g"], ["Dang Gui", "10g"], ["Xian Ling Pi", "15g"], ["Ba Ji Tian", "20g"], ["Gan Jiang", "5g"], ["Hong Zao", "20g"]],
       symptoms: ["Cold knees, cold limbs", "Hard to walk", "Talks really fast", "Sweating on the upper body, head sweats when she speaks", "Sleeping well", "Soft tummy", "Chest stuffiness", "Floating pulse"] },
@@ -93787,6 +93793,7 @@ or changing anything in Cliniko.
     });
     // the six cases with a formula of their own in Fang Bing Ren (2026-11-10): a case saved before moves to it once, unless she picked a family herself
     list.forEach(c => { const m = c.tour === "nanjing-2026-11-day1" && PH_TC_NEWFAM[c.n]; if (m && !c.famNew) { if ((c.fam || null) === m[0] && PH_FORMULAS[m[1]]) c.fam = m[1]; c.famNew = 1; } });
+    list.forEach(c => { if (c.famNew || c.tour !== "nanjing-2026-11-day1" || String(c.id).slice(0, 3) !== "hh-") return; const f = phTcHhFam().get(c.id); if (f) { if (!c.fam) c.fam = f; c.famNew = 1; } });
     // the names read again against her own notes (2026-11-10): a case saved with its first name moves to the corrected one once (PH_TC_FIX); a name or
     // family she changed herself is left as it is
     list.forEach(c => {
@@ -93832,6 +93839,8 @@ or changing anything in Cliniko.
   // It shows as the sign with its side and an Accept; Accept = the Correlate card saved with its default weight 3, and nothing scores until she accepts, one or the whole case at once
   // (the source's own rule: "only scores once she picks"). An observation with no sign in the catalog (a lab value, a diagnosis, "bad breath") has no match and keeps its Correlate button.
   // The pairs were read against the catalog by hand, 2026-11-10; a new observation has none until a line is added here
+  // 2026-11-12, her pick "Yes, all 22": the lines from "sleep adequate, frequent dreams" on are the 41 note cases (PH_TC_HH) that lead the 22 formulas added that day, read the same way.
+  // A line only where the note says the sign IS there: none for "no sore joints", for a drug's side effect or a change on the herbs ("dry mouth after the herbs"), for a number or a grade
   const PH_TC_MATCH = `night sweats|Sweat: at night|b
 nocturia 4-5x a night|Urine: at night (nocturia)|b
 dizziness|Head: dizziness|b
@@ -93954,7 +93963,293 @@ hard to urinate, 30 minutes to pass urine|Urine: difficult to pass|b
 coldness in the lower limbs|Legs: cold from the knees down|b
 low blood pressure|Blood pressure: low|b
 soft below the navel|Abdominal: lower belly weak, soft or numb|r
-pale red tongue|Tongue: pale-red|r`;
+pale red tongue|Tongue: pale-red|r
+sleep adequate, frequent dreams|Sleep: vivid dreams|b
+marked fatigue from work|Energy: low|b
+72.5 kg, finds it hard to lose weight|Build: slightly heavy|r
+doesn't like cold drinks, likes warm drinks|Thirst: prefers warm drinks|b
+robust, tight neck and shoulders|Build: robust|r
+robust, tight neck and shoulders|Neck & shoulders: pain, ache or stiffness|r
+black hair, robust, red cheeks|Build: robust|r
+black hair, robust, red cheeks|Complexion: red|r
+light sleep at night|Sleep: poor, light|b
+tongue pale red with thin white coating|Tongue: pale-red|r
+tongue pale red with thin white coating|Tongue coat: thin, white|r
+pulse deep, taut, forceful|Pulse: sinking|r
+pulse deep, taut, forceful|Pulse: wiry|r
+pulse deep, taut, forceful|Pulse: forceful|r
+gained 10 kg since giving birth|Build: slightly heavy|r
+abdominal tension 5/5|Abdominal: tight muscles|r
+abdomen firm and distended|Abdominal: large, full|r
+red eyelids, red lips, red mucous membranes|Eyes: red|b
+red eyelids, red lips, red mucous membranes|Lips: red|r
+sweats a lot, sweats easily|Sweat: profuse|b
+sweats a lot, sweats easily|Sweat: easily|r
+intolerant of heat, sweats easily, prefers cold drinks|Cold & heat: dreads heat, prefers coolness|r
+intolerant of heat, sweats easily, prefers cold drinks|Sweat: easily|r
+tongue pale red with thin white coating and tooth marks|Tongue: pale-red|r
+tongue pale red with thin white coating and tooth marks|Tongue coat: thin, white|r
+tongue pale red with thin white coating and tooth marks|Tongue: swollen, teethmarks|r
+abdomen firm and distended, 4+|Abdominal: large, full|r
+wakes easily at night, hard to fall asleep|Sleep: wakes in the night or very early|b
+wakes easily at night, hard to fall asleep|Sleep: hard to fall asleep|b
+gained weight over the past 5 years|Build: slightly heavy|r
+thick coating at the back of the tongue|Tongue coat: thick at the root|r
+red eyelids|Eyes: red|b
+nose much better, nosebleeds improved|Nose: bleeds|b
+red throat, red tongue|Tongue: red|r
+clear nasal discharge (a whole pack of tissues)|Nose: clear discharge|b
+aversion to heat|Cold & heat: averse to heat|b
+blurred vision|Eyes: blurred or double vision|b
+headache|Head: headache|b
+pain in the hands and ankles|Joints: pain|b
+tongue red, thin and stiff|Tongue: red|r
+tongue red, thin and stiff|Tongue: stiff|r
+allergic conditions|Allergy: present|r
+thin, bright white sallow complexion|Build: thin, delicate|r
+thin, bright white sallow complexion|Complexion: pale|r
+thin, bright white sallow complexion|Complexion: yellow, sallow|r
+aversion to wind and cold|Cold & heat: dislikes wind|b
+aversion to wind and cold|Cold & heat: sensitive to cold|b
+lips a bit dry and red|Lips: red|r
+lips a bit dry and red|Mouth & throat: dry lips|r
+sleep not good, with chest tightness and pain|Sleep: poor, light|b
+sleep not good, with chest tightness and pain|Chest & ribs: oppression or stuffiness|b
+sleep not good, with chest tightness and pain|Chest & ribs: pain or painful obstruction|b
+tongue pale red with cracks|Tongue: pale-red|r
+sore joints|Joints: pain|b
+gui zhi constitution|Constitution: Cinnamon Twig (Gui Zhi) type|r
+bone and joint pain|Joints: pain|b
+bone and joint pain|Body: aches|b
+morning stiffness, relieved by movement|Joints: stiff in the morning|b
+lower limb oedema at night|Swelling: especially of the feet and lower legs|r
+thin white tongue|Tongue coat: thin, white|r
+tense rectus abdominis|Abdominal: tight muscles|r
+sweaty abdominal skin|Skin: moist, or moist flesh|r
+itchy scalp|Skin: itchy|b
+pain in the l upper quadrant|Abdominal: pain|b
+sweating|Sweat: without effort|b
+tired walking|Energy: exhausted after activity|b
+moderately thin, tends to depression|Build: slim|r
+moderately thin, tends to depression|Mind & mood: low, flat or tearful|b
+allergies affecting the skin, allergic conjunctivitis|Allergy: present|r
+low-grade fever|Fever: mild|b
+white face|Complexion: pale|r
+always has phlegm, runny nose and sneezing|Phlegm: present|b
+always has phlegm, runny nose and sneezing|Nose: clear discharge|b
+always has phlegm, runny nose and sneezing|Nose: sneezing|b
+headache, severe since september|Head: headache|b
+numbness, tingling and cramps in the legs|Body: numbness in the hands and feet|r
+numbness, tingling and cramps in the legs|Limbs: stiff, cramping or painful|b
+occasional abdominal distension|Abdominal: bloating|b
+hand swelling in the morning at times, better with movement|Swelling: superficial|b
+insomnia|Sleep: poor, light|b
+eye allergy, eyes dry and itchy at times|Allergy: present|r
+itchy l arm|Skin: itchy|b
+intense itching, the entire upper body broke out|Skin: itchy|b
+face a bit brown|Complexion: slightly dark|r
+eczema on the scalp and back of the neck|Skin: dermatitis or eczema|b
+palms sweat often|Sweat: palms or soles|r
+strong abdominal muscles|Muscles: toned, firm|r
+fat red tongue|Tongue: red|r
+warm palms|Hands & feet: hot palms and soles|b
+wakes up with a dry mouth and itchy throat|Mouth & throat: dry mouth|b
+red throat, sticky tongue coating|Tongue coat: thick, greasy or sticky|r
+itchy eczema like sha on her back|Skin: dermatitis or eczema|b
+itchy eczema like sha on her back|Skin: itchy|b
+eyes a bit puffy|Swelling: face, especially around the eyes|r
+a bit robust|Build: robust|r
+well-developed muscles, prominent chest and waistline|Muscles: toned, firm|r
+dry skin with lots of hair|Skin: dry|r
+gets bloated|Abdominal: bloating|b
+short sleep, wakes at 3-4am|Sleep: wakes in the night or very early|b
+wiry rapid pulse|Pulse: wiry|r
+wiry rapid pulse|Pulse: rapid|r
+heaviness and distension in the lower abdomen|Hip & lower abdomen: distention or pain|r
+rash used to weep|Skin: weepy|b
+doesn't sweat easily|Sweat: not easily|r
+dry, flaky skin on the lower limbs|Skin: dry|r
+dark red acne on the sides of the cheeks and jawline|Skin: red rash, raised spots|b
+face a bit darker|Complexion: slightly dark|r
+eats a lot, little physical activity|Appetite: vigorous or excessive|b
+fat, tender red tongue with tooth marks|Tongue: tender, red|r
+fat, tender red tongue with tooth marks|Tongue: swollen, teethmarks|r
+looks a bit anxious|Mind & mood: anxiety or agitation|r
+has dreams, many dreams|Sleep: vivid dreams|b
+dull pain in the lower abdomen|Abdominal: lower belly pain|b
+gastric distension|Abdominal: epigastric fullness and distention|b
+morning stiffness (last time)|Joints: stiff in the morning|b
+hot palms|Hands & feet: hot palms and soles|b
+still loose stools 5-8 times a day|Bowels: loose stools|b
+urticaria in cold weather|Skin: hives, recurrent urticaria|b
+red eyelids, big eye bags|Eyes: red|b
+skinny, eyes have spirit, dark face, thick hair|Build: thin, delicate|r
+skinny, eyes have spirit, dark face, thick hair|Eyes: bright, spirited|r
+skinny, eyes have spirit, dark face, thick hair|Complexion: dark|r
+difficulty falling asleep, needs an afternoon nap|Sleep: hard to fall asleep|b
+bowel movements twice a day, somewhat loose but formed|Bowels: loose stools|b
+bloated when the ascites flares, otherwise not bad|Abdominal: bloating|b
+ascites flares bring abdominal infection and fever|Diagnosis: ascites|b
+skinny-ish, 45 kg|Build: thin, delicate|r
+red tongue with white coating|Tongue: red|r
+red tongue with white coating|Tongue coat: white|r
+hands and feet cold in winter|Hands & feet: cold|b
+vivid dreams|Sleep: vivid dreams|b
+stools hard and dry|Bowels: constipation|b
+throat so dry that food gets stuck|Mouth & throat: dry throat|r
+oedema on the legs, worse at night|Swelling: especially of the feet and lower legs|r
+nosebleeds, fire coming out of the nose|Nose: bleeds|b
+cold lower limbs, at night the cold hurts to the bone|Legs: cold from the knees down|b
+sweats under a cotton quilt as though bathing|Sweat: at night|b
+sweats under a cotton quilt as though bathing|Sweat: profuse|b
+clearing her throat, phlegm in the throat|Phlegm: present|b
+dry, hard stools|Bowels: constipation|b
+occasional eczema|Skin: dermatitis or eczema|b
+scanty menstruation, light flow|Periods: scanty flow|b
+a bald patch of hair on the back of her head|Hair: loss|b
+cold feet|Hands & feet: cold|b
+yellow, greasy coating|Tongue coat: greasy, yellow|b
+dry feet, heels ok|Hands & feet: dry palms and soles|b
+can't sleep, doesn't want to eat|Sleep: poor, light|b
+can't sleep, doesn't want to eat|Appetite: poor|b
+anxiety|Mind & mood: anxiety, panic or unstable|b
+thick tongue coating|Tongue coat: thick|r
+red, dry tongue with greasy coating|Tongue: red|r
+red, dry tongue with greasy coating|Tongue: dry|r
+red, dry tongue with greasy coating|Tongue coat: greasy|r
+water sounds in her stomach|Stomach: sloshes or gurgles|b
+navel pulsation|Abdominal: pulsation, strong around the navel|r
+soft tummy|Abdominal: weak, soft wall|r
+can't get food down|Appetite: poor|b
+hands and arms feel cold|Hands & feet: cold|b
+sleep not good|Sleep: poor, light|b
+feels cold, palms hot|Cold & heat: sensitive to cold|b
+feels cold, palms hot|Hands & feet: hot palms and soles|b
+frequent urination with the anxiety|Urine: frequent|b
+scared of heat and scared of cold|Cold & heat: sensitive to temperature changes|r
+prefers warm water|Thirst: prefers warm drinks|b
+restricted backward movement of the shoulder|Joints: reduced range of motion|b
+soreness in the r shoulder after a cold|Neck & shoulders: pain, ache or stiffness|r
+insomnia, no drowsiness in the day|Sleep: poor, light|b
+dry stools|Bowels: constipation|b
+red face|Complexion: red|r
+trouble sleeping|Sleep: poor, light|b
+still good energy|Energy: still intact, with good spirit|r
+cold knees, cold limbs|Hands & feet: cold|b
+hard to walk|Limbs: weak, or restricted movement|b
+sweating on the upper body, head sweats when she speaks|Sweat: mostly from the head and neck|b
+chest stuffiness|Chest & ribs: oppression or stuffiness|b
+floating pulse|Pulse: floating, weak or loose|b
+foreign-body sensation in the throat|Mouth & throat: something stuck in the throat|b
+very red eyelids|Eyes: red|b
+white face, black thin oily hair, red lips, looks shy|Complexion: pale|r
+white face, black thin oily hair, red lips, looks shy|Lips: red|r
+white face, black thin oily hair, red lips, looks shy|Mind & mood: timid or introverted|r
+diarrhoea when nervous|Bowels: loose stools|b
+diarrhoea when nervous|Mind & mood: stress-related symptoms|b
+falls asleep quicker on jie yu tang|Sleep: hard to fall asleep|b
+forceless pulse|Pulse: weak|r
+ice-cold hands and feet|Hands & feet: cold|b
+thick white tongue coating|Tongue coat: thick, white|r
+hard to fall asleep|Sleep: hard to fall asleep|b
+back pain|Back: lower, pain|b
+dark complexion|Complexion: dark|r
+dark tongue|Tongue: dark or purple|r
+tympanic abdomen|Abdominal: bloating|r
+diarrhoea only the past 2 days|Bowels: loose stools|b
+doesn't sweat much|Sweat: not easily|r
+poor mood, depressed and easily irritable|Mind & mood: low, flat or tearful|b
+poor mood, depressed and easily irritable|Mind & mood: irritable|b
+easily teary|Mind & mood: low, flat or tearful|b
+constipation|Bowels: constipation|b
+appetite normal, affected by mood|Appetite: changes with emotion|r
+acne on her jaw|Skin: red rash, raised spots|b
+white sallow face|Complexion: pale|r
+white sallow face|Complexion: yellow, sallow|r
+oily face|Complexion: oily or greasy|r
+feels fatigued and weak|Energy: low|b
+bloated after 1-2 bites last year, now again|Abdominal: bloating|b
+bloated after 1-2 bites last year, now again|Digestion: worse after eating|b
+keeps talking about her health, looks very concerned|Mind & mood: anxiety or agitation|r
+sense of rising heat, needs the air-con at 16 °c|Cold & heat: dreads heat, prefers coolness|r
+dermatitis noticeable on the neck|Skin: dermatitis or eczema|b
+prone to nosebleeds as a child|Nose: bleeds|r
+likes cold and sweet food|Appetite: craves sweet food|r
+cool lower limbs|Legs: cold from the knees down|b
+rash on the face and front of the neck|Skin: dermatitis or eczema|b
+doesn't sweat easily, clothes don't get damp|Sweat: not easily|r
+chest tightness when lying flat|Chest & ribs: oppression or stuffiness|b
+mood swings|Mind & mood: mood swings|b
+dizziness and headache|Head: dizziness|b
+dizziness and headache|Head: headache|b
+gastric distension and stomach pain|Abdominal: epigastric fullness and distention|b
+gastric distension and stomach pain|Abdominal: epigastric pain|b
+many dreams|Sleep: vivid dreams|b
+heart feels as though scratched by a cat|Mind & mood: restless|b
+stools stick to the toilet|Bowels: sticky stools|b
+red tongue, dark red|Tongue: red|r
+red tongue, dark red|Tongue: dark or purple|r
+looks anxious|Mind & mood: anxiety or agitation|r
+brown face, thick hair, looks robust|Build: robust|r
+profuse sweating ever since a dish with chopped chilli|Sweat: profuse|b
+stools on the loose side 2-3 times a day|Bowels: loose stools|b
+stomach pain after cold|Abdominal: epigastric pain|b
+stomach pain after cold|Cold & heat: symptoms worse with cold|r
+large, slippery pulse|Pulse: slippery, large|b
+red rashes on the upper arms and back|Skin: red rash, raised spots|b
+wants to lose weight, at any cost|Build: slightly heavy|r
+white face, black hair, looks sad|Complexion: pale|r
+white face, black hair, looks sad|Mind & mood: low, flat or tearful|r
+red lips, red tongue|Lips: red|r
+red lips, red tongue|Tongue: red|r
+eats a lot but hard to digest|Appetite: vigorous or excessive|b
+eats a lot but hard to digest|Digestion: worse after eating|b
+tongue coating tends to be thick and white|Tongue coat: thick, white|r
+heavy flow on days 1-2|Periods: heavy bleeding|b
+period lasts more than 10 days, cycle 25 days|Periods: prolonged bleeding|b
+dry red lips|Lips: red|r
+dry red lips|Mouth & throat: dry lips|r
+belly soft with navel pulsation|Abdominal: weak, soft wall|r
+belly soft with navel pulsation|Abdominal: pulsation, strong around the navel|r
+hands a bit cold today|Hands & feet: cold|b
+poor sleep from the pain|Sleep: poor, light|b
+dry hands|Hands & feet: dry palms and soles|b
+some bloating|Abdominal: bloating|b
+tongue a bit moist|Tongue: tender, moist|r
+likes sweets|Appetite: craves sweet food|r
+poor stomach motility|Digestion: dysfunction|b
+sneezing, itchy nose (very itchy, now settled)|Nose: sneezing|b
+throat felt dry, not sore|Mouth & throat: dry throat|r
+loss of appetite|Appetite: poor|b
+bitter taste in the mouth|Mouth & throat: bitter taste|b
+red, tender tongue with teeth marks (red and pale)|Tongue: tender, red|r
+red, tender tongue with teeth marks (red and pale)|Tongue: swollen, teethmarks|r
+upper abdominal discomfort and bloating after eating|Digestion: worse after eating|b
+upper abdominal discomfort and bloating after eating|Abdominal: epigastric fullness and distention|b
+nocturia 4-5 times|Urine: at night (nocturia)|b
+clean, shiny tongue|Tongue coat: none, or peeled|r
+wakes at 3am|Sleep: wakes in the night or very early|b
+dirty phlegm with blood|Phlegm: present|b
+fear of cold|Cold & heat: sensitive to cold|b
+cannot eat: nausea as soon as he sees a meal|Mouth & throat: nausea|b
+cannot eat: nausea as soon as he sees a meal|Appetite: poor|b
+few bowel movements (eats little), stools dry|Bowels: constipation|b
+abdomen: hard rectus abdominis|Abdominal: tight muscles|r
+cough and white phlegm improved and resolved|Cough: present|b
+cough and white phlegm improved and resolved|Phlegm: present|b
+strong appetite, never feels full, but overeating bloats her|Appetite: vigorous or excessive|b
+lots of dreams|Sleep: vivid dreams|b
+hand numbness with physical work|Body: numbness in the hands and feet|r
+sensitive to cold|Cold & heat: sensitive to cold|b
+tongue: thick, yellow, dry coating, full sublingual veins|Tongue coat: thick, dry|r
+tongue: thick, yellow, dry coating, full sublingual veins|Tongue coat: yellow|r
+legs a bit swollen|Swelling: especially of the feet and lower legs|r
+gets angry easily, fiery|Mind & mood: irritable|b
+red eyes|Eyes: red|b
+short of breath, chest fullness|Breathing: shortness of breath|b
+short of breath, chest fullness|Chest & ribs: oppression or stuffiness|b
+dull complexion, dark purple lips|Complexion: lusterless|r
+dull complexion, dark purple lips|Lips: dark|r`;
   let PH_TC_MATCH_MAP = null;
   // a new observation (her own session notes) that is the catalog's own wording for one sign gets that sign pre-filled too: "Hard to fall asleep" = Sleep: hard to fall asleep.
   // Only an exact wording, only one sign (both sides holding it = the Bing one); an ambiguous wording gets none. Nothing scores until she accepts.
@@ -119521,15 +119816,20 @@ pale red tongue|Tongue: pale-red|r`;
     // family formulas shows in both families (`also`, as Da Chai Hu Tang under Da Huang): its colour, scoring and home stay with the first. Chai Po Tang
     // (Xiao Chai Hu + Ban Xia Hou Po) also under Ban Xia; Chai Ling Tang (Xiao Chai Hu + Wu Ling San) and Shi San Wei Xue Bi Tang (Huang Qi Gui Zhi Wu
     // Wu Tang + Gui Zhi Fu Ling Wan, her notes) also under Gui Zhi. Wen Qing Yin's other half, Si Wu Tang, has no family here
-    { herb: "guizhi", formulas: ["wulingsan", "xiaojianzhong", "wenjingtang", "zhigancao", "guizhilonggu", "lingguizhugan", "guizhifuling", "guilingwuwei"], also: ["chailing", "shisanwei"] },   // the two Tour Case formulas (2026-11-10) last   // Wen Jing Tang (2026-10-28) under Gui Zhi: her "Cinnamon Twig constitution" line (her 2026-10-28 answer); Zhi Gan Cao Tang (run 17) the same line, the same filing; Gui Zhi Jia Long Gu Mu Li Tang (run 18, Gui Zhi Tang plus Long Gu and Mu Li) the same line, last in the list
-    { herb: "chaihu", formulas: ["xiaochaihu", "dachaihu", "chaihulonggu", "sinisan", "xiaoyaosan", "xuefuzhuyu", "chaihuguijiang", "chailing", "chaipo", "chaigui", "chaiqin"] },   // Chai Qin Tang (2026-11-10, her "XCHT + HQT") last. Chai Hu Gui Zhi Gan Jiang Tang (run 21, 2026-11-02), then Chai Ling Tang (run 22, the same day) last, so the others keep their shades; Da Chai Hu Tang (2026-10-24) beside Xiao Chai Hu: built on Chai Hu, as Huang Huang files it (MY pick, hers to correct)
-    { herb: "mahuang", formulas: ["xiaoqinglong"] },
-    { herb: "dahuang", formulas: ["dachengqi", "yinchenhao"], also: ["dachaihu"] },   // also: shown in this card too, still a Chai Hu formula (its colour, scoring and home stay with Chai Hu; her 2026-10-25 "show it under both")
-    { herb: "huangqi", formulas: ["yupingfeng", "fangjihuangqi", "shisanwei"] }, { herb: "shigao", formulas: ["zhuyeshigao"] }, { herb: "huanglian", formulas: ["huangliantang", "huanglianjiedu", "wenqingyin"] },
+    // 2026-11-12, the 22 note formulas (her pick "Yes, all 22"), each last in its list, MY picks, hers to correct: Yue Bi Jia Zhu Tang, Ge Gen Tang and Fang Feng Tong Sheng San under Ma Huang;
+    // Chai Hu Gui Zhi Tang under Chai Hu and also Gui Zhi; Jie Yu Tang under Chai Hu and also Ban Xia (Huang Huang's Jie Yu Tang is Si Ni San with Ban Xia Hou Po Tang); Geng Nian Fang and
+    // Zhi Shi Xie Bai Gui Zhi Tang under Gui Zhi; San Huang Xie Xin Tang, Ge Gen Qin Lian Tang, Huang Lian E Jiao Tang and Xiao Xian Xiong Tang under Huang Lian (San Huang also under Da Huang);
+    // Da Huang Gan Cao Jie Du Tang under Da Huang; Bai Hu Jia Ren Shen Tang under Shi Gao; Gan Cao Xie Xin Tang beside Ban Xia Xie Xin Tang, Ba Wei Chu Fan Tang and Chu Fan Tang (Ban Xia Hou Po
+    // Tang inside) under Ban Xia; Fu Zi Li Zhong Tang under Fu Zi. No herb here leads the Bai He formulas, Liu Jun Zi Tang, Mai Men Dong Tang or Shu Yu Wan: each has a heading of its own
+    { herb: "guizhi", formulas: ["wulingsan", "xiaojianzhong", "wenjingtang", "zhigancao", "guizhilonggu", "lingguizhugan", "guizhifuling", "guilingwuwei", "gengnianfang", "zhishixiebaiguizhi"], also: ["chailing", "shisanwei", "chaihuguizhi"] },   // the two Tour Case formulas (2026-11-10) last   // Wen Jing Tang (2026-10-28) under Gui Zhi: her "Cinnamon Twig constitution" line (her 2026-10-28 answer); Zhi Gan Cao Tang (run 17) the same line, the same filing; Gui Zhi Jia Long Gu Mu Li Tang (run 18, Gui Zhi Tang plus Long Gu and Mu Li) the same line, last in the list
+    { herb: "chaihu", formulas: ["xiaochaihu", "dachaihu", "chaihulonggu", "sinisan", "xiaoyaosan", "xuefuzhuyu", "chaihuguijiang", "chailing", "chaipo", "chaigui", "chaiqin", "chaihuguizhi", "jieyutang"] },   // Chai Qin Tang (2026-11-10, her "XCHT + HQT") last. Chai Hu Gui Zhi Gan Jiang Tang (run 21, 2026-11-02), then Chai Ling Tang (run 22, the same day) last, so the others keep their shades; Da Chai Hu Tang (2026-10-24) beside Xiao Chai Hu: built on Chai Hu, as Huang Huang files it (MY pick, hers to correct)
+    { herb: "mahuang", formulas: ["xiaoqinglong", "yuebijiazhu", "gegentang", "fangfengtongsheng"] },
+    { herb: "dahuang", formulas: ["dachengqi", "yinchenhao", "dahuanggancaojiedu"], also: ["dachaihu", "sanhuangxiexin"] },   // also: shown in this card too, still a Chai Hu formula (its colour, scoring and home stay with Chai Hu; her 2026-10-25 "show it under both")
+    { herb: "huangqi", formulas: ["yupingfeng", "fangjihuangqi", "shisanwei"] }, { herb: "shigao", formulas: ["zhuyeshigao", "baihujiarenshen"] }, { herb: "huanglian", formulas: ["huangliantang", "huanglianjiedu", "wenqingyin", "sanhuangxiexin", "gegenqinlian", "huanglianejiao", "xiaoxianxiong"] },
     { herb: "huangbo", formulas: [] },
     { herb: "huangqintang", formulas: [], also: ["chaiqin"] },   // Chai Qin Tang (2026-11-10) shown here too: XCHT + Huang Qin Tang, her two-families rule   // her 2026-10-14: "huang qin tang is a special formula, it is its own ren family. doesnt belong anywhere else" (was under Huang Lian)
     { herb: "dangguishaoyao", formulas: [], also: ["chaigui"] },   // Chai Gui Tang (2026-11-10) shown here too: XCHT + DGSYS, her two-families rule   // Dang Gui Shao Yao San (2026-10-14) on its own: MY pick (no herb family here holds Dang Gui, Shao Yao or Fu Ling), hers to correct
-    { herb: "banxia", formulas: ["wendantang", "banxiahoupotang", "banxiaxiexintang", "waitaifulingyin"], also: ["chaipo"] }, { herb: "fuzi", formulas: ["sinitang", "zhenwutang", "shenqiwan"] }   // Shen Qi Wan (2026-10-14) under Fu Zi: MY pick (it warms the kidney with Fu Zi and Gui Zhi), hers to correct
+    { herb: "banxia", formulas: ["wendantang", "banxiahoupotang", "banxiaxiexintang", "waitaifulingyin", "gancaoxiexin", "baweichufan", "chufantang"], also: ["chaipo", "jieyutang"] }, { herb: "fuzi", formulas: ["sinitang", "zhenwutang", "shenqiwan", "fuzilizhong"] }   // Shen Qi Wan (2026-10-14) under Fu Zi: MY pick (it warms the kidney with Fu Zi and Gui Zhi), hers to correct
   ];
   const phRenFamActive = () => !!(PH_REN_FAM || PH_REN_FAMGRP);
   // the formulas the filter lets through: one, or a herb with all of its formulas
@@ -120928,6 +121228,29 @@ pale red tongue|Tongue: pale-red|r`;
     guizhifuling: { n: "Gui Zhi Fu Ling Wan", hz: "桂枝茯苓丸", en: "Cinnamon Twig and Poria Pill", arch: "From Case 7, Nanjing Day 1: an elderly man after a stroke. Tired, weak legs, eczema, high blood pressure, a bad memory; a red nose with spider veins, a dark red tongue, a wiry, slippery pulse." },
     wenqingyin: { n: "Wen Qing Yin", hz: "温清饮", en: "Warming and Clearing Drink", arch: "From Case 9, Nanjing Day 1: a woman after 20+ IVF cycles. Tired, hair loss, a poor appetite, indigestion, low mood, facial spots, belching, sticky stools; a slightly heavy build, thick red lips." },
     shisanwei: { n: "Shi San Wei Xue Bi Tang", hz: "", en: "", arch: "From Case 10, Nanjing Day 1: an elderly man, gentle and kind-faced. Nocturia, an unsteady gait; a large, soft belly, a weak pulse." },
+    // the 22 note formulas (2026-11-12, her pick "Yes, all 22"): the picture is the signs their Nanjing cases showed, no book type yet
+    yuebijiazhu: { n: "Yue Bi Jia Zhu Tang", hz: "越婢加术汤", en: "Maidservant from Yue Decoction plus Atractylodes", arch: "From six Nanjing cases, Nov 2026: a woman of 40, abdominal distension and weight gain; a woman of 30, scant periods after childbirth; a woman of 30, constipation for 3 years; a young man, cystic acne; a man of 23, eczema since young; a girl of 12, weight and nose problems. Many dreams, tired, prefers warm drinks, poor sleep, red eyes or eyelids, profuse sweating, wakes in the night, hard to fall asleep, nosebleeds, a clear runny nose, averse to heat; a slightly heavy build, a robust build, tight or sore neck and shoulders, a red face, a pale-red tongue, a thin white coat, a sinking pulse, a wiry pulse, a forceful pulse, tight belly muscles, a large full belly, red lips, sweats easily, dreads heat and prefers coolness, a swollen tooth-marked tongue, a coat thick at the root, a red tongue." },
+    chaihuguizhi: { n: "Chai Hu Gui Zhi Tang", hz: "柴胡桂枝汤", en: "Bupleurum and Cinnamon Twig Decoction", arch: "From five Nanjing cases, Nov 2026: a middle-aged woman, rheumatoid arthritis; a woman of 61, rheumatoid arthritis for 16 years; a man, joint pain after pneumonia; a girl of 15, recurrent fever; an older woman, Raynaud's with headache and cough. Low mood, palpitations, blurred vision, headache, joint pain, dislikes wind, scared of cold, poor sleep, chest tightness, chest pain, dizziness, body aches, morning stiffness, itchy skin, abdominal pain, a sore lower back, sweating without effort, tired after activity, a mild fever, phlegm, a clear runny nose, sneezing, cramps in the limbs, bloating, swelling; a V-shaped tongue, a red tongue, a stiff tongue, allergies, a thin build, a pale face, a sallow face, red lips, dry lips, a pale-red tongue, a Gui Zhi constitution, swollen lower legs, a thin white coat, tight belly muscles, moist skin, a slim build, numb hands or feet." },
+    fangfengtongsheng: { n: "Fang Feng Tong Sheng San", hz: "防风通圣散", en: "Saposhnikovia Powder that Sagely Unblocks", arch: "From three Nanjing cases, Nov 2026: a woman of 54, eczema and urticaria; a woman of 41, internal heat and neurodermatitis; a man of 45, neurodermatitis. Itchy skin, eczema, hot palms, a dry mouth, bloating, wakes in the night, a weepy rash; a slightly dark face, sweaty palms, firm muscles, a red tongue, a sticky coat, puffy eyes, a robust build, dry skin, a red face, red lips, a wiry pulse, a rapid pulse, a heavy distended lower belly, does not sweat easily." },
+    gancaoxiexin: { n: "Gan Cao Xie Xin Tang", hz: "甘草泻心汤", en: "Licorice Decoction to Drain the Epigastrium", arch: "From three Nanjing cases, Nov 2026: a man of 25, acne for 9 years; a woman born 1986, lower belly pain and mouth ulcers after childbirth; a man of about 45, Behçet's disease. A red raised rash, a big appetite, many dreams, lower belly pain, a full distended upper belly, morning stiffness, hot palms, loose stools, hives; a slightly dark face, a tender red tongue, a swollen tooth-marked tongue, an anxious look." },
+    sanhuangxiexin: { n: "San Huang Xie Xin Tang", hz: "三黄泻心汤", en: "Three-Yellow Decoction to Drain the Epigastrium", arch: "From three Nanjing cases, Nov 2026: a man of 76, palpitations with atrial fibrillation; a middle-aged man, cirrhosis with ascites; a woman born 1962, generalised oedema. Palpitations, red eyes or eyelids, hard to fall asleep, loose stools, bloating, ascites, cold hands and feet, many dreams, constipation, nosebleeds, poor sleep; a thin build, bright eyes, a dark face, a red tongue, a white coat, a dry throat, swollen lower legs." },
+    baihefang: { n: "Bai He Fang", hz: "百合方", en: "Lily Bulb Formula", arch: "From two Nanjing cases, Nov 2026: a woman born 1979, poor sleep and alopecia areata; a woman in her 40s, anxiety after eye surgery. Cold lower legs, night sweats, profuse sweating, phlegm, constipation, eczema, scanty periods, hair loss, cold hands and feet, a greasy yellow coat, dry hands or feet, poor sleep, a poor appetite, anxiety, red eyes or eyelids, water sounds in the stomach, a slippery pulse, scared of cold, hot palms, frequent urination, prefers warm drinks; a thick coat, a red tongue, a dry tongue, a greasy coat, a pulse at the navel, a soft belly, sensitive to heat and to cold." },
+    gengnianfang: { n: "Geng Nian Fang", hz: "更年方", en: "Menopause Formula", arch: "From two Nanjing cases, Nov 2026: a woman of 46, irregular periods and hair loss; a woman, cold knees and limbs, high blood pressure, hypothyroidism. Hair loss, tired, poor sleep, cold hands and feet, weak or restricted limbs, sweating from the head, chest tightness, a floating pulse; a red face, energy still good, a soft belly." },
+    jieyutang: { n: "Jie Yu Tang", hz: "解郁汤", en: "Relieve Constraint Decoction", arch: "From two Nanjing cases, Nov 2026: a woman of 38, painful periods; a woman of 25, diarrhoea when nervous. Something stuck in the throat, constipation, red eyes or eyelids, loose stools, symptoms that come with stress, hard to fall asleep; a pale face, red lips, shy." },
+    fuzilizhong: { n: "Fu Zi Li Zhong Tang", hz: "附子理中汤", en: "Aconite Decoction to Regulate the Middle", arch: "From two Nanjing cases, Nov 2026: a middle-aged man, abdominal pain and low blood pressure; a man born 1977, on chemotherapy. Tired, cold hands and feet, hard to fall asleep, a sore lower back, loose stools; a weak pulse, a thick white coat, a dark face, a dark tongue, a bloated belly." },
+    baweichufan: { n: "Ba Wei Chu Fan Tang", hz: "八味除烦汤", en: "Eight-Ingredient Decoction to Clear Vexation", arch: "From one Nanjing case, Nov 2026: a woman who cannot lose weight, low mood, preparing for pregnancy. Low mood, irritable, constipation, a red raised rash, hard to fall asleep, cold hands and feet, tired, bloating, worse after eating; does not sweat easily, appetite changes with mood, a red tongue, a pale face, a sallow face, an oily face, an anxious look." },
+    baihedihuang: { n: "Bai He Di Huang Tang", hz: "百合地黄汤", en: "Lily Bulb and Rehmannia Decoction", arch: "From one Nanjing case, Nov 2026: a woman of 56, lung nodules. A joint that will not move fully, poor sleep, constipation; tight or sore neck and shoulders." },
+    baihujiarenshen: { n: "Bai Hu Jia Ren Shen Tang", hz: "白虎加人参汤", en: "White Tiger plus Ginseng Decoction", arch: "From one Nanjing case, Nov 2026: a girl of 12, atopic dermatitis. Eczema, cold lower legs, a slippery pulse; dreads heat and prefers coolness, prone to nosebleeds, likes sweet food, does not sweat easily." },
+    chufantang: { n: "Chu Fan Tang", hz: "除烦汤", en: "Clear Vexation Decoction", arch: "From one Nanjing case, Nov 2026: a woman born 1975, chest tightness and grief. Chest tightness, mood swings, dizziness, headache, a full distended upper belly, stomach pain, blurred vision, many dreams, restless, sticky stools, facial spots; a red tongue, a dark tongue, an anxious look." },
+    dahuanggancaojiedu: { n: "Da Huang Gan Cao Jie Du Tang", hz: "大黄甘草解毒汤", en: "Rhubarb and Licorice Decoction to Resolve Toxin", arch: "From one Nanjing case, Nov 2026: a woman of 46, itchy skin on osimertinib after brain tumour surgery. A slippery pulse; a red tongue." },
+    gegenqinlian: { n: "Ge Gen Qin Lian Tang", hz: "葛根芩连汤", en: "Kudzu, Scutellaria and Coptis Decoction", arch: "From one Nanjing case, Nov 2026: a middle-aged man, fatigue and profuse sweating, chronic gastritis. Tired, profuse sweating, loose stools, stomach pain, a slippery pulse, a red raised rash; a robust build, worse with cold, a dark face, a pale-red tongue." },
+    gegentang: { n: "Ge Gen Tang", hz: "葛根汤", en: "Kudzu Decoction", arch: "From one Nanjing case, Nov 2026: a woman of 70 kg, allergic rhinitis for 4 years. A slightly heavy build." },
+    huanglianejiao: { n: "Huang Lian E Jiao Tang", hz: "黄连阿胶汤", en: "Coptis and Ass-Hide Gelatin Decoction", arch: "From one Nanjing case, Nov 2026: a woman of 42, trigeminal neuralgia and anaemia. A big appetite, worse after eating, wakes in the night, hard to fall asleep, heavy periods, long periods, a slippery pulse, cold hands and feet, poor sleep, dry hands or feet; a pale face, a sad look, red lips, a red tongue, a thick white coat, dry lips, a soft belly, a pulse at the navel, does not sweat easily." },
+    liujunzi: { n: "Liu Jun Zi Tang", hz: "六君子汤", en: "Six-Gentleman Decoction", arch: "From one Nanjing case, Nov 2026: a woman born 1953, after pancreatic surgery and liver cancer ablation. Bloating, poor digestion; a soft belly, a tender moist tongue, likes sweet food." },
+    maimendong: { n: "Mai Men Dong Tang", hz: "麦门冬汤", en: "Ophiopogon Decoction", arch: "From one Nanjing case, Nov 2026: a woman, allergic rhinitis. Sneezing; a dry throat." },
+    shuyuwan: { n: "Shu Yu Wan", hz: "薯蓣丸", en: "Dioscorea Pill", arch: "From one Nanjing case, Nov 2026: a man born 1951, T-cell lymphoma after 17 rounds of chemotherapy. A poor appetite, a bitter taste, worse after eating, a full distended upper belly, averse to heat, nocturia; a tender red tongue, a swollen tooth-marked tongue." },
+    xiaoxianxiong: { n: "Xiao Xian Xiong Tang", hz: "小陷胸汤", en: "Minor Sinking into the Chest Decoction", arch: "From one Nanjing case, Nov 2026: a man, nasopharyngeal carcinoma. Wakes in the night, phlegm, scared of cold, nausea, a poor appetite, constipation; no coat, tight belly muscles." },
+    zhishixiebaiguizhi: { n: "Zhi Shi Xie Bai Gui Zhi Tang", hz: "枳实薤白桂枝汤", en: "Unripe Bitter Orange, Chinese Garlic and Cinnamon Twig Decoction", arch: "From one Nanjing case, Nov 2026: a woman of 55, a chronic cough, a long-term smoker. A cough, phlegm, a big appetite, many dreams, scared of cold, irritable, red eyes or eyelids, shortness of breath, chest tightness; numb hands or feet, a thick dry coat, a yellow coat, swollen lower legs, a dull complexion, dark lips." },
     chailing: { n: "Chai Ling Tang", hz: "柴苓汤", en: "Bupleurum and Poria Decoction", arch: "The wet Chai Hu person. Queasy and vomiting, water brings the nausea back; swollen, loose stools, fever and chills, tired, no wish to drink, water splashing in the belly. A thick coat on a dusky-pale, puffy, tooth-marked tongue; a wiry, slippery pulse." },
     chaihuguijiang: { n: "Chai Hu Gui Zhi Gan Jiang Tang", hz: "柴胡桂枝干姜汤", en: "Bupleurum, Cinnamon Twig, and Ginger Decoction", arch: "The anxious Chai Hu person. Worn out, up and down. Chest and ribs sore, the breastbone tender, sweats from the head, a dry mouth that will not drink, loose stools. A dry tongue with a thick white coat." },
     lingguizhugan: { n: "Ling Gui Zhu Gan Tang", hz: "苓桂术甘汤", en: "Poria, Cinnamon Twig, Atractylodes and Licorice Decoction", arch: "Thin fluid sits under the heart and rushes up. Water sloshes in the stomach, a throb below the heart, palpitations; dizzy and unsteady, chest and ribs full, urine hard to pass. A white, slippery coat; a soft belly; a sinking, tight pulse." },
@@ -122342,6 +122665,145 @@ pale red tongue|Tongue: pale-red|r`;
       core: "From one case, not a book table: Dr Huang Huang's clinic, Nanjing Study Tour, Nov 2026, Day 1, Case 10 (an elderly man, gentle and kind-faced): Huang Qi Gui Zhi Wu Wu Tang + Gui Zhi Fu Ling Wan + Ge Gen, Chuan Xiong, Niu Xi + Si Wei Jian Bu Tang. Each sign the case showed, at 3. Bing: nocturia, an unsteady gait. Ren: a large, soft belly, a weak pulse. His conditions (they score nothing): cerebral infarction, cerebellar atrophy, arthritis; diabetes, kidney dysfunction, coronary heart disease.",
       bing: { nocturia_now: 3, unsteady_now: 3 },
       ren: { abd_wall_weak_tend: 3, pulse_weak: 3 }
+    },
+    // her 2026-11-12 pick "Yes, all 22" (popup, after the cases from her six Nanjing notes went in: "Each formula gets its own draft table from the signs in its cases, as for Day 1"):
+    // the 41 note cases that led with a formula Fang Bing Ren did not have. Built as the six above: every observation of the formula's cases that the match list reads as a catalog
+    // sign (PH_TC_MATCH, its side as matched), at 3. A formula seen in several cases holds every sign any of them showed, each still at 3: no weight is made from how often a sign
+    // came. An observation with no catalog sign scores nothing ("mouth ulcers", "talks fast"); a note that a sign is absent, a drug's side effect or a change on the herbs is not
+    // a sign; conditions score nothing. `src` names the cases ("hh-" + the PH_TC_HH key): phFbrCeil reads it as "a case table", phTcHhFam links those cases to the formula.
+    // Which herb each sits under is MY pick, hers to correct (PH_REN_FAM_GROUPS). Not book tables: hers to change in Edit. A caption names the cases (who, which session); the
+    // signs are the table itself, and the card picture (PH_BTJ `arch`) says them in words
+    yuebijiazhu: {
+      name: "Yue Bi Jia Zhu Tang", family: "yuebijiazhu", src: ["hh-z2", "hh-z3", "hh-z10", "hh-m14", "hh-m17", "hh-m20"],
+      core: "From six cases, not a book table (Nanjing Study Tour, Nov 2026). Dr Zhang Xueguang, Day 1 afternoon: a woman of 40, abdominal distension and weight gain; a woman of 30, scant periods after childbirth; a woman of 30, constipation for 3 years. Prof. Huang Huang, Day 3 morning: a young man, cystic acne; a man of 23, eczema since young; a girl of 12, weight and nose problems. With Dang Gui Shao Yao San in one case and Ze Xie Tang in one; three alternate it with Fang Feng Tong Sheng San. The table holds every sign a case showed, each at 3; their conditions score nothing.",
+      bing: { dreams_vivid_now: 3, fatigue_now: 3, drinks_warm: 3, insomnia_dream: 3, eyes_red_now: 3, sweat_profuse: 3, sleep_wakes: 3, sleep_onset_hard: 3, nosebleed_now: 3, nasal_clear: 3, heat_averse: 3 },
+      ren: { build_heavyset_tend: 3, robust_build: 3, neck_shoulder_ache_tend: 3, complexion_red_tend: 3, tongue_pale_red: 3, white_coat: 3, pulse_sinking: 3, pulse_wiry: 3, pulse_forceful: 3, tight_belly: 3, abd_large_full_tend: 3, lips_red_tend: 3, sweats_easy: 3, dreads_heat: 3, tongue_swollen_toothmark: 3, coat_thick_root: 3, tongue_red: 3 }
+    },
+    chaihuguizhi: {
+      name: "Chai Hu Gui Zhi Tang", family: "chaihuguizhi", src: ["hh-a4", "hh-a8", "hh-m2", "hh-p17", "hh-q14"],
+      core: "From five cases, not a book table (Nanjing Study Tour, Nov 2026). Prof. Huang Huang, Day 2 morning: a middle-aged woman, rheumatoid arthritis; a woman of 61, rheumatoid arthritis for 16 years; Day 3 morning: a man, joint pain after pneumonia; Day 3 afternoon: a girl of 15, recurrent fever; Day 4 morning: an older woman, Raynaud's with headache and cough. The table holds every sign a case showed, each at 3; their conditions score nothing.",
+      bing: { mood_low: 3, palp: 3, vision_blur_now: 3, headache: 3, joint_pain_now: 3, wind_averse: 3, cold_feel: 3, insomnia_dream: 3, chest_oppress: 3, chest_pain_obstruct: 3, dizzy: 3, joint_ache: 3, joint_stiff_morning_now: 3, skin_itchy_now: 3, abd_disc: 3, lowback_pain: 3, spont_sweat: 3, fatigue_exert_now: 3, fever_mild: 3, phlegm_now: 3, nasal_clear: 3, sneezing: 3, limbs_stiff_cramp: 3, bloating_now: 3, edema_surf: 3 },
+      ren: { tongue_v_shaped: 3, tongue_red: 3, tongue_stiff_tend: 3, allergy_tend: 3, thin_body: 3, complexion_pale_tend: 3, complexion_sallow: 3, lips_red_tend: 3, dry_lips_tend: 3, tongue_pale_red: 3, guizhi_type_tend: 3, edema_tend: 3, white_coat: 3, tight_belly: 3, moist_flesh: 3, build_slim_tend: 3, numbness_tend: 3 }
+    },
+    fangfengtongsheng: {
+      name: "Fang Feng Tong Sheng San", family: "fangfengtongsheng", src: ["hh-z5", "hh-l12", "hh-l16"],
+      core: "From three cases, not a book table (Nanjing Study Tour, Nov 2026). Dr Zhang Xueguang, Day 1 afternoon: a woman of 54, eczema and urticaria. Dr Liu Minghan, Day 2 afternoon: a woman of 41, internal heat and neurodermatitis; a man of 45, neurodermatitis. Each as the half formula her notes call Ban Zhang. The table holds every sign a case showed, each at 3; their conditions score nothing.",
+      bing: { skin_itchy_now: 3, dermatitis: 3, palms_soles_hot_now: 3, dry_mouth_now: 3, bloating_now: 3, sleep_wakes: 3, skin_weepy_now: 3 },
+      ren: { complexion_dark_slight_tend: 3, sweaty_palms: 3, muscle_toned: 3, tongue_red: 3, coat_thick_greasy: 3, face_edema_eyes_tend: 3, robust_build: 3, dry_skin: 3, complexion_red_tend: 3, lips_red_tend: 3, pulse_wiry: 3, pulse_rapid: 3, hip_lowabd_pain_tend: 3, no_sweat_tend: 3 }
+    },
+    gancaoxiexin: {
+      name: "Gan Cao Xie Xin Tang", family: "gancaoxiexin", src: ["hh-a15", "hh-p1", "hh-q15"],
+      core: "From three cases, not a book table (Nanjing Study Tour, Nov 2026). Prof. Huang Huang, Day 2 morning: a man of 25, acne for 9 years; Day 3 afternoon: a woman born 1986, lower belly pain and mouth ulcers after childbirth; Day 4 morning: a man of about 45, Behçet's disease. The table holds every sign a case showed, each at 3; their conditions score nothing.",
+      bing: { skin_red_papules_now: 3, appetite_vigorous_now: 3, dreams_vivid_now: 3, lowabd_pain_now: 3, epigastric_full_now: 3, joint_stiff_morning_now: 3, palms_soles_hot_now: 3, diarrhea: 3, urticaria: 3 },
+      ren: { complexion_dark_slight_tend: 3, tongue_tender_red: 3, tongue_swollen_toothmark: 3, anxiety_tend: 3 }
+    },
+    sanhuangxiexin: {
+      name: "San Huang Xie Xin Tang", family: "sanhuangxiexin", src: ["hh-z14", "hh-a18", "hh-q2"],
+      core: "From three cases, not a book table (Nanjing Study Tour, Nov 2026). Dr Zhang Xueguang, Day 1 afternoon: a man of 76, palpitations with atrial fibrillation. Prof. Huang Huang, Day 2 morning: a middle-aged man, cirrhosis with ascites; Day 4 morning: a woman born 1962, generalised oedema. With Gui Zhi Fu Ling Wan in one case; beside Huang Qin Tang in one, beside Si Wei Jian Bu Tang with Gui Zhi Fu Ling Wan in one. The table holds every sign a case showed, each at 3; their conditions score nothing.",
+      bing: { palp: 3, eyes_red_now: 3, sleep_onset_hard: 3, diarrhea: 3, bloating_now: 3, ascites: 3, cold_limbs: 3, dreams_vivid_now: 3, constipation_now: 3, nosebleed_now: 3, insomnia_dream: 3 },
+      ren: { thin_body: 3, bright_eyes: 3, complexion_dark_tend: 3, tongue_red: 3, coat_white: 3, dry_throat_tend: 3, edema_tend: 3 }
+    },
+    baihefang: {
+      name: "Bai He Fang", family: "baihefang", src: ["hh-p12", "hh-q6"],
+      core: "From two cases, not a book table (Nanjing Study Tour, Nov 2026). Prof. Huang Huang, Day 3 afternoon: a woman born 1979, poor sleep and alopecia areata; Day 4 morning: a woman in her 40s, anxiety after eye surgery. In her notes: Bai He, Zhi Mu, Di Huang, Fu Ling, Liu Yi San, Huai Xiao Mai and dates; with Gan Mai Da Zao Tang in one case. The table holds every sign a case showed, each at 3; their conditions score nothing.",
+      bing: { cold_lower_body: 3, night_sweats: 3, sweat_profuse: 3, phlegm_now: 3, constipation_now: 3, dermatitis: 3, period_scanty_now: 3, hair_loss: 3, cold_limbs: 3, coat_greasy_yellow: 3, palms_soles_dry_now: 3, insomnia_dream: 3, appetite_poor_now: 3, anxiety_now: 3, eyes_red_now: 3, stomach_sloshing_now: 3, p_slippery_large_now: 3, cold_feel: 3, palms_soles_hot_now: 3, urine_frequent_now: 3, drinks_warm: 3 },
+      ren: { coat_thick: 3, tongue_red: 3, tongue_very_dry_tend: 3, coat_greasy_tend: 3, pulsate_upsurge_tend: 3, abd_wall_weak_tend: 3, temp_sensitive: 3 }
+    },
+    gengnianfang: {
+      name: "Geng Nian Fang", family: "gengnianfang", src: ["hh-z11", "hh-q20"],
+      core: "From two cases, not a book table (Nanjing Study Tour, Nov 2026). Dr Zhang Xueguang, Day 1 afternoon: a woman of 46, irregular periods and hair loss. Prof. Huang Huang, Day 4 morning: a woman, cold knees and limbs, high blood pressure, hypothyroidism. One case writes it as Gui Zhi Jia Ling Zhu Fu Tang with Long Gu and Mu Li. The table holds every sign a case showed, each at 3; their conditions score nothing.",
+      bing: { hair_loss: 3, fatigue_now: 3, insomnia_dream: 3, cold_limbs: 3, limbs_weak_now: 3, sweat_head_now: 3, chest_oppress: 3, p_float: 3 },
+      ren: { complexion_red_tend: 3, vitality_intact_tend: 3, abd_wall_weak_tend: 3 }
+    },
+    jieyutang: {
+      name: "Jie Yu Tang", family: "jieyutang", src: ["hh-z19", "hh-q11"],
+      core: "From two cases, not a book table (Nanjing Study Tour, Nov 2026). Dr Zhang Xueguang, Day 1 afternoon: a woman of 38, painful periods. Prof. Huang Huang, Day 4 morning: a woman of 25, diarrhoea when nervous. Her notes write JYT, read as Jie Yu Tang. The table holds every sign a case showed, each at 3; their conditions score nothing.",
+      bing: { throat_lump: 3, constipation_now: 3, eyes_red_now: 3, diarrhea: 3, mood_stress: 3, sleep_onset_hard: 3 },
+      ren: { complexion_pale_tend: 3, lips_red_tend: 3, timid_introverted_tend: 3 }
+    },
+    fuzilizhong: {
+      name: "Fu Zi Li Zhong Tang", family: "fuzilizhong", src: ["hh-m4", "hh-m21"],
+      core: "From two cases, not a book table (Nanjing Study Tour, Nov 2026). Prof. Huang Huang, Day 3 morning: a middle-aged man, abdominal pain and low blood pressure; a man born 1977, on chemotherapy. The decoction (with Rou Gui) beside the pill, Fu Zi Li Zhong Wan, in one case; the pill's herbs with Fu Ling in the other. The table holds every sign a case showed, each at 3; their conditions score nothing.",
+      bing: { fatigue_now: 3, cold_limbs: 3, sleep_onset_hard: 3, lowback_pain: 3, diarrhea: 3 },
+      ren: { pulse_weak: 3, coat_thick_white: 3, complexion_dark_tend: 3, tongue_purple: 3, bloating_tend: 3 }
+    },
+    baweichufan: {
+      name: "Ba Wei Chu Fan Tang", family: "baweichufan", src: ["hh-z4"],
+      core: "From one case, not a book table: Dr Zhang Xueguang's clinic, Nanjing Study Tour, Nov 2026, Day 1 afternoon (a woman who cannot lose weight, low mood, preparing for pregnancy). With Huang Qin Tang and Bai He Zhi Mu Tang. The table holds each sign the case showed, at 3; her conditions score nothing.",
+      bing: { mood_low: 3, irritable_restless: 3, constipation_now: 3, skin_red_papules_now: 3, sleep_onset_hard: 3, cold_limbs: 3, fatigue_now: 3, bloating_now: 3, worse_after_eating_now: 3 },
+      ren: { no_sweat_tend: 3, appetite_emotional: 3, tongue_red: 3, complexion_pale_tend: 3, complexion_sallow: 3, complexion_oily_tend: 3, anxiety_tend: 3 }
+    },
+    baihedihuang: {
+      name: "Bai He Di Huang Tang", family: "baihedihuang", src: ["hh-m19"],
+      core: "From one case, not a book table: Prof. Huang Huang's clinic, Nanjing Study Tour, Nov 2026, Day 3 morning (a woman of 56, lung nodules). With Bai He Zhi Mu Tang and Gan Mai Da Zao Tang; Er Zhi Wan beside it. The table holds each sign the case showed, at 3; her conditions score nothing.",
+      bing: { rom_reduced: 3, insomnia_dream: 3, constipation_now: 3 },
+      ren: { neck_shoulder_ache_tend: 3 }
+    },
+    baihujiarenshen: {
+      name: "Bai Hu Jia Ren Shen Tang", family: "baihujiarenshen", src: ["hh-p16"],
+      core: "From one case, not a book table: Prof. Huang Huang's clinic, Nanjing Study Tour, Nov 2026, Day 3 afternoon (a girl of 12, atopic dermatitis). The table holds each sign the case showed, at 3; her conditions score nothing.",
+      bing: { dermatitis: 3, cold_lower_body: 3, p_slippery_large_now: 3 },
+      ren: { dreads_heat: 3, nosebleed_tend: 3, appetite_sweet_tend: 3, no_sweat_tend: 3 }
+    },
+    chufantang: {
+      name: "Chu Fan Tang", family: "chufantang", src: ["hh-q16"],
+      core: "From one case, not a book table: Prof. Huang Huang's clinic, Nanjing Study Tour, Nov 2026, Day 4 morning (a woman born 1975, chest tightness and grief). The table holds each sign the case showed, at 3; her conditions score nothing.",
+      bing: { chest_oppress: 3, mood_swings_now: 3, dizzy: 3, headache: 3, epigastric_full_now: 3, epigastric_pain_now: 3, vision_blur_now: 3, dreams_vivid_now: 3, restless_now: 3, stool_sticky_now: 3, melasma_now: 3 },
+      ren: { tongue_red: 3, tongue_purple: 3, anxiety_tend: 3 }
+    },
+    dahuanggancaojiedu: {
+      name: "Da Huang Gan Cao Jie Du Tang", family: "dahuanggancaojiedu", src: ["hh-q19"],
+      core: "From one case, not a book table: Prof. Huang Huang's clinic, Nanjing Study Tour, Nov 2026, Day 4 morning (a woman of 46, itchy skin on osimertinib after brain tumour surgery). Her notes write DHGCJDT. The table holds each sign the case showed, at 3; her conditions score nothing.",
+      bing: { p_slippery_large_now: 3 },
+      ren: { tongue_red: 3 }
+    },
+    gegenqinlian: {
+      name: "Ge Gen Qin Lian Tang", family: "gegenqinlian", src: ["hh-q18"],
+      core: "From one case, not a book table: Prof. Huang Huang's clinic, Nanjing Study Tour, Nov 2026, Day 4 morning (a middle-aged man, fatigue and profuse sweating, chronic gastritis). With San Huang Si Ni Tang. The table holds each sign the case showed, at 3; his conditions score nothing.",
+      bing: { fatigue_now: 3, sweat_profuse: 3, diarrhea: 3, epigastric_pain_now: 3, p_slippery_large_now: 3, skin_red_papules_now: 3 },
+      ren: { robust_build: 3, cold_aggravates_tend: 3, complexion_dark_tend: 3, tongue_pale_red: 3 }
+    },
+    gegentang: {
+      name: "Ge Gen Tang", family: "gegentang", src: ["hh-z17"],
+      core: "From one case, not a book table: Dr Zhang Xueguang's clinic, Nanjing Study Tour, Nov 2026, Day 1 afternoon (a woman of 70 kg, allergic rhinitis for 4 years). With Gan Jiang and Xi Xin. The table holds each sign the case showed, at 3; her conditions score nothing.",
+      bing: {},
+      ren: { build_heavyset_tend: 3 }
+    },
+    huanglianejiao: {
+      name: "Huang Lian E Jiao Tang", family: "huanglianejiao", src: ["hh-a20"],
+      core: "From one case, not a book table: Prof. Huang Huang's clinic, Nanjing Study Tour, Nov 2026, Day 2 morning (a woman of 42, trigeminal neuralgia and anaemia). With Huang Qin Tang. The table holds each sign the case showed, at 3; her conditions score nothing.",
+      bing: { appetite_vigorous_now: 3, worse_after_eating_now: 3, sleep_wakes: 3, sleep_onset_hard: 3, heavy_bleed_spotting: 3, period_long_now: 3, p_slippery_large_now: 3, cold_limbs: 3, insomnia_dream: 3, palms_soles_dry_now: 3 },
+      ren: { complexion_pale_tend: 3, mood_low_tend: 3, lips_red_tend: 3, tongue_red: 3, coat_thick_white: 3, dry_lips_tend: 3, abd_wall_weak_tend: 3, pulsate_upsurge_tend: 3, no_sweat_tend: 3 }
+    },
+    liujunzi: {
+      name: "Liu Jun Zi Tang", family: "liujunzi", src: ["hh-p2"],
+      core: "From one case, not a book table: Prof. Huang Huang's clinic, Nanjing Study Tour, Nov 2026, Day 3 afternoon (a woman born 1953, after pancreatic surgery and liver cancer ablation). The table holds each sign the case showed, at 3; her conditions score nothing.",
+      bing: { bloating_now: 3, digestive_dysfunction_now: 3 },
+      ren: { abd_wall_weak_tend: 3, tongue_tender: 3, appetite_sweet_tend: 3 }
+    },
+    maimendong: {
+      name: "Mai Men Dong Tang", family: "maimendong", src: ["hh-z20"],
+      core: "From one case, not a book table: Dr Zhang Xueguang's clinic, Nanjing Study Tour, Nov 2026, Day 1 afternoon (a woman, allergic rhinitis). The table holds each sign the case showed, at 3; her conditions score nothing.",
+      bing: { sneezing: 3 },
+      ren: { dry_throat_tend: 3 }
+    },
+    shuyuwan: {
+      name: "Shu Yu Wan", family: "shuyuwan", src: ["hh-q5"],
+      core: "From one case, not a book table: Prof. Huang Huang's clinic, Nanjing Study Tour, Nov 2026, Day 4 morning (a man born 1951, T-cell lymphoma after 17 rounds of chemotherapy). The table holds each sign the case showed, at 3; his conditions score nothing.",
+      bing: { appetite_poor_now: 3, bitter_taste_now: 3, worse_after_eating_now: 3, epigastric_full_now: 3, heat_averse: 3, nocturia_now: 3 },
+      ren: { tongue_tender_red: 3, tongue_swollen_toothmark: 3 }
+    },
+    xiaoxianxiong: {
+      name: "Xiao Xian Xiong Tang", family: "xiaoxianxiong", src: ["hh-a14"],
+      core: "From one case, not a book table: Prof. Huang Huang's clinic, Nanjing Study Tour, Nov 2026, Day 2 morning (a man, nasopharyngeal carcinoma). With San Huang Xie Xin Tang; Qian Jin Wei Jing Tang beside it. The table holds each sign the case showed, at 3; his conditions score nothing.",
+      bing: { sleep_wakes: 3, phlegm_now: 3, cold_feel: 3, nausea_vomit: 3, appetite_poor_now: 3, constipation_now: 3 },
+      ren: { coat_none: 3, tight_belly: 3 }
+    },
+    zhishixiebaiguizhi: {
+      name: "Zhi Shi Xie Bai Gui Zhi Tang", family: "zhishixiebaiguizhi", src: ["hh-l6"],
+      core: "From one case, not a book table: Dr Liu Minghan's clinic, Nanjing Study Tour, Nov 2026, Day 2 afternoon (a woman of 55, a chronic cough, a long-term smoker). With Gui Zhi Fu Ling Wan. The table holds each sign the case showed, at 3; her conditions score nothing.",
+      bing: { cough: 3, phlegm_now: 3, appetite_vigorous_now: 3, dreams_vivid_now: 3, cold_feel: 3, irritable_restless: 3, eyes_red_now: 3, sob: 3, chest_oppress: 3 },
+      ren: { numbness_tend: 3, coat_thick_dry: 3, coat_yellow: 3, edema_tend: 3, complexion_lusterless_tend: 3, lips_dark_tend: 3 }
     }
   };
   // her 2026-11-10 "chai gui tang is XCHT with dgsys", her pick "Add it from its two halves": Chai Gui Tang, the blood-stasis Chai Hu (her 2026-11-02 word).
@@ -125411,13 +125873,17 @@ pale red tongue|Tongue: pale-red|r`;
     // the Tour Case formulas (2026-11-10) by their case recipes: Ban Xia in Chai Po Tang and Zhu Ye Shi Gao Tang; Gui Zhi or Huang Qi in Gui Ling Wu Wei
     // Gan Cao Tang, Gui Zhi Fu Ling Wan and Shi San Wei Xue Bi Tang; Chai Hu in Chai Po Tang. Her run 20 "Wu Tou, Rou Gui, Gui Zhi Fu Ling Wan" (read as
     // pregnancy lines, MY reading, hers to correct) now have formulas: Gui Zhi Fu Ling Wan itself, and Rou Gui in those three case recipes
-    { fact: "preg", text: "Pregnant: avoid Ban Xia (teratogenic)", ids: ["banxia", "banxiahoupotang", "banxiaxiexintang", "wendantang", "xiaochaihu", "dachaihu", "chaihulonggu", "chailing", "xiaoqinglong", "wenjingtang", "huangliantang", "chaipo", "zhuyeshigao", "chaigui", "chaiqin"] },
-    { fact: "preg", text: "Pregnant: avoid Ma Huang", ids: ["mahuang", "xiaoqinglong"] },
-    { fact: "preg", text: "Pregnant: avoid Fu Zi", ids: ["fuzi", "sinitang", "zhenwutang", "shenqiwan"] },
+    // the 22 note formulas (2026-11-12) by the formula's own herbs, as her recipe writes it or, where she wrote none (Jie Yu Tang, Chu Fan Tang), its usual make-up; a herb one case only
+    // added is not counted. Ban Xia: Chai Hu Gui Zhi, Gan Cao Xie Xin, Jie Yu, Ba Wei Chu Fan, Chu Fan, Liu Jun Zi, Mai Men Dong, Xiao Xian Xiong. Ma Huang: Yue Bi Jia Zhu, Fang Feng Tong
+    // Sheng, Ge Gen. Fu Zi: Fu Zi Li Zhong, Geng Nian Fang (also its Rou Gui). Gui Zhi or Fu Zi (bronchiectasis): Chai Hu Gui Zhi, Geng Nian Fang, Fu Zi Li Zhong, Ge Gen, Zhi Shi Xie Bai
+    // Gui Zhi. Chai Hu: Chai Hu Gui Zhi, Jie Yu, Shu Yu Wan (Chai Hu is one of its herbs). MY reading, hers to correct
+    { fact: "preg", text: "Pregnant: avoid Ban Xia (teratogenic)", ids: ["banxia", "banxiahoupotang", "banxiaxiexintang", "wendantang", "xiaochaihu", "dachaihu", "chaihulonggu", "chailing", "xiaoqinglong", "wenjingtang", "huangliantang", "chaipo", "zhuyeshigao", "chaigui", "chaiqin", "chaihuguizhi", "gancaoxiexin", "jieyutang", "baweichufan", "chufantang", "liujunzi", "maimendong", "xiaoxianxiong"] },
+    { fact: "preg", text: "Pregnant: avoid Ma Huang", ids: ["mahuang", "xiaoqinglong", "yuebijiazhu", "fangfengtongsheng", "gegentang"] },
+    { fact: "preg", text: "Pregnant: avoid Fu Zi", ids: ["fuzi", "sinitang", "zhenwutang", "shenqiwan", "fuzilizhong", "gengnianfang"] },
     { fact: "preg", text: "Pregnant: avoid Gui Zhi Fu Ling Wan", ids: ["guizhifuling"] },
-    { fact: "preg", text: "Pregnant: avoid Rou Gui", ids: ["guilingwuwei", "guizhifuling", "shisanwei"] },
-    { fact: "bronch", text: "Bronchiectasis: caution with warm herbs (Huang Qi, Gui Zhi, Fu Zi)", ids: ["huangqi", "yupingfeng", "fangjihuangqi", "guizhi", "wulingsan", "xiaojianzhong", "wenjingtang", "zhigancao", "guizhilonggu", "lingguizhugan", "xiaoqinglong", "chaihulonggu", "chaihuguijiang", "chailing", "huangliantang", "shenqiwan", "fuzi", "sinitang", "zhenwutang", "guilingwuwei", "guizhifuling", "shisanwei"] },
-    { fact: "liver", text: "Liver damage from medicines: avoid Chai Hu formulas", ids: ["chaihu", "xiaochaihu", "dachaihu", "chaihulonggu", "sinisan", "xiaoyaosan", "xuefuzhuyu", "chaihuguijiang", "chailing", "chaipo", "chaigui", "chaiqin"] }
+    { fact: "preg", text: "Pregnant: avoid Rou Gui", ids: ["guilingwuwei", "guizhifuling", "shisanwei", "gengnianfang"] },
+    { fact: "bronch", text: "Bronchiectasis: caution with warm herbs (Huang Qi, Gui Zhi, Fu Zi)", ids: ["huangqi", "yupingfeng", "fangjihuangqi", "guizhi", "wulingsan", "xiaojianzhong", "wenjingtang", "zhigancao", "guizhilonggu", "lingguizhugan", "xiaoqinglong", "chaihulonggu", "chaihuguijiang", "chailing", "huangliantang", "shenqiwan", "fuzi", "sinitang", "zhenwutang", "guilingwuwei", "guizhifuling", "shisanwei", "chaihuguizhi", "gengnianfang", "fuzilizhong", "gegentang", "zhishixiebaiguizhi"] },
+    { fact: "liver", text: "Liver damage from medicines: avoid Chai Hu formulas", ids: ["chaihu", "xiaochaihu", "dachaihu", "chaihulonggu", "sinisan", "xiaoyaosan", "xuefuzhuyu", "chaihuguijiang", "chailing", "chaipo", "chaigui", "chaiqin", "chaihuguizhi", "jieyutang", "shuyuwan"] }
   ];
   function phFbrAvoidFacts(rec, effP) {
     let preg = phHxVal(rec, "pregnant") === "yes";
