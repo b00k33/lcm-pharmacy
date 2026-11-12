@@ -14474,3 +14474,86 @@ rest are small. Only points that stood were changed.
 - **Built:** each now lists `Object.keys(PH_FORMULAS).sort(phAzBy(phGdfName))`, A-Z by the name shown. Nothing else changed.
 - **Tested** (sandbox): both case-head pickers read A-Z (Ban Xia, Ban Xia Hou Po Tang ... Zhu Ye Shi Gao Tang, 48 now); My patients draws without errors.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Fang Bing Ren: the 22 formulas her note cases lead with (2026-11-12)
+
+- **Her words:** her popup pick "Yes, all 22" (2026-11-12, shown the cases from her six Nanjing notes first). The question was: 41 of the
+  new cases lead with 22 formulas Fang Bing Ren does not have; the option she took: "Each formula gets its own draft table from the signs
+  in its cases, as for Day 1."
+- **Built** (`index.html`), the way the six Day 1 case formulas were built on 2026-11-10:
+  - `PH_TC_MATCH`: 286 new lines (note | the catalog's own label | side), one a sign, for the notes of those 41 cases, read by hand
+    against the two sign pools (361 Bing, 348 Ren). A line only where the note says the sign IS there. No line for a denial ("No sore
+    joints"), for a drug's side effect or a change on the herbs ("Afternoon palpitations on Yue Bi Jia Zhu Tang + Hou Po", "Dry mouth
+    after the herbs"), for a grade or a number ("Abdominal strength 4/5", "56.7 kg"), or for a note the catalog has no sign for ("Mouth
+    ulcers", "Talks very fast", "Furrowed brow", "Hollow pulse", "Cold sweats", "Somnolence", "Dry eyes"). A sign the formula had
+    already eased counts ("nosebleeds improved", "cough and white phlegm improved and resolved", "falls asleep quicker on Jie Yu Tang"):
+    it is the picture the formula was given for.
+  - `PH_FORMULAS`: 22 entries after the six. A table is every sign its cases' notes match, each at 3; a formula seen in several cases
+    holds every sign any of them showed (nothing is weighed by how often it came). `src` = its cases' ids ("hh-" + the row key). `core`
+    names the cases (teacher, session, person) and what the formula was given with; it does not repeat the signs.
+  - `PH_BTJ`: a card row each (pinyin, Chinese, English, the signs in words).
+  - `PH_REN_FAM_GROUPS`, MY picks, hers to correct, each last in its herb's list: Ma Huang: Yue Bi Jia Zhu Tang, Ge Gen Tang, Fang Feng
+    Tong Sheng San. Chai Hu: Chai Hu Gui Zhi Tang (also shown under Gui Zhi), Jie Yu Tang (also under Ban Xia). Gui Zhi: Geng Nian Fang,
+    Zhi Shi Xie Bai Gui Zhi Tang. Huang Lian: San Huang Xie Xin Tang (also under Da Huang), Ge Gen Qin Lian Tang, Huang Lian E Jiao
+    Tang, Xiao Xian Xiong Tang. Da Huang: Da Huang Gan Cao Jie Du Tang. Shi Gao: Bai Hu Jia Ren Shen Tang. Ban Xia: Gan Cao Xie Xin Tang
+    (beside Ban Xia Xie Xin Tang), Ba Wei Chu Fan Tang, Chu Fan Tang. Fu Zi: Fu Zi Li Zhong Tang. No herb here leads Bai He Fang, Bai He
+    Di Huang Tang, Liu Jun Zi Tang, Mai Men Dong Tang or Shu Yu Wan: they sit under "On their own" in the grey default. A longer list
+    re-spaces that herb's shades (the app's own rule), so some older formulas' shades moved a little.
+  - `PH_FBR_AVOID`, by the formula's own herbs (her recipe, or its usual make-up where she wrote none: Jie Yu Tang, Chu Fan Tang); a
+    herb one case only added is not counted. Ban Xia: Chai Hu Gui Zhi, Gan Cao Xie Xin, Jie Yu, Ba Wei Chu Fan, Chu Fan, Liu Jun Zi, Mai
+    Men Dong, Xiao Xian Xiong. Ma Huang: Yue Bi Jia Zhu, Fang Feng Tong Sheng, Ge Gen. Fu Zi: Fu Zi Li Zhong, Geng Nian Fang (and its Rou
+    Gui, from one of its two recipes). Warm herbs with bronchiectasis: Chai Hu Gui Zhi, Geng Nian Fang, Fu Zi Li Zhong, Ge Gen, Zhi Shi
+    Xie Bai Gui Zhi. Chai Hu with liver damage from medicines: Chai Hu Gui Zhi, Jie Yu, Shu Yu Wan (Chai Hu is one of its herbs).
+  - The 41 `PH_TC_HH` rows name their formula as `fam`. `phTcHhFam` (the cases each `src` names) and one line in `phTourCases` link a
+    case that was already saved unlinked, once (`famNew`); a family she picked herself stays.
+  - Two small things beside it. The Guide card's "Compare with" picker lists A-Z (it listed the formulas in table order, 70 now; the
+    Cases session sorted its three Family pickers the same day, c50c3cb5). `phGdfTcCasesHtml` reads the tour's days first
+    (`phTcSources()`), so a formula's page lists its cases on a device that has not opened Cases yet: on a fresh device Yue Bi Jia Zhu
+    Tang's page had shown none of its six (the note cases were filed only when the Cases page read the days).
+- **The tables** (Ren signs · Bing signs, cases): Yue Bi Jia Zhu Tang 17 · 11 (6); Chai Hu Gui Zhi Tang 17 · 25 (5); Fang Feng Tong Sheng
+  San 14 · 7 (3); Gan Cao Xie Xin Tang 4 · 9 (3); San Huang Xie Xin Tang 7 · 11 (3); Bai He Fang 7 · 21 (2); Geng Nian Fang 3 · 8 (2);
+  Jie Yu Tang 3 · 6 (2); Fu Zi Li Zhong Tang 5 · 5 (2); and one case each: Ba Wei Chu Fan Tang 7 · 9; Bai He Di Huang Tang 1 · 3; Bai Hu
+  Jia Ren Shen Tang 4 · 3; Chu Fan Tang 3 · 11; Da Huang Gan Cao Jie Du Tang 1 · 1; Ge Gen Qin Lian Tang 4 · 6; Ge Gen Tang 1 · 0; Huang
+  Lian E Jiao Tang 9 · 10; Liu Jun Zi Tang 3 · 2; Mai Men Dong Tang 1 · 1; Shu Yu Wan 2 · 6; Xiao Xian Xiong Tang 2 · 6; Zhi Shi Xie Bai
+  Gui Zhi Tang 6 · 9.
+- **Thin tables, for her eye:** Ge Gen Tang 1 sign, Da Huang Gan Cao Jie Du Tang 2, Mai Men Dong Tang 2, Bai He Di Huang Tang 4. Their
+  cases' notes hold few signs; nothing was added to fill them.
+- **Readings she may want to correct** (each a draft): a "taut" pulse read as wiry; "white sallow" as pale and sallow; acne as a red
+  raised rash; red eyelids as red eyes and a plain "slippery" pulse as "slippery, large" (both the Day 1 readings); a "floating" pulse
+  as "floating, weak or loose"; "heart feels as though scratched by a cat" as restless; "dry hands" / "dry feet" as dry palms and
+  soles; "firm and distended" belly as "large, full"; "tympanic abdomen" as a bloated belly; "still good energy" kept beside "fatigue"
+  in one case (her note has both); "wants to lose weight, at any cost" (a woman of 70 kg) as a slightly heavy build, the only sign Ge
+  Gen Tang's case gave.
+- **For her word:** (1) Chu Fan Tang (one case, no recipe written) and Ba Wei Chu Fan Tang (one case, its eight herbs) may be the same
+  formula: one table or two? Built as two, as she listed them. (2) Bai He Fang (two cases) and Bai He Di Huang Tang (one case, with Bai He
+  Zhi Mu Tang and Gan Mai Da Zao Tang) are close; kept apart, as listed. (3) "Mouth ulcers" is noted in four of these cases (three of
+  them Gan Cao Xie Xin Tang's) and the catalog has no sign for it, so it scores nothing: add it as a sign?
+- **Tested** (sandbox, c50c3cb5 + this change, 1220 and 360):
+  - 70 formulas, 28 with `src`; `phFbrKeyCheck()` returns nothing. In the app, each of the 22 tables equals what `PH_TC_MATCH` reads
+    from its own cases' notes, key for key, all at 3 (22 of 22).
+  - A device that already held the cases unlinked: the 41 link on the first read (`famNew`). Controls: a case she had given another
+    family keeps it; a linked case she had unlinked stays unlinked (it is not one a `src` names).
+  - A fresh device: 141 cases, the 41 linked as they are filed, 132 linked in all; unlinked are Case 4 and Case 5 (as before) and the
+    seven with no formula recorded. No number or id twice.
+  - A fresh device that opens Guide > Families first: Yue Bi Jia Zhu Tang's page lists C17, C18, C25, C92, C95, C98; Cases then shows
+    141, Day 1 15 + 21, Day 2 22 + 20, Day 3 23 + 19, Day 4 21.
+  - Ranking, each case's own matched signs ticked (`phFbrRank`): its own formula leads in 33 of the 41. The other eight: five cases
+    with one or two signs (m14, z14, q19, z17, z20) and three where a book formula with a short table leads on "thin build" (Wai Tai Fu
+    Ling Yin over a8, a18, q2). The case floor reads book tables only (Bing 76, Ren 68, unchanged), so every older formula scores as
+    it did. A patient record with eight Yue Bi Jia Zhu signs ticked: it leads at 0.17, the next at 0.08; 70 rows, none without a number.
+  - Cautions (`phFbrAvoid`, all three facts on): Yue Bi Jia Zhu Tang 1, Geng Nian Fang 3, Chai Hu Gui Zhi Tang 3, Shu Yu Wan 1, Bai He
+    Fang 0.
+  - Guide > Families: the 22 sit under their herbs A-Z with their counts, the five under "On their own"; a new formula's page draws
+    (banner in its herb's shade, Cases chips, caption, Ren / Bing table, pictures); "Compare with" reads A-Z. Cases: C17 reads Yue Bi
+    Jia Zhu Tang (chip and Family picker); Tag shows the hand matches (5 found, 6 with no sign).
+  - A patient's Fang Bing Ren body and the Ren figure's rows build with the 70 formulas and hold the new names (`phTriHtmlBody`,
+    `phRenFigureParts`).
+  - Tap audit 0 off at 1220: Families with a fold open and a new card, a thin card, Cases with a case open, the Tag sheet. At 360:
+    Families, an open fold, a card, a case. No sideways scroll. The console holds only the sandbox's missing service worker.
+  - NOT tested: her own devices; the Key2; a patient's Fang Bing Ren page drawn on screen (the sandbox patient page did not mount; its
+    ranking, its body and its figure rows were run and built without error).
+- **Written by a script, not typed:** mocks/hh-22-formulas-2026-11-12/ (local only) holds `match-new.txt` (the hand list, case by case)
+  and `gen2.pl`, which writes the pairs for index.html from that list and from HEAD (the match lines, the 41 rows, the tables, captions,
+  card rows, herb lists and caution lines); `build2.sh` applies them. To change a table: change the list, run it again.
+- **Pictures** (local): shots/hh-22-formulas-1-phone-formula-page.jpg, -2-families-yue-bi.jpg, -3-case-linked.jpg.
+- **SAVED, not live:** goes out only on her own "push live".

@@ -1478,8 +1478,19 @@ not repeated here.
   "Full name (CODE)" where the code is off the herb list or reads two ways; two prescriptions get a "1." / "2." line each. The wording is
   Claude's reading of her notes (a DRAFT, hers to correct in Edit). Her popup picks, 2026-11-12: "Same as the first 15" (a study-tour case
   sits in the app's code as written: no name; sex, age or birth year, diagnosis, the day seen); "Yes, all 22" (each formula Fang Bing Ren
-  lacks gets its own table from its cases, as the Day 1 six); "On each formula's page" (the teachers' teaching points go to the formula each
-  is about, marked with the teacher and the day; until that is built they stay in her notes).
+  lacked has its own table from its cases, as the Day 1 six: built 2026-11-12, the next item); "On each formula's page" (the teachers'
+  teaching points go to the formula each is about, marked with the teacher and the day; until that is built they stay in her notes).
+- The 22 note formulas (her 2026-11-12 pick "Yes, all 22"; BUILD-NOTES "the 22 formulas her note cases lead with"): a formula her note
+  cases led with and Fang Bing Ren lacked is a `PH_FORMULAS` entry made from its cases only. Its table is every observation of those cases
+  that the hand list `PH_TC_MATCH` reads as a catalog sign, each at 3, one table for all its cases (no weight from how often a sign came).
+  A match line only where the note says the sign IS there: none for a denial, a drug's side effect, a change on the herbs, a grade or a
+  number; a note with no sign in the catalog scores nothing; conditions score nothing. `src` names its cases ("hh-" + the row key): that
+  makes it a case table (`phFbrCeil`) and links a case already saved unlinked to it once (`phTcHhFam`, never over a family she picked).
+  Each also has a `PH_BTJ` row, its herb in `PH_REN_FAM_GROUPS` (last in the list; five have no herb here and sit "On their own") and its
+  lines in `PH_FBR_AVOID` by the formula's own herbs (a herb one case only added is not counted). The tables, captions and card rows are
+  written by a script from the hand list (mocks/hh-22-formulas-2026-11-12/: `match-new.txt`, `gen2.pl`, `build2.sh`; local only): to change
+  one, change the list and run it again. All of it is a DRAFT reading of her notes, hers to correct in Edit. Waiting on her word: whether
+  Chu Fan Tang and Ba Wei Chu Fan Tang are one formula; whether "mouth ulcers" becomes a sign (the catalog has none).
 - Two colours (her 2026-11-10 "give chai po tang half ban xia and half chai hu colour in the circle and in the banner"): `PH_FBR_COLOUR_TWO`
   splits a formula's circles and banner down the middle (`sw` / `--cs`); table lines, board and scoring keep its own colour. Chai Po Tang only.
 - A formula made of two halves (her 2026-11-10 "chai gui tang is XCHT with dgsys", her pick "Add it from its two halves"): `phFbrFromHalves`
