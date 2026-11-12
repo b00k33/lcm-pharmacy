@@ -922,7 +922,7 @@ Details and tests: [Guide Families].
 ## Guide — Tongue map, Pulse, Abdomen (linked to the record's own pages, 2026-11-03; LIVE build 20261103-233500)
 Each tab draws the **open record's LIVE chart** (the patient open behind the Guide, else her own record from Me: `phGdWho`) with
 the page's own builder, handlers and save (`phGdChartHtml`: `phTngHtml` / `phHxConstitPulseHtml` / `phAbdHtml`), so a tap in the
-Guide is on the profile and a tap there is here. Under it the notes (`[data-gd-notes]`, `phGdLinkRefresh(id)` after every chart
+Guide is on the profile and a tap there is here. Under it the notes (`[data-gd-notes]`; Abdomen's sit in the card's own right third since 2026-11-12, `phGdLinkRefresh(id)` after every chart
 tap): a **gold dot** on each note today's chart reaches and a **Today** chip that shows only those (`phGdToday`). Pulse: the hits
 are the page's own `phVisitPulseKbHits`. No "+ <name>" chip on a Guide page (her 2026-11-12 "not necessary ... other than her profile"): she marks on the chart, ticks on the Fang Bing Ren page. Tongue map: the Tongue page's chart; the 14+ notes by place (tip →
 Upper, middle → Middle, root → Lower, sides → L / R; `PH_GD_TNG_ZONE`), a place marked today dots its notes; the old demo model and
@@ -1985,7 +1985,7 @@ strength; the words and every finding stay full). Motion on the interactive char
 abdomen-fade-motion-mock-2026-11-09.html; all off under reduced motion where it moves): hover a place and it lights, its band on the side
 view lights and the other words dim (hover a band: its places; `phAbdHl`); a tap sends rings from the finger, slower and wider the softer the
 wall (the chart's Tension, `phAbdRipple`, carried through the repaint by `phAbdTap`); a warm place sends up heat, a cold or cool one drifts
-frost (`phAbdTempMotion`); a Today / Both / Last bar under the front chart (`presAbdView`, `data-view`) fades one visit's marks out; the marks
+frost (`phAbdTempMotion`); a Today / Both / Last bar under both charts (`presAbdView`, `data-view`) fades one visit's marks out; the marks
 sweep in once per open of a patient (`phAbdScanKey`, `scan0`, each mark's `--sd`), with a Replay circle beside the bar. The side view moves
 with it (her "make the side view animate too"): the same scan line, its wall line drawing top to bottom as the line passes, its sounds and °C
 strips sweeping in, warm / cold rows sending up heat / frost inside the belly (`phAbdSideTemp`), and Today / Both / Last fading its marks
@@ -1994,12 +1994,10 @@ one tap, on while that mark sits; not a place's sign, so no popup lists it). The
 only; water and gas ink stay grey), one temperature per place; Feel = tender · tight hypochondrium (`tighthypo`, R / L hypo only,
 ticks the Chest & ribs pair) · pulsation · tight rectus · thin wall. No Xia Xin chip: tender at epi IS Xia Xin tender
 (`phAbd2Read` reads an old `marks.xiaxin` as tender@epi). The page works the Pulse page's way (her pick) [Abdomen page: the Pulse
-page's way]: one tab bar Seen · Temp · Sounds · Tension · Feel + ✕ Erase that stays in view (`.ph-pls-tool`), only the open
-group's chips under it, °C steppers in the Temp row; a picked sign stays picked and taps places on and off (Esc lets go); with
+page's way]: one tab bar (A–Z) + ✕ Erase, only the open group's chips under it (on a computer the bar sits in the card's right third, its groups and Erase one joined 3 × 2 bar, the chips one list; on a phone it heads the card), °C steppers in the Temp row; a picked sign stays picked and taps places on and off (Esc lets go); with
 none picked a place opens its own signs beside it (`phAbdPopHtml`: only what can sit there, Clear place). "Whole abdomen" is a
 place (stored as `"whole"`; an empty list still reads as whole; a whole temperature washes every zone without its own,
-`phAbdTWashes`); the side view's rows tap too (`data-abd-band`). One tab panel beside the charts: Summary (still "Reads as") ·
-Note · Fang Bing Ren, today's photo over it (`phAbdPhotoHtml`, Today | Last flips, `phAbdPhotoRefresh` on a photo load). Fang Bing Ren the
+`phAbdTWashes`); the side view's rows tap too (`data-abd-band`). **Two halves on a computer** (her synth22 2026-11-12, picks chart ⅔ · signs ⅓ on the Guide and the page): the chart left (the two figures at 80 : 100, the same height, at most 640px wide), today's photo under it (`phAbdPhotoHtml`, Today | Last flips, `phAbdPhotoRefresh` on a photo load; a tap = the photo viewer, the corner ⤢ = its own window, `phAbdPhotoWin`); on the right the bar, one tab panel Fang Bing Ren · Note · Summary (Summary first, still "Reads as"), then the card's tail `.ph-abd3-more` (`phAbdHtml(name, where, keep)`: the Guide's belly signs there, the page's "From your Guide" lines and last visits there; a repaint keeps the tail's node). A phone: one column, the bar first. Fang Bing Ren the
 Tongue page's way (her "Same as Tongue now"; no sign list): a chip that reaches a sign carries the plum link bar (`.tfp-lk`) and
 its signs on hover (`phAbdChipLinks`, off the `abd:` specs); the "Fang Bing Ren · N ticked" count (`phAbdFbrTicked`, a fact) sits
 on its tab; `phAbdChartWordsOf` is the one read of a chart's Fang Bing Ren words. Last visit draws in grey under today's marks, front and

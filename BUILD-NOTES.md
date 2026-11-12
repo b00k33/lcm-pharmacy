@@ -14616,3 +14616,29 @@ rest are small. Only points that stood were changed.
   not touch (told the Cases session). NOT tested: 360 for this change; her devices.
 - **Script:** mocks/hh-teaching-notes-2026-11-12/gen5.pl (local).
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Abdomen synth22, step 2a: two halves, the marking bar on the right, the photo under the chart (2026-11-12)
+- **Her words:** "Enlarge the abdominal chart. Divide page into 2, 1st half chart, second half the annotations/signs/symptoms. place the
+  image below the abdominal chart with option to xpand as a separate window to view." and, mid-batch, "even move this to the right side"
+  (the Feel · Seen · Sounds · Temp · Tension bar). Her picks: chart ⅔ · signs ⅓, on the Guide and the patient's Abdomen page; the photo:
+  a tap = the app's photo viewer, ⤢ = its own window. Plan guide `mocks/abd-synth22-2026-11-12/guide.html`.
+- **Built** (`index.html`): on a computer (641px and up) `.ph-abd3-body` is a grid, chart ⅔ left (`.ph-abd3-left`, at most 640px: the
+  two figures side by side at 80 : 100, their viewBoxes' own widths, so both stand the same height; the Today · Both · Last bar now under
+  both; then Whole abdomen; then the photo), and on the right the marking bar (`.ph-abd3-tool`, no longer sticky: it sits beside the
+  chart; its five groups + ✕ Erase are ONE joined 3 × 2 bar, Erase moved into the tabs' own `.seg`; the open group's chips one list under
+  it, a picked sign's ring inside its row), the Fang Bing Ren · Note · Summary tabs (one full-width bar; " ticked" drops, the gold count
+  and its title stay) and the card's new tail `.ph-abd3-more`: on the Guide its belly signs (`[data-gd-notes="abdomen"]`, so
+  `phGdLinkHtml` no longer adds its own for Abdomen), on the page the Guide's lines and the last visits (`phGdLinesHtml`,
+  `phExamPastHtml`; `phExamPageHtml` no longer draws them for Abdomen). `phAbdHtml(name, where, keep)`: where "guide" or the page;
+  `phAbdRepaint` keeps the old tail node (what she types there stays) and its own refreshers repaint it. The photo's corner ⤢
+  (`.ph-pp-xp.ph-abd3-phwin`, `data-abd3="photowin:<id>"`, `phAbdPhotoWin`) opens the photo in its own window (`window.open` of its
+  object URL; a blocked window says so in the one toast). Clear and Clear place are now the Button shape (32px, 6px corners, 13px
+  bold, the teal line). A phone keeps one column: the bar first, the chart, the photo, the tabs, the tail.
+- **Tested** (sandbox, the made-up patient with a chart today and one on 10 Oct): Guide at 1220: chart 448px tall (was 401), the size
+  check clean; the patient page at 1220: chart 486px tall; a group tab, a picked sign and a tap on a place still mark (tender at epi
+  saved); words typed into the page's "+ my note" and the Guide's add-note box stay through a group tab and a chart tap; ⤢ calls
+  `window.open` with the photo's blob URL and a popup size, and the photo itself still opens the app's viewer (a made-up photo in the
+  test copy's own memory); at 360 the bar sits first, the two figures and the Today · Both · Last bar fit, nothing wider than the screen,
+  the size check clean on the Guide. Off, older than this step: the Temp group's °C stepper (− value +) reads to the checker as an icon bar ("want a circle"), unchanged here; the page's "From your Guide" lines (rows 47.8px, the "Guide › Abdomen"
+  link, the note's select): step 3 redraws that list. **Not tested:** her real records; a real photo window.
+- **SAVED, not live:** goes out only on her own "push live".
