@@ -1980,8 +1980,8 @@ tabs and lines, written to the photo's own day (today, a visit, or a dated revie
 show on today's finding); a sublingual shot opens on Sublingual; Drawing hides on Jiao.
 **Abdomen** (her redesign): `visitFnd[id].abd =
 {tension, tensionAt{} (read-only legacy: nothing new is written), tempC{epi, lower} (°C at CV12 / CV4, 28–40, no navel),
-marks{sign:[zones]} (Seen signs distended / bulging / sunken / vispulse sit by ROW: whole, epi, umb, lower), v2}`; tension is one
-whole-abdomen value. Full / distended sits only on the whole abdomen, above the umbilicus (epi, hypo) or below it (lower, iliac): never the
+marks{sign:[zones]} (Seen signs distended / bulging / sunken / vispulse / puffy sit by ROW: whole, epi, umb, lower), none: [mark], v2}`; tension is one
+whole-abdomen value, Strength 1–5 since 2026-11-13 (her synth22 pick: `vsoft` 1 · `soft` 2 · `medium` 3 · `hard` 4 · `vhard` 5, one joined bar of numbers; 1 and 5 read as soft / hard for every sign, `phAbdTenBand`). Her Nanjing marks since 2026-11-13: resistance, lump or organ (Feel), puffy, damp (Seen), sweaty skin (Temp). **Checked, none** (`none`): tap 2 on a picked sign with nothing placed (water: its second tap) = ⊘, tap 3 clears; Fang Bing Ren reads its signs No (`phFbrChartNoSet`). Full / distended sits only on the whole abdomen, above the umbilicus (epi, hypo) or below it (lower, iliac): never the
 umbilical row or flanks (`phAbdOkAt`; her 2026-11-09 "almost never the umbilicus"). It draws as one soft rose glow, breathing, fading to
 nothing at its edge and round every place's word (`phAbdDistLayer`, her pick A; no dashes or rings): above = costal margin to the
 umbilicus, below = umbilicus to the pubis, whole = one glow over the trunk with the outline pushed out at the sides; the side view's belly
