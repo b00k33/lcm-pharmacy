@@ -94002,6 +94002,42 @@ pale red tongue|Tongue: pale-red|r`;
     const out = [...byKey.values()].slice(0, 3).map(h => ({ key: h.x.key, side: h.x.side, label: h.x.label }));
     PH_TC_SYN_MEMO.set(t, out); return out;
   }
+  // a note that says a sign is NOT there (2026-11-12: 51 of the 303 tour notes hold a no / not / never, about 43 of them pre-filled as the very sign they deny, "No itchy skin" ->
+  // Skin: itchy, "Not scared of cold" -> sensitive to cold). The app's similar-wording phrases are read first, so "sweating that does not stop" (profuse sweating), "can't sleep"
+  // (poor sleep), "no appetite" (poor appetite) and "no periods" (periods absent) still match. Then each part of the note (split at , . ; and at but / however / though) that
+  // still says no / not / never / without / none / nil / denies is a negated part; a note part opening with the negation ("No headache, nausea") negates the rest of its list up to
+  // a "but". A similar-wording match whose sign words are said only in a negated part is left out; a sign that itself says none / absent stays. Her own list of note wordings
+  // (PH_TC_MATCH) and a sign's exact words are trusted as they are. Still only pre-filled: nothing scores until she accepts.
+  const PH_TC_NEG = /\b(no|not|never|without|none|neither|nor|cannot|nil|denies)\b|n't\b/;
+  const PH_TC_NEG_MEMO = new Map();
+  function phTcNegRead(t) {
+    const pos = new Set(), neg = new Set();
+    String(t || "").toLowerCase().replace(/[‘’`]/g, "'").split(/;|\bbut\b|\bhowever\b|\balthough\b|\bthough\b/).forEach(seg => {
+      let all = false;
+      seg.split(/,|\.(?!\d)/).forEach((p, i) => {
+        let w = " " + p.replace(/[-\/_]+/g, " ").replace(/\s+/g, " ") + " ";
+        phSynPhrases().forEach(([re, to]) => { w = w.replace(re, to); });
+        const n = PH_TC_NEG.test(w);
+        if (i === 0 && n && /^\s*(no|not|never|without|none|neither|nil|denies)\b/.test(w)) all = true;
+        phTcToks(p).forEach(k => (all || n ? neg : pos).add(k));
+      });
+    });
+    return { pos, neg };
+  }
+  function phTcSynMatchNeg(t) {
+    if (!t) return [];
+    if (PH_TC_NEG_MEMO.has(t)) return PH_TC_NEG_MEMO.get(t);
+    let out = phTcSynMatch(t);
+    if (out.length && PH_TC_NEG.test(String(t).toLowerCase().replace(/[‘’`]/g, "'"))) {
+      const r = phTcNegRead(t);
+      if (r.neg.size) out = out.filter(m => {
+        if (/\b(none|absent|nil|lack\w*|without)\b/i.test(String(m.label || ""))) return true;   // a sign that itself says it is not there
+        const x = (PH_TC_SYN_IDX || []).find(y => y.key === m.key && y.side === m.side); if (!x) return true;
+        return [...x.d].some(w => r.pos.has(w));   // the sign keeps a word the note says without a negation ("No bitter mouth, but dry": dry mouth stays)
+      });
+    }
+    PH_TC_NEG_MEMO.set(t, out); return out;
+  }
   function phTcMatchAll(text) {
     if (!PH_TC_MATCH_MAP) {
       PH_TC_MATCH_MAP = new Map();
@@ -94016,7 +94052,7 @@ pale red tongue|Tongue: pale-red|r`;
       });
     }
     const t = String(text || "").trim().toLowerCase(), a = PH_TC_MATCH_MAP.get(t); if (a && a.length) return a;
-    const d = phTcDescMatch(t); return d.length ? d : phTcSynMatch(t);
+    const d = phTcDescMatch(t); return d.length ? d : phTcSynMatchNeg(t);
   }
   const phTcMatch = text => phTcMatchAll(text)[0] || null;   // the first match: the Change form opens on it
   const phTcOpenMatches = c => c.symptoms.map((s, i) => ({ s, i, m: !s.sign && !s.skip && !s.dx ? phTcMatch(s.text) : null })).filter(x => x.m);
