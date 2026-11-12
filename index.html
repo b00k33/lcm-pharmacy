@@ -15971,6 +15971,7 @@
   #pharmacyPage .ph-tc .tt-pn:first-of-type { margin-top: 0; }
   @media (max-width: 640px) { #pharmacyPage .ph-tc-flat .gf-seg button { padding-left: 8px; padding-right: 8px; } }   /* four views (Cases, Timetable, Places, My patients) fit a 360px phone */
   #pharmacyPage .ph-tc .ph-cmp-cs thead .t1 { display: block; font-weight: 700; }
+  #pharmacyPage .ph-fbr-sum { margin-top: 12px; min-width: 0; }   /* the patient Summary (her 2026-11-12) */
   #pharmacyPage .ph-tc .ph-tc-unk { display: block; margin: -4px 0 8px; font-size: var(--fs-12); color: var(--ph-soft); }
   #pharmacyPage .ph-tc-cor tr.gh td { background: var(--ph-herb-tint); font: 700 var(--fs-11) var(--font-body); letter-spacing: .07em; text-transform: uppercase; color: var(--ph-soft); padding: 8px 10px; }
   #pharmacyPage .ph-tc-cor tr.gh em { font-style: normal; margin-left: 8px; color: var(--ph-ink); }
@@ -95554,7 +95555,7 @@ pale red tongue|Tongue: pale-red|r`;
     : r.subj === "Diagnosis" && /^(high ldh|high uric acid|hyperlipidemia|diabetes)$/i.test(r.descr) ? Object.assign({}, r, { subj: "Blood tests" }) : r;
   // her 2026-11-10 "bing diagnosis divide between western and chinese patterns": a condition is a Chinese pattern when the catalog files it as one (the subject "Signs", mark pat) or its words are pattern words; else Western
   const PH_CMP_TCM_RE = /\b(deficien\w*|excess|stasis|stagnat\w*|damp\w*|phlegm|yin|yang|qi|wind|cold in|heat in|floating|exterior|interior|tai ?yang|shao ?yang|yang ?ming|tai ?yin|shao ?yin|jue ?yin|pattern)\b/i;
-  const phCmpAbdObj = d => /tender|resist|on pressure|pulsat|pulsing|tight|tense|rigid|spasm|weak, soft|soft wall|hot to the touch|flat|large, full|enlarged|contracted/i.test(String(d));
+  const phCmpAbdObj = d => /^chart · |tender|resist|on pressure|pulsat|pulsing|tight|tense|rigid|spasm|weak, soft|soft wall|hot to the touch|flat|large, full|enlarged|contracted/i.test(String(d));
   const PH_CMP_CASE_GRP = [["Head & ears", ["Head", "Ears"]], ["Mouth & throat", ["Mouth & throat"]], ["Tongue", ["Tongue", "Tongue coat"]], ["Abdominal", ["Abdominal"]], ["Pulse", ["Pulse"]], ["Heart", ["Heart"]], ["Lung · respiratory · immunity", ["Breathing", "Cough", "Immunity"]], ["Stomach", ["Stomach"]], ["Appetite", ["Appetite"]], ["Bowels", ["Bowels"]], ["Urine", ["Urine"]], ["Periods", ["Periods"]], ["Sex & fertility", ["Sex & fertility"]], ["Cold & heat", ["Cold & heat"]], ["Fever", ["Fever"]], ["Sweat", ["Sweat"]], ["Thirst", ["Thirst"]], ["Sleep", ["Sleep"]], ["Mood", ["Mind & mood"]], ["Energy", ["Energy"]], ["Muscles", ["Muscles"]], ["Back & limbs", ["Back", "Back & knees", "Limbs", "Joints", "Hands & feet"]], ["Skin & hair", ["Skin", "Hair"]], ["Family history", ["Family history"]], ["Medical findings", ["Blood pressure", "Blood tests"]]];
   // a row's signs (her synth22 2026-11-10, 4 new rows): a Ren-only sign of a look the Ren row already shows (Skin, Hair ...) stays in that Ren row, never twice
   const phCmpGrpRs = (all, subjs) => all.filter(r => subjs.indexOf(r.subj) >= 0 && !(r.r && !r.b && PH_CMP_REN_VIS.indexOf(r.subj) >= 0));
@@ -128907,7 +128908,57 @@ pale red tongue|Tongue: pale-red|r`;
     // her 2026-10-12 split (picks A + D in fbr-patterns-switch-mock.html): ONE page used to stack the Triangle and then
     // Patterns, so Patterns sat far down the scroll. They are now two pages joined by a pill switch at the top of each
     // (and two items in the left list): "patterns" (the constitution Triangle) and "patdx" (Patterns · Diagnosis).
+    if (phFbrSumFor && phFbrSumFor === name) return `${phFbrSwitchHtml(name, "patterns")}${phFbrSumHtml(t, name)}`;   // the Summary (her 2026-11-12)
     return `${phFbrSwitchHtml(name, "patterns")}${phFtgHostHtml(name)}${phTriHtml(name, true)}`;   // Energy moved into the Bing column (phTriHtml), her 2026-10-13
+  }
+  // ---- Summary (her 2026-11-12 "how do i see a summary of the patients symptoms", then "build the one-page summary - to include abdomen pulse symptoms etc - like the case study
+  // table"): a third view on the Fang Bing Ren switch, the patient on ONE page in the case study table's own rows (phCmpCaseParts / phCmpCaseRowsHtml, the learning table:
+  // each line with its picture). Her signs = every sign ticked for her now (Bing) and in her build (Ren), the same ticks the board counts (phTriEffective); the newest
+  // tongue, pulse and abdomen chart in words as each row's "Chart ·" line (the abdomen's on the Objective side); Bing · diagnosis = her complaints (Western) and the
+  // patterns that read likely or she agreed (Chinese patterns); Prescription = the open prescription. A tick shows ✓ where a case shows its weight (a patient's tick has
+  // no weight). View state only: phFbrSumFor = the patient it is open for; any other flow tab closes it.
+  var phFbrSumFor = "";   // var: read by the switch, which may draw before this line runs
+  document.addEventListener("click", e => {   // runs before the flow handler: the Summary tab opens it, any other flow tab closes it
+    const b = e.target && e.target.closest ? e.target.closest("[data-flow-go]") : null; if (!b) return;
+    const sw = b.closest("[data-fbr-switch]");
+    phFbrSumFor = b.hasAttribute("data-fbr-sumv") && sw ? sw.dataset.fbrSwitch : "";
+  }, true);
+  function phFbrSumSrc(t, name) {
+    const rec = phPatientPeek(name) || {}, today = phTriToday(rec), m = new Map();
+    const eff = { b: phTriEffective(rec, name, "d", today.d, today.prevD), r: phTriEffective(rec, name, "p", today.p) };
+    ["b", "r"].forEach(sd => Object.keys(eff[sd]).forEach(key => {
+      if (eff[sd][key] !== true) return;
+      const lab = phSignLabel(key); if (!lab || lab === key) return;
+      const ar = phGdfAreaIx(sd, { k: key, lab }), p = phGdfSplit(lab), subj = p[0] || "", descr = p[0] ? p[1] : lab, k = ar + "|" + (subj + "|" + descr).toLowerCase();
+      let e = m.get(k); if (!e) { e = { ar, subj, descr, r: 0, b: 0, or: false, kr: "", kb: "" }; m.set(k, e); }
+      e[sd] = 3; e[sd === "r" ? "kr" : "kb"] = key;
+    }));
+    const when = d => d ? " · " + phPtSxDate(d) : "";
+    const chart = (subj, txt, d) => { if (txt) m.set("chart|" + subj, { ar: -2, subj, descr: "Chart · " + txt + when(d), r: 0, b: 0, or: false, un: 1, kr: "", kb: "" }); };
+    try { const d = phFndDays(rec, "tongue", true)[0]; if (d && d.tng) chart("Tongue", phTng2Summary(d.tng), d.date); } catch (e) { /* no tongue chart */ }
+    try { const d = phFndDays(rec, "pulse", true)[0]; if (d && d.pulse) chart("Pulse", phVisitPulseSummaryText(d.pulse), d.date); } catch (e) { /* no pulse chart */ }
+    try { const d = phFndDays(rec, "abdomen", true).find(x => x.abd); if (d) chart("Abdominal", phAbd2Summary(d.abd), d.date); } catch (e) { /* no abdomen chart */ }
+    const c = rec.complaint || {}, dx = [String(c.mainText || "").trim()].concat((Array.isArray(c.secondary) ? c.secondary : []).map(x => String((x && x.text) || "").trim())).filter(Boolean);
+    // a pattern goes on the Chinese side by its own mark (pat), whatever its words
+    try { phPatCompute(name).shown.filter(p => p.agreed || p.level === "likely").forEach(p => { const n = p.def && p.def.name; if (n) { dx.push(n); m.set("pat|" + n, { ar: -2, subj: "Diagnosis", descr: n, r: 0, b: 0, or: false, pat: 1, kr: "", kb: "" }); } }); } catch (e) { /* no patterns */ }
+    const ings = (t && t.ingredients) || [], fx = t ? presActualFormula(t) : "";
+    const inv = ings.length ? `<div class="gl">${esc(fx || "Prescription")}</div>` + ings.map(i => { const g = Number(i.grams); return `<div class="cs"><span class="nm">${esc(phPinyinName({ name: i.herb || i.name || "" }))}</span><span class="ds">${i.grams != null && i.grams !== "" && isFinite(g) ? phRound2(g) + " g" : ""}</span></div>`; }).join("") : "";
+    const nT = Object.values(eff.b).filter(v => v === true).length + Object.values(eff.r).filter(v => v === true).length;   // the same count as the switch
+    return { id: "sum" + phPatientKey(name), signs: [...m.values()], dx, fid: null, invHtml: inv, bkHtml: "", nT };
+  }
+  function phFbrSumHtml(t, name) {
+    let src, parts;
+    try { src = phFbrSumSrc(t, name); parts = phCmpCaseParts(src, "", false, "one"); } catch (e) { return `<div class="ph-fbr-none">The summary could not be read.</div>`; }
+    parts._e.bk = true; if (!src.invHtml) parts._e.inv = true;
+    const rec = phPatientPeek(name) || {}, age = phAgeOf(rec.dob), n = src.nT;
+    let fam = null; try { fam = phFbrTop(rec, name, phTriFam(name)); } catch (e) { fam = null; }
+    const style = fam && PH_FORMULAS[fam] ? phGdfStyle(fam) : "--c:var(--ph-herb);--deep:var(--ph-herb-deep)";
+    const head = `<span class="t1">${esc(phTitle(name))}${age != null && rec.sex ? ` · ${age}${esc(rec.sex)}` : ""}</span><small class="ph-tc-sub">${n} sign${n === 1 ? "" : "s"} ticked${fam && PH_FORMULAS[fam] ? ` · Fang Bing Ren leading: ${esc(PH_FORMULAS[fam].name)}` : ""} · ${esc(phPtSxDate(keyOf(TODAY)))}</small>`;
+    const rows = phCmpCaseRowsHtml([parts], [{ style }], false, "data-fbr-sum-anim", null, "one")
+      .replace(/<tr class="an[^"]*">[\s\S]*?<\/tr>/, "")
+      .replace(/(<b class="zn [rb])" style="--f:0\.6" title="(Ren|Bing) · [^"]*">3<\/b>/g, '$1" style="--f:1" title="$2 · ticked">✓</b>')
+      .replace("Prescription · Inventory", "Prescription");
+    return `<div class="ph-tc ph-fbr-sum"><div class="ph-cmp-wrap"><table class="ph-cmp-cs lt" style="--n:1"><colgroup><col class="s"><col></colgroup><thead><tr><th class="rh"></th><th style="${style}">${head}</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
   // the Patterns · Diagnosis page: the glance line (return visits), the ring + pattern cards + Diagnosis line + clues, the
   // herb-family flow and the Zheng / Ti Zi cards -- exactly what used to sit under the Triangle
@@ -128935,7 +128986,9 @@ pale red tongue|Tongue: pale-red|r`;
     } catch (e) { /* the switch just shows no count */ }
     try { likely = phPatCompute(name).shown.filter(p => p.level === "likely" && !p.agreed).length; } catch (e) { /* no count */ }
     const b = (id, label, n, gold) => `<button type="button" role="tab" class="${active === id ? "on" : ""}" aria-selected="${active === id ? "true" : "false"}" data-flow-go="${id}">${label}${n ? `<span class="n${gold ? " gold" : ""}">${n}${gold ? " likely" : " ticked"}</span>` : ""}</button>`;
-    return `<div class="ph-fbr-switch" data-fbr-switch="${esc(name)}" data-fbr-switch-on="${active}"><span class="seg" role="tablist" aria-label="Fang Bing Ren views">${b("patterns", "Fang Bing Ren", ticked, false)}${b("patdx", "Patterns · Diagnosis", likely, true)}</span></div>`;
+    const sum = active === "patterns" && phFbrSumFor === name;   // the Summary (her 2026-11-12) is a view of the Fang Bing Ren page
+    const bs = (id, label, n, gold, on, attr) => `<button type="button" role="tab" class="${on ? "on" : ""}" aria-selected="${on ? "true" : "false"}" data-flow-go="${id}"${attr || ""}>${label}${n ? `<span class="n${gold ? " gold" : ""}">${n}${gold ? " likely" : " ticked"}</span>` : ""}</button>`;
+    return `<div class="ph-fbr-switch" data-fbr-switch="${esc(name)}" data-fbr-switch-on="${active}"><span class="seg" role="tablist" aria-label="Fang Bing Ren views">${bs("patterns", "Fang Bing Ren", ticked, false, active === "patterns" && !sum)}${b("patdx", "Patterns · Diagnosis", likely, true)}${bs("patterns", "Summary", 0, false, sum, " data-fbr-sumv=\"1\"")}</span></div>`;
   }
   function phFbrSwitchRefresh(name) {
     const s = document.querySelector("#pharmacyPage [data-fbr-switch]");
