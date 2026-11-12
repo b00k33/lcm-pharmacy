@@ -446,6 +446,18 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   tall tile blocks, one-line rows, tight paddings, no duplicated numbers, the
   first screen should carry real work. Never trim real data to save space
   (counts stay), trim the chrome around it.
+- **Vertical space first, every page, desktop and phone** (her 2026-11-13: "add a rule to prioritis vertical space saving for the
+  whole app", after the Guide's formula table went to two columns for "as many symptoms on page as possible"). When a layout
+  choice trades height against anything else (a picture's size, a label on its own line, a heading row, one column or two),
+  take the one that shows more rows on a screen. In practice:
+  - one line per item: a read-only line 22-26px; a row holding a 32px control is 36px (tap-audit sizes still rule);
+  - a group's name is a band or a prefix on its rows, never a spacer row; "or" / "and" is a tag on the row, never its own line;
+  - an empty section shrinks to its one action (Patient profile's "+ Schedule a dispense"), or hides if the bar already has it;
+  - never repeat on the page what the bar already says (the day, the patient's name);
+  - a list of short groups in a wide box goes into two columns of cards (a container query; one column under about 460px);
+  - measure before / after (the page's height in px, or rows on a 900px screen) and write the numbers in the build note.
+  Her own dated picks stay as they are unless she says otherwise (the phone's patient herb line wraps to two lines, her
+  2026-09-07; the locked session grid). The 2026-11-13 audit and its numbers: BUILD-NOTES.md "Vertical space audit".
 - Respect safe areas (`env(safe-area-inset-top/bottom)`). Nothing cut off
   under the status bar or at the phone's bottom edge.
 - Every dropdown/menu/popover/filter panel MUST open fully on-screen; if it
