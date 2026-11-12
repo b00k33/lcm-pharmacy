@@ -151448,13 +151448,23 @@ dull complexion, dark purple lips|Lips: dark|r`;
   function phAbdSideWall(a, breath) {
     const S = phAbdSideState(a), k = a.tension === "soft" ? 1.35 : a.tension === "hard" ? .95 : 1.12;
     const amp = { flat: 2, full: 8.5, distended: 21, sunken: -6.5 }[S.contour] + (breath ? (S.contour === "distended" ? 2.2 : 1.9) : 0);
+    // her synth22 2026-11-12 "the bulging line more curved / realistic", her pick B "Full": bulging or full places in rows next to each
+    // other make ONE dome over their span (a belly in profile is one curve), 1.4 times the old bump and higher the more rows it spans,
+    // easing to nothing at the ribs and the pubis; where two domes meet the higher one wins. A hollow stays its own dip.
+    const RM = PH_ABD_SIDE_ROWMID, up = S.locals.filter(l => l[1] > 0), spans = [];
+    [...new Set(up.map(l => l[0]))].sort((p, q) => p - q).forEach(r => { const s = spans[spans.length - 1]; if (s && r === s[1] + 1) s[1] = r; else spans.push([r, r]); });
+    const domes = spans.map(([r1, r2]) => {
+      const ls = up.filter(l => l[0] >= r1 && l[0] <= r2), cy = l => l[2] || RM[l[0]];
+      return { v: Math.max(...ls.map(l => l[1])) * 1.4 * (1 + .22 * (r2 - r1)), y0: Math.max(PH_ABD_XIPH_Y, Math.min(...ls.map(cy)) - 28), y1: Math.min(PH_ABD_PUBIS_Y, Math.max(...ls.map(cy)) + 28) };
+    });
     return y => {
       if (y <= PH_ABD_XIPH_Y) return phAbdCos([[0, 61], [PH_ABD_XIPH_Y, 60]], y);
       if (y >= PH_ABD_PUBIS_Y) return phAbdCos([[PH_ABD_PUBIS_Y, 57.5], [150, 55]], y);
       const u = (y - PH_ABD_XIPH_Y) / (PH_ABD_PUBIS_Y - PH_ABD_XIPH_Y);
-      let x = 60 - 2.5 * u + amp * Math.sin(Math.PI * Math.pow(u, k));
-      S.locals.forEach(([r, v, yc, sg]) => { x += v * Math.exp(-Math.pow((y - (yc || PH_ABD_SIDE_ROWMID[r])) / (sg || 9), 2)); });
-      return x - 1.6 * Math.exp(-Math.pow((y - PH_ABD_UMB_Y) / 1.5, 2));   // the navel dimple
+      let x = 60 - 2.5 * u + amp * Math.sin(Math.PI * Math.pow(u, k)), m = 0;
+      domes.forEach(d => { const t = (y - d.y0) / (d.y1 - d.y0); if (t > 0 && t < 1) m = Math.max(m, d.v * Math.pow(Math.sin(Math.PI * t), 2)); });
+      S.locals.forEach(([r, v, yc, sg]) => { if (v < 0) x += v * Math.exp(-Math.pow((y - (yc || RM[r])) / (sg || 9), 2)); });
+      return x + m - 1.6 * Math.exp(-Math.pow((y - PH_ABD_UMB_Y) / 1.5, 2));   // the navel dimple
     };
   }
   // heat / frost in the side view's warm / cold rows (her 2026-11-09 "make the side view animate too"): inside the belly, one row each, clipped to the cavity and the row
