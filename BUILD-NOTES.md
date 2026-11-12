@@ -14642,3 +14642,20 @@ rest are small. Only points that stood were changed.
   the size check clean on the Guide. Off, older than this step: the Temp group's °C stepper (− value +) reads to the checker as an icon bar ("want a circle"), unchanged here; the page's "From your Guide" lines (rows 47.8px, the "Guide › Abdomen"
   link, the note's select): step 3 redraws that list. **Not tested:** her real records; a real photo window.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Abdomen synth22, step 2b: a past day open big, beside today (Abdomen, Tongue, Pulse) (2026-11-12)
+- **Her words**, mid-batch, with a picture of the "10 Oct · LAST" strip: "add this to the build: allow to expand the previous abdominal
+  chart". Her picks: A "that day beside today"; Tongue and Pulse the same: Yes.
+- **Built** (`index.html`): the strip's picked-day cell (`phFvHtml`, under the Abdomen, Pulse and Tongue charts) gains the app's open-big
+  circle ⤢ (`.ph-pp-xp.ph-fv-xp`, `data-fv-big="<date>"`), grouped with "Same as <date>" in `.ph-fv-acts`; the cell now wraps, so in a
+  narrow column (the Abdomen card's right third, a phone) the two buttons go under the words, which keep their width (before, in the
+  right third, the words had about 90px). `phFvBigOpen(name, part, date)` opens the one sheet shell (`.ph-lk-sheet` `#phFvBig`, card
+  `.ph-fvbig`, up to 1100px): that day and Today side by side, each the part's own drawing (`phFvBigDraw`: Abdomen `phAbdChartSvg` ro +
+  `phAbdSideSvg` still, at 80 : 100; Tongue `phTongueChartSvg` ro; Pulse `phPulseBigHtml`) and its words (`phFndText`); "Not examined
+  today" where today has none. One day under the other on a phone. Closes on ✕, the backdrop or Esc (Esc closes only the sheet, the
+  patient stays open). Reads only; nothing is saved.
+- **Tested** (sandbox, the made-up patient, with a made-up tongue and pulse on 10 Oct): Abdomen at 1220: 10 Oct beside Today, each figure
+  427px tall, the card 1100 x 572; ✕, the backdrop and Esc each close it and the patient page stays; Pulse: both grids, 10 Oct's two
+  marks drawn; Tongue: 10 Oct beside "Not examined today"; the size check clean on the sheet and the three strips at 1220 and 360; at
+  360 the sheet is one column inside the screen. **Not tested:** her real records.
+- **SAVED, not live:** goes out only on her own "push live".
