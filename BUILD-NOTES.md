@@ -14598,3 +14598,21 @@ rest are small. Only points that stood were changed.
   clean; Abdomen one line, the card's Summary "Clear" (999px corners, 21.6px on a phone), older than this step: step 2 rebuilds that
   card and fixes it. **Not tested:** her real records.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Chu Fan Tang joined, mouth ulcers a sign (2026-11-13)
+
+- **Her words:** her popup picks (2026-11-13): "One formula" (Chu Fan Tang and Ba Wei Chu Fan Tang) and "Add it" (mouth ulcers as a sign).
+- **One formula** (`index.html`): the `chufantang` entry is gone from `PH_FORMULAS`, `PH_BTJ`, `PH_REN_FAM_GROUPS` and `PH_FBR_AVOID`;
+  `baweichufan` holds both cases (`src` hh-z4, hh-q16) and every sign either showed, each at 3 (20 Bing, 8 Ren); its caption and card
+  row name both; the case row and its three teaching notes moved to it. One line in `phTourCases` moves a case a device had already
+  linked to the old page. Her note's own formula text on the case ("Chu Fan Tang") is unchanged. 69 formulas, 27 case tables.
+- **Mouth ulcers:** a new Bing sign `mouth_ulcers_now`, "Mouth & throat: mouth ulcers" (the pool, the "how they feel" area list, the
+  search words). `PH_TC_MATCH` reads seven notes that say ulcers are there (none for "No mouth ulcers"). At 3 in Gan Cao Xie Xin Tang
+  (three cases) and Huang Lian E Jiao Tang (one case). Bing only: no Ren twin was added (nothing in her words asks for one).
+- **Tested** (sandbox, 38b425ba + this change, 1220): `phFbrKeyCheck()` returns nothing; a device that held the case on the old page
+  now shows it on Ba Wei Chu Fan Tang (cases C19 and C136 on its page, 3 teaching notes); 141 cases, 132 linked, none linked to a
+  missing formula; mouth ulcers + red raised rash + diarrhoea + a tender red tongue ticked: Gan Cao Xie Xin Tang leads; the sign's row
+  shows on its page. Tap audit: 3 kinds off, all the picture thumbnails (`button.gf-ani-th`), the same on a formula this change did
+  not touch (told the Cases session). NOT tested: 360 for this change; her devices.
+- **Script:** mocks/hh-teaching-notes-2026-11-12/gen5.pl (local).
+- **SAVED, not live:** goes out only on her own "push live".
