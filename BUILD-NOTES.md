@@ -14557,3 +14557,23 @@ rest are small. Only points that stood were changed.
   card rows, herb lists and caution lines); `build2.sh` applies them. To change a table: change the list, run it again.
 - **Pictures** (local): shots/hh-22-formulas-1-phone-formula-page.jpg, -2-families-yue-bi.jpg, -3-case-linked.jpg.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Teaching notes on each formula's page (2026-11-12)
+
+- **Her words:** her popup pick "On each formula's page" (2026-11-12): each teacher's teaching point goes to the formula it is about,
+  marked with the teacher and the day (her preview: "TEACHING NOTES / Dr Zhang · Day 1 pm (the point, in your words)").
+- **Built** (`index.html`): `PH_GDF_TEACH` (formula id: [session, note] rows), `PH_GDF_TEACH_WHO` (the seven sessions' teacher and
+  day) and `phGdfTeachHtml(id)`, drawn at the end of a formula's Guide card, before her own notes block, in the look of her quotes
+  (`.gf-quote`) under a small "Teaching notes" heading (`.gf-teach`). 131 notes on 51 of the 70 formulas. Read-only and in the code,
+  so they use none of the app's storage (it is near 70% full).
+- **The notes are her words:** spelling tidied only, her abbreviations kept (DCHT, GZFLW). A general teaching line only; nothing
+  about one person in the room. A line that names two formulas sits on both where it teaches both.
+- **Left in her notes:** points about a formula Fang Bing Ren does not hold (Ze Xie Tang, Zhi Zi Bai Pi Tang, Shao Yao Gan Cao Tang,
+  Yin Chen Wu Ling San, Bai Tou Weng Tang, Ba Wei Huo Xue Tang, Ba Wei Tong Yang San, Suan Zao Ren Tang, Shi Quan Da Bu Tang, Wen Pi
+  Tang, Ma Zi Ren Wan, Tao He Cheng Qi Tang, Dang Gui Si Ni Tang, Li Zhong Tang) and the by-disease lists (high blood pressure,
+  urticaria, stomach, coronary heart disease, rheumatoid arthritis).
+- **Tested** (sandbox, f13b2a95 + this change): every id in `PH_GDF_TEACH` is a formula; `phFbrKeyCheck()` returns nothing; Yue Bi
+  Jia Zhu Tang's card shows its 5 at 1220, Da Chai Hu Tang's its 7 at 360; a formula with none (Bai He Fang) shows no heading; tap
+  audit 0 off at both sizes; no sideways scroll; console holds only the sandbox's missing service worker. NOT tested: her devices.
+- **Written by a script:** mocks/hh-teaching-notes-2026-11-12/ (local): `teach.txt` (the list) and `gen3.pl` (writes the pairs).
+- **SAVED, not live:** goes out only on her own "push live".

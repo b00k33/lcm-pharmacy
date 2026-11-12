@@ -1479,7 +1479,10 @@ not repeated here.
   Claude's reading of her notes (a DRAFT, hers to correct in Edit). Her popup picks, 2026-11-12: "Same as the first 15" (a study-tour case
   sits in the app's code as written: no name; sex, age or birth year, diagnosis, the day seen); "Yes, all 22" (each formula Fang Bing Ren
   lacked has its own table from its cases, as the Day 1 six: built 2026-11-12, the next item); "On each formula's page" (the teachers'
-  teaching points go to the formula each is about, marked with the teacher and the day; until that is built they stay in her notes).
+  teaching points go to the formula each is about, marked with the teacher and the day: built 2026-11-12 as `PH_GDF_TEACH`, "Teaching
+  notes" at the end of a formula's Guide card. The notes are HER words (spelling tidied only, her abbreviations kept): never reword
+  one; a general teaching line only, nothing about one person in the room; a point about a formula Fang Bing Ren does not hold stays
+  in her notes).
 - The 22 note formulas (her 2026-11-12 pick "Yes, all 22"; BUILD-NOTES "the 22 formulas her note cases lead with"): a formula her note
   cases led with and Fang Bing Ren lacked is a `PH_FORMULAS` entry made from its cases only. Its table is every observation of those cases
   that the hand list `PH_TC_MATCH` reads as a catalog sign, each at 3, one table for all its cases (no weight from how often a sign came).
