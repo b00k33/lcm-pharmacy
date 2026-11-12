@@ -1470,6 +1470,16 @@ not repeated here.
 - A case's formula is its base (her 2026-11-10 "some formulas from case studies have the base formula e.g. dcht and additions so its dcht
   modified"): `formula` / `fms` name the base formula(s) only; herbs added or a dose changed are `mod`, shown as "Modified" on the Book /
   lecture row and ", modified" in the By Formula names, never a formula in the filter list. `PH_TC_FIX` moved the Day 1 names once.
+- Her notes' cases (her 2026-11-12 integrate33 with six Word notes, "add the following cases into the relevant days"): `PH_TC_HH` holds the 126
+  cases of her Nanjing notes, each row its day and time by her timetable (Day 1 afternoon to Day 4 morning; her "HH Day 1" is the fifteen
+  seeded). `phTcHhAdd` files them once (`s.hhV`), numbered after the highest case so far, ids "hh-" + the row key, each `added` (Edit and
+  Remove work). An observation is saved as its words only (`{ text }`; the tag fields arrive when she correlates it): this origin's storage
+  was 68.7% full on 2026-11-12 and the app warns at 75%, so a seeded case never carries the six-field notes. A recipe keeps her shorthand, as
+  "Full name (CODE)" where the code is off the herb list or reads two ways; two prescriptions get a "1." / "2." line each. The wording is
+  Claude's reading of her notes (a DRAFT, hers to correct in Edit). Her popup picks, 2026-11-12: "Same as the first 15" (a study-tour case
+  sits in the app's code as written: no name; sex, age or birth year, diagnosis, the day seen); "Yes, all 22" (each formula Fang Bing Ren
+  lacks gets its own table from its cases, as the Day 1 six); "On each formula's page" (the teachers' teaching points go to the formula each
+  is about, marked with the teacher and the day; until that is built they stay in her notes).
 - Two colours (her 2026-11-10 "give chai po tang half ban xia and half chai hu colour in the circle and in the banner"): `PH_FBR_COLOUR_TWO`
   splits a formula's circles and banner down the middle (`sw` / `--cs`); table lines, board and scoring keep its own colour. Chai Po Tang only.
 - A formula made of two halves (her 2026-11-10 "chai gui tang is XCHT with dgsys", her pick "Add it from its two halves"): `phFbrFromHalves`

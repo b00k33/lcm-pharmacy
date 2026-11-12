@@ -14375,3 +14375,65 @@ rest are small. Only points that stood were changed.
   screen on a device, the Key2 itself.
 
 **SAVED, not live:** goes out with her next "push live".
+
+## Guide › Cases: the cases from her six Nanjing notes, 2026-11-12
+
+- **Her words:** "integrate33 … add the following cases into the relevant days", with six Word notes from
+  `Huang Huang 2026 / November`: HH Day 1, HH Day 1 dr zhang, HH Day 2 Dr hh, HH Day 2 Dr liu, HH Day 3 Dr hh, HH Day 4 Dr hh.
+- **Where each note went** (by her Week One timetable, `PH_TC_TT`): "HH Day 1" is the fifteen cases already in Day 1
+  morning (the same patients in the same order), so nothing was added from it. dr zhang = Day 1 afternoon, 21 cases.
+  Day 2 Dr hh = Day 2 morning, 22. Day 2 Dr liu = Day 2 afternoon, 20 (her #21 is an empty heading). Day 3 Dr hh = Day 3
+  morning, 23, and its "Afternoon" part = Day 3 afternoon, 19 (her numbers run 1, 2, 3, 3, 4 to 13, 15 to 19: the second
+  3 is its own case, there is no 14). Day 4 Dr hh = Day 4 morning, 21. 126 new cases, 141 in the tour.
+- **Built** (`index.html`): `PH_TC_HH`, a row a case (key = note letter + her number, day, block, complaint, name,
+  formula, `fms`, family, `mod`, recipe, diagnosis lines, observations), and `phTcHhAdd(s)` before `phTourCases`; one line
+  in `phTcDays` after the Week Two timetable calls it once (`s.hhV`). Each row becomes a case in its day's morning or
+  afternoon: id "hh-" + key, `added` (so Edit and Remove work), numbered after the highest case so far (a case she typed
+  herself keeps its number), skipped if its id is already a case. Nothing else in Cases changed.
+- **How her notes were read** (the way the Day 1 seed reads): what the patient showed or said = observations; her
+  conditions, test results and earlier prescriptions = diagnosis lines; the teachers' teaching lines, formula comparisons
+  and her "looks like" notes are not in the cases (they stay in her notes). The formula is the base formula(s); added herbs
+  and dose notes are `mod`. A case with two prescriptions lists each under a "1." / "2." line, so it shows no total.
+  A recipe keeps her shorthand; a code off the herb list, or one that reads two ways, is written "Full name (CODE)":
+  SG is Shi Gao beside Ma Huang and Su Geng in Ban Xia Hou Po Tang; SDH is Sheng Di Huang in Xi Jiao Di Huang Tang.
+  A family is set only where the lead formula is one in Fang Bing Ren (a named variant goes to its base). 78 cases link;
+  48 read "Not matched yet": 7 with no formula recorded, 41 that lead with a formula Fang Bing Ren lacks (her Case 5 pick):
+  Yue Bi Jia Zhu Tang 6, Chai Hu Gui Zhi Tang 5, Fang Feng Tong Sheng San 3, Gan Cao Xie Xin Tang 3, San Huang Xie Xin
+  Tang 3, the Bai He formulas 3, Fu Zi Li Zhong (Tang / Wan) 2, Geng Nian Fang 2, Jie Yu Tang 2, and twelve seen once.
+- **Left exactly as she wrote them, for her eye** (Edit flags the codes): m13 "bz20 bz15" (BZ twice, the second kept as
+  BZ); z6 "DH 10" in Wen Jing Tang; q19 "G 10, ZC 10"; l15 "GL 30" in Gui Ling Long Mu; a11 "gz20 … sz20" in Dang Gui
+  Shao Yao San; q12 "dg1-"; z9 "Tianyuju 2". JYT is read as Jie Yu Tang. A herb written twice with one dose is entered
+  once (MX in z5, GJ in q9). No formula was recorded for z12, z15, z16, z21, l19 and m12; z9 has herbs but no name.
+- **Five diagnosis lines were worded so the page files them in the right row** (the page reads a line starting "Blood"
+  as a blood test, and the word "pattern" as a Chinese pattern): "Bloods: blood sugar normal", "2014: blood pressure
+  spiked to 260 …", "TCM: blood deficiency", "Male-type hair loss", and z5's treatment history as two lines.
+- **Storage, measured:** her computer's storage for b00k33.github.io held 3,603,174 characters, 68.7% of the 5 MB the
+  app counts against (`daybook-pharmacy` 2.94 MB, read as sizes only, from a page of that site that is not the app); the
+  app's banner comes at 75%. With the usual six-field notes the 126 cases were 184 KB; saved as `{ text }` only (the tag
+  fields arrive when she correlates a note) they are 110 KB, about 70.8% after. No reader needs the missing fields (the
+  code since Tour Cases began, 649ca73c, never compares them to null). Keeping only a stub in storage and the words in
+  the code was not done: a device on an older build would receive cases with no observations and fail on the Cases page.
+- **Tested** (sandbox, the code of this build, 1220 and 360): a fresh device gets 141 cases, Day 1 36, Day 2 42, Day 3
+  42, Day 4 21, C16 to C141, no number or id twice; a device with her own typed case in Day 2 keeps it as C16 and the
+  new ones run C17 to C142; running the step again adds nothing; a reload keeps 141. Every case's page builds without an
+  error; a one-formula case totals its grams (C16 = 303 g), a two-prescription case shows both lists. Edit then Save
+  with nothing changed leaves a case as it was; Remove asks, Undo puts it back in its place. Tag › Accept all on a new
+  case writes the signs and saves. Compare with shows two new cases side by side. Timetable, Places (141 columns, it
+  scrolls in its box) and My patients draw. Tap audit 0 off on Cases, an open case, Edit, Timetable and Places at 1220
+  and at 360; no sideways scroll; the console holds only the sandbox's service worker 404. Every herb and dose was
+  compared with her notes by script (87 recipes; the 17 it could not match letter for letter were read by eye: typos in
+  her shorthand, the doses agree). NOT tested: her own devices; the Key2.
+- **Known, small:** a dose that is not plain grams ("1 part", "10g a day", "a handful") joins the herb's name after an
+  Edit save, as Edit only reads "N g".
+- **Two dosing notes are in the formula's name, not in `mod`** (a schedule is not a change to the formula): Shu Yu Wan
+  "(1 dose split over 3 days)", Jie Yu Tang "(JYT; 3 days on, 2 off)".
+- **Her picks (popup, 2026-11-12, shown the build first: Day 1 afternoon with C16 open, the Timetable, Day 4 on a phone):**
+  - How they go in: "Same as the first 15" (in the app's code as written: no name; sex, age or birth year, diagnosis,
+    the day seen. The other two offered: ages as decades only; only in her private data).
+  - The formulas Fang Bing Ren lacks: "Yes, all 22" (each its own draft table from the signs in its cases, as the Day 1
+    six of 2026-11-10). NOT built in this save.
+  - The teachers' teaching points: "On each formula's page" (each point to the formula it is about, marked with the
+    teacher and the day). NOT built in this save; they are still only in her notes.
+  - "Push live".
+
+**Her pick "Push live":** published right after this save.
