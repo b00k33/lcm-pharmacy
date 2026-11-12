@@ -924,12 +924,10 @@ Each tab draws the **open record's LIVE chart** (the patient open behind the Gui
 the page's own builder, handlers and save (`phGdChartHtml`: `phTngHtml` / `phHxConstitPulseHtml` / `phAbdHtml`), so a tap in the
 Guide is on the profile and a tap there is here. Under it the notes (`[data-gd-notes]`, `phGdLinkRefresh(id)` after every chart
 tap): a **gold dot** on each note today's chart reaches and a **Today** chip that shows only those (`phGdToday`). Pulse: the hits
-are the page's own `phVisitPulseKbHits`; "+ <name>" on a note ticks the same Rate & rhythm chip (`data-constit-hm`) or picks the
-chart's brush for a box quality (`data-constit-pulse-stamp`). Tongue map: the Tongue page's chart; the 14+ notes by place (tip →
+are the page's own `phVisitPulseKbHits`. No "+ <name>" chip on a Guide page (her 2026-11-12 "not necessary ... other than her profile"): she marks on the chart, ticks on the Fang Bing Ren page. Tongue map: the Tongue page's chart; the 14+ notes by place (tip →
 Upper, middle → Middle, root → Lower, sides → L / R; `PH_GD_TNG_ZONE`), a place marked today dots its notes; the old demo model and
 4-region map are gone; the healthy tongue photo opens beside today's from the same icon as on the Tongue page (below). **Abdomen (new):** the Abdomen page's chart; the belly signs Fang Bing Ren reads off it (built each time
-from the abdomen specs of `PH_FBR_CHART_PREFILL`, with the formulas whose `ren` / `bing` weigh them), each with "+ / ✓ <name>" =
-the Fang Bing Ren page's Yes / No (`phGdSignTick`, `phRenSignTick`'s write); her own notes in **`PHARMACY.abdNotes`**
+from the abdomen specs of `PH_FBR_CHART_PREFILL`, with the formulas whose `ren` / `bing` weigh them); her own notes in **`PHARMACY.abdNotes`**
 (`{id, w: "abd:<mark>[@zone]", meaning, formulas, source}`, syncs in pharmacy_core like `pulseNotes` / `tongueNotes`); a place's
 popup open on the chart (or a picked sign) shows that place's rows. **The pages' side:** under the Tongue / Pulse / Abdomen pages'
 chart a "From your Guide" box (`phGdLinesHtml`, `[data-gd-lines]`): today's notes, each a door (`data-gd-open="tab:id"`,
