@@ -14695,3 +14695,37 @@ rest are small. Only points that stood were changed.
 
 - **Tap audit** (HEAD's script, 360): the changed rows add nothing new. Already there before, not vertical: Today's visit's goal line (`.ph-cx-gl`, 14px tall) and the row's ▾ (`.ph-cx-dd`, 20px); Tongue's "Next: Pulse" (35.5px, 10px corners).
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Abdomen synth22, step 3: the belly signs, picture first (2026-11-13)
+- **Her words:** "I don't understand what this does" (the Guide's Belly signs). Her pick A "What's marked, with pictures" (plan guide
+  `mocks/abd-synth22-2026-11-12/guide.html`, note 3): what today's chart reaches, "On this chart · n", picture first, each sign with
+  its formulas, the rest behind "All belly signs · N ▾"; the same rows on the Abdomen page. Built under her 2026-11-13 "Vertical space
+  first".
+- **Built** (`index.html`): ONE row renderer, `phGdAbdSignHtml`, for the Guide's right third (`phGdAbdNotesInner`) and the page's tail
+  (`phGdAbdPageInner`, called from `phGdLinesInner`; that box loses its paper frame, `.ph-gd-abs-pg`). A row: the sign's own picture
+  (`phKsSvgHtml(key, true)`, rule 1; 34 of the 38 belly signs have one; the 4 without and her own notes draw their place on a small
+  belly, `phGdAbdPicHtml` → `phAbdChartSvg` ro; the picture's hover names the chart words), its words through `phSignDescHtml` /
+  `phSignLabHtml` ("Abdominal:" dropped, the card says it; "Chest & ribs:", "Stomach:" and the rest stay), its formulas named in soft
+  ink with their family's colour dot (`phGdfStyle`), each name whole. A Ren and a Bing sign worded the same are one row
+  (`phGdAbdSigns`, formulas and words together: 38 signs → 28 rows). `phGdAbdRows` now carries `fx` ([id, name] A–Z, `phGdAbdFx`, which
+  replaced `phGdAbdFormulas`), `pic` and `on` (today's chart words that reach the sign). Rows A–Z by the words on screen
+  (`phGdAbdKey`). The Guide: "On this chart · n" + "+ Note", the rows, then "All belly signs · N ▾" (`phGdAbdAll`), which opens every row
+  under its mark's band, today's with the gold dot; no patient, a search, or a place / sign picked on the chart = one list of what
+  matches, the head naming it ("“navel” · 2"). Gone: the explaining sentence, the Today chip on Abdomen, the "From the chart:" line,
+  the Bing / Ren tag, the always-open add form. "+ Note" (`phGdAbdAddAt`, "guide" | "page") opens its form with the first box focused
+  (Guide: mark, place, meaning, formulas; page: one of today's marks, A–Z, + meaning); a save closes it ("Type the note first." on an
+  empty one; a failed save says so). The page's head: "On this chart · n" · + Note · Guide (book icon, `data-gd-open="abdomen:"`); the
+  per-line "Guide ›" doors and the 47.8px lines went, and with them the size check's three old misses on that box.
+- **A choice for her new rule, disclosed:** her mock drew the formulas as 32px chips; in the 273px right third that made rows up to
+  228px (a sign has up to 11 formulas): 2610px for the Guide's column as chips, 1638px as named tags (not tappable). A formula's name
+  never splits over two lines (a split "Chai / Hu Gui Zhi …" reads as two formulas; splitting would save about 140px more).
+- **Measured** (sandbox, the made-up patient, 13 belly signs reached by today's chart, 1220px): the Guide's belly signs 4812px →
+  1638px (38 rows always open, with the sentence and the form → 13 rows + the fold; the fold open: 5210px, 41 rows); the page's tail
+  1166px → 1549px (13 one-line text rows → 13 picture rows with their formulas; the form now folds).
+- **Tested** at 1220 and 360: the size check clean on the whole Guide and the whole patient page, the fold open, both forms open;
+  nothing wider than the screen at 360; the phone's fields 16px; "+ Note" opens and focuses, words typed stay through the fold and a
+  marking-bar tab; a Guide note and a page note save, show as a row with their place, delete; a search ("navel") lists 2 under their
+  marks; the Guide door opens the Guide's Abdomen with the record still open; every sign picture in view drawn. **Checked elsewhere:**
+  the card's Fang Bing Ren tab and the Tongue page's "From your Guide" lines (unchanged; `phGdLineHtml` stays for them). **Not
+  tested:** her real records and notes. Pictures: `mocks/abd-synth22-2026-11-12/step3-s3-guide.png`, `step3-s3-page.png`.
+- **SAVED, not live:** goes out only on her own "push live".
