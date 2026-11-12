@@ -14745,3 +14745,25 @@ rest are small. Only points that stood were changed.
   the ribs (60 at y 24) and the pubis (57.5 at y 143) as before; no marks = the old line; the patient page draws with no error and
   the size check clean. **Not tested:** her real records.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Vertical space audit, Formula refill, Communications, Records (2026-11-13)
+- **Her words:** "audit formula refill, communications and the records pages" (the rule: CLAUDE.md "Vertical space first"). CSS only.
+- **Sandbox:** 1220x900 and 360x740; every "before" measured on the saved build b3eaa6ba, the same seed data.
+
+| Page | Before | After | Change |
+|---|---|---|---|
+| Dispense history, computer (901-1400px) | 129px a dispense (a card) | 40px (the table row) | the card rules for `#presLog` now sit in `@media (max-width: 900px)`; above 1400px it was always the table |
+| Dispense history, phone card | 126px | 102px | the date joins the grams and price on the last line ("13 Nov 2026 · 150 g · $45.00"); `td` order + `::before` "· " |
+| Formula refill, tabs | 45px tabs, 50px head (phone 100px head) | 32px tabs, 37px head (phone 91) | `.ph-rfc .tab` 32px, 13px text, 6px top corners; the tabs stretch to the head's foot so the gold line stays on the divider |
+| Formula refill, rows | 50px (computer), 95px (phone) | 41px; phone 77 (no Recipe button) / 94 (with one) | `.nmw` a wrapping flex row: "Gui Zhi Tang  untracked" on one line, a long name still wraps |
+| Phone top bar, Dispense history | 92px, title cut to 61px | 85px, whole title | the bar's controls get their own row (`order: 99; flex: 1 0 100%`, wraps, never scrolls); search beside Show all; the count beside Show all hidden (it repeated the list) |
+| Phone top bar, Patient directory | 92px, title 15px | 85px, whole | segments + the name filter (80px min) on one row |
+| Phone top bar, Photos | 168px, title 7px | 123px, whole | the type picker shrinks (255 -> 168px) so Sort and Select share its row |
+| Phone top bar, Stock movements | 162px, title 17px | 123px, whole | the two pickers shrink to share rows |
+| Phone top bar, Guide | 136px, title 17px | 123px, whole | `.ph-gd-head` a row, not a column: Families + search, the studied count under; the Families menu opens whole |
+| Phone top bar, All templates | 100px, title 46px ("All tem…") | 111px, whole | its four segments with counts are 481px and can't share one 342px row; 11px taller buys the whole title |
+| Photos bar, computer | 90px (controls 13px too wide, dropped under the title) | 59px, one line | `#phRecPhotosTypeSel` max 180px (the open list still shows every name whole) |
+| Communications | - | - | no change: Due + More is one 28px row, search + chips another; the empty state is one line |
+
+- **Audits** (HEAD's titlebar-audit.js and tap-audit.js): every page's bar clean at 360 and 1220; no page scrolls sideways; no console errors. Already there before, not vertical: the refill row's tick (`.tk`, 20px); the Records segment buttons (26px segments in a joined 31px bar, deliberate); search boxes' round corners (the app's field shape).
+- **SAVED, not live:** goes out only on her own "push live".
