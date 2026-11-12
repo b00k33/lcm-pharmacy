@@ -14680,3 +14680,18 @@ rest are small. Only points that stood were changed.
 - **Not measured this round:** a patient's own pages (Care Plan, Today's visit, Last visits, Abdomen / Tongue / Pulse). The C22 session is rebuilding Last visits and the Abdomen page (her synth22 steps 2a / 2b), so they wait until that lands. Also Formula refill, Communications and the Records pages, which need more seeded data.
 - **Tested:** tap audit (HEAD's script) at 360 on Patient profile (one pre-existing line: the search box's round corners, the app's field shape) and on the Guide card (off empty); no sideways scroll; no console errors.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Vertical space audit, a patient's pages (2026-11-13)
+- **Her words:** "audit care plan, today's visit, tongue and pulse" (the rule: CLAUDE.md "Vertical space first"). The Abdomen page and the Last visits strip belong to the B33 C4 LCM bugs session (her synth22), which applies the rule there.
+- **Sandbox:** 13794bc6, a test patient with a new Course care plan; 1220x900 and 360x740.
+
+| Page | Before | After | Change |
+|---|---|---|---|
+| Care Plan, Findings | 41px a finding (name over value) | 32px | `.ph-tp-fr .tx` one row: the name a prefix (84px), the value beside it, the date ("today") at the right; a phone lets a long value wrap instead of cutting it |
+| Today's visit, complaint rows | 56px a group's first row (computer) | 50px | `.ph-cx-row.ga` padding 7 -> 4px, `.ga1` 22 -> 19px (the band name stays over the first row); phone 9 -> 6 / 23 -> 20 |
+| Tongue, no photo yet | 267px empty photo frame + an empty "Past photos" | 79px box with "Add today's" | `.ph-tc-empty` no 3:4 frame (min 72px); `.ph-tc-past` hidden while it only says "Nothing earlier yet" ("No earlier photo" under the box says it once) |
+| Pulse | - | - | no change: the chart, its layer toggles and the Summary tabs are already one line each (her design, 2026-10-26) |
+| Care Plan, the phase table and session grid | - | - | no change: locked (her 2026-09-27) |
+
+- **Tap audit** (HEAD's script, 360): the changed rows add nothing new. Already there before, not vertical: Today's visit's goal line (`.ph-cx-gl`, 14px tall) and the row's ▾ (`.ph-cx-dd`, 20px); Tongue's "Next: Pulse" (35.5px, 10px corners).
+- **SAVED, not live:** goes out only on her own "push live".
