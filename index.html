@@ -17421,6 +17421,10 @@
      same lighter-weight-than-name shape as presBandAgeHtml already uses on
      the open-script header band, just for the list row here. */
   #pharmacyPage .ph-pl-age { font-size: var(--fs-13); font-weight: 500; color: var(--ph-soft); }
+  /* a patient found by a sign (her 2026-11-12): the finding that matched, its date */
+  #pharmacyPage .ph-sxhit { margin-top: 2px; font-size: var(--fs-12-5); color: var(--ph-soft); overflow-wrap: anywhere; }
+  #pharmacyPage .ph-sxhit b { color: var(--ph-ink); font-weight: 600; }
+  #pharmacyPage .ph-sxhit .more { color: var(--ph-soft); font-weight: 600; }
   /* Her ask (2026-10-09, "mock A"): Edit/Dispense sit idle, out of the way,
      until she's actually looking at a row -- a mouse/trackpad hover reveals
      them. Guarded to real hover devices only: a touch screen has no hover,
@@ -78665,6 +78669,56 @@ or changing anything in Cliniko.
     }
   });
 
+  // ---- Search patients by sign (her 2026-11-12 "allow for me to search my patients based on signs and symptoms e.g. hot above umbilicus cold below"). The Patient profile search box also
+  // reads what she recorded for each patient, through the app's one similar-wording system (phSynHas: every typed word, read as its meaning, starts a word of the finding):
+  // every kept day of the abdomen chart (phFndDays: its words; each mark placed above, at or below the umbilicus; warmer above than below by her marks, or by her two temperatures
+  // with epi CV12 1 °C or more over lower CV4 -- CV4 is normally the coolest spot, so a smaller gap is not called hot above / cold below), tongue and pulse on every kept day, her
+  // Fang Bing Ren ticks (label + everyday words) and her complaints. A row found this way says which finding matched and its date (+n more on hover). The lines are read once a
+  // patient per search and dropped when the box empties.
+  let phPtSxCache = new Map();
+  function phPtSxLab() {
+    if (!phPtSxLab.m) { const m = {}; PH_BING_SIGNS.concat(PH_REN_SIGNS).forEach(r => { if (r && r[0] && !m[r[0]]) m[r[0]] = r[1]; }); phPtSxLab.m = m; }
+    return phPtSxLab.m;
+  }
+  function phPtSxLines(rec) {
+    const out = [], put = (src, text, date, more, key, sum) => { text = String(text || "").trim(); if (text) out.push({ src, text, date: date || "", m: more ? text + " " + more : text, key: key || "", sum: !!sum }); };
+    const c = rec.complaint || {};
+    put("Complaint", c.mainText);
+    (Array.isArray(c.secondary) ? c.secondary : []).forEach(x => put("Complaint", x && x.text));
+    const pos = r => r === 0 ? "above the umbilicus" : r === 1 ? "at the umbilicus" : r === 2 ? "below the umbilicus" : "over the whole abdomen";
+    const near = r => r === 0 ? "upper above navel belly button" : r === 1 ? "around navel belly button umbilical" : r === 2 ? "lower below navel belly button" : "whole";
+    const tWords = { warm: "hot heat warm", cool: "cool cold", cold: "cold cool" }, tVal = { warm: 1, cool: -1, cold: -2 };
+    const hl = "hot heat warm above upper navel belly button umbilicus cold cool below lower", lh = "cold cool above upper navel belly button umbilicus hot heat warm below lower";
+    phFndDays(rec, "abdomen", true).forEach(d => {
+      if (!d.abd) return;
+      const a = phAbd2Read(d.abd), rowT = { 0: [], 2: [] };
+      put("Abdomen", phAbd2Summary(a), d.date, "", "", 1);   // the chart in words; a named finding below wins a tie (it says what matched)
+      PH_ABD_MARKS.forEach(([k, l]) => (a.marks[k] || []).forEach(z => { const r = phAbdRowOf(z); put("Abdomen", `${l} ${pos(r)}, ${phAbdMarkZoneLabel(k, z)}`, d.date, (tWords[k] || "") + " " + near(r)); if (tVal[k] != null && rowT[r]) rowT[r].push(tVal[k]); }));
+      const t = a.tempC || {}, diff = t.epi != null && t.lower != null ? Math.round((t.epi - t.lower) * 10) / 10 : null;
+      if (diff != null && Math.abs(diff) >= 1) put("Abdomen", `${diff > 0 ? "hot above the umbilicus, cold below" : "cold above the umbilicus, hot below"}: ${phAbdTempText(a)}`, d.date, diff > 0 ? hl : lh);
+      const avg = l => l.reduce((x, v) => x + v, 0) / l.length;
+      if (rowT[0].length && rowT[2].length && avg(rowT[0]) !== avg(rowT[2])) { const up = avg(rowT[0]) > avg(rowT[2]); put("Abdomen", up ? "warmer above the umbilicus, colder below (her marks)" : "colder above the umbilicus, warmer below (her marks)", d.date, up ? hl : lh); }
+    });
+    phFndDays(rec, "tongue", true).forEach(d => { if (d.tng) { try { put("Tongue", phTng2Summary(d.tng), d.date, "tongue"); } catch (e) { /* a day that cannot be read is skipped */ } } });
+    phFndDays(rec, "pulse", true).forEach(d => { if (d.pulse) { try { put("Pulse", phVisitPulseSummaryText(d.pulse), d.date, "pulse"); } catch (e) { /* a day that cannot be read is skipped */ } } });
+    const tri = rec.tri || {}, lab = phPtSxLab(), when = tri.at ? keyOf(new Date(tri.at)) : "";
+    ["d", "p"].forEach(k => Object.keys(tri[k] || {}).forEach(key => { if (tri[k][key] && lab[key]) put("Fang Bing Ren", lab[key], when, (PH_BING_ALIAS[key] || "") + " " + (PH_BING_ALIAS[key.replace(/_(tend|now)$/, "")] || ""), key); }));
+    return out;
+  }
+  // the findings of one patient that her words name, newest first ([] for a word under three letters)
+  function phPtSxHits(name, q) {
+    if (!q || q.length < 3 || !name) return [];
+    const k = phPatientKey(name); let lines = phPtSxCache.get(k);
+    if (!lines) { const rec = phPatientPeek(name); try { lines = rec ? phPtSxLines(rec) : []; } catch (e) { lines = []; } phPtSxCache.set(k, lines); }
+    const seen = new Set();
+    return lines.filter(l => phSynHas(l.m, q)).sort((a, b) => (b.date || "").localeCompare(a.date || "") || (a.sum ? 1 : 0) - (b.sum ? 1 : 0)).filter(l => { const t = l.src + "|" + l.text; if (seen.has(t)) return false; seen.add(t); return true; });
+  }
+  const phPtSxDate = d => { const t = d ? new Date(d + "T00:00:00") : null; return t && !isNaN(t) ? `${t.getDate()} ${MON_SHORT[t.getMonth()]} ${t.getFullYear()}` : ""; };
+  function phPtSxHtml(h) {
+    if (!h || !h.length) return "";
+    const one = f => `${f.src}: ${f.text}${f.date ? " · " + phPtSxDate(f.date) : ""}`;
+    return `<div class="ph-sxhit"><b>${esc(h[0].src)}</b> ${esc(h[0].text)}${h[0].date ? ` · ${esc(phPtSxDate(h[0].date))}` : ""}${h.length > 1 ? ` <span class="more" title="${esc(h.slice(1, 12).map(one).join("\n"))}">+${h.length - 1}</span>` : ""}</div>`;
+  }
   function renderPrescriptions() {
     const wrap = document.getElementById("phPresWrap");
     if (!wrap.dataset.built) {
@@ -78697,7 +78751,7 @@ or changing anything in Cliniko.
                  single-select filter chips below it (renderPresList owns
                  #presFilters -- counts need the all/lastDisp locals, computed there). -->
             <div class="ph-pl-controls">
-              <input type="search" id="presSearch" placeholder="Search — name, formula, condition…" autocomplete="off" autofocus aria-label="Search a patient by name, formula, or condition">
+              <input type="search" id="presSearch" placeholder="Search — name, formula, condition, sign…" autocomplete="off" autofocus aria-label="Search a patient by name, formula, condition, or a sign or symptom">
               <select class="ph-tl-select ph-pl-sort" id="presSortSel" aria-label="Sort patients"></select>
               <button type="button" class="ph-load-btn ph-pl-schedbtn" data-sched-new="1" hidden><svg class="icn" aria-hidden="true"><use href="#i-cal"/></svg>Schedule</button>
             </div>
@@ -78977,8 +79031,12 @@ or changing anything in Cliniko.
     // her protected behaviour: search must still match live, by name, herb
     // or notes -- now across ANY of a patient's scripts (a herb only used
     // in an older one should still surface her), not just the current one.
+    // her 2026-11-12: a patient whose recorded findings her words name is found too (phPtSxHits); a name / formula / herb / notes match stays as it was
+    if (!q) phPtSxCache.clear();
+    const sxHits = new Map();
     const rows = patients
-      .filter(p => !q || p.group.some(t => presWordStartMatch(t.name, q) || presWordStartMatch(t.formula, q) || presWordStartMatch(t.actualFormula, q) || presWordStartMatch(t.notes, q) || (t.ingredients || []).some(i => presWordStartMatch(i.herb || i.name, q))))
+      .filter(p => { if (!q || p.group.some(t => presWordStartMatch(t.name, q) || presWordStartMatch(t.formula, q) || presWordStartMatch(t.actualFormula, q) || presWordStartMatch(t.notes, q) || (t.ingredients || []).some(i => presWordStartMatch(i.herb || i.name, q)))) return true;
+        const h = phPtSxHits(presPatientFor(p.current) || p.current.name, q); if (h.length) { sxHits.set(p.current.id, h); return true; } return false; })
       .filter(p => (CHIP_PREDS[presFilterChip] || CHIP_PREDS.all)(p.current));
     const val = p => presSort.key === "grams" ? (p.current.totalGrams || 0)
       : presSort.key === "recent" ? lastMs(p.current)
@@ -79069,7 +79127,7 @@ or changing anything in Cliniko.
       const noHerbs = !(t.ingredients && t.ingredients.length) && !presActualFormula(t);
       return `<div class="ph-tl-row ph-pl-row" data-pres-row-open="${t.id}" role="button" tabindex="0" aria-label="Open ${esc(phTitle(t.name))}">
         <span class="ph-tl-time ph-pl-when${ms ? (stale ? " stale" : "") : " never"}" title="${ms ? esc((d => `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`)(new Date(ms))) + (stale ? " · not seen 6+ months" : "") : noHerbs ? "Never dispensed · no herbs yet" : "Never dispensed"}">${ms ? phRelShort(ms) : "never"}</span><span class="ph-tl-dot ${today ? "done" : draft ? "new" : "chm"}"></span>
-        <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(t.name))}</b>${ageStr}${badges}</div><div class="l2">${line2(t)}</div></div>
+        <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(t.name))}</b>${ageStr}${badges}</div><div class="l2">${line2(t)}</div>${phPtSxHtml(sxHits.get(t.id))}</div>
         <div class="ph-tl-end">${times.length ? `<span class="ph-tl-chip none" title="Booked today">${esc(times.join(" · "))}</span>` : ""}<span class="ph-pl-g">${t.totalGrams ? phFmtG(t.totalGrams) + " g" : "—"}</span><button type="button" class="ph-arr-editbtn" data-pres-open="${t.id}" title="Dispense ${esc(phTitle(t.name))}" aria-label="Dispense ${esc(phTitle(t.name))}"><svg class="icn" aria-hidden="true"><use href="#i-pill"/></svg></button><button type="button" class="ph-arr-editbtn" data-pres-open="${t.id}" title="Edit ${esc(phTitle(t.name))}" aria-label="Edit ${esc(phTitle(t.name))}">✎</button></div>
       </div>`;
     };
@@ -79110,12 +79168,12 @@ or changing anything in Cliniko.
                 : `<span class="p-when">never</span>`}
             </div>
           </div>
-          ${badges ? `<div class="p-badges">${badges}</div>` : ""}
+          ${badges ? `<div class="p-badges">${badges}</div>` : ""}${phPtSxHtml(sxHits.get(t.id))}
         </div>`;
       return `<tr class="p-trow" data-pres-row-open="${t.id}" role="button" tabindex="0" aria-label="Open ${esc(phTitle(t.name))}">
           <td class="p-tpatient">
             <div class="p-tname-row"><span class="p-tname">${esc(phTitle(t.name))}</span>${countPill}</div>
-            ${badges ? `<div class="p-tbadges">${badges}</div>` : ""}
+            ${badges ? `<div class="p-tbadges">${badges}</div>` : ""}${phPtSxHtml(sxHits.get(t.id))}
           </td>
           <td style="text-align:right" class="${stale ? "p-tstale" : ""}">${ms
             ? `<span class="p-when${stale ? " stale" : ""}">${phRelTime(ms)}</span><span class="p-lastdate">${(d => `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`)(new Date(ms))}</span>`
