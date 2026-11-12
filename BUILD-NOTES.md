@@ -14293,3 +14293,85 @@ Hou Po Tang first". The 30 other formula films now have what that one has.
 - **Built** (`index.html`): the mode bar reads Cases · Timetable · Places · My patients (`phTcModeBar`, `data-tc-go="tt"`); `phTcHtml` sends `phGdTcView === "tt"` to the new `phTcTtHtml`. A tour holding a case = one table a week (Monday to Sunday, only the tour's own days; days with no date last under "No date yet"), the days across, the blocks down (Morning / Afternoon by `PH_TC_BTIME`), a cell = kind · teacher (`b.at` as its title) + its cases as `.tcd-pg` rows (`phTcPerHtml`, `phTcLogDot`). Then Seminars and Books (`PH_TC_KINDS`, A–Z, their `s.cases`), then Not placed. A tour with no case stays off. Filters: `phTcVisible()`. A case opens through the existing `data-tc-toggle` (`phTcOpenCase`); a day head (`data-tc-ttday="<tourId>|d<n>"`) opens that day in Cases. CSS `.tt-*` after the case-bar block; at 640px and under the mode bar's four segments take 8px side padding so they fit a 360px phone.
 - **Tested** (sandbox, 1220 and 360): Nanjing reads Week 1 (Mon 2 Nov – Sun 8 Nov, Day 1 morning holds the fifteen cases) and Week 2 (Mon 9 – Thu 12 Nov, Day 11 gold as today, Site visit, Case review, Lecture · Dr Mei Lifang); a seminar-tour and a book show their cases; Case 3 opens in Cases on its page; Day 10's head opens Day 10; Formula filter Zhen Wu Tang leaves Case 8 alone. Tap audit 0 off at 1220 and 360 (the case rows keep the Cases list height; the day heads are 56px tiles). The page never scrolls sideways at 360. No console errors (the CDN ones only).
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Every formula's film: a second read, full screen on a phone, reduced motion, 2026-11-12
+
+After "Every formula's film" was saved (it is LIVE since build 20261112-141300, her "push live"), her word "continue":
+the checks that note listed as NOT tested were run, and five independent readers read the saved build (two the code, three
+the words: against the sources, against the herbs' actions, and against her own Ren / Bing rows and card lines). Then a
+checker tried to refute each point. No error in the code. In the words one line was wrong (Xue Fu Zhu Yu Tang, below); the
+rest are small. Only points that stood were changed.
+
+- **The words: 4 small changes, still Claude's DRAFT** (the Draft pill stays).
+  - Xue Fu Zhu Yu Tang, Poor sleep: "Dang Gui: nourish the blood, the spirit has a home" (it said "the heart is housed",
+    which turns the teaching round: the spirit is what is housed; three readers and the checker).
+  - Ban Xia Hou Po Tang (the film she has seen): "Eased: nothing stuck, swallows freely" (no pronoun for the person; it
+    was the only one in the table).
+  - Ban Xia Xie Xin Tang: "Eased: pit open, stuffiness gone" (the soft pit is the trouble's own sign: her Ren row, and
+    the chapter's own How it forms line).
+  - Si Ni San: "with Bai Shao", the chip's name (the line said Shao Yao, which read as a second herb).
+- **Raised, checked, and left as they were** (the checker found each a fair reading; hers to change if she teaches it
+  otherwise):
+  - Wen Jing Tang's dry lips are given to low blood and yin (Yi Zong Jin Jian's reading; the Jin Gui clause itself and
+    You Yi read them as the sign of old stasis). The one point worth her eye.
+  - Dang Gui Shao Yao San: the period-pain picture plays `build` under "Blood moves" (the table plays `build` for every
+    blood-feeding group that also moves blood, and keeps `unclot` for the stasis formulas; three readers wanted
+    `unclot`). "Eased: belly soft, pain gone", though her card gives this person a soft, lax belly already (the closest
+    call; "lower belly light and easy, pain gone" would do no harm if she prefers it).
+  - Ban Xia Hou Po Tang's Sheng Jiang · Zi Su Ye line in Nausea, Vomiting plays `open` under "settle the stomach, stop
+    the retching" (Zi Su Ye moves qi; Ban Xia · Hou Po beside it already plays `down`, so the two chips show the acrid
+    opening and the bitter descending; three readers wanted `down`).
+  - Ban Xia Xie Xin Tang: "Gan Jiang: warm the stomach" beside "clear the heat above" (cold and heat knot together at
+    the pit; with Ban Xia it is Ban Xia Gan Jiang San), and the Rumbling gut line names no damp-heat.
+  - Chai Hu Gui Zhi Gan Jiang Tang's "Tian Hua Fen · Mu Li: make fluids, moisten the mouth" (the line is the pair's,
+    Gua Lou Mu Li San; Mu Li alone makes no fluids).
+  - Gui Zhi Jia Long Gu Mu Li Tang's Gui Zhi · Shao Yao "close the surface, hold the yin" (the pair's joint effect;
+    Gui Zhi alone does not close it).
+  - Si Ni Tang's Gan Cao "hold the fluids" with the closing ring (it does not astringe; Huang Huang has it keep the
+    fluids). Wen Dan Tang's phlegm "clouds" the gallbladder (the textbook word is "disturbs"). Xiao Qing Long Tang's Wu
+    Wei Zi · Bai Shao "stop the streaming". Xue Fu Zhu Yu Tang's period chapter says the womb (the formula's own seat
+    is the chest). Yu Ping Feng San's "no sweat". Shen Qi Wan's chips, as before.
+  - Five chapter lines name only the herbs of their chip that share the action, while the chip lights them all (Dang
+    Gui Shao Yao San's second draining line has no Ze Xie; Chai Hu Gui Zhi Gan Jiang Tang's two Gui Zhi · Gan Jiang
+    lines no Gan Cao; Wen Jing Tang's blood lines no E Jiao in the first chapter, no Chuan Xiong in the third). A herb
+    chip tapped during a chapter holds on that herb's turn under Formula at work and goes on from there (older than the
+    chapters).
+- **Cover › Signs** now blurs a condition chapter's title on the stage (`.fs-tag.cond`, set in `enter`): its chip was
+  blurred, but the same name stood in clear on the picture for the chapter's first 2 s. A stop's title (Person, Trouble,
+  Formula at work, Settled) stays clear.
+- **The whole formula with two or three pictures** (Wai Tai Fu Ling Yin, Chai Ling Tang): a cell there is not a
+  picture's shape, so it shows half of its picture. It now shows the half its subject is in (`fit` in `enter`: the
+  picture and its marks overlay take one `preserveAspectRatio`, Min / Mid / Max by the mark's place, switching at .38 and
+  .62). Wai Tai Fu Ling Yin's thin figure and its build mark were cut by the cell's edge; both are whole now. Four
+  pictures are untouched. (The other way, both pictures whole and smaller with paper above and below, was not taken:
+  it leaves half the stage empty.)
+- **Full screen keeps the stage 16:10** on a tall narrow screen (`width: min(100%, (100vh - 170px, or 232px with
+  chapters) x 1.6)`, the height from the shape). The height used to be fixed and the width capped, so on an upright
+  phone the stage went squarer, the marks overlay stretched with it and the marks left their place. On a computer the
+  stage is the size it was (1069 x 668 both ways at 1366 x 900).
+- **Reduced motion:** the camera's slow push on a herb's turn is off when her device asks for less motion (`camNow`), so
+  the body and its marks hold still inside a shot. All 31 films were run with the setting on: no error, every kind of
+  shot draws a still picture, the words show.
+- **A trap written down:** `PH_FS_AT.throat` is right for the full-stage throat picture only; among the whole formula's
+  pictures the throat is drawn tight, so an `a` entry on a throat sign gives its own place (the comment says so).
+- **Measured, nothing changed:**
+  - Real-time playback (headless Edge, the film playing by its own loop, the browser's frames counted): the marks cost
+    nothing that can be measured. The same stretch of one shot, each way taking its turn over four laps: as built 59 to
+    59.8 frames a second, marks off 57 to 60. The marks on a layer of their own (`will-change`) and without their white
+    glow were no better, so neither was done. The first time any shot plays it drops a few frames (about 53 a second
+    for 3 s), with the marks or without them: older than this build.
+  - Child-node writes (the page's watchers): all 31 films stepped at 1/30 s, 188,126 frames, under a watcher. The marks
+    write child nodes only when a shot with marks starts (41 frames a film at most), never two frames running, and
+    nothing else does either. A frame's own script is 0.2 to 2 ms.
+- Tested on test copies: the code of this build with ten word changes (these four, and six the checker then judged fair
+  as built) on all 31 films at 1366 and at 360: sought every 0.45 s from start to end, no error; the tap audit clean on
+  every card; a line of words two lines at most (three at 360), the band keeps its height, every caption inside its
+  picture; Cover › Signs through its own button; the two films with fewer than four pictures by measurement and by
+  eye; reduced motion with the device setting on; full screen stood in for by a class carrying the browser's own
+  full-screen rules at 1366 x 900, 360 x 640 and 360 x 540 (the stage 16:10; a herb's mark 0.1px from its label's dot,
+  it was 7px off at 360 x 640). Then this exact build (the six lines back as they were): it boots clean, the table
+  check passes (mark names, chip keys, no pronoun), and the four films with a changed line and Dang Gui Shao Yao San
+  were sought and measured again at both widths, with Cover › Signs and the two short grids. NOT tested: a real Full
+  screen on a device, the Key2 itself.
+
+**SAVED, not live:** goes out with her next "push live".
