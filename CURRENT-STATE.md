@@ -1983,7 +1983,7 @@ whole-abdomen value. Full / distended sits only on the whole abdomen, above the 
 umbilical row or flanks (`phAbdOkAt`; her 2026-11-09 "almost never the umbilicus"). It draws as one soft rose glow, breathing, fading to
 nothing at its edge and round every place's word (`phAbdDistLayer`, her pick A; no dashes or rings): above = costal margin to the
 umbilicus, below = umbilicus to the pubis, whole = one glow over the trunk with the outline pushed out at the sides; the side view's belly
-line swells there to match. An old mark saved at the umbilical row still draws as a band. The chart's basic drawing (outline, ribs, rectus,
+line swells there to match; bulging or full places in neighbouring rows make ONE dome over their span (her synth22 pick B "Full", 2026-11-13, `phAbdSideWall`), a hollow its own dip. An old mark saved at the umbilical row still draws as a band. The chart's basic drawing (outline, ribs, rectus,
 bones, dotted lines) sits back, Ghost-faded (her 2026-11-09 pick; `--abd-f` .28 inside, `--abd-fs` .55 outline; the `.ro` minis keep full
 strength; the words and every finding stay full). Motion on the interactive chart only (`.ph-abd3`; her 2026-11-09 picks, mock
 abdomen-fade-motion-mock-2026-11-09.html; all off under reduced motion where it moves): hover a place and it lights, its band on the side

@@ -14729,3 +14729,19 @@ rest are small. Only points that stood were changed.
   the card's Fang Bing Ren tab and the Tongue page's "From your Guide" lines (unchanged; `phGdLineHtml` stays for them). **Not
   tested:** her real records and notes. Pictures: `mocks/abd-synth22-2026-11-12/step3-s3-guide.png`, `step3-s3-page.png`.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Abdomen synth22, step 4: the side view's bulge, one full dome (2026-11-13)
+- **Her words:** "the bulging line more curved / realistic". Her pick B "Full" (plan guide `mocks/abd-synth22-2026-11-12/guide.html`,
+  note 2, `bulge-3.png`): bulging places next to each other make one dome.
+- **Built** (`index.html`, `phAbdSideWall` only): the positive local bumps (`phAbdSideState().locals`: bulging at a row, full /
+  distended at a row) no longer add one bell each; the rows they sit in group into spans of neighbouring rows, and each span is ONE
+  dome, `v * sin²(πt)` from 28 units above its first bump's centre to 28 below its last (the centre a bump's own `yc` where it has one,
+  the row's middle otherwise), clamped to the xiphoid and the pubis so it eases to nothing there (no kink at the ribs). Its height is
+  the span's biggest bump × 1.4 × (1 + 0.22 per extra row): one place 10.5 (was 7.5), three places one dome of 15.1 where the old
+  three bells made waves. Where two domes meet the higher wins; a hollow (sunken) keeps its own dip. Whole-belly shapes, the breath,
+  the navel dimple, the last visit's grey copy and the big view all read the same function.
+- **Tested** (sandbox): five cases drawn before and after (`mocks/abd-synth22-2026-11-12/step4-before.png`, `step4-after.png`):
+  bulging at the navel, at three places, at epi + navel, full at the lower row, bulging epi with a sunken lower row; the wall meets
+  the ribs (60 at y 24) and the pubis (57.5 at y 143) as before; no marks = the old line; the patient page draws with no error and
+  the size check clean. **Not tested:** her real records.
+- **SAVED, not live:** goes out only on her own "push live".
