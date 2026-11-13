@@ -94881,6 +94881,10 @@ dull complexion, dark purple lips|Lips: dark|r`;
     for (const s of tours) for (const d of phTcDays(s)) for (const b of d.blocks) if (b.cases.indexOf(c.n) >= 0) return { s, d, b };
     return null;
   }
+  // her 2026-11-13 "each day, the case study number restarts as 1" + "case number restarts at 1 in afternoon clinics too" (her pick C): a case's
+  // number counts from 1 in its own clinic (each morning, each afternoon), in tour-number order over that clinic's whole list (a filter never
+  // renumbers); C<n> stays its tour number: on hover, on its page, in Places, a formula's Cases and Compare with. Worked out when drawn, never saved.
+  function phTcSessNo(c, b) { b = b || (phTcPlace(c) || {}).b; return b ? b.cases.slice().sort((x, y) => x - y).indexOf(c.n) + 1 : 0; }
   function phTcWhen(c) {   // her 2026-11-10 "Mon 9th Nov C1": the case's first column reads date then case
     const p = phTcPlace(c), t = p && p.d.date ? new Date(p.d.date + "T00:00:00") : null;
     return t && !isNaN(t) ? `${t.toLocaleDateString("en-AU", { weekday: "short" })} ${phTcOrd(t.getDate())} ${t.toLocaleDateString("en-AU", { month: "short" })} C${c.n}` : `C#${c.n}`;
@@ -95334,7 +95338,7 @@ dull complexion, dark purple lips|Lips: dark|r`;
     if (c.patientKey) return `<span class="cn">${esc(when ? phTcWhen(c) : "C#" + c.n)}</span>${esc(phTcNm(c))}${phTcSubName(c)}${phTcPlaceHtml(c)}`;
     const cc = phTcCc(c), fm = phTcFms(c).join(" + "), p = phTcPlace(c);
     const who = String(c.name || "").split(/\s*--\s*|,\s*/).map(x => x.trim()).filter(x => x && x.toLowerCase() !== cc.toLowerCase()).join(", ");
-    const at = p ? [p.d.date ? phTcDayLab(p.d.date) : "Day " + p.d.n, p.b.t, PH_TC_BKIND[p.b.k] || PH_TC_BKIND[0], p.b.who].filter(Boolean).join(" · ") : "";
+    const at = p ? [p.d.date ? phTcDayLab(p.d.date) : "Day " + p.d.n, p.b.t, "case " + phTcSessNo(c, p.b), PH_TC_BKIND[p.b.k] || PH_TC_BKIND[0], p.b.who].filter(Boolean).join(" · ") : "";
     return `<span class="t1">C${c.n} · ${esc(cc)}${fm ? ` · ${esc(fm)}${c.mod ? ", modified" : ""}` : ""}</span><small class="ph-tc-sub">${esc([who, at].filter(Boolean).join(" · "))}</small>`;
   }
   // a case's person in the Cases list (her pick 2026-11-11 "the formula's person"): the formula's own build (phFsBuild) on the one body, head and
@@ -95371,19 +95375,19 @@ dull complexion, dark purple lips|Lips: dark|r`;
     const tabs = !isTour ? "" : days.filter(dayOn).map(d => { const k = "d" + d.n, n = dayCases(d); return `<button type="button" class="gf-chip tcd-tab${cur === k ? " on" : ""}${n ? "" : " none"}" data-tc-dday="${k}" aria-pressed="${cur === k}">Day ${d.n}${d.date ? `<span class="dt"> · ${esc(phTcDayLab(d.date))}</span>` : ""}${n ? `<em>${n}</em>` : ""}</button>`; }).join("") + allDays
       + (keys.indexOf("none") >= 0 ? `<button type="button" class="gf-chip tcd-tab${cur === "none" ? " on" : ""}${loose.length ? "" : " none"}" data-tc-dday="none" aria-pressed="${cur === "none"}">Not placed${loose.length ? `<em>${loose.length}</em>` : ""}</button>` : "");
     const groups = !s ? [{ head: "", cs: vis }] : !isTour ? [{ head: "", cs: (s.cases || []).filter((n, i, a) => a.indexOf(n) === i).map(byN).filter(Boolean).sort((a, b) => a.n - b.n) }] : cur === "none" ? [{ head: "No day yet", cs: loose }]
-      : ((days.find(x => "d" + x.n === cur) || { blocks: [] }).blocks.map(b => ({ head: [esc(b.t), esc(PH_TC_BKIND[b.k] || PH_TC_BKIND[0]), b.who ? esc(b.who) : ""].filter(Boolean).join(" · "), cs: b.cases.map(byN).filter(Boolean).sort((a, b2) => a.n - b2.n) })));
+      : ((days.find(x => "d" + x.n === cur) || { blocks: [] }).blocks.map(b => ({ head: [esc(b.t), esc(PH_TC_BKIND[b.k] || PH_TC_BKIND[0]), b.who ? esc(b.who) : ""].filter(Boolean).join(" · "), b, cs: b.cases.map(byN).filter(Boolean).sort((a, b2) => a.n - b2.n) })));
     const ids = groups.flatMap(g => g.cs.map(c => c.id)), ticked = phGdTcTick.map(id => cases.find(c => c.id === id)).filter(Boolean), multi = ticked.length > 1;
     const focus = multi ? (ticked.find(c => c.id === phGdTcSel) || ticked[0]) : (cases.find(c => c.id === phGdTcSel && ids.indexOf(c.id) >= 0) || cases.find(c => c.id === ids[0]) || null);
     const fid = focus ? focus.id : "";
     // her picks 2026-11-11: no round ticks; a row = the formula's person, "n · complaint", the formula; a case beside the open one (Compare with) is outlined
-    const row = c => { const f = phTcFms(c).join(" + "), cw = multi && c.id !== fid && phGdTcTick.indexOf(c.id) >= 0; return `<button type="button" class="tcd-pg${c.id === fid ? " on" : ""}${cw ? " cw" : ""}" data-tc-dpick="${esc(c.id)}"${cw ? ` title="Side by side"` : ""}>${phTcPerHtml(c.fam)}<span class="tx"><b>${c.n} · ${esc(phTcCc(c))}</b>${f ? `<span class="fm">${esc(f)}${c.mod ? ", modified" : ""}</span>` : ""}</span>${phTcLogDot(c)}</button>`; };
-    const list = groups.map(g => (g.head ? `<div class="tcd-bh">${g.head}</div>` : "") + (g.cs.length ? g.cs.map(row).join("") : `<div class="tcd-no">No cases</div>`)).join("");
+    const row = (c, b) => { const f = phTcFms(c).join(" + "), cw = multi && c.id !== fid && phGdTcTick.indexOf(c.id) >= 0, k = phTcSessNo(c, b), tip = [k ? "C" + c.n : "", cw ? "Side by side" : ""].filter(Boolean).join(" · "); return `<button type="button" class="tcd-pg${c.id === fid ? " on" : ""}${cw ? " cw" : ""}" data-tc-dpick="${esc(c.id)}"${tip ? ` title="${tip}"` : ""}>${phTcPerHtml(c.fam)}<span class="tx"><b>${k || "C" + c.n} · ${esc(phTcCc(c))}</b>${f ? `<span class="fm">${esc(f)}${c.mod ? ", modified" : ""}</span>` : ""}</span>${phTcLogDot(c)}</button>`; };
+    const list = groups.map(g => (g.head ? `<div class="tcd-bh">${g.head}</div>` : "") + (g.cs.length ? g.cs.map(c => row(c, g.b)).join("") : `<div class="tcd-no">No cases</div>`)).join("");
     const phone = window.innerWidth <= 640, open = !!(phone && phGdTcPageOpen && focus);
     const sessOk = !multi && focus && phGdTcSess && (focus.sessions || []).some(x => x.id === phGdTcSess), target = sessOk ? phTcFind(phGdTcSess) : focus;
     const focusBar = multi ? `<div class="ph-tc-fc tcd-cb"><b class="ph-tc-lb">Working on</b>${ticked.map(c => `<button type="button" class="gf-chip${c.id === focus.id ? " on" : ""}" data-tc-focus="${esc(c.id)}">C${c.n}</button>`).join("")}</div>` : "";
     // side by side is picked from the open case: "Compare with" lists the other cases by number, a tick each; "Close compare" ends it
     const cwList = !focus ? [] : cases.filter(c => c.id !== focus.id && (pass(c) || phGdTcTick.indexOf(c.id) >= 0));
-    const cmp = !cwList.length ? "" : `<span class="ph-cmp-add"><button type="button" class="gf-chip${multi ? " on" : ""}" data-tc-cw="${esc(focus.id)}" aria-haspopup="listbox" aria-expanded="${phGdTcPop === "cw"}">${multi ? "Compare with · " + (ticked.length - 1) : "Compare with…"} ▾</button>${phGdTcPop === "cw" ? `<div class="ph-cmp-addl" data-tc-pop-wrap role="listbox">${cwList.map(c => { const on = multi && phGdTcTick.indexOf(c.id) >= 0, f = phTcFms(c).join(" + "); return `<button type="button" class="ph-cmp-addi${on ? " on" : ""}" data-tc-cwpick="${esc(c.id)}" role="option" aria-selected="${on}"><i class="tk"></i><span>${c.n} · ${esc(phTcCc(c))}</span>${f ? `<em>${esc(f)}</em>` : ""}</button>`; }).join("")}</div>` : ""}</span>${multi ? `<button type="button" class="gf-chip" data-tc-tick-clear="1">Close compare</button>` : ""}`;
+    const cmp = !cwList.length ? "" : `<span class="ph-cmp-add"><button type="button" class="gf-chip${multi ? " on" : ""}" data-tc-cw="${esc(focus.id)}" aria-haspopup="listbox" aria-expanded="${phGdTcPop === "cw"}">${multi ? "Compare with · " + (ticked.length - 1) : "Compare with…"} ▾</button>${phGdTcPop === "cw" ? `<div class="ph-cmp-addl" data-tc-pop-wrap role="listbox">${cwList.map(c => { const on = multi && phGdTcTick.indexOf(c.id) >= 0, f = phTcFms(c).join(" + "); return `<button type="button" class="ph-cmp-addi${on ? " on" : ""}" data-tc-cwpick="${esc(c.id)}" role="option" aria-selected="${on}"><i class="tk"></i><span>C${c.n} · ${esc(phTcCc(c))}</span>${f ? `<em>${esc(f)}</em>` : ""}</button>`; }).join("")}</div>` : ""}</span>${multi ? `<button type="button" class="gf-chip" data-tc-tick-clear="1">Close compare</button>` : ""}`;
     const page = focus ? `${open ? `<div class="ph-tc-fc tcd-cb"><button type="button" class="gf-btn" data-tc-back="1">‹ Day</button></div>` : ""}${focusBar}${phTcCaseBarHtml(focus, target, cmp)}${phTcEditHtml(focus)}${phGdTcTag ? phTcCorrelateHtml(target) : ""}<div style="margin-top:10px${multi ? "" : ";max-width:760px"}">${phTcTableHtml(multi ? ticked : [focus])}</div>${multi ? "" : phTcSessBarHtml(focus, sessOk ? phGdTcSess : "")}${phTcIntegrateHtml(target)}` : `<div class="gf-none" style="padding:16px">No cases</div>`;
     const pick = places.length > 1 ? `<select class="field-bare gf-chip tcd-pl" data-tc-dplace aria-label="Place">${places.map(p => `<option value="${esc(p.id)}"${p === s ? " selected" : ""}>${esc(p.name)}</option>`).join("")}</select>` : "";
     return `<div class="ph-gdf"><div class="ph-tc" style="grid-column:1 / -1;padding:6px 18px 16px;min-width:0">
@@ -95404,9 +95408,9 @@ dull complexion, dark purple lips|Lips: dark|r`;
     if (!cases.length) return `<div class="ph-gdf"><div class="gf-none" style="grid-column:1 / -1;padding:16px">No cases yet</div></div>`;
     const vis = phTcVisible(), byN = n => vis.find(c => c.n === n), srcs = phTcSources(), placed = new Set();
     const ymd = t => [t.getFullYear(), String(t.getMonth() + 1).padStart(2, "0"), String(t.getDate()).padStart(2, "0")].join("-"), today = ymd(new Date());
-    const chip = c => { const f = phTcFms(c).join(" + "); return `<button type="button" class="tcd-pg tt-c" data-tc-toggle="${esc(c.id)}">${phTcPerHtml(c.fam)}<span class="tx"><b>${c.n} · ${esc(phTcCc(c))}</b>${f ? `<span class="fm">${esc(f)}${c.mod ? ", modified" : ""}</span>` : ""}</span>${phTcLogDot(c)}</button>`; };
+    const chip = (c, b) => { const f = phTcFms(c).join(" + "), k = phTcSessNo(c, b); return `<button type="button" class="tcd-pg tt-c" data-tc-toggle="${esc(c.id)}"${k ? ` title="C${c.n}"` : ""}>${phTcPerHtml(c.fam)}<span class="tx"><b>${k || "C" + c.n} · ${esc(phTcCc(c))}</b>${f ? `<span class="fm">${esc(f)}${c.mod ? ", modified" : ""}</span>` : ""}</span>${phTcLogDot(c)}</button>`; };
     const inBlock = b => b.cases.map(byN).filter(Boolean).sort((a, x) => a.n - x.n);
-    const cell = b => { if (!b) return "<td></td>"; const set = b.cases.length || b.who || b.at || b.k; return `<td>${set ? `<div class="tt-k"${b.at ? ` title="${esc(b.at)}"` : ""}>${esc([PH_TC_BKIND[b.k] || PH_TC_BKIND[0], b.who].filter(Boolean).join(" · "))}</div>` : ""}${inBlock(b).map(chip).join("")}</td>`; };
+    const cell = b => { if (!b) return "<td></td>"; const set = b.cases.length || b.who || b.at || b.k; return `<td>${set ? `<div class="tt-k"${b.at ? ` title="${esc(b.at)}"` : ""}>${esc([PH_TC_BKIND[b.k] || PH_TC_BKIND[0], b.who].filter(Boolean).join(" · "))}</div>` : ""}${inBlock(b).map(c => chip(c, b)).join("")}</td>`; };
     const monday = d => { const t = d.date ? new Date(d.date + "T00:00:00") : null; if (!t || isNaN(t)) return "~"; t.setDate(t.getDate() - (t.getDay() + 6) % 7); return ymd(t); };
     const tours = srcs.filter(x => x.kind === "tour" && phTcDays(x).some(d => d.blocks.some(b => b.cases.length))).sort((a, b) => phAz(a.name, b.name));   // a tour with no case yet stays off
     const tourHtml = s => {
@@ -95427,10 +95431,10 @@ dull complexion, dark purple lips|Lips: dark|r`;
     const others = PH_TC_KINDS.filter(([k]) => k !== "tour").map(([k, lab]) => {
       const l = srcs.filter(x => x.kind === k).map(x => ({ x, cs: (x.cases || []).filter((n, i, a) => a.indexOf(n) === i).map(byN).filter(Boolean).sort((a, b) => a.n - b.n) })).filter(o => o.cs.length).sort((a, b) => phAz(a.x.name, b.x.name));
       l.forEach(o => o.cs.forEach(c => inSrc.add(c.n)));
-      return l.length ? `<div class="tt-pl"><div class="tcd-bh">${esc(lab)}</div>${l.map(o => `<div class="tt-pn">${esc(o.x.name)}</div><div class="tt-g">${o.cs.map(chip).join("")}</div>`).join("")}</div>` : "";
+      return l.length ? `<div class="tt-pl"><div class="tcd-bh">${esc(lab)}</div>${l.map(o => `<div class="tt-pn">${esc(o.x.name)}</div><div class="tt-g">${o.cs.map(c => chip(c)).join("")}</div>`).join("")}</div>` : "";
     }).join("");
     const loose = vis.filter(c => !placed.has(c.n) && !inSrc.has(c.n));
-    const none = loose.length ? `<div class="tt-pl"><div class="tcd-bh">Not placed</div><div class="tt-g">${loose.map(chip).join("")}</div></div>` : "";
+    const none = loose.length ? `<div class="tt-pl"><div class="tcd-bh">Not placed</div><div class="tt-g">${loose.map(c => chip(c)).join("")}</div></div>` : "";
     return `<div class="ph-gdf"><div class="ph-tc" style="grid-column:1 / -1;padding:6px 18px 16px;min-width:0">
       <div class="tcd-top">${phTcModeBar()}<div class="ph-cmp">${phTcBarHtml(vis, cases.length)}</div></div>
       ${tt}${others}${none}${!vis.length ? `<div class="gf-none" style="padding:8px 2px">No cases match</div>` : ""}
