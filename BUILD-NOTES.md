@@ -15109,3 +15109,63 @@ rest are small. Only points that stood were changed.
 - **Result:** all four views are in the bar at 1370, with All tours or any tour picked. At 1220 (rail), Cases and My patients now fit as well; Timetable and Places stay under the bar with the search at full width. The phone is unchanged (full names).
 - **Checks:** HEAD's tap-audit and titlebar-audit clean at 1370, 1220 and 360. A real click opens the search to 260px and typing stays on one line; clearing it returns it to the magnifier. The search works as before (only its size changed). No console errors; no sideways scroll.
 - **LIVE 20261113-233700** (her "push live", 2026-11-13).
+
+## Guide > Cases: Patterns (a fifth view) and Formula in numbers on a case (2026-11-13)
+- **Her words** (on a screenshot of C142's case page): "improve this visual - its too boring and flat and doesnt give a sense
+  of workflow for analysing case patterns quantities and complaints and formulas etc - help find solitions and show mocks".
+  Four mocks drawn inside the real app on her June 2026 tour (`mocks/cases-page-2026-11-13/`: now, A Steps, B Patterns,
+  C Case board, D Formula in numbers; the published page "Cases Page Mocks"). **Her picks:** B and D; Patterns its own view;
+  it counts the tour picked; the complaint groups a draft she can edit on Patterns itself; a bar opens those cases; all four
+  parts (Complaints, Formulas, Herbs + doses, the Complaint × formula grid); compare with her recipe and every tour case; D at
+  the top under the case name; "some precriptions are 2 or 3 or 4 formulas combined" (so one table for the whole
+  prescription, each herb marked with its formula); "Yes, build both".
+- **Patterns** (`index.html`, `phGdTcView = "pat"`, `phTcPatHtml`): the views row reads `PH_TC_VIEWS` (Cases · Timetable ·
+  Places · Patterns · My patients). Its bar is the Timetable's (the Place picker with All tours, By, the filter, the count).
+  Then a Day dropdown (Whole tour, each day with its count, `phGdTcPatDay`) and "N cases · N formulas · N herbs". Four white
+  sections (auto-fit columns with a 420px floor, so a phone stacks them with no phone rule):
+  - **Complaints** (Draft tag, Edit groups): a bar per group, split by the formulas used, each in its family colour, grey for
+    no formula recorded; most cases first, Other last.
+  - **Formulas:** the top 12 (+ All N): the formula's person, its name, its top three groups, a bar, the count.
+  - **Complaints × formulas:** the groups down, the top 8 formulas across, each cell a 32px button tinted by its count.
+  - **Herbs:** the top 12 (+ All N): a cases bar, the count, every dose as a dot on one 0–S g line (S = the largest dose to
+    the next 10, at most 60), the middle dose a gold tick, the range.
+  - A case given 2–4 formulas counts under each. Ties A–Z.
+- **A tap opens those cases** (`data-tc-pat` = g|group, f|formula, h|herb, x|group|formula): Cases on that place and day,
+  the filter named by a chip (`phGdTcFg` a group, `phGdTcFh` a herb, a formula = the By Formula pick). The chip's ×
+  (`data-tc-fgx`, `data-tc-fhx`) and Clear drop it. One filter for every view (`phTcPass`: complaints, formulas, group, herb),
+  so Timetable, Places and Patterns count the same cases.
+- **The groups are a DRAFT** (Claude's words, `PH_TC_GRP`: the first match on the complaint's first part, then on all of it,
+  `phTcGrpDraft`). Edit groups (`data-tc-grped`) opens a name field per group (`data-tc-grpren`) and a group dropdown on each
+  complaint (`data-tc-grpmv`), saved as `PHARMACY.tcGrp = {ren, mv}` only on her edit. A complaint moved back to its draft
+  group, or a name cleared, removes its entry. Nothing is written on read.
+- **Formula in numbers** (`phTcRxHtml(c)`): under the case's head, in the one-case table (a `tr.rxr` in its thead) and in the
+  session table. The one-case table's two Prescription rows (Inventory, Book / lecture) are hidden; the session table keeps
+  its Lecture / visit row (each visit's own recipe).
+  - Head: each formula numbered (1, 2 … in a ring of its colour) with "n on this tour", the case's grams and her recipe's,
+    the case's own formula line when it says more (alternating), the modification with a blue dot.
+  - One grid, A–Z (divs with table roles: a table nested in the case table took its two-column card rules): Herb ·
+    Formula (only with 2+ formulas: the "1. …" part it is written under, else the formulas whose classical recipe holds it,
+    `phCmpCol(f).classic.hs` keys) · This case (grams + bar) · Your recipe (her own recipe for that formula,
+    `phCmpCol(f).rec.ingredients`; only when she has one) · On this tour (every case on the same tour given that formula, a
+    dot per dose, this case ringed, "k of N") · the change (Same, +g a blue dot, −g amber, Added green, Left out red; only
+    with her recipe).
+  - Her recipe's herbs the case left out are rows too. Hong Zao counts as Da Zao (`phHuKeys`). A patient study
+    (`c.patientKey`) has none; a case without grams says "No grams recorded".
+- **Phone:** the five views need 347px of the phone's 298, so on a phone they are one dropdown (`data-tc-gosel` clicks the
+  view's own button; PHONE REDESIGN block); the case grid scrolls inside its box (700px floor).
+- **Tested** (sandbox, her June 2026 tour, 220 cases):
+  - Patterns: 220 cases · 93 formulas · 126 herbs. Taps: Thyroid & metabolism → 31 cases, Da Chai Hu Tang → 25, Gan Cao →
+    109 (the day strip's counts follow), Cancer & nodules × Da Chai Hu Tang → 4, Clear → 220. Day 3 → 22 cases, and a tap
+    opens Cases on Day 3. A Skin filter shows 16 on the Timetable and Places too. Edit groups: a rename and a move saved;
+    moved back, the entries were gone. All tours drawn.
+  - C142 (Da Chai Hu Tang + Gui Ling Gan Lu Yin, Mang Xiao added) with a test copy of her Da Chai Hu Tang (105 g, from her
+    screenshot; the sandbox has no recipe of hers): Bai Shao +5 g, Huang Qin +5 g, Mang Xiao Added, Zhi Ke Left out, the
+    rest Same; the eight Gui Ling Gan Lu Yin herbs marked 2.
+  - Size check: Patterns clean at 1220 and 360 (Edit groups, All formulas and All herbs open); the case page only the known
+    40px case rows and 26×20 pictures; no sideways scroll at 360. No errors.
+  - The other session's check: at 1370 with the side menu folded, the views row rides in the top bar on all five views.
+    **Changed:** with the side menu open at 1370, Cases and Places now keep the row on its own line (it fit with four views).
+- **Not tested:** her real records (her own recipes, her tags); Patterns on the November 2026 and October 2025 tours by eye.
+- Pictures: `mocks/patterns-build-2026-11-13/` (1-patterns, 2-edit-groups, 3-case-c142, 4-phone-patterns).
+- **DRAFT:** the complaint groups and their names are Claude's (the Draft tag) until she reads them.
+- **SAVED, not live:** goes out only on her own "push live".
