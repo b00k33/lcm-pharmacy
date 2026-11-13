@@ -14920,4 +14920,4 @@ rest are small. Only points that stood were changed.
 - **Shared:** the same editor is a Cases case's Sessions panel (Note, Add observations, Photos, Save): it gets the same two-line boxes.
 - **Unchanged:** the visits table (a column a visit, its rows as Cases' progress table); Tag notes and Integrate.
 - **Checks:** HEAD's tap-audit and titlebar-audit clean at 1220 and 360 (My patients and Cases); the phone's date box fits its half row; no console errors; no sideways page scroll.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-191300 (her "push live"; 6d92524b).
