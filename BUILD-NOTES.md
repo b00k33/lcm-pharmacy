@@ -15194,4 +15194,4 @@ rest are small. Only points that stood were changed.
   Oct 2025, then June 2026; the Timetable under All tours June 2026 then Nov 2026 (Oct 2025 has no case); Seen at in the
   same order; made-up tours "… Sept 2026" (no dates) fall between June and Nov, "… March 2027" after Nov, a name with no
   date last. No errors. No control changed size, so no size check.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261114-020100 (her "push live").
