@@ -137,7 +137,7 @@ dropdowns: A–Z. A new list is A–Z from its first build.
 - **Normal first, then A–Z** (her pick): a symptom list led by Normal / None keeps it first. In house leads a supplier list;
   Custom / Other / + New… stay last.
 - **Kept as they are:** a rank keeps its rank and uses A–Z for ties only (FBR fit, Quick assess, body charts, Dashboard urgency,
-  a search: starts-with matches first, then A–Z); time lists keep time order (prescriptions recent first, timelines, a cycle's
+  a search: starts-with matches first, then A–Z); time lists keep time order (prescriptions recent first, the Guide's tours oldest first (her 2026-11-14 "organise in chronological order for tours list", `phTcTourSort`), timelines, a cycle's
   days, Cycle & IVF messages, a course like Active treatment → In remission → Past → Monitoring); a document's own order (a
   letter's sections, a plan's phases, the Session grid, which is LOCKED); Stocktake opens in shelf order, A–Z is a view; the Guide's Herbs list opens A–Z with Most · Fewest formulas as her own view (her 2026-11-04 word).
 - **How:** `phAz(a, b)` (Intl.Collator "en", base, numeric; skips a leading emoji or mark; đ → d) and `phAzBy(f)`; herbs
