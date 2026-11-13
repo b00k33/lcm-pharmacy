@@ -14597,7 +14597,7 @@ rest are small. Only points that stood were changed.
   Pulse its 42 notes with no chip and no console error; the size check (`tap-audit.js`, root `#phGuideWrap`) at 1220 and at 360: Pulse
   clean; Abdomen one line, the card's Summary "Clear" (999px corners, 21.6px on a phone), older than this step: step 2 rebuilds that
   card and fixes it. **Not tested:** her real records.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-030100.
 
 ## Chu Fan Tang joined, mouth ulcers a sign (2026-11-13)
 
@@ -14641,7 +14641,7 @@ rest are small. Only points that stood were changed.
   test copy's own memory); at 360 the bar sits first, the two figures and the Today · Both · Last bar fit, nothing wider than the screen,
   the size check clean on the Guide. Off, older than this step: the Temp group's °C stepper (− value +) reads to the checker as an icon bar ("want a circle"), unchanged here; the page's "From your Guide" lines (rows 47.8px, the "Guide › Abdomen"
   link, the note's select): step 3 redraws that list. **Not tested:** her real records; a real photo window.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-032100.
 
 ## Abdomen synth22, step 2b: a past day open big, beside today (Abdomen, Tongue, Pulse) (2026-11-12)
 - **Her words**, mid-batch, with a picture of the "10 Oct · LAST" strip: "add this to the build: allow to expand the previous abdominal
@@ -14658,7 +14658,7 @@ rest are small. Only points that stood were changed.
   427px tall, the card 1100 x 572; ✕, the backdrop and Esc each close it and the patient page stays; Pulse: both grids, 10 Oct's two
   marks drawn; Tongue: 10 Oct beside "Not examined today"; the size check clean on the sheet and the three strips at 1220 and 360; at
   360 the sheet is one column inside the screen. **Not tested:** her real records.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-032100.
 
 ## Vertical space audit + rule (2026-11-13)
 - **Her words:** "make the Importance view more space saving too - add a rule to prioritis vertical space saving for the whole app", then "do an audit about vertical space saving".
@@ -14728,7 +14728,7 @@ rest are small. Only points that stood were changed.
   marks; the Guide door opens the Guide's Abdomen with the record still open; every sign picture in view drawn. **Checked elsewhere:**
   the card's Fang Bing Ren tab and the Tongue page's "From your Guide" lines (unchanged; `phGdLineHtml` stays for them). **Not
   tested:** her real records and notes. Pictures: `mocks/abd-synth22-2026-11-12/step3-s3-guide.png`, `step3-s3-page.png`.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-161500 (her "push live", 2026-11-13; her devices need the gold Update).
 
 ## Abdomen synth22, step 4: the side view's bulge, one full dome (2026-11-13)
 - **Her words:** "the bulging line more curved / realistic". Her pick B "Full" (plan guide `mocks/abd-synth22-2026-11-12/guide.html`,
@@ -14744,7 +14744,7 @@ rest are small. Only points that stood were changed.
   bulging at the navel, at three places, at epi + navel, full at the lower row, bulging epi with a sunken lower row; the wall meets
   the ribs (60 at y 24) and the pubis (57.5 at y 143) as before; no marks = the old line; the patient page draws with no error and
   the size check clean. **Not tested:** her real records.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-161500 (her "push live", 2026-11-13; her devices need the gold Update).
 
 ## Vertical space audit, Formula refill, Communications, Records (2026-11-13)
 - **Her words:** "audit formula refill, communications and the records pages" (the rule: CLAUDE.md "Vertical space first"). CSS only.
@@ -14799,7 +14799,7 @@ rest are small. Only points that stood were changed.
   "4/5 firm" and "no gas sounds"; the size check clean on the card with Tension, Feel and Sounds open at both widths; no errors.
   Pictures: `mocks/abd-synth22-2026-11-12/step5-s5-feel.png`, `step5-s5-ten.png`. **Not tested:** her real records.
 - **Wording DRAFT:** the strength words (very soft, weak · soft · middle · firm · hard, strong) and the new marks' names are mine until
-  she reads them. **SAVED, not live:** goes out only on her own "push live".
+  she reads them. **LIVE** in build 20261113-161500 (her "push live", 2026-11-13; her devices need the gold Update).
 
 ## Abdomen synth22, step 5b: her teachers' belly rules as DRAFT weights (2026-11-13)
 - **Her pick:** "Yes, as Draft (Recommended)": "Added to the formulas' weights, marked Draft until you read them. Ma Huang gets a minus
@@ -14825,4 +14825,4 @@ rest are small. Only points that stood were changed.
   large, full and Huang Qi goes 29th → 19th (Puffy taken off: back to 29th). The four formulas' Guide pages show the new lines (Ma Huang's
   lower belly −3 −3); Fang Bing Ren draws with no errors; its size check lists the same kinds of flags as the saved page before this step
   (the tick cells, 14 before, 15 after: one more row on the board), none from this step. **Not tested:** her real records.
-- **DRAFT for her to read:** every number above. **SAVED, not live:** goes out only on her own "push live".
+- **DRAFT for her to read:** every number above. **LIVE** in build 20261113-161500 (her "push live", 2026-11-13; her devices need the gold Update).
