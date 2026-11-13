@@ -15013,3 +15013,24 @@ rest are small. Only points that stood were changed.
   Clinic, Q&A", "Day 8 · Fri 24 Oct Rest day" and the rest; tap audit 0 off on Cases, Timetable and Places at 1220, Places at 360;
   no sideways scroll; the 220 June cases still untouched. NOT tested: her devices.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## June 2026 tour: the official timetable (2026-11-13)
+
+- **Her words:** "add this for june 2026", with a picture of the official timetable, "2026 Jingfang Training Course (June 8-19)".
+- **What it changed:** the tour is twelve days, Mon 8 to Fri 19 June. Day 1's morning was the Opening Ceremony + Special Lecture, so
+  the notes' "Day 1 Clinical Observation with Dr HH" (19 cases) is Day 1's AFTERNOON. Sun 14 is Rest; Mon 15 is Huang Huang am, Zhang
+  Xueguang pm, which is the notes' "Day 7 Dr HH hospital am" + "Dr Zhang PM" (44 cases): they move to Day 8. This REPLACES her
+  earlier popup pick "Sun 14 June" (made before she had the timetable to hand; newest word wins). Tue 16's afternoon is Dr Zhang
+  Xueguang. Also: Day 4 pm Case review + Q&A; Day 7 Rest; Day 10 Abdominal Diagnosis (filed as Lecture); Day 11 Clinic am, pm not
+  decided; Day 12 Visit (Site visit).
+- **One conflict, kept as the notes have it:** the timetable lists Fri 12 June as Rest, but the notes hold 16 cases dated 12/6/26 in
+  Dr Liu's clinic. They stay on Day 5 morning, and that half's note says so. Hers to correct.
+- **Built** (`index.html`): `PH_TC_JN_S` is the timetable's filing, `PH_TC_JN_S0` the first one, `PH_TC_JN_TT` the twelve days;
+  `phTcJnTt(s)` runs once per device (`jnTtV`) after `phTcJnAdd`: adds Days 10-12, moves a case only if it still sits where the
+  first filing put it, and sets a half's kind, teacher and note only where it still holds what the first filing wrote. The teaching
+  notes' labels (A "Day 1 pm", I / J "Day 8", L "Dr Zhang's clinic") and the nine June table captions follow.
+- **Tested** (sandbox, afc5f7c2 + this change): a device that already had the tour, with one case moved by hand and one teacher
+  retyped: the 18 + 44 cases moved, the hand-moved case and the typed teacher stayed, 220 placed once each; a fresh device ends the
+  same; 220 of 220 untouched, 0 stored; a Day 8 case's foot reads "Day 8"; tap audit 0 off on Cases, Timetable, Places at 1220 and
+  Timetable, Places at 360; no sideways scroll. NOT tested: her devices; two devices syncing mid-move.
+- **SAVED, not live:** goes out only on her own "push live".
