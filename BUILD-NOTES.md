@@ -14859,4 +14859,4 @@ rest are small. Only points that stood were changed.
 
 - **Unchanged:** several cases side by side (Compare with) and a case with logged sessions (its progress table) keep their columns; Timetable, Places and My patients unchanged.
 - **Checks:** the Complaint, All days and Compare with lists open whole (the Complaint list now opens under its button, right edges aligned); HEAD's tap-audit and titlebar-audit clean at 1220 and 360; no console errors; no sideways page scroll.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-165800 (published by C22 on her pick "Yes, both"; 7e14bdc9).
