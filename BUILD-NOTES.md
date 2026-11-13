@@ -14878,4 +14878,4 @@ rest are small. Only points that stood were changed.
 
 - **tap-audit.js KEEP:** `.tcd-pg` added (a case row: its picture beside the name and formula on two lines, 40px; a row, as `.gf-row`). The audit measures anything up to 52px as a chip, so the shorter row needed naming. Her word to keep it is the vertical space rule; say so if she wants it otherwise.
 - **Checks:** HEAD's tap-audit (with the KEEP line) and titlebar-audit clean at 1220 and 360 on Cases, Timetable and Places; the Complaint list opens under its button; no console errors; no sideways page scroll.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-184100 (her "push live"; a920e102).
