@@ -15048,3 +15048,18 @@ rest are small. Only points that stood were changed.
   errors); case C37's table, Abdominal one 22px line, no head of its own; the size check lists only the 26×20 pictures
   (`.gf-ani-th`, on the KEEP list). Pictures: `mocks/abd-card-2026-11-13/before.png`, `after.png`. **Not tested:** her real records.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Guide > Cases: the views row in the top bar (2026-11-13)
+- **Her words:** "mock space saving version" (her screenshot of the Timetable's top: the Guide bar, then a row of views + By + 361 cases, then the tour name, then the week). Two mocks, the real page restyled in the sandbox: A (one slim row under the bar) and B (the row inside the bar). **Her pick: B.**
+- **How:** `phTcTopToBar()` runs first in `phGdAfterPaint()` and 150ms after a resize. It removes any old holder (putting its row back if the body has none), then on the tourcases tab above 900px moves `#phGdBody .ph-tc > .tcd-top` into a new `div.ph-tc.ph-tc-bar` placed after the bar's h1. The holder carries `.ph-tc`, so every `.ph-tc ...` rule (the list rows' 32px height, the ticks, the count) still applies; the first try (moving the row alone) lost them and its list rows shrank to 16px. If the row overflows (`scrollWidth > clientWidth + 1`) or the bar passes 64px (the bar wraps), the row goes back to the body.
+- **CSS:** holder `flex: 1 1 auto; min-width: 0; margin: 0 16px 0 24px`; the row no wrap; the By group `overflow: visible` (it clipped the Complaint list); `.ph-shell-topblock:has(.ph-tc-bar .ph-cmp-addl)` lets an open list out over the page; on a computer `.ph-gd-shell:has(.ph-tc)` loses its top margin and padding.
+- **Also:** My patients' views row is wrapped in `.tcd-top` (it was bare) so it moves the same way; the Timetable's `tt-h` carries the first week's label (`span.wk`), later weeks keep their own `tcd-bh` line; `phTcPageTop` queries `.ph-tc:not(.ph-tc-bar)`.
+
+| Width | Row | Timetable's table starts |
+|---|---|---|
+| 1370, rail (her screen) | in the bar, bar 58px | y96 (was 185) |
+| 1220, rail or sidebar open | under the bar (about 90px short) | as before |
+| 360 phone | under the bar | as before |
+
+- **Checks:** HEAD's tap-audit and titlebar-audit clean on all four views at 1370, 1220 and 360; the Complaint list opens above the page and every row of it takes a click; All days and Compare with lists open; a view switch from the bar works; leaving for another Guide tab removes the holder; no console errors; no sideways scroll. Built on 8670c17e (C22's By Formula rows, 5498e9bd). Picture: `shots/2026-11-13 Timetable top in the bar.jpg`.
+- **SAVED, not live:** goes out only on her own "push live".
