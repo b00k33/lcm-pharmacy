@@ -14841,3 +14841,22 @@ rest are small. Only points that stood were changed.
   audit 0 off; console holds only the sandbox's missing service worker. NOT tested: the chart inside a patient's Abdomen page or
   the Guide with a patient open (the sandbox has no patient), a phone, her devices.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Guide > Cases, vertical space (2026-11-13)
+- **Her words:** on a screenshot of a case's sign table, "apply the same vertical space saving rules to whole page"; on its top, "improve this page so it is more space saving intstead of taking up 5 rows" (the rule: CLAUDE.md "Vertical space first"; the two columns are her 2026-11-12 pick B for the Guide formula table).
+- **Sandbox:** C1 Lung nodule (Day 1), 1220x900 and 360x740; "before" measured on 1ecea1bc, the same seed.
+
+| Part | Before | After | Change |
+|---|---|---|---|
+| Top, computer | 5 rows: views, the By card (53px), days, then the case buttons on 2 lines | 3 rows: views + By on one line, days, case buttons on one line | `.tcd-top` wraps `phTcModeBar()` and the By bar (flex, wraps when narrow); no card round By; `.ph-tc` padding top 16 -> 6px; the family chip `flex: 1 1 0; max-width: max-content` with … (the table head says it whole) |
+| First case (list), computer | y 256 | y 181 | the above |
+| Case table, computer | starts y 336, 2393px tall | y 223, 1014px | `phTcTableHtml` one case: `gf2 tc1` + `gf2w` = two columns of area cards; `tc1`: the head spans both columns, the empty Ren / Bing columns and their headings hidden while no sign has a weight (`:has`) |
+| Top, phone | days 130px (4 lines) | 62px | a day chip's date in `span.dt`, hidden at <= 640px: "Day 1 36"; the All days list keeps every date |
+| First case (list), phone | y 396 | y 277 | the above |
+| Case table, phone | 2406px, 480px wide in a 300px box (sideways scroll) | 1872px, fits | `tc1 { width: auto }` (not 130 + 300px a case); the Family picker shrinks to the box |
+| Case buttons, phone | 96px (3 lines) | 62px (2) | the family chip shrinks |
+| "How it works" closed | 75px (an empty 34px cell under it) | 41px | `.gf2 tr.an.off > td:empty` hidden; the Guide formula table too |
+
+- **Unchanged:** several cases side by side (Compare with) and a case with logged sessions (its progress table) keep their columns; Timetable, Places and My patients unchanged.
+- **Checks:** the Complaint, All days and Compare with lists open whole (the Complaint list now opens under its button, right edges aligned); HEAD's tap-audit and titlebar-audit clean at 1220 and 360; no console errors; no sideways page scroll.
+- **SAVED, not live:** goes out only on her own "push live".
