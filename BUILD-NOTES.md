@@ -14901,7 +14901,7 @@ rest are small. Only points that stood were changed.
   the case rows' 40px height and the case page's animation thumbnails, the same as the saved page before this change. Pictures:
   `mocks/case-day-numbers-2026-11-13/built-timetable.png`, `built-day2.png`. **Integration:** Timetable, Cases (by day), the case page,
   Compare with, Places, a formula's Cases chips, Working on, Edit. **Not tested:** her real records (the cases sit in the code).
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-191300 (her "push live", 2026-11-13; published by B33 C4 LCM, 6d92524b; her devices need the gold Update).
 
 ## Guide > My patients, vertical space (2026-11-13)
 - **Her words:** "audit the my patients page for vertical space" (the rule: CLAUDE.md "Vertical space first").
