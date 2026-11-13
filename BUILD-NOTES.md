@@ -15062,7 +15062,7 @@ rest are small. Only points that stood were changed.
 | 360 phone | under the bar | as before |
 
 - **Checks:** HEAD's tap-audit and titlebar-audit clean on all four views at 1370, 1220 and 360; the Complaint list opens above the page and every row of it takes a click; All days and Compare with lists open; a view switch from the bar works; leaving for another Guide tab removes the holder; no console errors; no sideways scroll. Built on 8670c17e (C22's By Formula rows, 5498e9bd). Picture: `shots/2026-11-13 Timetable top in the bar.jpg`.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE 20261113-232100** (her "push live", 2026-11-13).
 
 ## Guide > Cases > Timetable: a Place picker, one pick for every view (2026-11-13)
 - **Her words:** "how do i filter the cases based on the tours" (on the Timetable, June 2026 and Nov 2026 stacked, 361 cases).
