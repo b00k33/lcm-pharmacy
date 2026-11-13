@@ -14679,7 +14679,7 @@ rest are small. Only points that stood were changed.
 - **Left as they are (her own picks):** the phone's patient herb line wraps to two lines (her 2026-09-07); Appointments' hour height (Calm week); the locked session grid.
 - **Not measured this round:** a patient's own pages (Care Plan, Today's visit, Last visits, Abdomen / Tongue / Pulse). The C22 session is rebuilding Last visits and the Abdomen page (her synth22 steps 2a / 2b), so they wait until that lands. Also Formula refill, Communications and the Records pages, which need more seeded data.
 - **Tested:** tap audit (HEAD's script) at 360 on Patient profile (one pre-existing line: the search box's round corners, the app's field shape) and on the Guide card (off empty); no sideways scroll; no console errors.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-032100 (e2025c74, her "push live").
 
 ## Vertical space audit, a patient's pages (2026-11-13)
 - **Her words:** "audit care plan, today's visit, tongue and pulse" (the rule: CLAUDE.md "Vertical space first"). The Abdomen page and the Last visits strip belong to the B33 C4 LCM bugs session (her synth22), which applies the rule there.
@@ -14694,7 +14694,7 @@ rest are small. Only points that stood were changed.
 | Care Plan, the phase table and session grid | - | - | no change: locked (her 2026-09-27) |
 
 - **Tap audit** (HEAD's script, 360): the changed rows add nothing new. Already there before, not vertical: Today's visit's goal line (`.ph-cx-gl`, 14px tall) and the row's ▾ (`.ph-cx-dd`, 20px); Tongue's "Next: Pulse" (35.5px, 10px corners).
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-033200 (f5a08727, her "push live").
 
 ## Abdomen synth22, step 3: the belly signs, picture first (2026-11-13)
 - **Her words:** "I don't understand what this does" (the Guide's Belly signs). Her pick A "What's marked, with pictures" (plan guide
@@ -14766,7 +14766,7 @@ rest are small. Only points that stood were changed.
 | Communications | - | - | no change: Due + More is one 28px row, search + chips another; the empty state is one line |
 
 - **Audits** (HEAD's titlebar-audit.js and tap-audit.js): every page's bar clean at 360 and 1220; no page scrolls sideways; no console errors. Already there before, not vertical: the refill row's tick (`.tk`, 20px); the Records segment buttons (26px segments in a joined 31px bar, deliberate); search boxes' round corners (the app's field shape).
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-161500 (4165f82a, her "push live").
 
 ## Abdomen synth22, step 5a: four new marks, Strength 1–5, "checked, none" (2026-11-13)
 - **Her words:** "audit abdominal charting vs case notes" (= apply). The audit (plan guide `mocks/abd-synth22-2026-11-12/guide.html`,
