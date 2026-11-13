@@ -14995,3 +14995,21 @@ rest are small. Only points that stood were changed.
   untouched and 0 stored; tap audit 0 off on the Guide families page with a new formula open at 1220 and 360; no sideways scroll.
   NOT tested: her devices; no picture taken (the preview pane was too narrow); a patient's Fang Bing Ren board with these formulas.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## October 2025 tour: its dates (2026-11-13)
+
+- **Her words:** "add these dates for october study tour 2025", with two pictures of that tour's printed programme ("October 17th -
+  30th 2025").
+- **Built** (`index.html`): a third tour, `nanjing-2025-10`, "Nanjing Study Tour Oct 2025", Day 1 = Fri 17 Oct to Day 14 = Thu 30 Oct
+  2025, no cases (`PH_TC_OCT25`: per day [morning, afternoon] = [kind, teacher, note]). Days 1-3 Conference (the Nanjing Jing Fang
+  Conference); Mon 20, Tue 21, Thu 23, Mon 27, Tue 28, Thu 30: Clinic then Q&A with Prof. Huang Huang; Wed 22 and Wed 29: Clinic
+  both halves; Fri 24 and Sat 25: Rest day; Sun 26: Clinic with Dr Mei Lifang. The programme's detail (what follows each Q&A, the
+  museum visit, the farewell dinner) is each half's place note. Two kinds added at the END of `PH_TC_BKIND`: "Q&A" and "Rest day"
+  (so every saved kind keeps its number; the kind chip's tap now also passes through them). Teachers named as the other tours name them.
+- **Where it shows:** Guide > Cases > Places (its 14 days, each with its kinds) and the tour picker on Cases. The Timetable shows
+  tours that hold cases, so it is not there until a case is added. The arrival day (16 Oct) and the flight home (31 Oct) are outside
+  the programme's own dates and are not days.
+- **Tested** (sandbox, 2ffeba55 + this change): 14 days, each date's weekday matches the programme; Places lists "Day 4 · Mon 20 Oct
+  Clinic, Q&A", "Day 8 · Fri 24 Oct Rest day" and the rest; tap audit 0 off on Cases, Timetable and Places at 1220, Places at 360;
+  no sideways scroll; the 220 June cases still untouched. NOT tested: her devices.
+- **SAVED, not live:** goes out only on her own "push live".
