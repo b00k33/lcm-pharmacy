@@ -14879,3 +14879,26 @@ rest are small. Only points that stood were changed.
 - **tap-audit.js KEEP:** `.tcd-pg` added (a case row: its picture beside the name and formula on two lines, 40px; a row, as `.gf-row`). The audit measures anything up to 52px as a chip, so the shorter row needed naming. Her word to keep it is the vertical space rule; say so if she wants it otherwise.
 - **Checks:** HEAD's tap-audit (with the KEEP line) and titlebar-audit clean at 1220 and 360 on Cases, Timetable and Places; the Complaint list opens under its button; no console errors; no sideways page scroll.
 - **LIVE** in build 20261113-184100 (her "push live"; a920e102).
+
+## Guide › Cases: each clinic counts its cases from 1 (2026-11-13)
+- **Her words:** "each day, the case study number restarts as 1. have 2 separate case study counting systems - show solution
+  before building", then, while it was being built, "case number restarts at 1 in afternoon clinics too". Shown three looks on the real
+  Timetable (published page "Case Day Numbers", pictures `mocks/case-day-numbers-2026-11-13/tt-*.png`), her pick **C "Day number only"**:
+  the card reads "1 · Autoimmune hepatitis"; the tour number shows on hover and on the case's page (A, the tour number at the card's end,
+  cost 248px of height; B, both numbers in a column, 304px; C nothing).
+- **Built** (`index.html`): `phTcSessNo(c, b)` (before `phTcWhen`): a case's number in its own clinic, 1 up, in tour-number order over
+  the clinic's whole list (a Complaint / Formula filter never renumbers), worked out when drawn, never saved; 0 for a case in no clinic.
+  **Two counts:** the clinic number (bare, "1") and the tour number ("C37", unchanged, the case's fixed name). The Timetable's cards
+  (`phTcTtHtml`'s `chip(c, b)`, its cell passes the block) and the Cases day list (`phTcDayHtml`'s `row(c, b)`, each tour-day group
+  carries its block) lead with the clinic number, hover "C37" ("C37 · Side by side" on a compared row); a case in no clinic (a book's,
+  Not placed) reads "C5 · …". The case's page head keeps "C37 · complaint · formula" and its second line gains "case 1" after the time
+  (`phTcHeadHtml`'s `at`). Compare with's list now reads "C37 · …" (all days at once). Kept as they were, all tour numbers: Places
+  ("C#37"), a formula's Cases chips ("C37 · …"), "Working on", Edit C#37, the toasts, `phTcWhen` ("Mon 9th Nov C1", her 2026-11-10 pick).
+- **Counts now:** Day 1 morning 1–15, afternoon 1–21; Day 2 1–22, 1–20; Day 3 1–23, 1–19; Day 4 morning 1–21 (C1–C141 as before).
+- **Tested** (sandbox, 1220 and 360): every clinic starts at 1 with its C number on hover; Day 2's list 1–22 then 1–20, a complaint filter
+  keeps "2 / C60" and "15 / C73"; C60's head "Tue 3 Nov · 2pm–5pm · case 2 · Clinic · Dr Liu Minghan"; Compare with lists "C1 · Lung
+  nodule"; no errors; the Timetable 2414 → 2398px (shorter numbers wrap less); no sideways scroll at 360; the size check lists only
+  the case rows' 40px height and the case page's animation thumbnails, the same as the saved page before this change. Pictures:
+  `mocks/case-day-numbers-2026-11-13/built-timetable.png`, `built-day2.png`. **Integration:** Timetable, Cases (by day), the case page,
+  Compare with, Places, a formula's Cases chips, Working on, Edit. **Not tested:** her real records (the cases sit in the code).
+- **SAVED, not live:** goes out only on her own "push live".
