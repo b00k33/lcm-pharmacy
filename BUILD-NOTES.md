@@ -15108,4 +15108,4 @@ rest are small. Only points that stood were changed.
   - The holder is `flex: 1 1 0` (with `auto` the bar wrapped the holder to a second line instead of shrinking it); margins 20/12px.
 - **Result:** all four views are in the bar at 1370, with All tours or any tour picked. At 1220 (rail), Cases and My patients now fit as well; Timetable and Places stay under the bar with the search at full width. The phone is unchanged (full names).
 - **Checks:** HEAD's tap-audit and titlebar-audit clean at 1370, 1220 and 360. A real click opens the search to 260px and typing stays on one line; clearing it returns it to the magnifier. The search works as before (only its size changed). No console errors; no sideways scroll.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE 20261113-233700** (her "push live", 2026-11-13).
