@@ -14860,3 +14860,22 @@ rest are small. Only points that stood were changed.
 - **Unchanged:** several cases side by side (Compare with) and a case with logged sessions (its progress table) keep their columns; Timetable, Places and My patients unchanged.
 - **Checks:** the Complaint, All days and Compare with lists open whole (the Complaint list now opens under its button, right edges aligned); HEAD's tap-audit and titlebar-audit clean at 1220 and 360; no console errors; no sideways page scroll.
 - **LIVE** in build 20261113-165800 (published by C22 on her pick "Yes, both"; 7e14bdc9).
+
+## Guide > Timetable and Places, vertical space (2026-11-13)
+- **Her words:** "audit the timetable and places pages for vertical space" (the rule: CLAUDE.md "Vertical space first").
+- **Sandbox:** the seed tour (141 cases), 1220x900 and 360x740; "before" measured on 58ebfe20.
+
+| Part | Before | After | Change |
+|---|---|---|---|
+| Top, both pages | 2 rows: views, then the By card (53px) | 1 row | `.tcd-top` as Cases (9d036887); `.ph-tc` padding top 16 -> 6px; Places' grid keeps its own card |
+| Timetable, first case | y 346 (phone 388) | y 272 (phone 338) | the above |
+| Timetable, a case row | 60px floor, a 40x48 picture; most names and formulas wrapped (156px of text) | 40px (a long formula 56); a 26x32 picture | `.tcd-pg` min-height 0, padding 4px; `.fm` two lines at most (the case says it whole); a day with cases 210 -> 240px wide (more width = fewer wraps; 260 and 280 gained little) |
+| Timetable, the week's table | 3431px tall, 1247px wide | 2414px tall, 1367px wide | height first: the week scrolls 120px further sideways |
+| Cases list (the same row) | 2305px, rows 60 | 1733px, rows 40 | the same `.tcd-pg` |
+| Places, a row | 40px (a day 37, two lines: "Day 1 · Mon 2" / "Nov Clinic") | 33px (its 32px button), one line on a computer | th/td height 28 (the 32px row button is the floor); a computer's name column 232 -> 300px, the day's label nowrap with …; a phone keeps 232px and its two lines (300px would cover a phone) |
+| Places, + Add a day / Add to calendar | 71px (stacked) | 33px (one line, a computer) | the wider column |
+| Places, the grid | 718px, first day y 284 (phone 326) | 600px, y 212 (phone 682, y 278) | the whole grid fits one computer screen |
+
+- **tap-audit.js KEEP:** `.tcd-pg` added (a case row: its picture beside the name and formula on two lines, 40px; a row, as `.gf-row`). The audit measures anything up to 52px as a chip, so the shorter row needed naming. Her word to keep it is the vertical space rule; say so if she wants it otherwise.
+- **Checks:** HEAD's tap-audit (with the KEEP line) and titlebar-audit clean at 1220 and 360 on Cases, Timetable and Places; the Complaint list opens under its button; no console errors; no sideways page scroll.
+- **SAVED, not live:** goes out only on her own "push live".
