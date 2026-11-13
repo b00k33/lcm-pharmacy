@@ -14826,3 +14826,18 @@ rest are small. Only points that stood were changed.
   lower belly −3 −3); Fang Bing Ren draws with no errors; its size check lists the same kinds of flags as the saved page before this step
   (the tick cells, 14 before, 15 after: one more row on the board), none from this step. **Not tested:** her real records.
 - **DRAFT for her to read:** every number above. **LIVE** in build 20261113-161500 (her "push live", 2026-11-13; her devices need the gold Update).
+
+## Abdomen side view: the belly line follows a real belly in profile (2026-11-13)
+
+- **Her words:** "these are the type of side view abdomens i see. make the current animation correspond with abdominal curve", with
+  four photos of bellies in profile (each leaves the ribs on a long slope, is fullest below the navel, then turns under to a crease).
+- **Built** (`index.html`, `phAbdSideWall`): a belly that stands out (flat, full, distended) now rises from the ribs on an even
+  slope to its fullest point BELOW the navel, then turns under fast to the pubis (`prof`, fullest at `p` = .66 of the way down; a
+  softer wall hangs lower, .71 / .74; a firmer one holds higher, .62 / .6). A dome over marked rows is fullest a little below its
+  middle. A sunken belly keeps its old even curve. The breathing motion, the cavity clip, the temperature strip and last visit's
+  grey line all read the same wall, so they follow.
+- **Tested** (sandbox, 5a30dc1c + this change): eight shapes drawn old beside new (flat, full, distended, distended soft / firm,
+  bulging lower, bulging navel + lower, sunken): no NaN, sunken unchanged; four moving side views placed on a page at 1024: tap
+  audit 0 off; console holds only the sandbox's missing service worker. NOT tested: the chart inside a patient's Abdomen page or
+  the Guide with a patient open (the sandbox has no patient), a phone, her devices.
+- **SAVED, not live:** goes out only on her own "push live".
