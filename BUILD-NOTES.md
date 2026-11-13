@@ -14949,3 +14949,21 @@ rest are small. Only points that stood were changed.
   still on an older build receiving the tour from sync (it would show the tour's days with no cases until Update).
 - **Page weight:** index.html grows by about 235 KB (14.75 to 14.99 MB).
 - **SAVED, not live:** goes out only on her own "push live".
+
+## June 2026 tour: teaching notes on each formula's page (2026-11-13)
+
+- **Her words:** popup pick "Yes, on each formula's page" (after the June cases were in, her "Cases first, ask me after").
+- **Built** (`index.html`): `PH_GDF_TEACH_JN` (formula id: [session, line]) and `PH_GDF_TEACH_JN_WHO`; `phGdfTeachHtml` shows them under
+  the November notes inside a fold, "June 2026 tour · n" (closed until tapped, so a page stays short: Da Chai Hu Tang alone has 39).
+  541 lines on 52 formulas, in the notes' own words (a colleague's notes; spelling tidied only, abbreviations kept), general lines
+  only. The label is the clinic session the line was written in ("June 2026 · Day 3 · Prof. Huang Huang's clinic"), not always who
+  said it; the two stretches of her questions to Dr Mei are labelled so.
+- **How:** the readers' `-teach.txt` files (748 lines), then `teach.pl`: a line is kept only if its formula is one Fang Bing Ren holds
+  (202 are not: Li Zhong Tang, Yue Bi Tang, Ma Xing Shi Gan Tang, Gui Ling Gan Lu Yin, Ba Wei Tong Yang San and others stay in the
+  notes; herb-family pages get none) and at least 72% of its words stand in the notes at that line (5 failed and were dropped).
+  The notes' first 252 lines (the opening lecture) were not read for teaching lines.
+- **Tested** (sandbox, b0e85a4b + this change): every id is a formula, every session has a label; Da Chai Hu Tang's card holds the
+  fold; a formula with none shows nothing; fold open on Shen Qi Wan (6 November notes + 8 June) at 1220 and 360: tap audit 0 off
+  (first try flagged the fold button's corners and height; fixed to 6px corners, 31px high); no sideways scroll; the 220 June cases
+  still load. NOT tested: her devices; the fold inside a full formula card on a phone was checked by audit only, not by eye.
+- **SAVED, not live:** goes out only on her own "push live".
