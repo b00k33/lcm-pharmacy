@@ -15097,4 +15097,4 @@ rest are small. Only points that stood were changed.
   26×20 pictures, as before); no sideways scroll at 360. Pictures: `mocks/timetable-place-2026-11-13/` (before, after-all,
   after-june, phone-june). Rebuilt on 161fc10b (the row in the top bar) and tested again at 1220, 1600 and 1700: no
   errors, size check clean in the bar. **Not tested:** her real records; a window with the side menu folded.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-232300 (her "push live", 2026-11-13).
