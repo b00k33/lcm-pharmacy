@@ -15195,3 +15195,12 @@ rest are small. Only points that stood were changed.
   same order; made-up tours "… Sept 2026" (no dates) fall between June and Nov, "… March 2027" after Nov, a name with no
   date last. No errors. No control changed size, so no size check.
 - **LIVE** in build 20261114-020100 (her "push live").
+
+## Guide › Cases: the tour's formulas in numbers + a slimmer case page (2026-11-14, synth22)
+- **Her words:** "the formula table is a bit too big for what it is communicating. i want a mass analysis of formulas used in tour, number of formulas, how many formulas are repeated etc etc - show mock"; "audit page to reduce redundant information on page" (a case page). Her plan picks: "Inside Patterns", "Yes, that plan", "Here, one group at a time" (the whole-app audit comes next, a page group at a time).
+- **Measured:** Nov 2026 tour 141 cases, 77 formulas, 39 repeated, 38 once; formulas a prescription 1:74, 2:45, 3:11, 4:3, none 8; 48 modified; 109 herbs; teachers HH 100 cases / 63 formulas, Zhang 21 / 22, Liu 20 / 19. June 2026: 220, 93, 50, 43; 121 modified; 126 herbs.
+- **Her picks on the mocks (one popup):** tour stats "Build as shown"; case page "Build as shown"; family "Picker + book button"; phone "Two columns, grams only".
+- **How:** `phTcPatHtml` draws `.pt-top` = day picker + the joined `gf-seg pt-tab` switch + `pt-sum`; Complaints tab = `pt-cc` + `pt-gg`; Formulas tab = `phTcPatFmHtml(sc, fl, flRep, flOnce, ffHtml, hhHtml, …)` (`.pt-st` strip, `.pt-pc` bar k1–k4, `.pt-fm .pt-ff` repeated rows, `.pt-ol` once rows `f|name`, `.pt-rr` pairs, `.pt-tt` teachers). Case page: `phTcHeadHtml(c, when, bare)` (bare for one case and the session table), `phTcFamSel(c, cls)`, `phTcCaseBarHtml(c, t, cmp, multi)`; `phTcRxHtml` loses the dots, `S`, where and pool lines; `.rx-cg/.rx-c` grid. Phone (≤560px): repeated rows' bars 36px, pairs wrap, the prescription grid two columns without bars. The book button overrides the old chip rule's `min-width: 80px` (`.tcd-cb > [data-tc-card]`).
+- **Checks:** the sandbox at 1280 and 375: tap-audit 0 and titlebar-audit 0 on Patterns › Formulas (Used once open) and a case (one formula, three formulas); no sideways scroll; the book button 32x32 opens the card; the June tour's numbers (220 / 93 / 50 / 43, 4 teachers); the Complaints tab (14 groups); the session table still draws (`phTcProgressHtml`); no console errors.
+- **Not tested:** her own recipes on a case (the Your recipe table; none in the sandbox); her devices.
+- **SAVED 7b7f687e, not live:** goes out only on her own "push live".
