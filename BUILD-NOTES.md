@@ -15181,3 +15181,17 @@ rest are small. Only points that stood were changed.
 - **Checks:** built result on the page at 1440 (`shots`: Treat myself folded and open) and 360 (the drawer); Treat myself opens, Dispense opens from it and the row stays open, Meals from Body, a second tap folds it; a made-up patient's band (name · age, Book, Text) and rail (This visit, Profile, File once, the six steps, Log) unchanged; no console errors, no sideways scroll; titlebar-audit 0. tap-audit on the band and rail: nothing new; the lines left (group head 30px, ‹ Menu 28px, More rows 40px, numbered steps 42px, the name 18px) are on every patient's rail and band too.
 - **Not tested:** her real record and devices.
 - **LIVE 20261114-015800** (her "push live", 2026-11-13).
+
+## Guide > Cases: the tours in date order (2026-11-14)
+- **Her words** (a picture of the Place picker: Nanjing Study Tour June 2026, Nov 2026, Oct 2025): "organise in
+  chronological order for tours list".
+- **Built** (`index.html`): `phTcTourWhen(s)` = a tour's first dated day (`phTcDays`), else the month and year its name gives
+  ("… March 2027" → 2027-03), else nothing; `phTcTourSort` = oldest first, a tour with no date last, A–Z for ties. Used by
+  every tour list: the Place picker on Cases, Timetable and Patterns (`phTcPlaces`), the Places list, the Timetable's
+  stacked tours under All tours, a case's Seen at list (Edit), and `phTcPlace` (a case's tour). Seminars and books stay
+  A–Z. CLAUDE.md's A–Z rule names the tours with the time lists.
+- **Tested** (sandbox): every picker reads Oct 2025 · June 2026 · Nov 2026 (the bar's short names too); Places opens on
+  Oct 2025, then June 2026; the Timetable under All tours June 2026 then Nov 2026 (Oct 2025 has no case); Seen at in the
+  same order; made-up tours "… Sept 2026" (no dates) fall between June and Nov, "… March 2027" after Nov, a name with no
+  date last. No errors. No control changed size, so no size check.
+- **SAVED, not live:** goes out only on her own "push live".
