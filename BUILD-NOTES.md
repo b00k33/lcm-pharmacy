@@ -15034,3 +15034,17 @@ rest are small. Only points that stood were changed.
   same; 220 of 220 untouched, 0 stored; a Day 8 case's foot reads "Day 8"; tap audit 0 off on Cases, Timetable, Places at 1220 and
   Timetable, Places at 360; no sideways scroll. NOT tested: her devices; two devices syncing mid-move.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Guide formula table: the Abdominal card drawn like the others (2026-11-13)
+- **Her words:** "see problem?" with a picture of Gui Zhi's table (Area view, two columns of area cards). The Abdominal card alone
+  kept the old wide drawing: each half (Subjective · she reports / Objective · on palpation) drew its own "REN BING" head, "●
+  Abdominal" under the card's own name twice, lines 32-35px tall in a table of 22px lines, and its sub-head bands stopped short of the
+  card's edge. 290px for four lines.
+- **Built** (`index.html`, `phLtCell`'s Abdominal branch): each half is drawn as the Pulse card is (`phCmpCaseBox(..., { pic: () =>
+  "", solo })`): the table's own head says Ren / Bing once, one subject is not named again, the abdomen chart stays at the side. The
+  Subjective / Objective split (her 2026-11-10 pick) stays. The same cell draws a tour case's own table, which gets the same
+  lines. Gui Zhi's card 290 → 167px at 1220, 153px at 360 (one column), every line 22px.
+- **Tested** (sandbox): Gui Zhi at 1220 and 360 (numbers in line with the Tongue card's, 800 / 798px; no sideways scroll; no
+  errors); case C37's table, Abdominal one 22px line, no head of its own; the size check lists only the 26×20 pictures
+  (`.gf-ani-th`, on the KEEP list). Pictures: `mocks/abd-card-2026-11-13/before.png`, `after.png`. **Not tested:** her real records.
+- **SAVED, not live:** goes out only on her own "push live".
