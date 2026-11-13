@@ -14921,3 +14921,31 @@ rest are small. Only points that stood were changed.
 - **Unchanged:** the visits table (a column a visit, its rows as Cases' progress table); Tag notes and Integrate.
 - **Checks:** HEAD's tap-audit and titlebar-audit clean at 1220 and 360 (My patients and Cases); the phone's date box fits its half row; no console errors; no sideways page scroll.
 - **LIVE** in build 20261113-191300 (her "push live"; 6d92524b).
+
+## Her June 2026 tour: 220 cases, kept out of storage (2026-11-13)
+
+- **Her words:** "i had a tour in june 2026, add these cases too", with a colleague's notes of that tour (a 113-page PDF, cases marked
+  `#N`). Her four popup picks: the notes' unheaded second session (19 cases, Prof. Huang Huang) is Day 2 morning; "Day 7 Dr HH hospital
+  am" + "Dr Zhang PM" is Sun 14 June (Mon 15 empty, 16 June is Day 9); storage "Out of storage"; follow-ups "Cases first, ask me after".
+- **Built** (`index.html`): tour `nanjing-2026-06`, "Nanjing Study Tour June 2026", Days 1 to 9 (Mon 8 to Tue 16 June), a morning and
+  an afternoon Clinic each, the teacher the notes name (`PH_TC_JN_WHO`; full names taken from the November timetable, MY reading); 220
+  rows in `PH_TC_JN` (session A Day 1 am 19 · B Day 2 am 19 · C Day 2 pm 16 · D Day 3 am 22 · E Day 4 am 17 · F Day 5 am 16 · G Day 6
+  am 11 · H Day 6 pm 14 · I Day 7 am 21 · J Day 7 pm 23 · K Day 9 am 24 · L Day 9 pm 18). `phTcJnJoin` (called by `phTourCases`) adds
+  them to the list in memory; the list's `toJSON` drops an untouched one from every save (`phTcJnPristine`: the case equals its row as
+  first built); `phTcJnAdd` gives the tour its base number once and files each number in its day; `phTcJnGone` keeps a removed case
+  removed (Undo clears it); `phTcFromWords` names the right tour, day and teacher on a case sheet's foot and in a sign's source.
+- **How the rows were read:** the PDF as text (pdftotext), one reader per one or two sessions with one written brief
+  (mocks/june-tour-cases-2026-11-13/BRIEF.md), each leaving its doubts in a `-notes.txt` file (598 lines: lost "fl" doses read as Fu
+  Ling, codes kept as written, prescriptions not named = "Not recorded", 13 of them) and the general teaching lines in a `-teach.txt`
+  file (748 lines, NOT used yet: her pick, ask first). I checked a sample of rows against the notes, every row's shape, key, session and
+  family by script, and swept every row for a comparison to a person, clothing or a companion (none). My brief wrongly read CGT as Chai
+  Hu Gui Zhi Tang; her 2026-11-10 word is that Chai Gui Tang is Xiao Chai Hu Tang with Dang Gui Shao Yao San: five rows now point at
+  `chaigui`. 40 cases lead with a formula Fang Bing Ren does not hold (no family).
+- **Tested** (sandbox, 53641f6a + this change): 361 cases, 220 June, no number used twice (142 to 361 there); after opening Cases,
+  Timetable, Places, My patients, by Formula and a case sheet: 220 of 220 untouched and 0 June cases in the saved copy; an edited case is
+  the only one saved and comes back edited after a reload with its number; a removed case stays removed after a reload; nothing in a
+  day's list without its case; `phFbrKeyCheck()` returns nothing; tap audit 0 off on Cases, Timetable and Places at 1220 and 360; no
+  sideways scroll; console holds only the sandbox's missing service worker. NOT tested: her devices, two devices syncing, a device
+  still on an older build receiving the tour from sync (it would show the tour's days with no cases until Update).
+- **Page weight:** index.html grows by about 235 KB (14.75 to 14.99 MB).
+- **SAVED, not live:** goes out only on her own "push live".
