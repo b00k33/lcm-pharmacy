@@ -14902,3 +14902,22 @@ rest are small. Only points that stood were changed.
   `mocks/case-day-numbers-2026-11-13/built-timetable.png`, `built-day2.png`. **Integration:** Timetable, Cases (by day), the case page,
   Compare with, Places, a formula's Cases chips, Working on, Edit. **Not tested:** her real records (the cases sit in the code).
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Guide > My patients, vertical space (2026-11-13)
+- **Her words:** "audit the my patients page for vertical space" (the rule: CLAUDE.md "Vertical space first").
+- **Sandbox:** a test patient (Mia Tran, three visits on her record) added through the page's own Add a patient and Update from her record; 1220x900 and 360x740; "before" measured on 656113e7.
+
+| Part | Before | After | Change |
+|---|---|---|---|
+| Space above the views | 16px | 6px | `phPtHtml`'s `.ph-tc` padding, as Cases / Timetable / Places |
+| The patient's bar | 53px card (phone 110) | 32px line (phone 89) | `.ph-tc-pt .ph-cmp-bar` no padding, fill or line |
+| Visit editor, Date / Label / Formula | two rows (Date + Label, then Formula alone) | one row (a phone: Date + Label, then Formula) | `.ph-tc-sp` columns `minmax(140px, 1fr)` (was 200px) |
+| Prescription, Note, Add observations | 76px boxes (three lines) | 54px (two lines; drag one taller) | `textarea` height 54px |
+| Photos strip | 50px | 40px | `.ph-tc-dz` padding 3px 8px |
+| Visit editor | 537px (phone 635) | 392px (phone 474) | the above |
+| Save | y 1020, below the first screen (phone 1312) | y 832, on it (phone 1118) | the above |
+
+- **Shared:** the same editor is a Cases case's Sessions panel (Note, Add observations, Photos, Save): it gets the same two-line boxes.
+- **Unchanged:** the visits table (a column a visit, its rows as Cases' progress table); Tag notes and Integrate.
+- **Checks:** HEAD's tap-audit and titlebar-audit clean at 1220 and 360 (My patients and Cases); the phone's date box fits its half row; no console errors; no sideways page scroll.
+- **SAVED, not live:** goes out only on her own "push live".
