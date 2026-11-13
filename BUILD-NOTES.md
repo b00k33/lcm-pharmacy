@@ -15098,3 +15098,14 @@ rest are small. Only points that stood were changed.
   after-june, phone-june). Rebuilt on 161fc10b (the row in the top bar) and tested again at 1220, 1600 and 1700: no
   errors, size check clean in the bar. **Not tested:** her real records; a window with the side menu folded.
 - **LIVE** in build 20261113-232300 (her "push live", 2026-11-13).
+
+## Guide > Cases: the Timetable's row fits the bar again (2026-11-13)
+- **Why:** a minute after the top-bar row went live (20261113-232100), the Place menu (f9dc4003, LIVE 20261113-232300) joined the Timetable's row. At 1370 the row was about 50px too wide with "All tours" and about 190px too wide with a tour picked, so the Timetable's row dropped back under the bar.
+- **Her pick (popup, with a mock `mocks/2026-11-13 Timetable top with Place - mock.jpg`):** "Magnifier + short names" (other choices: leave it; short names only).
+- **How:**
+  - While the row is in the bar (`.ph-shell-titlebar:has(> .ph-tc-bar)`), `input.ph-gd-search` is 32px (its magnifier only, the placeholder hidden). On focus, or while it holds words, it is 260px with `margin-left: -228px`, so it opens leftwards over the row and the bar keeps its line.
+  - `phTcTopToBar` shortens the Place menu's tour names by the words they all share ("Nanjing Study Tour"); each option and the menu carry the whole name as a tip. The names are restored if the row falls back.
+  - The holder is `flex: 1 1 0` (with `auto` the bar wrapped the holder to a second line instead of shrinking it); margins 20/12px.
+- **Result:** all four views are in the bar at 1370, with All tours or any tour picked. At 1220 (rail), Cases and My patients now fit as well; Timetable and Places stay under the bar with the search at full width. The phone is unchanged (full names).
+- **Checks:** HEAD's tap-audit and titlebar-audit clean at 1370, 1220 and 360. A real click opens the search to 260px and typing stays on one line; clearing it returns it to the magnifier. The search works as before (only its size changed). No console errors; no sideways scroll.
+- **SAVED, not live:** goes out only on her own "push live".
