@@ -15047,7 +15047,7 @@ rest are small. Only points that stood were changed.
 - **Tested** (sandbox): Gui Zhi at 1220 and 360 (numbers in line with the Tongue card's, 800 / 798px; no sideways scroll; no
   errors); case C37's table, Abdominal one 22px line, no head of its own; the size check lists only the 26×20 pictures
   (`.gf-ani-th`, on the KEEP list). Pictures: `mocks/abd-card-2026-11-13/before.png`, `after.png`. **Not tested:** her real records.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261113-231500 (it went out with that publish).
 
 ## Guide > Cases: the views row in the top bar (2026-11-13)
 - **Her words:** "mock space saving version" (her screenshot of the Timetable's top: the Guide bar, then a row of views + By + 361 cases, then the tour name, then the week). Two mocks, the real page restyled in the sandbox: A (one slim row under the bar) and B (the row inside the bar). **Her pick: B.**
@@ -15062,4 +15062,39 @@ rest are small. Only points that stood were changed.
 | 360 phone | under the bar | as before |
 
 - **Checks:** HEAD's tap-audit and titlebar-audit clean on all four views at 1370, 1220 and 360; the Complaint list opens above the page and every row of it takes a click; All days and Compare with lists open; a view switch from the bar works; leaving for another Guide tab removes the holder; no console errors; no sideways scroll. Built on 8670c17e (C22's By Formula rows, 5498e9bd). Picture: `shots/2026-11-13 Timetable top in the bar.jpg`.
+- **SAVED, not live:** goes out only on her own "push live".
+
+## Guide > Cases > Timetable: a Place picker, one pick for every view (2026-11-13)
+- **Her words:** "how do i filter the cases based on the tours" (on the Timetable, June 2026 and Nov 2026 stacked, 361 cases).
+  Asked: the Timetable had no tour filter, so the same Place dropdown the Cases tab has? Her pick: **"Add it"** (All tours
+  first, then each tour A–Z; the pick stays when she switches between Cases, Timetable and Places).
+- **Built** (`index.html`): one list and one picker for both views, `phTcPlaces(srcs)` (tours A–Z, then each seminar and book
+  holding cases A–Z; Cases used to build this list itself) and `phTcPlaceSel(places, cur, all)` (the Cases select's own
+  class, `tcd-pl`; `all` adds "All tours" first). The Timetable passes it to `phTcBarHtml(vis, total, lead, noSrc)` as the
+  bar's first element. **One pick:** `phGdTcSrcF`, the place Places already kept (a tap on a place's name):
+  - the Timetable shows only the picked place (`tours` = that tour, even one with no case yet, so October 2025's days
+    show; `others` = that seminar or book), and its cases (`phTcVisible`, unchanged); "All tours" = every tour with a case,
+    as before;
+  - a pick in Cases sets it too; a pick on the Timetable moves Cases to that place (`phGdTcDayTour`); "All tours" leaves
+    Cases on its own place (Cases always shows one);
+  - switching to Cases (`data-tc-go`) opens the picked place (a tour's block opens its day); a day's head
+    (`data-tc-ttday`) and Clear no longer drop the pick; on the Timetable, Clear and a block chip's x keep the place
+    (All tours is in the picker); a case opened from elsewhere (`phTcOpenCase`) moves a pick to its tour, All stays All;
+  - the chip for a whole place is not drawn on the Timetable (the picker names it) or on Cases; a tour's block stays a chip
+    on the Timetable; Places is unchanged (its chip and Clear).
+- **Width:** the picker is as wide as what it shows (`field-sizing: content`): "All tours" is 90px, so the Timetable's top
+  stays one line at 1220 (the first table at 135px, 134 without the picker). A picked tour (its name 227px) wraps the top
+  to two lines at 1220 (the table at 175px); the page is then one tour, so far shorter. **With the row in the top bar**
+  (161fc10b, her pick B, saved just before this): the picker rides along; the row needs about 100px more of the bar, so
+  with All tours it moves up from about 1610px wide (1500 before; at 1600 it misses by 1px, the table at 135 instead of 96),
+  with a picked tour from about 1790; at 1700 picking a tour drops it under the bar and All tours puts it back. On a phone the picker may take the row
+  (`max-width: 100%`, PHONE REDESIGN), so "Nanjing Study Tour June 2026" shows whole in 16px words (it was cut at 260px);
+  the Cases select gets the same.
+- **Tested** (sandbox, her tours: June 2026 220 cases, Nov 2026 141, Oct 2025 dates only): at 1220, All → June → Cases →
+  Places → Timetable kept June (220 of 361, 2 week tables); Places' tap on Nov → Timetable Nov; a Cases pick → Timetable
+  follows; All tours → Cases stays on its tour; a day head → Cases that day, back = the same pick; By Formula (the other
+  session's 5498e9bd) works with a pick; no errors. Size check at 1220 and 360: nothing new (only the 40px case rows and the
+  26×20 pictures, as before); no sideways scroll at 360. Pictures: `mocks/timetable-place-2026-11-13/` (before, after-all,
+  after-june, phone-june). Rebuilt on 161fc10b (the row in the top bar) and tested again at 1220, 1600 and 1700: no
+  errors, size check clean in the bar. **Not tested:** her real records; a window with the side menu folded.
 - **SAVED, not live:** goes out only on her own "push live".
