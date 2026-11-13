@@ -32412,6 +32412,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   #pharmacyPage #presFlowRail .ph-rail-who .nm { min-width: 0; }
   #pharmacyPage #presFlowRail .ph-rail-who b { display: block; font-size: var(--fs-14); font-weight: 700; line-height: 1.2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   #pharmacyPage #presFlowRail .ph-rail-who small { display: block; font-size: var(--fs-11-5); color: var(--ph-band-soft); }
+  /* her own rail (no This visit box, her 2026-11-13 picks): the fold chevron alone, a slim row, no line under it */
+  #pharmacyPage #presFlowRail:not(.mini):not(:has(.ph-flow-visit)) .ph-rail-who { margin: 0; padding: 0 6px 2px; border-bottom: 0; }
   /* This visit and Next up, on the band */
   #pharmacyPage #presFlowRail .ph-flow-visit { margin: 0 0 6px; padding: 2px 6px 0; }
   #pharmacyPage #presFlowRail .ph-flow-visit .top b { color: #fff; }
@@ -46868,6 +46870,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // keep the icon"), the fast (its clock hand turns while she fasts), herb doses, meals, steps, habits, her next patient
   // today; a count rolls when it changes (data-roll); a chip opens its page the rail's own way (data-flow-prof), the next
   // patient opens Appointments
+  const PH_MINE_BAND_QUIET = true;   // her 2026-11-13 pick A: name + cycle day only (false brings the chips back)
   function phMineBandHtml(t) {
     const name = t ? presPatientFor(t) : "";
     if (!name || !phFastIsMe(name)) return "";
@@ -46875,6 +46878,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const chip = (go, w, lead, v, cls, em) => `<button type="button" class="ph-mine-bch${cls ? " " + cls : ""}" ${go} title="${w}" aria-label="${w}${v ? ` ${v}` : ""}">${lead}${v ? `<em${em ? " " + em : ""}>${v}</em>` : ""}</button>`;
     const c = phMeCycleAt(tk);
     if (c) out.push(chip(rec && phCycleTracked(rec) ? `data-flow-prof="cycle"` : `data-ph-me-cycle="1"`, `Cycle · ${esc(c.phase)}`, phMeIc("drop"), `CD ${c.day}`, "cyc", `data-roll="band-cd"`));
+    // her 2026-11-13 pick A ("the top row ... looks really really busy ... i dont look at all those elements"): the band is the cycle day
+    // alone; the fast, herbs, meals, steps, habits and next-patient chips below are off (their pages and the Meals page's Fast card stay)
+    if (PH_MINE_BAND_QUIET) return `<div class="ph-mine-band" id="phMineBand" role="group" aria-label="Today">${out.join("")}</div>`;
     const a = phFastActive();
     if (a) {
       const ms = Date.now() - Date.parse(a.s), p = Math.min(ms / PH_FAST_H / phFastGoal(a), 1);
@@ -70349,6 +70355,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         }, 60);
         return;
       }
+      if (e.target.closest("[data-flow-treat]")) { presFlowTreatOpen = !presFlowTreatOpen; presFlowRailRefresh(); return; }
       const flowMore = e.target.closest("[data-flow-more]");
       if (flowMore) { presFlowMoreOpen = presFlowMoreOpen === flowMore.dataset.flowMore ? "" : flowMore.dataset.flowMore; presFlowRailRefresh(); return; }
       // the teal rail (her picks 2026-11-02): a group's ▾ head folds it; "‹ Menu" folds the rail to its icons (the open plan page
@@ -80208,7 +80215,7 @@ or changing anything in Cliniko.
   function presBandAgeHtml(t, isF) {
     if (isF) return "";
     const name = presPatientFor(t) || "";
-    if (!name) return "";
+    if (!name || (PH_MINE_BAND_QUIET && phFastIsMe(name))) return "";   // her own record: no age (her 2026-11-13 pick A)
     const rec = phPatientPeek(name) || {};
     const age = phAgeOf(rec.dob);
     if (age == null || !rec.sex) return "";
@@ -99991,6 +99998,7 @@ burning behind her chest|Stomach: heartburn|b`;
      done; the next step's circle pulses once; the body slides in when
      the stage/tab changes. presFlowLast remembers the last render per
      script so nothing replays on an ordinary repaint. ==== */
+  let presFlowTreatOpen = false;   // her own rail's "Treat myself" row (her 2026-11-13 pick): open on a tap
   let presFlowLast = null, presFlowMoreOpen = "";   // the rail's "⋯ More" rows: "" = all closed, else the one open ("1" = Patterns · Diagnosis and Timeline, her 2026-10-29 pick; "life" · "file" · "log" = her own record's folded pages, the Me audit the same day)
   function presFlowSteps(t, isNew) {
     const name = presPatientFor(t) || t.name || "";
@@ -100130,6 +100138,7 @@ burning behind her chest|Stomach: heartburn|b`;
   function presFlowRailHtml(t, isNew) {
     const f = presFlowSteps(t, isNew);
     const mini = presRailMini(), folds = presRailFolds(), tip = l => mini ? ` title="${esc(l)}"` : "";
+    const meQuiet = phFastIsMe(f.name);   // her 2026-11-13 picks: her own rail keeps names only (the cycle day stays)
     // one lit row (rail-mock2): while a page row is open, its step stays plain (par)
     const rowOn = [f.profSubs, f.examSubs, f.fertSubs, f.patSubs, f.subs].some(a => a.some(u => u.on));
     const key = `${presStage}:${presStage === "plan" ? (presTpMainTab || "plan") : presStage === "profile" ? (presAssessTab || "") : ""}`;
@@ -100199,7 +100208,7 @@ burning behind her chest|Stomach: heartburn|b`;
       if (rcN) presFlowLast.cnt[u.id] = rcN;
       const rcRoll = rcN && prevCnt && prevCnt[u.id] !== rcN && !phTpReduceMotion() ? " roll" : "";
       const badge = rcN ? `<span class="ph-rc${rcRoll}" title="${esc(u.id === "supplements" ? `Taking ${rcN}` : u.id === "bloods" ? `${rcN} result${rcN === 1 ? "" : "s"}` : `${rcN} appointment${rcN === 1 ? "" : "s"}`)}">${rcN}</span>` : "";
-      return `<button type="button" class="${u.on ? "on" : ""}${u.locked ? " locked" : ""}${vis}" data-flow-prof="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}"${u.locked ? ` title="Add sex and date of birth first"` : tip(u.label)}>${presRailIcn(u.id)}${esc(u.label)}${u.mini ? `<span class="sub">${esc(u.mini)}</span>` : ""}${u.dn ? u.dn : ""}${left}${badge}${u.flags ?`<span class="flag${seenFlags && !seenFlags.includes(flagKey(u)) ? " pop" : ""}" title="${esc(u.flagTitle)}">${u.flags}</span>` : ""}</button>`;
+      return `<button type="button" class="${u.on ? "on" : ""}${u.locked ? " locked" : ""}${vis}" data-flow-prof="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}"${u.locked ? ` title="Add sex and date of birth first"` : meQuiet && !mini && u.mini && u.id !== "cycle" ? ` title="${esc(u.label + " · " + u.mini)}"` : tip(u.label)}>${presRailIcn(u.id)}${esc(u.label)}${u.mini && (!meQuiet || u.id === "cycle") ? `<span class="sub">${esc(u.mini)}</span>` : ""}${u.dn && !meQuiet ? u.dn : ""}${meQuiet ? "" : left + badge}${u.flags && !meQuiet ?`<span class="flag${seenFlags && !seenFlags.includes(flagKey(u)) ? " pop" : ""}" title="${esc(u.flagTitle)}">${u.flags}</span>` : ""}</button>`;
     };
     const visitHead = visitTotal ? `<div class="ph-flow-visit" aria-label="${visitDone} done, ${visitLeft} to do">
       <div class="top"><b>This visit</b><span class="n done">${visitDone} done</span><span class="n todo">${visitLeft} to do</span></div>
@@ -100219,7 +100228,7 @@ burning behind her chest|Stomach: heartburn|b`;
       const all = f.profSubs.filter(u => u.grp === g), items = all.filter(u => !foldOf(u)), fold = all.filter(foldOf);
       return (items.length ? `<div class="ph-flow-sub prof g-${g}${prof.done ? " done" : ""}${newlyDone.includes("profile") ? " anim" : ""}${folds.has(g) ? " fold" : ""}">${capBtn(g, cap)}${items.map(profBtn).join("")}</div>` : "") + moreRow(g, `prof g-${g}`, fold);
     };
-    const fileHtml = grpHtml("file", "File <i>once</i>");
+    const fileHtml = grpHtml("file", meQuiet ? "File" : "File <i>once</i>");
     // her own record (ONE ME, her picks 2026-10-26): Body and Life lead the rail, and no "This visit" box (patients keep it)
     const mineHtml = grpHtml("body", "Body") + grpHtml("life", "Life");
     const checkHtml = grpHtml("check", "Today's check <i>every visit</i>");
@@ -100253,10 +100262,17 @@ burning behind her chest|Stomach: heartburn|b`;
     const moreHtml = moreItems.length ? `<div class="ph-flow-sub keep plan more${moreOpen ? " open" : ""}"><button type="button" class="more" data-flow-more="1" aria-expanded="${moreOpen}"${tip(moreItems.map(s => s.label).join(" · "))}>${presRailIcn("more")}More${moreOpen ? "" : `<span class="sub">${moreItems.map(s => esc(s.label)).join(" · ")}</span>`}</button>${moreOpen ? moreItems.map(s => s.id === "patdx" ? patSubBtn(s) : fertSubBtn(s)).join("") : ""}</div>` : "";
     const planSubHtml = f.planSubs.length ? `<div class="ph-flow-sub keep plan${planStep.done ? " done" : ""}">${f.planSubs.map(examSubBtn).join("")}</div>` : "";
     // her 2026-11-08 "merge with the Me line, space save": the fold chevron sits in the name row now, not its own line above it
-    const ini = (f.name || "").split(/[\s,]+/).filter(Boolean);
     const menu = `<button type="button" class="ph-rail-menu" data-flow-mini="1" aria-expanded="${!mini}"${tip("Menu")}><svg class="icn" aria-hidden="true"><use href="#i-chev-l"></use></svg></button>`;
-    const who = `<div class="ph-rail-who"${f.name ? tip(f.name) : ""}>${menu}${f.name && isMe ? `<span class="av" aria-hidden="true">${esc((((ini[0] || "")[0] || "") + (ini.length > 1 ? ini[ini.length - 1][0] : "")).toUpperCase())}</span><span class="nm"><b>${esc(f.name)}</b>${isMe ? "<small>My profile</small>" : ""}</span>` : ""}</div>`;
-    const inner = `${who}${isMe ? mineHtml : visitHead + nextHtml}${stepHtml(prof)}${fileHtml}${checkHtml}${sumHtml}${stepHtml(todayStep)}${examSubHtml}${fertHtml}${stepHtml(patStep)}${patSubHtml}${moreHtml}${stepHtml(planStep)}${planSubHtml}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}`;
+    // her 2026-11-13 pick: the name is in the band, so her rail no longer repeats it (a patient's never did): the fold chevron alone
+    const who = `<div class="ph-rail-who"${f.name ? tip(f.name) : ""}>${menu}</div>`;
+    const careHtml = `${checkHtml}${sumHtml}${stepHtml(todayStep)}${examSubHtml}${fertHtml}${stepHtml(patStep)}${patSubHtml}${moreHtml}${stepHtml(planStep)}${planSubHtml}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}`;
+    // her own record (her 2026-11-13 pick "One 'Treat myself' row"): Today's visit to Dispense and the Clinic pages fold into one row
+    // after File; it opens on a tap, and stays open while one of its pages is the page
+    const careOn = isMe && ([todayStep, patStep, planStep, treat, dispStep].some(x => x && x.on) || [f.examSubs, f.fertSubs, f.patSubs, f.planSubs, f.subs].some(a => a.some(u => u.on))
+      || f.profSubs.some(u => u.on && ["check", "sum", "log"].includes(u.grp)));
+    const careOpen = careOn || presFlowTreatOpen;
+    const treatHtml = `<div class="ph-flow-sub keep treat more${careOpen ? " open" : ""}"><button type="button" class="more" data-flow-treat="1" aria-expanded="${careOpen}"${tip("Treat myself")}>${presRailIcn("more")}Treat myself${careOpen ? "" : `<span class="sub">Visit · Care Plan · Dispense</span>`}</button></div>${careOpen ? careHtml : ""}`;
+    const inner = isMe ? `${who}${mineHtml}${fileHtml}${treatHtml}` : `${who}${visitHead + nextHtml}${stepHtml(prof)}${fileHtml}${careHtml}`;
     let sig = 0; for (let i = 0; i < inner.length; i++) sig = (sig * 31 + inner.charCodeAt(i)) | 0;   // lets a repaint skip an identical rail
     return `<div class="ph-flow-rail${mini ? " mini" : ""}" id="presFlowRail" role="tablist" aria-label="Where you are" data-sig="${sig}"><div class="ph-rail-in">
       ${inner}
@@ -103435,7 +103451,7 @@ burning behind her chest|Stomach: heartburn|b`;
       <div class="ph-pres-band${!isF ? phPsBandCls() : ""}${!isF && phFastIsMe(presPatientFor(t) || "") ? " ph-mine-head" : ""}">
         <button type="button" class="ph-band-back" data-pres-close="1" aria-label="Close">‹</button>
         <div class="ph-band-titlewrap">
-          <span class="ph-band-nameline"><button type="button" class="ph-band-name" data-pres-name-jump="1" title="Tap to edit the name">${esc(phDispName(t.name, isF))}</button>${isF ? "" : phMeTagHtml(presPatientFor(t) || "")}${presBandAgeHtml(t, isF)}${isF ? "" : phRfBandHtml(presPatientFor(t) || "")}${isF ? "" : `<span class="ph-band-page" id="presBandPage" hidden></span>${phBandAlertHtml(presPatientFor(t) || "")}`}</span>
+          <span class="ph-band-nameline"><button type="button" class="ph-band-name" data-pres-name-jump="1" title="Tap to edit the name">${esc(phDispName(t.name, isF))}</button>${isF || PH_MINE_BAND_QUIET ? "" : phMeTagHtml(presPatientFor(t) || "")}${presBandAgeHtml(t, isF)}${isF ? "" : phRfBandHtml(presPatientFor(t) || "")}${isF ? "" : `<span class="ph-band-page" id="presBandPage" hidden></span>${phBandAlertHtml(presPatientFor(t) || "")}`}</span>
           <span class="ph-band-sub" id="presBandSub" data-live="band:${esc(t.id)}" data-live-sig="${esc(presBandSubText(t, isF, isNew))}">${presBandSubText(t, isF, isNew)}</span>
         </div>
         ${isF ? `<span class="ph-pres-type formula"><svg class=icn aria-hidden=true><use href=#i-jar></use></svg> formula</span>` : ""}
