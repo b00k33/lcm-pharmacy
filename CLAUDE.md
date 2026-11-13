@@ -1507,6 +1507,15 @@ not repeated here.
   one, change the list and run it again. All of it is a DRAFT reading of her notes, hers to correct in Edit. Her 2026-11-13 words: Chu Fan
   Tang and Ba Wei Chu Fan Tang are ONE formula (one page, `baweichufan`, both cases; never split them again; 69 formulas, 27 case
   tables); "mouth ulcers" is a Bing sign (`mouth_ulcers_now`), in a table only where a case's note says it is there.
+- Her June 2026 tour (her 2026-11-13 "i had a tour in june 2026, add these cases too"): a second tour, `nanjing-2026-06`, nine days from
+  Mon 8 June, 220 cases (`PH_TC_JN`, read from a colleague's notes of that tour). **Its cases are kept OUT of storage** (her pick): they
+  join the list in memory when the app opens (`phTcJnJoin`) and the list's `toJSON` leaves an untouched one out of every save; a case she
+  edits, correlates or links is saved whole; one she removes is remembered on the tour (`jnGone`). A case's number is the tour's `jnBase`
+  + its row's place: **never reorder, insert into or delete from `PH_TC_JN`; add rows at the end only.** Never write code that adds a
+  field to every case on read (every June case would then count as edited and fill storage): the test is `phTcJnPristine`, 220 of 220
+  after opening every Cases view. Her picks: the notes' unheaded second session is Day 2 morning; "Day 7" is Sun 14 June; cases first,
+  then ASK her before teaching notes or new formula tables from these notes. CGT in these notes is Chai Gui Tang (`chaigui`) where the
+  herbs are Xiao Chai Hu Tang with Dang Gui Shao Yao San.
 - Two colours (her 2026-11-10 "give chai po tang half ban xia and half chai hu colour in the circle and in the banner"): `PH_FBR_COLOUR_TWO`
   splits a formula's circles and banner down the middle (`sw` / `--cs`); table lines, board and scoring keep its own colour. Chai Po Tang only.
 - A formula made of two halves (her 2026-11-10 "chai gui tang is XCHT with dgsys", her pick "Add it from its two halves"): `phFbrFromHalves`
