@@ -1519,6 +1519,9 @@ not repeated here.
   Her 2026-11-13 picks after the cases: teaching lines on each formula's page (`PH_GDF_TEACH_JN`, folded "June 2026 tour"); a draft
   table for "all of them" (18 formulas, `src: ["jn-..."]`, as the 22); CQT is Chai Qin Tang (`chaiqin`). Yue Bi Tang with Bai Zhu or
   Cang Zhu in its recipe is Yue Bi Jia Zhu Tang; Ba Wei Jie Yu Tang is the app's Jie Yu Tang (`jieyutang`).
+  The official timetable (her 2026-11-13 picture, June 8-19) REPLACES the day picks above: twelve days; the notes' Day 1 clinic is
+  Day 1 AFTERNOON; the notes' "Day 7" is Mon 15 June = Day 8 (Sun 14 is Rest); `phTcJnTt` moves a case once, only if it still
+  sits where the first filing (`PH_TC_JN_S0`) put it. The timetable says Fri 12 June is Rest; the notes' 16 cases of 12/6 stay there.
 - Two colours (her 2026-11-10 "give chai po tang half ban xia and half chai hu colour in the circle and in the banner"): `PH_FBR_COLOUR_TWO`
   splits a formula's circles and banner down the middle (`sw` / `--cs`); table lines, board and scoring keep its own colour. Chai Po Tang only.
 - A formula made of two halves (her 2026-11-10 "chai gui tang is XCHT with dgsys", her pick "Add it from its two halves"): `phFbrFromHalves`
