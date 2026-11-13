@@ -14967,3 +14967,31 @@ rest are small. Only points that stood were changed.
   (first try flagged the fold button's corners and height; fixed to 6px corners, 31px high); no sideways scroll; the 220 June cases
   still load. NOT tested: her devices; the fold inside a full formula card on a phone was checked by audit only, not by eye.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## June 2026 tour: 18 draft formula tables, CQT = Chai Qin Tang (2026-11-13)
+
+- **Her words:** popup picks, shown the list of formulas the June cases lead with that Fang Bing Ren lacked: "All of them"; and
+  CQT "Chai Qin Tang".
+- **Built** (`index.html`): 18 formulas with a case table each (87 formulas now): Ling Gui Zao Gan Tang (3 cases), Gui Ling Gan Lu
+  Yin (2), and one case each for Ba Wei Tong Yang San, Feng Yin Tang, Gan Mai Da Zao Tang, Gui Ling Long Mu, Gui Zhi Ren Shen Tang,
+  Hou Shi Hei San, Huang Qi Gui Zhi Wu Wu Tang, Ma Huang Lian Qiao Chi Xiao Dou Tang, Ma Xing Shi Gan Tang, San Huang Si Ni Tang, Tao
+  He Cheng Qi Tang, Wu Ji San, Xi Jiao Di Huang Tang, Xiao Cheng Qi Tang, Yin Chen Wu Ling San, Zhi Zi Gan Cao Chi Tang. Built as
+  November's 22: each sign a case showed that the match list reads as a catalog sign, at 3; `src: ["jn-<key>"]`; a `PH_BTJ` card row
+  (its picture is the signs in the catalog's own labels); `PH_TC_MATCH` + 191 lines; the 21 rows name their formula.
+- **My reading, hers to correct:** the herb each sits under (Gui Zhi: Ling Gui Zao Gan, Gui Ling Gan Lu Yin, Ba Wei Tong Yang (also
+  Ban Xia), Gui Ling Long Mu, Gui Zhi Ren Shen, Yin Chen Wu Ling; Ma Huang: Ma Huang Lian Qiao Chi Xiao Dou, Ma Xing Shi Gan, Wu Ji
+  San; Da Huang: Tao He Cheng Qi (also Gui Zhi), Xiao Cheng Qi; Huang Qi: Huang Qi Gui Zhi Wu Wu (also Gui Zhi); Shi Gao: Feng Yin;
+  Huang Lian: San Huang Si Ni; on their own: Gan Mai Da Zao, Hou Shi Hei San, Xi Jiao Di Huang, Zhi Zi Gan Cao Chi); the cautions by
+  each formula's usual herbs, only the kinds the app already has (Ban Xia, Ma Huang, Fu Zi in pregnancy; warm herbs in
+  bronchiectasis); Gui Ling Long Mu is a set of four herbs the notes add to a formula, kept as a page because she picked it.
+- **Not new tables, linked instead:** CQT (3 cases) = Chai Qin Tang (her pick); Yue Bi Tang (1) = Yue Bi Jia Zhu Tang (its recipe
+  holds Bai Zhu and Cang Zhu); Ba Wei Jie Yu Tang (1) = the app's Jie Yu Tang (its recipe is Si Ni San with Ban Xia Hou Po Tang).
+  14 June cases stay unlinked (13 with no prescription written, 1 "original formula").
+- **The match list:** a reader matched each observation to the catalog (220 lines, every label checked against the pools); I read
+  all of it and took out 12 that stretched (a cause-bound or conditional symptom, a disease feature, "wants to lose weight" as a
+  build, "sweaty" as a sweat type, acne as a rash). Thin tables: Hou Shi Hei San 3 signs, Ma Xing Shi Gan 3, Huang Qi Gui Zhi Wu Wu 5.
+- **Tested** (sandbox, 6278dd8a + this change): 87 formulas, each new id has a table and a card; `phFbrKeyCheck()` returns nothing;
+  `phFbrRank` runs; each new formula's Guide card renders with its case chips; cases linked 3, 2 and 1 each; 220 June cases still
+  untouched and 0 stored; tap audit 0 off on the Guide families page with a new formula open at 1220 and 360; no sideways scroll.
+  NOT tested: her devices; no picture taken (the preview pane was too narrow); a patient's Fang Bing Ren board with these formulas.
+- **SAVED, not live:** goes out only on her own "push live".

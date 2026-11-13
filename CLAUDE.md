@@ -1516,6 +1516,9 @@ not repeated here.
   after opening every Cases view. Her picks: the notes' unheaded second session is Day 2 morning; "Day 7" is Sun 14 June; cases first,
   then ASK her before teaching notes or new formula tables from these notes. CGT in these notes is Chai Gui Tang (`chaigui`) where the
   herbs are Xiao Chai Hu Tang with Dang Gui Shao Yao San.
+  Her 2026-11-13 picks after the cases: teaching lines on each formula's page (`PH_GDF_TEACH_JN`, folded "June 2026 tour"); a draft
+  table for "all of them" (18 formulas, `src: ["jn-..."]`, as the 22); CQT is Chai Qin Tang (`chaiqin`). Yue Bi Tang with Bai Zhu or
+  Cang Zhu in its recipe is Yue Bi Jia Zhu Tang; Ba Wei Jie Yu Tang is the app's Jie Yu Tang (`jieyutang`).
 - Two colours (her 2026-11-10 "give chai po tang half ban xia and half chai hu colour in the circle and in the banner"): `PH_FBR_COLOUR_TWO`
   splits a formula's circles and banner down the middle (`sw` / `--cs`); table lines, board and scoring keep its own colour. Chai Po Tang only.
 - A formula made of two halves (her 2026-11-10 "chai gui tang is XCHT with dgsys", her pick "Add it from its two halves"): `phFbrFromHalves`
