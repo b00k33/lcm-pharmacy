@@ -20,6 +20,7 @@
     ".gf-dots button", ".gf-dots i",                 // importance dots (the Guide, Compare)
     ".gf-mcell",                                    // a value in the Guide's table (its number is data; a tap opens its box)
     ".gf-row", ".sg", ".gf-pr",                     // list rows, sign rows, search results (a row may wrap to two lines)
+    ".tcd-pg",                                      // a case row (Guide > Cases list, Timetable): its picture beside the name and formula, two lines (her 2026-11-13 vertical space audit)
     ".gf-fam-fold", ".gf-picfold-head", ".ph-ftg-foldbar",   // fold heads: a section's capitals label that folds it (a heading)
     ".gf-ks-t", ".fs-scrub", ".gf-ani-th",                        // key-sign picture tiles; the film's scrubber (a slider); the Animation pane's picture buttons (2026-11-10)
     ".ph-tbm-ic",                                   // the top bar's circles (audited 2026-10-24; the phone's bar stays 31px)
