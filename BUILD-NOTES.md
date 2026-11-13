@@ -15168,4 +15168,4 @@ rest are small. Only points that stood were changed.
 - **Not tested:** her real records (her own recipes, her tags); Patterns on the November 2026 and October 2025 tours by eye.
 - Pictures: `mocks/patterns-build-2026-11-13/` (1-patterns, 2-edit-groups, 3-case-c142, 4-phone-patterns).
 - **DRAFT:** the complaint groups and their names are Claude's (the Draft tag) until she reads them.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE** in build 20261114-005300 (her "push live").
