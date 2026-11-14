@@ -15221,11 +15221,11 @@ rest are small. Only points that stood were changed.
 - **How:** `phTcRxHtml` with 2+ formulas draws blocks `B` (a herb in its first formula; none = "Other herbs"); `bHead` = number, name, this case g, her recipe g; rows compare with that formula's own recipe (`r.bmg`, `r.bch`); the Formula column is gone; the head no longer lists the names (the blocks do) and the written line keeps only its extra words. Without her recipe: a head + compact grid per formula. One formula: unchanged.
 - **Checks:** the sandbox, C142 (jn-ja1) with a borrowed Da Chai Hu Tang recipe (her picture's grams) and without; 1280 + 375: tap-audit 0 on `.tc-rx`, no sideways scroll, no names cut.
 - **Not tested:** her own recipes on her device.
-- **SAVED 22dcac4f, not live:** goes out only on her own "push live".
+- **LIVE 20261114-210200** (her "push live").
 
 ## Guide › Cases: the case list folds (2026-11-14)
 - **Her words:** "make the column on the left collapsible" (her screenshot: Nov tour, C1 Lung nodule).
 - **How:** `phGdTcListFold` (this device, "lcm-tc-list-fold"); `.tcd-fold` (32px circle, ‹ / ›, `data-tc-listfold`) in the first `.tcd-bh` (one line, … + hover) or a slim `.tcd-bh0`; folded `.tcd-list.fold` = the button + `.tcd-pn` number buttons (`data-tc-dpick`, title = n · complaint · formulas) + `.tcd-sep`; `.tcd-body.fold` 40px column; the one-case page drops `max-width:760px` while folded. The phone (640 and under) draws no fold.
 - **Found while checking:** the Abdominal card past 470px kept the side-by-side `margin-left:-10px` on `.gf2 .pcw .sp` and cut "Objective"; now 0.
 - **Checks:** 1370: folded column 40px, a number opens its case and the open list shows it selected, the choice kept; tap-audit 0 on the list both ways, titlebar-audit 0; 375: no fold button, no sideways scroll; no console errors.
-- **SAVED 5fc2dda7, not live:** goes out only on her own "push live".
+- **LIVE 20261114-210200** (her "push live").
