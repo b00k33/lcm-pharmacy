@@ -15229,3 +15229,32 @@ rest are small. Only points that stood were changed.
 - **Found while checking:** the Abdominal card past 470px kept the side-by-side `margin-left:-10px` on `.gf2 .pcw .sp` and cut "Objective"; now 0.
 - **Checks:** 1370: folded column 40px, a number opens its case and the open list shows it selected, the choice kept; tap-audit 0 on the list both ways, titlebar-audit 0; 375: no fold button, no sideways scroll; no console errors.
 - **LIVE 20261114-210200** (her "push live").
+
+## 2026-11-14 Guide > Cases is ONE page (the case library)
+
+Her synth22 ask: "help design the case study organisation so when i navigate throughout this section, it feels more seamless
+instead of the page changing alot visually. i want to see all my cases, and be able to filter them based on the trip, and
+analyse patterns of case conditions and formulas etc. i will also in the future add cases from textbooks, seminars, friends"
++ "this is essentially a great reference/database". Her 4 popup picks: the one-page layout with "make the left column
+collapsible"; the right pane opens on Summary; "Yes, fold them in"; kinds Tours, Textbooks, Seminars, Friends and colleagues.
+
+- ONE frame, drawn by `phTcDayHtml` for every view: the bar (From = `phTcPlaceSel`, every source under its kind, "All sources"
+  first; Group by Day | Complaint | Formula = `phGdTcGb`; the filter; "n of N cases" = the cases the list shows), the date
+  strip when a tour is picked, the case list on the left, ONE pane on the right.
+- The views are the pane. `phGdTcView` keeps its keys: "pat" Summary (was Patterns; the default), "day" Case, "tt" Timetable,
+  "grid" Organise (was Places: the grid, where a case is added and a place is opened on the Sources page). `phTcPatHtml` and
+  `phTcTtHtml` now return the pane's inside only. My patients is still its own page.
+- The place is `phGdTcSrcF` ("" = All sources) for the list too; `phGdTcDayTour` is no longer read by the frame. A tour opens
+  on all its days (blocks with cases, each head "Day n · date · time · teacher"); a day square narrows the list and Summary,
+  a second tap widens again. Summary's own day picker went (the strip is the day).
+- A tap on a Summary bar keeps the pane on Summary: the list and the counts narrow to it, named by its chip.
+- The list scrolls on its own (sticky, the window's height) and keeps its place across a redraw while it holds the same cases
+  (`phGdTcListAt`, put back in `phGdAfterPaint`). A row is lit only while the pane shows its case.
+- A phone shows the list (Case) or the pane (Summary, Timetable, Organise, an open case), one at a time, as before.
+- `PH_TC_KINDS`: Books is now "Textbooks"; a fourth kind "friend" (Friends and colleagues), made on the Sources page as an
+  event that "Shows in Cases as a Friend or colleague".
+- Not done: the old Places page code under `phTcHtml`'s first return is unreachable and can go; with the side menu open the
+  views row does not fit the top bar at 1370 (it stays the page's first row).
+- Tested in the sandbox at 1024, 1370 and 360: every pane, From, the strip, Group by, a Summary tap, a Timetable day and chip;
+  tap audit 0 off. Not tested: her devices, a source of the new kind with cases in it.
+- SAVED, not live.
