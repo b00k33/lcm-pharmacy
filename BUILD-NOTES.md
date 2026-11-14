@@ -15282,4 +15282,4 @@ collapsible"; the right pane opens on Summary; "Yes, fold them in"; kinds Tours,
   build's (the case list rows `.tcd-pg` 40px, the sign pictures `.gf-ani-th`). Checked: the Case view (one formula, several,
   joint, Added, notes); Patterns › Formulas reads `phTcRx`, unchanged. Not checked: her own recipe tables beyond drawing
   without error (unchanged code).
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE 20261114-213200** (her "push live").
