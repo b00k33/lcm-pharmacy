@@ -15322,3 +15322,25 @@ open); all the case histories (38, not 37: one heading was hidden by a page brea
   with 1 case, numbered 1, family Shu Yu Wan, 24 observations, both sessions; loading it again adds nothing; no errors;
   the case page draws (its column, the two sessions, the herbs). Not tested: her own device (she imports after Update).
 - **SAVED, not live:** goes out only on her own "push live", with the import door (58b86e65).
+
+## integrate33: Huang Lian Tang + Huang Lian from Huang Huang's 2017 notes (2026-11-14, 69350f64, SAVED, not live)
+Her ask: "integrate33 this for Huang Lian Tang" (the PDF `HUANG-2017-HUANG-LIAN-NOTES-3.pdf`, Huang Huang, tr. Reece Yeo) + "yes include for huang lian too".
+- **Huang Lian Tang (`PH_FORMULAS.huangliantang`):** her run-13 lines and numbers unchanged. Added Bing: vomiting_now, anxiety_now, alcohol_vomit_diarrhea 4;
+  impotence, premature_ejac_now, lowabd_tense_now, lowabd_pain_now, urine_difficult_now 3. Added Ren: thin_body, complexion_dark_yellow_tend, flat_belly,
+  abd_wall_weak_tend, abd_resist_tend, tongue_purple, tongue_pale, lips_dark_tend, lips_pale_tend, anxiety_tend, vomiting_tend 4; impotence_tend,
+  lowabd_tight_tend, urine_difficult_tend 3. New `or` groups so one idea scores once (restless/anxiety, nausea/vomiting, impotence/early ejaculation, lower
+  belly tight/pain, dark/pale tongue, dark/pale lips, flat belly/soft wall). Weights are MY draft (his notes have none): person + main illness 4, the
+  sexual / lower-belly / urine picture 3.
+- **`core`:** his person, the Ban Xia Xie Xin Tang contrast, his dose and decoction, the Rou Gui vs Huang Lian dose shift (slow vs slippery pulse, appetite,
+  restlessness, fast heart, sugar) and his reported uses, short and in my words (the PDF is "all rights reserved"). Dose-shift pulses score nothing, so no
+  slow or plain slippery pulse sign was added.
+- **Huang Lian (`PH_FORMULAS.huanglian`):** diarrhea_heat_now / diarrhea_heat_tend 4 (Bing one idea with diarrhea). Every other line of his herb picture was there.
+- **No new pool signs.** "Around or below the navel" stays the plain Abdominal: pain (its body picture already sits at the navel; a tender mark on the chart
+  is not spontaneous pain). "White coat" has no honest sign (white_coat says "thin, white"). Only wiring gap filled: `PH_BING_ALIAS.alcohol_vomit_diarrhea`
+  ("hangover ..."); the rest already reach the tongue chips, belly chart, Look, twins, Patterns and search.
+- **Tested (sandbox, `phFbrRank` itself):** his person 4th → 2nd, after alcohol 14th → 2nd, sexual + poor sleep 11th → 3rd; Xiao Jian Zhong control stays
+  low (11th); heat diarrhoea → Huang Lian 1st (.32 → .37). A Ban Xia Xie Xin picture still lists Huang Lian Tang 1st (her red tongue 5 + focal distention 5:
+  needs her word). Boots clean; tap + title-bar audits at 1220 and 360 identical to HEAD (data only). Seen: Wai Tai Fu Ling Yin (4 Ren lines, no Bing) leads
+  any thin, dark-yellow person; it did before this too.
+- **Needs her word:** (1) lower her red tongue / focal distention on Huang Lian Tang? (2) diarrhoea + rumbling 3 → 4? (3) my 4 / 3 draft weights.
+  Matrix: `mocks/2026-11-14 Huang Lian Tang integrate33.html`.
