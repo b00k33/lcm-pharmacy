@@ -15303,3 +15303,22 @@ open); all the case histories (38, not 37: one heading was hidden by a page brea
 - Tested in the sandbox: the import (38 added, a second load adds none, a wrong file says so), Summary, a case with stages,
   tap audit 0 off at 1024 and 360. Not tested: her devices; her own storage's room (about 85 KB more).
 - SAVED, not live. She loads the file herself after the gold Update.
+
+## Guide > Cases: Wei Di's case, a colleague's, as a file to import (2026-11-14)
+- **Her words:** "add these cases into Weidi's cases (she is a fellow practitioner)", with a pasted transcript of the Jing
+  Fang case conference of Wed 4 Feb 2026 (Wei Di presenting a woman of 71 with rectal cancer) and the group's notes.
+- **Where it lives:** NOT in the app's code. A colleague's case from a private study group stays out of the public code,
+  like a book's (the rule in "Import cases from a file", 58b86e65). It is a cases file on her computer,
+  `mocks/wei-di-cases-2026-11-14/Wei Di cases for LCM.json` (local only), source `{ kind: "friend", title: "Wei Di" }`
+  (her own contacts' spelling), one case `k: "weidi-1"`: the first visit (18 Nov 2025) as the case, two sessions (Later
+  visits to 4 Feb 2026; the case conference: the group's discussion and plan, nobody named). She loads it once:
+  Guide › Cases › Organise › Import cases from a file. The recording gives no grams and loses most herb names said in
+  Chinese, so the herbs are the ones named, without grams (the box reads "No grams recorded"; the herbs show in the case
+  table's Prescription row). The wording is my reading of the transcript: DRAFT until she reads it.
+- **Built** (`index.html`, two fixes any source that is not a tour needs, imported books too): `phTcSessNo` numbers a case
+  with no tour clinic from 1 within its own source (it read C362); `phTcFromWords` names the case's own source ("Wei Di —
+  Case 362"; it said "Nanjing Study Tour Nov 2026 — Day 1").
+- **Tested** (sandbox, built on 58b86e65): the file loads through `phTcImport`: "Wei Di" under Friends and colleagues
+  with 1 case, numbered 1, family Shu Yu Wan, 24 observations, both sessions; loading it again adds nothing; no errors;
+  the case page draws (its column, the two sessions, the herbs). Not tested: her own device (she imports after Update).
+- **SAVED, not live:** goes out only on her own "push live", with the import door (58b86e65).
