@@ -15258,3 +15258,28 @@ collapsible"; the right pane opens on Summary; "Yes, fold them in"; kinds Tours,
 - Tested in the sandbox at 1024, 1370 and 360: every pane, From, the strip, Group by, a Summary tap, a Timetable day and chip;
   tap audit 0 off. Not tested: her devices, a source of the new kind with cases in it.
 - SAVED, not live.
+
+## Guide > Cases: the prescription as columns, a formula a column (2026-11-14)
+- **Her words** (a picture of C1's Prescription box): "refine this display, show mock"; four mocks drawn on the real case
+  (now, A two lines, B dose strip, C tidy grid; `mocks/prescription-box-2026-11-14/`). Her picks: "a but swap column and row,
+  so the first formula is in the first column" and herbs "A–Z (Recommended)".
+- **Built** (`index.html`, `phTcRxHtml`, the path without her own recipe; her recipe tables are unchanged): one row of
+  columns (`.rx-v`), a column a formula in prescription order (`.rx-col`: its number ring when there are several, else its
+  colour dot; its herbs A–Z with grams, `.rx-hr`), a joint column where two open formulas share herbs, then **Added** (blue
+  dot) last, the total at the right (`.rx-vt`). A herb goes under the formula that holds it (`fromOf`; a formula given whole,
+  "2. Fang Feng Tong Sheng San 10 g", sits in its own column); a herb after "+" in the modification line is Added; a herb no
+  formula of the case holds is Added too (C33: Cang Zhu, Su Geng). The modification line: words that only name the case's
+  herbs are said by the columns, a herb's bracket words small under it ("severe constipation"); a line that says more ("Cang
+  Zhu for Bai Zhu; + …", "Ma Huang down from 15") stays whole under the columns with a blue dot (`.rx-vm`). The formula
+  line's own extra words ("Alternating") are one soft line (`wx`, shared with the head). The old compact grid (`.rx-cg`,
+  `.rx-c`) and its 560px rules are gone. Columns 160–240px share a line and wrap when they run out; the phone (PHONE
+  REDESIGN) stacks them full width so every gram lines up, the total under them.
+- **Tested** (sandbox, built on 2b9f463f, the one-page Cases): all 361 cases draw with no error; 284 take the columns and
+  every herb shows exactly once. At 1220 C1 = Gui Ling Wu Wei Gan Cao Tang | Added (Rou Gui, Shan Yu Rou) · 125 g; C142 =
+  1 Da Chai Hu Tang | 2 Gui Ling Gan Lu Yin | Added Mang Xiao with "severe constipation" · 355 g, "Alternating"; C33 = 1 Wu
+  Ling San | 2 Ban Xia Hou Po Tang | Added, the modification line kept, "Ba Wei Tong Yang San". At 360 the columns stack,
+  grams on one edge, no sideways scroll. Size check: the box has no controls; the lines left on the page are not this
+  build's (the case list rows `.tcd-pg` 40px, the sign pictures `.gf-ani-th`). Checked: the Case view (one formula, several,
+  joint, Added, notes); Patterns › Formulas reads `phTcRx`, unchanged. Not checked: her own recipe tables beyond drawing
+  without error (unchanged code).
+- **SAVED, not live:** goes out only on her own "push live".
