@@ -15204,3 +15204,14 @@ rest are small. Only points that stood were changed.
 - **Checks:** the sandbox at 1280 and 375: tap-audit 0 and titlebar-audit 0 on Patterns › Formulas (Used once open) and a case (one formula, three formulas); no sideways scroll; the book button 32x32 opens the card; the June tour's numbers (220 / 93 / 50 / 43, 4 teachers); the Complaints tab (14 groups); the session table still draws (`phTcProgressHtml`); no console errors.
 - **Not tested:** her own recipes on a case (the Your recipe table; none in the sandbox); her devices.
 - **LIVE 20261114-023900** (her "push live").
+
+## Whole-app audit: a fact said once on a page (2026-11-14)
+- **Her words:** "do a full audit of the app the reduce redudndant features and words on pages"; mid-way through Appointments: "do the whole app".
+- **How it was read:** the sandbox with made-up patients and a week of bookings (`scratchpad/sandbox/au-seed.js`, `au-mock.js`), every page's text read for a line said twice, the patient pages with a Natural fertility plan; pictures with headless Edge.
+- **Words (a86e2c63):** see CURRENT-STATE "Whole-app audit". Each count now shows once: the title's total, a filtered list's "n of N".
+- **Her picks A–D (0caa804c, all "Recommended"):** A details card without name + Text (name box opens from the top bar's name); B Dashboard top-bar buttons off on a computer; C no-plan Care Plan = the big + New alone; D Today's visit band without Formula.
+- **Caught while checking:** the Dashboard's date leaned left once the buttons went (CSS gave its push-right to `.ph-shell-qa`; now `.ph-shell-qa ~ .ph-shell-titlebar-meta`); To order's update in place wrote "n on the list" back into the title.
+- **Checks:** 1280 and 375 on Inventory, Stock movements, Dispense history, Stock statistics, Stocktake, Relocation, Patient directory, To order, Formula refill, Appointments (List + popup), Dashboard, Patient details, Care Plan, Today's visit: tap-audit and titlebar-audit counts the same as the unchanged copy or lower (every line left was there before), no sideways scroll, no console errors; the top bar's name tap opens and focuses the name box.
+- **Left as her picks:** Fang Bing Ren's sub-pages (2026-10-12 pick D), the Log group head, Compass's "Red flag" tags.
+- **Not tested:** her real data and devices.
+- **SAVED, not live:** goes out only on her own "push live".
