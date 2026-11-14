@@ -15283,3 +15283,23 @@ collapsible"; the right pane opens on Summary; "Yes, fold them in"; kinds Tours,
   joint, Added, notes); Patterns › Formulas reads `phTcRx`, unchanged. Not checked: her own recipe tables beyond drawing
   without error (unchanged code).
 - **LIVE 20261114-213200** (her "push live").
+
+## 2026-11-14 Guide > Cases: Import cases from a file (a book's cases stay out of the code)
+
+Her words: "add the relevant cases indicated and organise it into case study under the name of book Infertility by Jane
+Lyttleton" (her textbook PDF). Her popup picks: read the local "Lina" copy (her named copy is online-only and would not
+open); all the case histories (38, not 37: one heading was hidden by a page break); the full study card.
+
+- RULE: a published book's cases are NEVER in the app's code or any tracked file (the repo is public). They are study cards
+  written in Claude's own words (no copied prose, no names), kept in a LOCAL file and loaded into her own storage.
+- `phTcImport(text)`: Organise > "Import cases from a file". File: `{ lcmCases: 1, source: { kind, title, author }, cases }`.
+  Makes the library entry (the Sources page's book) if its title is new, adds each card as a case with id "imp-" + k under
+  that source, skips a card already loaded, saves, opens the source on Summary. A card: k, cc, name, cond, symptoms, formula,
+  fms?, fam?, mod?, recipe, label + note + outcome (the case's `note`), sessions (its later stages, no date: the stage's
+  head shows no "No date").
+- The Lyttleton file: `mocks/lyttleton-cases-2026-11-14/Lyttleton Infertility cases for LCM.json` (git-ignored; a copy sits
+  beside the book in her Work folder). 38 cards, 770 herb lines; 750 match the book's text exactly, the rest sit in eight
+  tables the PDF scrambled (those cards say "check the doses against the printed page").
+- Tested in the sandbox: the import (38 added, a second load adds none, a wrong file says so), Summary, a case with stages,
+  tap audit 0 off at 1024 and 360. Not tested: her devices; her own storage's room (about 85 KB more).
+- SAVED, not live. She loads the file herself after the gold Update.
