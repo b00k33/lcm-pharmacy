@@ -96784,7 +96784,7 @@ burning behind her chest|Stomach: heartburn|b`;
     });
     const chg = vs.map((v, i) => { const set = new Set(); if (i) Object.keys(parts[i]).forEach(k => { if (k !== "an" && k !== "inv" && parts[i][k] !== parts[i - 1][k]) set.add(k); }); return set; });
     const heads = vs.map((v, i) => v !== c
-      ? `<th style="${cols[i].style}"><span class="cn">${esc(phTcDate(v.date))}</span>${esc(v.label || "Follow-up")}${v.formula ? `<small class="ph-tc-sub">${esc(v.formula)}</small>` : ""}</th>`
+      ? `<th style="${cols[i].style}">${v.date || String(c.id).slice(0, 4) !== "imp-" ? `<span class="cn">${esc(phTcDate(v.date))}</span>` : ""}${esc(v.label || "Follow-up")}${v.formula ? `<small class="ph-tc-sub">${esc(v.formula)}</small>` : ""}</th>`
       : `<th style="${cols[0].style}">${phTcHeadHtml(c, true, true)}</th>`).join("");
     const notes = `<tr><th class="rh" scope="row">Notes</th>${vs.map((v, i) => `<td style="${cols[i].style}">${esc(v.note || "")}</td>`).join("")}</tr>`;
     const anyPh = vs.some(v => phTcPhOf(v.id).length), photos = anyPh ? `<tr><th class="rh" scope="row">Photos</th>${vs.map((v, i) => `<td style="${cols[i].style}"><div class="ph-tc-ths">${phTcThumbs(v.id, false)}</div></td>`).join("")}</tr>` : "";
@@ -96956,7 +96956,7 @@ burning behind her chest|Stomach: heartburn|b`;
     { const lk = [pk, cur, phGdTcGb, phGdTcFc, phGdTcFf, phGdTcFg, phGdTcFh, fold].join("|"), le = document.querySelector("#phGdBody .tcd-list"); phGdTcListAt = { k: lk, y: le && phGdTcListAt.k === lk ? le.scrollTop : 0 }; }   // put back in phGdAfterPaint
     // the right pane: Summary counts what the list shows (the source, its day), the case, the Timetable, or Organise (the places grid: where a place or a case is added)
     if (phGdTcView === "pat") phGdTcPatDay = isTour && /^d\d+$/.test(cur) ? cur : "";
-    const pane = phGdTcView === "pat" ? phTcPatHtml() : phGdTcView === "tt" ? phTcTtHtml() : phGdTcView === "grid" ? (v2 => `<div class="ph-cmp">${v2.length ? phTcGridHtml(v2, []) : `<div class="gf-none" style="padding:16px 18px">No cases match</div>`}</div>`)(phTcVisible()) : page;
+    const pane = phGdTcView === "pat" ? phTcPatHtml() : phGdTcView === "tt" ? phTcTtHtml() : phGdTcView === "grid" ? (v2 => `<div class="ph-cmp"><div style="margin-bottom:8px"><button type="button" class="gf-chip" data-tc-import="1" title="Load study cards from a cases file on this computer into a book, seminar or friend's cases">Import cases from a file</button><input type="file" accept=".json,application/json" data-tc-importf hidden></div>${v2.length ? phTcGridHtml(v2, []) : `<div class="gf-none" style="padding:16px 18px">No cases match</div>`}</div>`)(phTcVisible()) : page;
     return `<div class="ph-gdf"><div class="ph-tc" style="grid-column:1 / -1;padding:6px 18px 16px;min-width:0">
       <div class="tcd-top">${phTcModeBar()}${open ? "" : `<div class="ph-cmp">${phTcBarHtml(ids, cases.length, pick)}</div>`}</div>${open || !tabs ? "" : `<div class="tcd-tabs">${tabs}</div>`}
       <div class="tcd-body${phone ? " ph" : ""}${fold ? " fold" : ""}">${paneOnly ? "" : `<div class="tcd-list${fold ? " fold" : ""}">${list}</div>`}${phone && !paneOnly ? "" : `<div class="tcd-page">${pane}</div>`}</div>
@@ -97176,6 +97176,36 @@ burning behind her chest|Stomach: heartburn|b`;
       ${phTcViewerHtml()}
     </div></div>`;
   }
+  // her 2026-11-14 "add the relevant cases indicated and organise it into case study under the name of book Infertility by Jane Lyttleton": a published book's cases are NEVER in the app's code (the code is
+  // public; a study tour's cases are her colleagues' notes, a textbook's are its publisher's). They are study cards in a file on her computer, { lcmCases: 1, source: { kind, title, author }, cases: [...] },
+  // loaded here once into her own storage under the book's name (Organise > Import cases from a file). A card already loaded (its id, "imp-" + k) is skipped, so the same file can be loaded twice.
+  // A card: k, cc, name, cond, symptoms, formula, fms?, fam?, mod?, recipe, label + note + outcome (the case's Notes), sessions [{ label, formula, recipe, note, symptoms }] (its later stages).
+  function phTcImport(text) {
+    let d = null; try { d = JSON.parse(text); } catch (e) {}
+    const title = d && d.source ? String(d.source.title || "").trim() : "";
+    if (!d || d.lcmCases !== 1 || !title || !Array.isArray(d.cases)) { presSavedToast("This file is not a cases file"); return; }
+    const kind = ["book", "seminar", "tour", "friend"].indexOf(d.source.kind) >= 0 ? d.source.kind : "book", lib = phSourceLib();
+    let b = lib.find(x => String(x.title || "").trim().toLowerCase() === title.toLowerCase());
+    if (!b) { b = { id: uid(), date: "", notes: "", title, author: String(d.source.author || ""), translator: "", type: kind === "book" ? "book" : "event" }; if (kind !== "book") b.evAs = kind; lib.push(b); }
+    const s = phTcSources().find(x => x.libId === b.id); if (!s) { presSavedToast("This file is not a cases file"); return; }
+    const list = phTourCases(), str = v => String(v == null ? "" : v).trim(), arr = v => Array.isArray(v) ? v : [], rec = v => arr(v).filter(r => Array.isArray(r) && str(r[0])).map(r => [str(r[0]), str(r[1])]), sym = v => arr(v).map(t => ({ text: str(t) })).filter(x => x.text);
+    let n = list.reduce((m, c) => Math.max(m, c.n || 0), 0), added = 0;
+    d.cases.forEach(x => {
+      const id = "imp-" + str(x && x.k); if (!x || !str(x.k) || list.some(c => c.id === id)) return;
+      const c = { id, n: ++n, tour: s.id, added: 1, name: str(x.name) || "Case " + n, cc: str(x.cc), cond: arr(x.cond).map(str).filter(Boolean), formula: str(x.formula) || "Not recorded", fam: x.fam && PH_FORMULAS[x.fam] ? x.fam : null, recipe: rec(x.recipe), mod: str(x.mod), symptoms: sym(x.symptoms) };
+      if (Array.isArray(x.fms)) c.fms = x.fms.map(str).filter(Boolean);
+      const note = [str(x.label), str(x.note), str(x.outcome) ? "Outcome: " + str(x.outcome) : ""].filter(Boolean).join(" · "); if (note) c.note = note;
+      const ss = arr(x.sessions).filter(Boolean).map(y => ({ id: uid(), date: "", rdate: "", label: str(y.label), note: str(y.note), symptoms: sym(y.symptoms), cond: [], recipe: rec(y.recipe), formula: str(y.formula) })); if (ss.length) c.sessions = ss;
+      list.push(c); s.cases.push(c.n); added++;
+    });
+    if (added && savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
+    phGdTcSrcF = s.id; phGdTcDay = ""; phGdTcView = "pat"; renderPhGdBody();
+    presSavedToast(added ? added + " case" + (added === 1 ? "" : "s") + " added to " + title : "These cases are already in " + title);
+  }
+  document.addEventListener("change", e => {   // Organise > Import cases from a file: the file she picked
+    const el = e.target && e.target.closest ? e.target.closest("[data-tc-importf]") : null; if (!el || !el.files || !el.files[0]) return;
+    const r = new FileReader(); r.onload = () => phTcImport(String(r.result || "")); r.readAsText(el.files[0]); el.value = "";
+  });
   function phTcSrcSave(kind) {
     const inp = document.querySelector("[data-tc-src-name]"); if (!inp) return;
     const name = inp.value.trim(); if (!name) { inp.focus(); return; }
@@ -97186,6 +97216,7 @@ burning behind her chest|Stomach: heartburn|b`;
   function phTcGridClick(T) {
     let el;
     if ((el = T.closest("[data-tc-view]"))) { phGdTcView = el.dataset.tcView === "day" ? "day" : "grid"; phGdTcPageOpen = false; phGdTcAdd = null; phGdTcMenu = false; phGdTcSess = ""; renderPhGdBody(); return true; }
+    if (T.closest("[data-tc-import]")) { const i = document.querySelector("[data-tc-importf]"); if (i) i.click(); return true; }
     if ((el = T.closest("[data-tc-dday]"))) { phGdTcDay = phGdTcDay === el.dataset.tcDday ? "" : el.dataset.tcDday; phGdTcPop = ""; phGdTcPageOpen = false; phGdTcAdd = null; phGdTcSess = ""; phGdTcEd = ""; renderPhGdBody(); return true; }
     if ((el = T.closest("[data-tc-ttday]"))) { const v = el.dataset.tcTtday, at = v.lastIndexOf("|"); phGdTcSrcF = phGdTcDayTour = v.slice(0, at); phGdTcDay = v.slice(at + 1); phGdTcPop = ""; phGdTcTick = []; phGdTcPageOpen = false; phGdTcAdd = null; phGdTcSess = ""; phGdTcEd = ""; phGdTcTag = false; renderPhGdBody(); phTcPageTop(); return true; }
     if ((el = T.closest("[data-tc-dtour]"))) { phGdTcDayTour = el.dataset.tcDtour; phGdTcDay = ""; phGdTcPageOpen = false; renderPhGdBody(); return true; }
