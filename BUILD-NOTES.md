@@ -15214,4 +15214,4 @@ rest are small. Only points that stood were changed.
 - **Checks:** 1280 and 375 on Inventory, Stock movements, Dispense history, Stock statistics, Stocktake, Relocation, Patient directory, To order, Formula refill, Appointments (List + popup), Dashboard, Patient details, Care Plan, Today's visit: tap-audit and titlebar-audit counts the same as the unchanged copy or lower (every line left was there before), no sideways scroll, no console errors; the top bar's name tap opens and focuses the name box.
 - **Left as her picks:** Fang Bing Ren's sub-pages (2026-10-12 pick D), the Log group head, Compass's "Red flag" tags.
 - **Not tested:** her real data and devices.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE 20261114-201900** (her "push live").
