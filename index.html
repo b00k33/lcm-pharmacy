@@ -16178,6 +16178,11 @@
   #pharmacyPage .tc-rx .ch::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ph-dot, var(--ph-faint)); }
   #pharmacyPage .tc-rx .ch.up { --ph-dot: var(--ph-blue); } #pharmacyPage .tc-rx .ch.dn { --ph-dot: var(--ph-low); } #pharmacyPage .tc-rx .ch.add { --ph-dot: var(--ph-good); } #pharmacyPage .tc-rx .ch.out { --ph-dot: var(--ph-zero); }
   #pharmacyPage .tc-rx .rx-no { padding: 8px 12px 10px; color: var(--ph-soft); }
+  #pharmacyPage .tc-rx .rx-fh { display: flex; align-items: center; gap: 6px 16px; padding: 10px 12px 4px; border-top: 1px solid var(--ph-line); }   /* her 2026-11-14 "display the formulas separately" */
+  #pharmacyPage .tc-rx .rx-h + .rx-fh, #pharmacyPage .tc-rx .rx-w + .rx-fh, #pharmacyPage .tc-rx .rx-r.hd + .rx-fh { border-top: 0; }
+  #pharmacyPage .tc-rx .rx-fh .rx-f i.rx-n { width: 20px; height: 20px; }
+  #pharmacyPage .tc-rx .rx-gb .rx-r:not(.hd):nth-child(odd) { background: none; }
+  #pharmacyPage .tc-rx .rx-gb .rx-rg > .rx-r:nth-child(even) { background: var(--ph-paper); }
   /* her synth22 2026-11-14: a case's prescription is herbs and grams in columns; Patterns › Formulas counts the place */
   #pharmacyPage .tc-rx .rx-l { font: 600 var(--fs-10-5, 10.5px) var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-soft); }
   #pharmacyPage .tc-rx .rx-h .rx-m { padding: 0; }
@@ -97015,12 +97020,26 @@ burning behind her chest|Stomach: heartburn|b`;
       r.ch = r.lo ? ["out", "Left out"] : r.mg != null ? (r.g === r.mg ? ["eq", "Same"] : r.g > r.mg ? ["up", "+" + phRound2(r.g - r.mg) + " g"] : ["dn", "−" + phRound2(r.mg - r.g) + " g"]) : withMine.length ? ["add", "Added"] : null; });
     const G = Math.max(1, ...rows.flatMap(r => [r.g || 0, r.mg || 0])), w = g => (g / G).toFixed(3);   // the gram bars: this table's largest dose = a full bar
     const tot = rx.reduce((a, r) => a + r.g, 0), mineTot = F.reduce((a, x) => a + [...x.mine.values()].reduce((s, v) => s + v.g, 0), 0);
-    const head = `<div class="rx-h">${many ? F.map((x, k) => `<span class="rx-f"><i class="rx-n" style="--c:${x.colour}">${k + 1}</i><b>${esc(x.n)}</b></span>`).join("") : `<span class="rx-l">Prescription</span>${c.mod ? `<span class="rx-m">${esc(c.mod)}</span>` : ""}`}<span class="gf-sp"></span>${tot ? `<span class="rx-t"><b>${phRound2(tot)} g</b>this case</span>` : ""}${mineTot ? `<span class="rx-t"><b>${phRound2(mineTot)} g</b>your recipe</span>` : ""}</div>`
-      + (c.formula && phGdfNorm(c.formula) !== phGdfNorm(fms.join("")) ? `<div class="rx-w">${esc(c.formula)}</div>` : "") + (c.mod && many ? `<div class="rx-m">${esc(c.mod)}</div>` : "");
+    const head = `<div class="rx-h"><span class="rx-l">Prescription</span>${c.mod ? `<span class="rx-m">${esc(c.mod)}</span>` : ""}<span class="gf-sp"></span>${tot ? `<span class="rx-t"><b>${phRound2(tot)} g</b>this case</span>` : ""}${mineTot ? `<span class="rx-t"><b>${phRound2(mineTot)} g</b>your recipe</span>` : ""}</div>`
+      + (c.formula && phGdfNorm(c.formula) !== phGdfNorm(fms.join("")) ? (t => t ? `<div class="rx-w">${esc(t)}</div>` : "")(many ? (() => { let t = c.formula; fms.forEach(n => { t = t.split(n).join(" "); }); t = t.replace(/\d+\./g, " ").replace(/[·+,()]/g, " ").replace(/\s+/g, " ").trim(); return t ? t[0].toUpperCase() + t.slice(1) : ""; })() : c.formula) : "");
     if (!rx.length) return `<div class="tc-rx">${head}<div class="rx-no">No grams recorded</div></div>`;
+    // her 2026-11-14 "display the formulas separately": each formula a block, its herbs A–Z, this case against HER recipe of that formula
+    const B = !many ? [] : F.map((x, k) => ({ x, k, rows: rows.filter(r => r.from[0] === x) })).concat([{ x: null, k: -1, rows: rows.filter(r => !r.from.length) }]).filter(b => b.rows.length);
+    B.forEach(b => b.rows.forEach(r => { const m = b.x && b.x.mine.has(r.k) ? b.x.mine.get(r.k).g : null; r.bmg = m;
+      r.bch = r.lo ? ["out", "Left out"] : m != null ? (r.g === m ? ["eq", "Same"] : r.g > m ? ["up", "+" + phRound2(r.g - m) + " g"] : ["dn", "−" + phRound2(m - r.g) + " g"]) : b.x && b.x.mine.size ? ["add", "Added"] : null; }));
+    const bHead = b => { const t = b.rows.reduce((a, r) => a + (r.g || 0), 0), m = b.x ? [...b.x.mine.values()].reduce((a, v) => a + v.g, 0) : 0;
+      return `<div class="rx-fh" role="row"><span class="rx-f" role="rowheader">${b.x ? `<i class="rx-n" style="--c:${b.x.colour}">${b.k + 1}</i><b>${esc(b.x.n)}</b>` : `<b>Other herbs</b>`}</span><span class="gf-sp"></span>${t ? `<span class="rx-t"><b>${phRound2(t)} g</b>this case</span>` : ""}${m ? `<span class="rx-t"><b>${phRound2(m)} g</b>your recipe</span>` : ""}</div>`; };
     const fd = r => many ? `<span class="fd" role="cell">${r.from.map(x => `<i class="rx-n" style="--c:${x.colour}" title="${esc(x.n)}">${F.indexOf(x) + 1}</i>`).join("")}</span>` : "";
     // without a recipe of hers: herb and grams in columns, a few rows tall (her 2026-11-14 "too big for what it is communicating")
+    const cell = r => `<div class="rx-c${r.lo ? " lo" : ""}" role="listitem"><span class="nm">${esc(r.nm)}</span><span class="g c" style="--w:${r.g ? w(r.g) : 0};--c:${r.c}"><b>${r.g ? phRound2(r.g) + " g" : "—"}</b><i></i></span></div>`;
+    if (!hasMine && many) return `<div class="tc-rx">${head}${B.map(b => `${bHead(b)}<div class="rx-cg" role="list" aria-label="${esc(b.x ? b.x.n : "Other herbs")}">${b.rows.map(cell).join("")}</div>`).join("")}</div>`;
     if (!hasMine) return `<div class="tc-rx">${head}<div class="rx-cg" role="list" aria-label="Prescription">${rows.map(r => `<div class="rx-c${r.lo ? " lo" : ""}" role="listitem"><span class="nm">${esc(r.nm)}</span>${fd(r)}<span class="g c" style="--w:${r.g ? w(r.g) : 0};--c:${r.c}"><b>${r.g ? phRound2(r.g) + " g" : "—"}</b><i></i></span></div>`).join("")}</div></div>`;
+    if (many) {
+      const mc = ["130px", "120px", "120px", "84px", "minmax(0, 1fr)"].join(" "), h2 = s => `<span role="columnheader">${s}</span>`;
+      const row = (r, b) => `<div class="rx-r${r.lo ? " lo" : ""}" role="row"><span class="nm" role="rowheader">${esc(r.nm)}</span><span class="g c" role="cell" style="--w:${r.g ? w(r.g) : 0};--c:${r.c}"><b>${r.g ? phRound2(r.g) + " g" : "—"}</b><i></i></span><span class="g y" role="cell" style="--w:${r.bmg ? w(r.bmg) : 0}">${b.x && b.x.mine.size ? `<b>${r.bmg != null ? phRound2(r.bmg) + " g" : "—"}</b><i></i>` : ""}</span><span role="cell">${r.bch ? `<span class="ch ${r.bch[0]}">${esc(r.bch[1])}</span>` : ""}</span><span></span></div>`;
+      return `<div class="tc-rx">${head}<div class="rx-sc"><div class="rx-g rx-gb" role="table" aria-label="Prescription" style="--rxc:${mc}"><div class="rx-r hd" role="row">${h2("Herb")}${h2("This case")}${h2("Your recipe")}${h2("")}<span></span></div>
+        ${B.map(b => bHead(b) + `<div class="rx-rg" role="rowgroup">${b.rows.map(r => row(r, b)).join("")}</div>`).join("")}</div></div></div>`;
+    }
     const cols = ["130px"].concat(many ? [Math.max(84, 21 * F.length + 20) + "px"] : [], ["120px"], hasMine ? ["120px"] : [], hasMine ? ["84px"] : [], ["minmax(0, 1fr)"]).join(" ");
     const hd = s => `<span role="columnheader">${s}</span>`;
     return `<div class="tc-rx">${head}<div class="rx-sc"><div class="rx-g" role="table" aria-label="Prescription" style="--rxc:${cols}"><div class="rx-r hd" role="row">${hd("Herb")}${many ? hd("Formula") : ""}${hd("This case")}${hasMine ? hd("Your recipe") : ""}${hasMine ? hd("") : ""}<span></span></div>
