@@ -15321,7 +15321,7 @@ open); all the case histories (38, not 37: one heading was hidden by a page brea
 - **Tested** (sandbox, built on 58b86e65): the file loads through `phTcImport`: "Wei Di" under Friends and colleagues
   with 1 case, numbered 1, family Shu Yu Wan, 24 observations, both sessions; loading it again adds nothing; no errors;
   the case page draws (its column, the two sessions, the herbs). Not tested: her own device (she imports after Update).
-- **SAVED, not live:** goes out only on her own "push live", with the import door (58b86e65).
+- **LIVE 20261115-174300** (her "push live"; the publish 7d54741c carried it with the import door). She loads the file once after Update.
 
 ## integrate33: Huang Lian Tang + Huang Lian from Huang Huang's 2017 notes (2026-11-14, 69350f64, LIVE 20261115-174300)
 Her ask: "integrate33 this for Huang Lian Tang" (the PDF `HUANG-2017-HUANG-LIAN-NOTES-3.pdf`, Huang Huang, tr. Reece Yeo) + "yes include for huang lian too".
