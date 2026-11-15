@@ -15442,7 +15442,7 @@ Her words: "reference chapter and page number of cases". A cases file's card may
     are a label with a tick box, both already on the audit's KEEP list.
   - Pictures: `mocks/case-find-2026-11-15/`.
 - **Not tested:** her own device and her own data (the counts follow her own moves in Edit groups the same way).
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE 20261116-000600** (publish 9bf7eb4a, her "push live when done", with the motion below).
 
 ## Guide > Cases > Find in motion (2026-11-16)
 - **Her words:** "add some dramatic animated elements to when i am browsing cases based on formula or conditions to make it
@@ -15467,3 +15467,4 @@ Her words: "reference chapter and page number of cases". A cases file's card may
   - The first open of Cases redraws once when its photos load, which can cut that first cascade short (the photo load runs
     once a visit).
 - **Not tested:** her own device.
+- **LIVE 20261116-000600** (publish 9bf7eb4a, her "push live when done").
