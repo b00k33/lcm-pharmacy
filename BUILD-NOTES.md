@@ -15387,7 +15387,7 @@ Her words: "MOCK A way to show that this case is of low sperm motility and count
 
 Her words: "reference chapter and page number of cases". A cases file's card may carry `ref` ("Chapter 4, page 82"); `phTcImport` keeps it as `c.ref` on a new card and sets it on a card already loaded (counted in the "N cases in <title> updated" toast); `phTcHeadHtml` shows it at the end of the grey line under the case's title. The Lyttleton cases file (local, never tracked) now has a reference on all 38 cards: the printed page each case history starts on, read from the page foot of the book text, and its chapter (1 to 11). After the gold Update she loads the same file again. Tested in the sandbox: old file then new file (38 updated), same file again (already in), tap audit 0 off at 1220 and 360.
 
-## Guide › Cases: the formula after the analysis + Ban Xia Xie Xin Tang integrate33 (2026-11-15, ae55664c + 5e1be86b, SAVED, not live)
+## Guide › Cases: the formula after the analysis + Ban Xia Xie Xin Tang integrate33 (2026-11-15, ae55664c + 5e1be86b, LIVE 20261115-233100)
 - **Her "dont need to see formula first for case study analysis"** (picture: C373's sessions table, the Original formula box first). `phTcRxHtml` left the
   table head (`tr.rxr`) in both `phTcProgressHtml` (sessions over time) and the one-case page; it is now `.tc-rx-end` under the table (12px gap). The
   table's own "Prescription · Lecture / visit" row is unchanged. Checked in the sandbox at 1280 (box under the table, 760 wide, above Sessions; a session added
@@ -15399,4 +15399,4 @@ Her words: "reference chapter and page number of cases". A cases file's card may
   Already there: the distention 5 both sides, red lips 4. Tested: a Ban Xia Xie Xin patient .317 first (Huang Lian .183, Huang Lian Tang .179); Huang Lian Tang's
   person and the Huang Lian heat picture unchanged. No new signs, no new wiring. Open: her Usual red tongue stays 2 (red lips 4): hers to raise.
 - **Her "yes raise tongue to 4, then push live" (520fc57f):** Ban Xia Xie Xin Tang red tongue 2 → 4, Usual and today. A Ban Xia Xie Xin patient .343 first; Huang Lian
-  Tang's person and the Huang Lian heat picture unchanged. Goes LIVE with ae55664c + 5e1be86b on her word.
+  Tang's person and the Huang Lian heat picture unchanged. LIVE 20261115-233100 with ae55664c + 5e1be86b.
