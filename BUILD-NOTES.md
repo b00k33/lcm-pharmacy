@@ -15443,3 +15443,27 @@ Her words: "reference chapter and page number of cases". A cases file's card may
   - Pictures: `mocks/case-find-2026-11-15/`.
 - **Not tested:** her own device and her own data (the counts follow her own moves in Edit groups the same way).
 - **SAVED, not live:** goes out only on her own "push live".
+
+## Guide > Cases > Find in motion (2026-11-16)
+- **Her words:** "add some dramatic animated elements to when i am browsing cases based on formula or conditions to make it
+  more interesting to browse" + "push live when done".
+- **Built** (`index.html`) on the shared MOTION kit (`data-roll`, `data-barw`, `data-mo-once`; no second motion system), each
+  only on a real change:
+  - **Counts and bars.** Every tick row's count rolls (`data-roll`; up from 0 the first time it shows in a visit).
+  - **A share bar under each name.** A 3px teal bar, `.tcf-bt` (`data-barw`): a group's share of the biggest group, a
+    complaint's share of its group, a formula's share of the formula with most cases. Ticks on the other side sweep it.
+  - **New rows** cascade in with their bars growing (`.tcf-k.mo-in`, stagger `--i`).
+  - **The tapped tick** pops with the gold ring (`.tcf-pop` + `mo-gold`, `phTcFindFx`). A group's arrow turns as it opens.
+  - **The bar's count** rolls (`<b data-roll="tc-ct">`, every view).
+  - **The grid** rains in on a diagonal (`.tcf-c.mo-in`, `--d`). A pick rings gold and lights its row and its column
+    outwards, a cell at a time (`.tcf-lit`); a group lights its row, a total its column.
+  - **The cases found** slide in with a gold wash (`tr.mo-in`). The case list's newly shown rows slide in (`.tcd-pg.mo-in`).
+  - Under reduced motion: none of it (the kit, `phTcFindFx`, one `@media` rule).
+- **Tested** (sandbox, built on 65794ff2):
+  - A tick: the gold pop on its box, the counts and the bar count roll, the bars sweep (0.5s), 7 new cases slide in.
+  - Lists ↔ Grid: 90 cells and 14 names rain in.
+  - A grid pick: the gold ring and 16 cells lit by distance.
+  - No errors. Pictures `mocks/case-find-2026-11-15/motion-*.png` (the motion paused part way).
+  - The first open of Cases redraws once when its photos load, which can cut that first cascade short (the photo load runs
+    once a visit).
+- **Not tested:** her own device.
