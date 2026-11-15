@@ -15344,3 +15344,8 @@ Her ask: "integrate33 this for Huang Lian Tang" (the PDF `HUANG-2017-HUANG-LIAN-
   any thin, dark-yellow person; it did before this too.
 - **Needs her word:** (1) lower her red tongue / focal distention on Huang Lian Tang? (2) diarrhoea + rumbling 3 → 4? (3) my 4 / 3 draft weights.
   Matrix: `mocks/2026-11-14 Huang Lian Tang integrate33.html`.
+- **Her answers (2026-11-15, 626a6b87, SAVED, not live):** "yes lower red tongue, diarrhoea 4, weights ok". Red tongue on Huang Lian Tang 5 → 2 both sides
+  (2 my pick); loose stools / watery stools 3 → 4; the 4 / 3 draft weights are hers now. Rumbling and the focal distention unchanged (not in her answer).
+  Retested: his person .379 (2nd), after alcohol .177 (2nd), sexual 3rd. A Ban Xia Xie Xin picture still lists Huang Lian Tang 1st because Ban Xia Xie
+  Xin Tang's own Today table has none of focal distention, nausea, rumbling or diarrhoea (its Bing lines are eczema, sticky stools, sleep and mood) and
+  neither table has red lips: a gap in its table, asked of her.
