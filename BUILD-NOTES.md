@@ -15349,3 +15349,6 @@ Her ask: "integrate33 this for Huang Lian Tang" (the PDF `HUANG-2017-HUANG-LIAN-
   Retested: his person .379 (2nd), after alcohol .177 (2nd), sexual 3rd. A Ban Xia Xie Xin picture still lists Huang Lian Tang 1st because Ban Xia Xie
   Xin Tang's own Today table has none of focal distention, nausea, rumbling or diarrhoea (its Bing lines are eczema, sticky stools, sleep and mood) and
   neither table has red lips: a gap in its table, asked of her.
+- **Ban Xia Xie Xin Tang (2026-11-15, 1a388cab):** her "yes add them": Bing epigastric_focal_disten 5, nausea_vomit 4, borborygmus_now 3 (her Usual weights for
+  the same signs), Ren lips_red_tend 4 (my pick). Tested: the Ban Xia Xie Xin picture now leads with Ban Xia Xie Xin Tang .301 (Huang Lian Tang .167, 2nd);
+  a sleep + sticky-stool Ban Xia picture 1st .328; Huang Lian Tang's person and after-alcohol patients still 2nd. Her "then push live": LIVE with 626a6b87.
