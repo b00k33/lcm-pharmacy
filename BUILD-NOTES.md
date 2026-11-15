@@ -15398,3 +15398,5 @@ Her words: "reference chapter and page number of cases". A cases file's card may
   Huang Lian Tang contrast, both treat the gut. Bing `tongue_red_now` 2 (her Usual red tongue weight, as distention / nausea / rumbling took hers in 1a388cab).
   Already there: the distention 5 both sides, red lips 4. Tested: a Ban Xia Xie Xin patient .317 first (Huang Lian .183, Huang Lian Tang .179); Huang Lian Tang's
   person and the Huang Lian heat picture unchanged. No new signs, no new wiring. Open: her Usual red tongue stays 2 (red lips 4): hers to raise.
+- **Her "yes raise tongue to 4, then push live" (520fc57f):** Ban Xia Xie Xin Tang red tongue 2 → 4, Usual and today. A Ban Xia Xie Xin patient .343 first; Huang Lian
+  Tang's person and the Huang Lian heat picture unchanged. Goes LIVE with ae55664c + 5e1be86b on her word.
