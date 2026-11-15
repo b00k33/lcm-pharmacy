@@ -15352,3 +15352,19 @@ Her ask: "integrate33 this for Huang Lian Tang" (the PDF `HUANG-2017-HUANG-LIAN-
 - **Ban Xia Xie Xin Tang (2026-11-15, 1a388cab):** her "yes add them": Bing epigastric_focal_disten 5, nausea_vomit 4, borborygmus_now 3 (her Usual weights for
   the same signs), Ren lips_red_tend 4 (my pick). Tested: the Ban Xia Xie Xin picture now leads with Ban Xia Xie Xin Tang .301 (Huang Lian Tang .167, 2nd);
   a sleep + sticky-stool Ban Xia picture 1st .328; Huang Lian Tang's person and after-alcohol patients still 2nd. Her "then push live": LIVE with 626a6b87.
+
+## 2026-11-15 Guide > Cases: a case can carry its own condition (the Lyttleton cards)
+
+Her words: "for jane cases, include notes like pcos endometriosis recurrent miscarriages in the conditions" (the 38 cards all
+fell into "Women's health" or "Other").
+
+- `c.grp`: a case's own condition, set by a cases file. `phTcGrp` = her move in Edit groups, else `c.grp`, else the draft word
+  match. `phTcGrpKeys` = the thirteen drafts, every condition a case carries (A–Z, `phTcGrpX` memo, cleared by an import), Other.
+- `phTcImport`: a card already loaded is still left as she has it, EXCEPT its condition: a newer file's `grp` is set and named
+  first in its diagnosis lines when no line says it. So she loads the same file again to get the conditions.
+- The Lyttleton file now carries a condition a card (my reading of each card's own facts, hers to regroup in Edit groups):
+  Amenorrhea 5, Miscarriage 5, Male factor 4, Endometriosis 3, Luteal phase defect 3, PCOS 3, Tubal damage 3, Fibroids,
+  adhesions 2, IVF failure 2, Recurrent miscarriage 2, Unexplained infertility 2, Antisperm antibodies 1, Pregnancy care 1,
+  Premature menopause 1, Secondary infertility 1.
+- Tested in the sandbox: the first file loaded, then the new one (38 updated, a third load changes nothing), Summary, Edit
+  groups, tap audit 0 off. SAVED, not live.
