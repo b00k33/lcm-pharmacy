@@ -15423,7 +15423,7 @@ Her words: "reference chapter and page number of cases". A cases file's card may
   - **Grid:** the groups down, the 8 formulas with most cases across (shown A–Z; a ticked formula joins them), a tinted
     count a cell with ink numbers. Tapping a cell = that pair, a group = the group, the All row = the formula; the same tap
     again clears it. It scrolls sideways in its own box while the condition names stay; a name wraps in its own cell.
-  - **The cases found:** a table under both (Case, Complaint, Formula, From). The words every tour shares are left out of
+  - **The cases found:** a table under both (Case, Complaint, Formula, From), in the left list's order (source by source, then by number). The words every tour shares are left out of
     From, as in the bar's Place menu. 8 rows, then "+ n more". A row opens the case on Case at the top of its page; Find's
     ticks stay, so the left list holds the found cases and Find comes back as she left it.
   - Counted from the source picked in From (`phTcFindBase`).
