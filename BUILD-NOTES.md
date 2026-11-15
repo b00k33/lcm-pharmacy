@@ -15344,14 +15344,14 @@ Her ask: "integrate33 this for Huang Lian Tang" (the PDF `HUANG-2017-HUANG-LIAN-
   any thin, dark-yellow person; it did before this too.
 - **Needs her word:** (1) lower her red tongue / focal distention on Huang Lian Tang? (2) diarrhoea + rumbling 3 → 4? (3) my 4 / 3 draft weights.
   Matrix: `mocks/2026-11-14 Huang Lian Tang integrate33.html`.
-- **Her answers (2026-11-15, 626a6b87, SAVED, not live):** "yes lower red tongue, diarrhoea 4, weights ok". Red tongue on Huang Lian Tang 5 → 2 both sides
+- **Her answers (2026-11-15, 626a6b87, LIVE 20261115-180500):** "yes lower red tongue, diarrhoea 4, weights ok". Red tongue on Huang Lian Tang 5 → 2 both sides
   (2 my pick); loose stools / watery stools 3 → 4; the 4 / 3 draft weights are hers now. Rumbling and the focal distention unchanged (not in her answer).
   Retested: his person .379 (2nd), after alcohol .177 (2nd), sexual 3rd. A Ban Xia Xie Xin picture still lists Huang Lian Tang 1st because Ban Xia Xie
   Xin Tang's own Today table has none of focal distention, nausea, rumbling or diarrhoea (its Bing lines are eczema, sticky stools, sleep and mood) and
   neither table has red lips: a gap in its table, asked of her.
 - **Ban Xia Xie Xin Tang (2026-11-15, 1a388cab):** her "yes add them": Bing epigastric_focal_disten 5, nausea_vomit 4, borborygmus_now 3 (her Usual weights for
   the same signs), Ren lips_red_tend 4 (my pick). Tested: the Ban Xia Xie Xin picture now leads with Ban Xia Xie Xin Tang .301 (Huang Lian Tang .167, 2nd);
-  a sleep + sticky-stool Ban Xia picture 1st .328; Huang Lian Tang's person and after-alcohol patients still 2nd. Her "then push live": LIVE with 626a6b87.
+  a sleep + sticky-stool Ban Xia picture 1st .328; Huang Lian Tang's person and after-alcohol patients still 2nd. Her "then push live": LIVE 20261115-180500 with 626a6b87.
 
 ## 2026-11-15 Guide > Cases: a case can carry its own condition (the Lyttleton cards)
 
