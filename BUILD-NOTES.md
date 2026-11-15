@@ -15368,3 +15368,17 @@ fell into "Women's health" or "Other").
   Premature menopause 1, Secondary infertility 1.
 - Tested in the sandbox: the first file loaded, then the new one (38 updated, a third load changes nothing), Summary, Edit
   groups, tap audit 0 off. SAVED, not live.
+
+## 2026-11-15 Guide > Cases: condition tags on every case
+
+Her words: "MOCK A way to show that this case is of low sperm motility and count plus irregular menses", her pick A
+"condition tags", then "a, do this for all cases".
+
+- `phTcTags(c)`: `c.tags` (the tags a cases file gives a card) or, for a case without them (the study tours), the words of
+  its own name after " -- ", cut at the commas: at most three, a part over 30 letters left out. A tag equal to the complaint
+  is never shown. Nothing is invented. A patient study (`patientKey`) has none.
+- Shown by `phTcTagsHtml` (`.tcg`): on the case's row in the list (not on a Timetable chip) and under its title
+  (`phTcHeadHtml`; a case whose tags come from its name keeps only who it is, "Man, elderly", on the grey line).
+- `phTcImport`: a newer file's `tags` are set on a card already loaded. The Lyttleton file carries tags on all 38 cards (my
+  reading of each card's facts). In the sandbox 363 of 399 cases show tags; 36 have none (a name with nothing short to say).
+- Tested: sandbox at 1220 and 360, the old file then the new one, tap audit 0 off. SAVED, not live.

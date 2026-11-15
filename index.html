@@ -16066,6 +16066,10 @@
   #pharmacyPage .ph-tc .tcd-pg .tx { flex: 1; min-width: 0; }
   #pharmacyPage .ph-tc .tcd-pg b { display: block; font-size: var(--fs-13); overflow-wrap: anywhere; }
   #pharmacyPage .ph-tc .tcd-pg .fm { display: block; font-size: var(--fs-12-5); color: var(--ph-soft); overflow-wrap: anywhere; }
+  /* a case's condition tags (her pick A, 2026-11-15): teal on white; white on the lit row */
+  #pharmacyPage .ph-tc .tcg { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 1px; min-width: 0; }
+  #pharmacyPage .ph-tc .tcg i { font-style: normal; font-weight: 400; font-size: var(--fs-12); line-height: 16px; padding: 0 6px; border: 1px solid var(--ph-herb); border-radius: 6px; color: var(--ph-herb); background: var(--ph-white); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  #pharmacyPage .ph-tc .tcd-pg.on .tcg i { background: transparent; border-color: #fff; color: #fff; }
   #pharmacyPage .ph-tc .tcd-pg .lgd { position: absolute; top: 10px; right: 10px; width: 6px; height: 6px; border-radius: 50%; background: var(--ph-gold); }
   #pharmacyPage .ph-tc .tcd-pg:hover:not(.on) { background: var(--ph-white); box-shadow: inset 0 0 0 1px var(--ph-line); }
   #pharmacyPage .ph-tc .tcd-pg.on { background: var(--ph-herb); color: #fff; }
@@ -96227,6 +96231,11 @@ burning behind her chest|Stomach: heartburn|b`;
   const phTcFms = c => c.fms ? c.fms.slice() : /^not recorded/i.test(c.formula) ? [] : String(c.formula).replace(/\([^)]*\)/g, "").replace(/\s*,\s*later\s+/i, " + ").split("+").map(s => s.trim()).filter(Boolean);
   // her 2026-11-13 "when i click on complaint or case, nothing happens": in the day list and the Timetable the By switch changed only the filter's name, so it looked dead. By Formula now leads each row with
   // the formula (the complaint under it); By Complaint is her 2026-11-11 row, "n · complaint" then the formula. A case with no formula keeps its complaint on top.
+  // her 2026-11-15 "MOCK A way to show that this case is of low sperm motility and count plus irregular menses" + her pick A "condition tags" + "do this for all cases": a case's conditions as small
+  // tags, on its row in the case list and under its title. c.tags = the tags a cases file gives a card; a case without them (the study tours) takes them from its own name, the words after
+  // " -- " cut at the commas (at most three, a part over 30 letters or the complaint itself left out). Nothing is invented: a tag is the case's own recorded words.
+  const phTcTags = c => { if (!c || c.patientKey) return []; if (Array.isArray(c.tags) && c.tags.length) return c.tags.map(x => String(x).trim()).filter(x => x && x.toLowerCase() !== phTcCc(c).toLowerCase()); const cc = phTcCc(c).toLowerCase(), seen = new Set(); return String(c.name || "").split(/\s*--\s*/).slice(1).join(", ").split(/\s*,\s*/).map(x => x.trim()).filter(x => x && x.length <= 30 && x.toLowerCase() !== cc && !seen.has(x.toLowerCase()) && seen.add(x.toLowerCase())).slice(0, 3).map(x => x.charAt(0).toUpperCase() + x.slice(1)); };
+  const phTcTagsHtml = c => { const t = phTcTags(c); return t.length ? `<span class="tcg">${t.map(x => `<i>${esc(x)}</i>`).join("")}</span>` : ""; };
   const phTcRowNm = (c, k, f) => { const cc = phTcCc(c), fm = f ? f + (c.mod ? ", modified" : "") : "", sw = phGdTcBy === "fm" && fm, top = sw ? fm : cc, sub = sw ? cc : fm; return `<b>${k || "C" + c.n} · ${esc(top)}</b>${sub ? `<span class="fm">${esc(sub)}</span>` : ""}`; };
   const phTcNm = c => phGdTcBy === "fm" ? ((phTcFms(c).join(" + ") || "No formula recorded") + (c.mod ? ", modified" : "")) : phTcCc(c);   // her "dcht modified"
   const phTcLibLive = s => { const b = s.libId && phSourceLib().find(x => x.id === s.libId); return !!b && phLibType(b) !== "person"; };
@@ -96884,9 +96893,10 @@ burning behind her chest|Stomach: heartburn|b`;
   function phTcHeadHtml(c, when, bare) {   // her pick: two lines, "C1 · complaint · formula" then who, when and where (bare: who only, her 2026-11-14 "reduce redundant information": one case's day strip and list head say when and where)
     if (c.patientKey) return `<span class="cn">${esc(when ? phTcWhen(c) : "C#" + c.n)}</span>${esc(phTcNm(c))}${phTcSubName(c)}${phTcPlaceHtml(c)}`;
     const cc = phTcCc(c), fm = phTcFms(c).join(" + "), p = phTcPlace(c);
-    const who = String(c.name || "").split(/\s*--\s*|,\s*/).map(x => x.trim()).filter(x => x && x.toLowerCase() !== cc.toLowerCase()).join(", ");
+    const own = Array.isArray(c.tags) && c.tags.length, tg = phTcTagsHtml(c);
+    const who = tg && !own ? String(c.name || "").split(/\s*--\s*/)[0].trim() : String(c.name || "").split(/\s*--\s*|,\s*/).map(x => x.trim()).filter(x => x && x.toLowerCase() !== cc.toLowerCase()).join(", ");
     const at = p && !bare ? [p.d.date ? phTcDayLab(p.d.date) : "Day " + p.d.n, p.b.t, "case " + phTcSessNo(c, p.b), PH_TC_BKIND[p.b.k] || PH_TC_BKIND[0], p.b.who].filter(Boolean).join(" · ") : "";
-    return `<span class="t1">C${c.n} · ${esc(cc)}${fm ? ` · ${esc(fm)}${c.mod ? ", modified" : ""}` : ""}</span><small class="ph-tc-sub">${esc([who, at].filter(Boolean).join(" · "))}</small>`;
+    return `<span class="t1">C${c.n} · ${esc(cc)}${fm ? ` · ${esc(fm)}${c.mod ? ", modified" : ""}` : ""}</span><small class="ph-tc-sub">${esc([who, at].filter(Boolean).join(" · "))}</small>${tg}`;
   }
   // a case's person in the Cases list (her pick 2026-11-11 "the formula's person"): the formula's own build (phFsBuild) on the one body, head and
   // shoulders; drawn once a family into a hidden holder and reused by every row; a case with no family yet keeps the usual person
@@ -96951,7 +96961,7 @@ burning behind her chest|Stomach: heartburn|b`;
     const focus = multi ? (ticked.find(c => c.id === phGdTcSel) || ticked[0]) : (cases.find(c => c.id === phGdTcSel && ids.indexOf(c.id) >= 0) || cases.find(c => c.id === ids[0]) || null);
     const fid = focus && phGdTcView === "day" ? focus.id : "";   // a row is lit only while the pane shows its case
     // her picks 2026-11-11: no round ticks; a row = the formula's person, "n · complaint", the formula; a case beside the open one (Compare with) is outlined
-    const row = (c, b) => { const f = phTcFms(c).join(" + "), cw = multi && c.id !== fid && phGdTcTick.indexOf(c.id) >= 0, k = phTcSessNo(c, b), tip = [k ? "C" + c.n : "", cw ? "Side by side" : ""].filter(Boolean).join(" · "); return `<button type="button" class="tcd-pg${c.id === fid ? " on" : ""}${cw ? " cw" : ""}" data-tc-dpick="${esc(c.id)}"${tip ? ` title="${tip}"` : ""}>${phTcPerHtml(c.fam)}<span class="tx">${phTcRowNm(c, k, f)}</span>${phTcLogDot(c)}</button>`; };
+    const row = (c, b) => { const f = phTcFms(c).join(" + "), cw = multi && c.id !== fid && phGdTcTick.indexOf(c.id) >= 0, k = phTcSessNo(c, b), tip = [k ? "C" + c.n : "", cw ? "Side by side" : ""].filter(Boolean).join(" · "); return `<button type="button" class="tcd-pg${c.id === fid ? " on" : ""}${cw ? " cw" : ""}" data-tc-dpick="${esc(c.id)}"${tip ? ` title="${tip}"` : ""}>${phTcPerHtml(c.fam)}<span class="tx">${phTcRowNm(c, k, f)}${phTcTagsHtml(c)}</span>${phTcLogDot(c)}</button>`; };
     const phone = window.innerWidth <= 640, open = !!(phone && phGdTcPageOpen && focus && phGdTcView === "day"), paneOnly = phone && (open || phGdTcView !== "day"), fold = !phone && phGdTcListFold;
     // the fold (a computer; a phone already shows the list and the case one at a time): ‹ at the top of the list, › at the top of the folded column
     const foldBtn = phone ? "" : `<button type="button" class="tcd-fold" data-tc-listfold="1" aria-expanded="${!fold}" title="${fold ? "Show the case list" : "Fold the case list"}" aria-label="${fold ? "Show the case list" : "Fold the case list"}">${fold ? "›" : "‹"}</button>`;
@@ -97205,9 +97215,10 @@ burning behind her chest|Stomach: heartburn|b`;
     d.cases.forEach(x => {
       const id = "imp-" + str(x && x.k), ex = x && str(x.k) ? list.find(c => c.id === id) : null; if (!x || !str(x.k)) return;
       // a card already loaded is left as she has it, but for its condition: a newer file's condition is set, and named first in its diagnosis lines if no line says it yet
-      if (ex) { const g = str(x.grp); if (g && ex.grp !== g) { ex.grp = g; if (!(ex.cond || []).some(t => String(t).toLowerCase().indexOf(g.toLowerCase()) >= 0)) (ex.cond = ex.cond || []).unshift(g); upd++; } return; }
+      if (ex) { const g = str(x.grp), tg = arr(x.tags).map(str).filter(Boolean); if (tg.length && JSON.stringify(ex.tags || []) !== JSON.stringify(tg)) { ex.tags = tg; upd++; } if (g && ex.grp !== g) { ex.grp = g; if (!(ex.cond || []).some(t => String(t).toLowerCase().indexOf(g.toLowerCase()) >= 0)) (ex.cond = ex.cond || []).unshift(g); upd++; } return; }
       const c = { id, n: ++n, tour: s.id, added: 1, name: str(x.name) || "Case " + n, cc: str(x.cc), cond: arr(x.cond).map(str).filter(Boolean), formula: str(x.formula) || "Not recorded", fam: x.fam && PH_FORMULAS[x.fam] ? x.fam : null, recipe: rec(x.recipe), mod: str(x.mod), symptoms: sym(x.symptoms) };
       if (Array.isArray(x.fms)) c.fms = x.fms.map(str).filter(Boolean);
+      if (arr(x.tags).length) c.tags = arr(x.tags).map(str).filter(Boolean);
       if (str(x.grp)) { c.grp = str(x.grp); if (!c.cond.some(t => t.toLowerCase().indexOf(c.grp.toLowerCase()) >= 0)) c.cond.unshift(c.grp); }
       const note = [str(x.label), str(x.note), str(x.outcome) ? "Outcome: " + str(x.outcome) : ""].filter(Boolean).join(" · "); if (note) c.note = note;
       const ss = arr(x.sessions).filter(Boolean).map(y => ({ id: uid(), date: "", rdate: "", label: str(y.label), note: str(y.note), symptoms: sym(y.symptoms), cond: [], recipe: rec(y.recipe), formula: str(y.formula) })); if (ss.length) c.sessions = ss;
@@ -97216,7 +97227,7 @@ burning behind her chest|Stomach: heartburn|b`;
     phTcGrpX.n = -1;
     if ((added || upd) && savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
     phGdTcSrcF = s.id; phGdTcDay = ""; phGdTcView = "pat"; renderPhGdBody();
-    presSavedToast(added ? added + " case" + (added === 1 ? "" : "s") + " added to " + title : upd ? upd + " case" + (upd === 1 ? "" : "s") + " in " + title + " now carry their condition" : "These cases are already in " + title);
+    presSavedToast(added ? added + " case" + (added === 1 ? "" : "s") + " added to " + title : upd ? upd + " case" + (upd === 1 ? "" : "s") + " in " + title + " updated" : "These cases are already in " + title);
   }
   document.addEventListener("change", e => {   // Organise > Import cases from a file: the file she picked
     const el = e.target && e.target.closest ? e.target.closest("[data-tc-importf]") : null; if (!el || !el.files || !el.files[0]) return;
