@@ -15323,7 +15323,7 @@ open); all the case histories (38, not 37: one heading was hidden by a page brea
   the case page draws (its column, the two sessions, the herbs). Not tested: her own device (she imports after Update).
 - **SAVED, not live:** goes out only on her own "push live", with the import door (58b86e65).
 
-## integrate33: Huang Lian Tang + Huang Lian from Huang Huang's 2017 notes (2026-11-14, 69350f64, SAVED, not live)
+## integrate33: Huang Lian Tang + Huang Lian from Huang Huang's 2017 notes (2026-11-14, 69350f64, LIVE 20261115-174300)
 Her ask: "integrate33 this for Huang Lian Tang" (the PDF `HUANG-2017-HUANG-LIAN-NOTES-3.pdf`, Huang Huang, tr. Reece Yeo) + "yes include for huang lian too".
 - **Huang Lian Tang (`PH_FORMULAS.huangliantang`):** her run-13 lines and numbers unchanged. Added Bing: vomiting_now, anxiety_now, alcohol_vomit_diarrhea 4;
   impotence, premature_ejac_now, lowabd_tense_now, lowabd_pain_now, urine_difficult_now 3. Added Ren: thin_body, complexion_dark_yellow_tend, flat_belly,
