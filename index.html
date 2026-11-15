@@ -96584,9 +96584,13 @@ burning behind her chest|Stomach: heartburn|b`;
     ["Fatigue", /fatigue|tired|exhaust|energy/i]];
   const phTcGrpCfg = () => { const g = PHARMACY.tcGrp || {}; return { ren: g.ren || {}, mv: g.mv || {} }; };
   const phTcGrpName = k => phTcGrpCfg().ren[k] || k;
-  const phTcGrpKeys = () => PH_TC_GRP.map(g => g[0]).concat("Other");
+  // her 2026-11-15 "for jane cases, include notes like pcos endometriosis recurrent miscarriages in the conditions": a case may carry its own condition (c.grp, set by a cases file: a book's own
+  // conditions, PCOS, Endometriosis, Recurrent miscarriage). It is that case's group in Group by Complaint and in Summary, ahead of the draft word match; her own move in Edit groups still wins.
+  // The groups in use = the thirteen drafts, then every condition a case carries (A–Z), then Other.
+  let phTcGrpX = { n: -1, l: [] };
+  const phTcGrpKeys = () => { const cs = PHARMACY.tourCases || []; if (phTcGrpX.n !== cs.length) phTcGrpX = { n: cs.length, l: [...new Set(cs.map(c => c && c.grp).filter(Boolean))].filter(g => g !== "Other" && !PH_TC_GRP.some(x => x[0] === g)).sort(phAz) }; return PH_TC_GRP.map(g => g[0]).concat(phTcGrpX.l, "Other"); };
   const phTcGrpDraft = t => { const g = PH_TC_GRP.find(([, re]) => re.test(t.split(",")[0])) || PH_TC_GRP.find(([, re]) => re.test(t)); return g ? g[0] : "Other"; };
-  function phTcGrp(c) { const t = phTcCc(c), m = phTcGrpCfg().mv[t.toLowerCase()]; return m && phTcGrpKeys().indexOf(m) >= 0 ? m : phTcGrpDraft(t); }
+  function phTcGrp(c) { const t = phTcCc(c), m = phTcGrpCfg().mv[t.toLowerCase()]; return m && phTcGrpKeys().indexOf(m) >= 0 ? m : c.grp || phTcGrpDraft(t); }
   // a case's prescription as herbs, [{nm, k, g, part}]: k = the herb's key (phHuKeys: Hong Zao and Da Zao are one herb), g = grams, part = the formula of its "1. …"
   // heading (a recipe written as one list has none); a dose not in grams is left out
   function phTcRx(c) {
@@ -97197,18 +97201,22 @@ burning behind her chest|Stomach: heartburn|b`;
     if (!b) { b = { id: uid(), date: "", notes: "", title, author: String(d.source.author || ""), translator: "", type: kind === "book" ? "book" : "event" }; if (kind !== "book") b.evAs = kind; lib.push(b); }
     const s = phTcSources().find(x => x.libId === b.id); if (!s) { presSavedToast("This file is not a cases file"); return; }
     const list = phTourCases(), str = v => String(v == null ? "" : v).trim(), arr = v => Array.isArray(v) ? v : [], rec = v => arr(v).filter(r => Array.isArray(r) && str(r[0])).map(r => [str(r[0]), str(r[1])]), sym = v => arr(v).map(t => ({ text: str(t) })).filter(x => x.text);
-    let n = list.reduce((m, c) => Math.max(m, c.n || 0), 0), added = 0;
+    let n = list.reduce((m, c) => Math.max(m, c.n || 0), 0), added = 0, upd = 0;
     d.cases.forEach(x => {
-      const id = "imp-" + str(x && x.k); if (!x || !str(x.k) || list.some(c => c.id === id)) return;
+      const id = "imp-" + str(x && x.k), ex = x && str(x.k) ? list.find(c => c.id === id) : null; if (!x || !str(x.k)) return;
+      // a card already loaded is left as she has it, but for its condition: a newer file's condition is set, and named first in its diagnosis lines if no line says it yet
+      if (ex) { const g = str(x.grp); if (g && ex.grp !== g) { ex.grp = g; if (!(ex.cond || []).some(t => String(t).toLowerCase().indexOf(g.toLowerCase()) >= 0)) (ex.cond = ex.cond || []).unshift(g); upd++; } return; }
       const c = { id, n: ++n, tour: s.id, added: 1, name: str(x.name) || "Case " + n, cc: str(x.cc), cond: arr(x.cond).map(str).filter(Boolean), formula: str(x.formula) || "Not recorded", fam: x.fam && PH_FORMULAS[x.fam] ? x.fam : null, recipe: rec(x.recipe), mod: str(x.mod), symptoms: sym(x.symptoms) };
       if (Array.isArray(x.fms)) c.fms = x.fms.map(str).filter(Boolean);
+      if (str(x.grp)) { c.grp = str(x.grp); if (!c.cond.some(t => t.toLowerCase().indexOf(c.grp.toLowerCase()) >= 0)) c.cond.unshift(c.grp); }
       const note = [str(x.label), str(x.note), str(x.outcome) ? "Outcome: " + str(x.outcome) : ""].filter(Boolean).join(" · "); if (note) c.note = note;
       const ss = arr(x.sessions).filter(Boolean).map(y => ({ id: uid(), date: "", rdate: "", label: str(y.label), note: str(y.note), symptoms: sym(y.symptoms), cond: [], recipe: rec(y.recipe), formula: str(y.formula) })); if (ss.length) c.sessions = ss;
       list.push(c); s.cases.push(c.n); added++;
     });
-    if (added && savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
+    phTcGrpX.n = -1;
+    if ((added || upd) && savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
     phGdTcSrcF = s.id; phGdTcDay = ""; phGdTcView = "pat"; renderPhGdBody();
-    presSavedToast(added ? added + " case" + (added === 1 ? "" : "s") + " added to " + title : "These cases are already in " + title);
+    presSavedToast(added ? added + " case" + (added === 1 ? "" : "s") + " added to " + title : upd ? upd + " case" + (upd === 1 ? "" : "s") + " in " + title + " now carry their condition" : "These cases are already in " + title);
   }
   document.addEventListener("change", e => {   // Organise > Import cases from a file: the file she picked
     const el = e.target && e.target.closest ? e.target.closest("[data-tc-importf]") : null; if (!el || !el.files || !el.files[0]) return;
