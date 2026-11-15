@@ -15400,3 +15400,46 @@ Her words: "reference chapter and page number of cases". A cases file's card may
   person and the Huang Lian heat picture unchanged. No new signs, no new wiring. Open: her Usual red tongue stays 2 (red lips 4): hers to raise.
 - **Her "yes raise tongue to 4, then push live" (520fc57f):** Ban Xia Xie Xin Tang red tongue 2 → 4, Usual and today. A Ban Xia Xie Xin patient .343 first; Huang Lian
   Tang's person and the Huang Lian heat picture unchanged. LIVE 20261115-233100 with ae55664c + 5e1be86b.
+
+## Guide > Cases: Find, the cases by condition and formula (2026-11-15)
+- **Her words:** "build a page where i can filter cases based on - conditions - formulas - show me mock". Three working mocks
+  (A two tick lists, B a grid, C two menus). Her 8 picks: Combine A + B (the two lists on top, the grid a second look);
+  a new Find tab; groups that open; Either one (OR within a side, AND between); counts change as you tick; each formula,
+  A–Z with a search; table + left list; open it, keep my picks.
+- **Built** (`index.html`): Find is a view of the one Cases page (`PH_TC_VIEWS` "find", `phTcFindHtml`; the phone's views
+  dropdown has it). **Its ticks are the shared filter**, not a second one: the groups (`phGdTcFg`, now an array, was one
+  group), the complaints (`phGdTcFc`), the formulas (`phGdTcFf`). So the case list on the left, the bar's count, Summary,
+  Case and the bar's Clear all follow them. `phTcPass` = `phTcCondOk` (any ticked group or complaint) AND `phTcFmOk` (any
+  ticked formula) AND Summary's herb. The bar's Complaint ▾ and Summary's taps write the same picks: a complaint and a group
+  are now either one (before: both). On Find the bar has no Complaint ▾ and no chips for what Find ticks (the ticks say it).
+  - **Lists:** Conditions = the groups A–Z, Other last (`phTcGrp`). Each has a ▸ that opens its complaints A–Z. Ticking a
+    group ticks all of it. Unticking one complaint in a ticked group keeps the others ticked. Ticking every complaint of a
+    group ticks the group (partial = a dash). Formulas = A–Z with a search (`data-tc-fdq`; the list alone repaints, so the
+    box keeps its cursor). The first 13 show, then "+ n more". A combined prescription counts under each of its formulas.
+    No formula with 0 cases shows unless ticked. A group with 0 shows faint. Each side counts the cases the other side
+    leaves. A tick row is a real tick box in a row (`.tcf-k`, `phTcFindTk`; a change event, never a click), so a long name
+    wraps in its row and is never cut. The two lists sit side by side from a 420px pane (`@container tcf`), else one under
+    the other (the phone).
+  - **Grid:** the groups down, the 8 formulas with most cases across (shown A–Z; a ticked formula joins them), a tinted
+    count a cell with ink numbers. Tapping a cell = that pair, a group = the group, the All row = the formula; the same tap
+    again clears it. It scrolls sideways in its own box while the condition names stay; a name wraps in its own cell.
+  - **The cases found:** a table under both (Case, Complaint, Formula, From). The words every tour shares are left out of
+    From, as in the bar's Place menu. 8 rows, then "+ n more". A row opens the case on Case at the top of its page; Find's
+    ticks stay, so the left list holds the found cases and Find comes back as she left it.
+  - Counted from the source picked in From (`phTcFindBase`).
+- **Tested** (sandbox, built on eb100dd9, 361 cases):
+  - Counts against a hand count: Skin 30; Skin + Lungs 38; one Skin complaint unticked 37 and the group partial; ticked
+    back = the group again. Skin + Lungs with Ba Wei Chu Fan Tang = 1. The formula counts under a ticked formula add up
+    to its 8 cases.
+  - Grid: Cancer & nodules × Ban Xia Hou Po Tang = 4 (the same 4 from Summary's grid). The same cell again clears. A
+    total = 35 (Ban Xia Hou Po Tang); a group = 50.
+  - The search "chai hu" narrows the list. A result row opens Case with the 50 cases in the left list; Find comes back
+    with its ticks.
+  - Summary's group tap, a chip's ×, the bar's Complaint ▾ (Lungs or a complaint = 9, as counted) and Clear all work.
+    Timetable and Organise draw. No errors.
+  - Tap audit (`#phGdBody` and the top bar): `off` empty at 1220 (lists and grid, side list open and folded) and at 360
+    (lists, grid, the whole table). Nothing wider than the screen at 360. The search is 16px on the phone. The tick rows
+    are a label with a tick box, both already on the audit's KEEP list.
+  - Pictures: `mocks/case-find-2026-11-15/`.
+- **Not tested:** her own device and her own data (the counts follow her own moves in Edit groups the same way).
+- **SAVED, not live:** goes out only on her own "push live".
