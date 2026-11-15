@@ -15382,3 +15382,7 @@ Her words: "MOCK A way to show that this case is of low sperm motility and count
 - `phTcImport`: a newer file's `tags` are set on a card already loaded. The Lyttleton file carries tags on all 38 cards (my
   reading of each card's facts). In the sandbox 363 of 399 cases show tags; 36 have none (a name with nothing short to say).
 - Tested: sandbox at 1220 and 360, the old file then the new one, tap audit 0 off. SAVED, not live.
+
+## 2026-11-15: Guide > Cases: a book case says its chapter and page (SAVED, not live)
+
+Her words: "reference chapter and page number of cases". A cases file's card may carry `ref` ("Chapter 4, page 82"); `phTcImport` keeps it as `c.ref` on a new card and sets it on a card already loaded (counted in the "N cases in <title> updated" toast); `phTcHeadHtml` shows it at the end of the grey line under the case's title. The Lyttleton cases file (local, never tracked) now has a reference on all 38 cards: the printed page each case history starts on, read from the page foot of the book text, and its chapter (1 to 11). After the gold Update she loads the same file again. Tested in the sandbox: old file then new file (38 updated), same file again (already in), tap audit 0 off at 1220 and 360.
