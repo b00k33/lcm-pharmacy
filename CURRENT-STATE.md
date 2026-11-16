@@ -1627,8 +1627,8 @@ Her work trips live in LCM; Nanjing is the first. Data in her Me row, entry by e
   one line "Paused · back <day>" with the list under All (`phTripPzRowHtml`), "away" on This week. A fast week holding a trip day
   reads "–" and neither counts nor breaks Weeks on aim.
 
-## Mine hub (her week, work, money, fitness, code)
-Five steps on HER record (the one in My profile): **Fitness** in Body (Steps + weight + Weigh in; its routine dots are Habits'; see
+## Mine hub (her week, work, money, fitness, code, numbers & stars)
+Six steps on HER record (the one in My profile): **Fitness** in Body (Steps + weight + Weigh in; its routine dots are Habits'; see
 Fitness + Exercises), the rest in Life.
 - **Week**: Mon–Sun table; a tap on a past day or today opens its journal under the row (a timeline written from the day + her note,
   kept as she types); her to-dos beside it by area, dropdown All · Work · Money · Code · Fit · Home · Travel. A to-do tick stores
@@ -1645,8 +1645,15 @@ Fitness + Exercises), the rest in Life.
 - **Money**: income per week by her sheet's formulas, invoices + tax due ticked off, bills that repeat, the tax pile for the accountant, the
   visit-type Prices table; hidden until Show $ (this visit only). HER OWN money syncs in her Me row (her yes, 2026-10-26: `d.price`,
   `d.hubset`, `d.bills`, `d.taxp`, `d.plans`, `d.jn`, `d.dueT`, `d.hlth`, `d.hlim`, entry by entry); herbs, patients and pharmacy
-  money never go there. Herbs Linh reads the CBD login's log ("–" on Acupreg).
+  money never go there. Herbs Linh reads the CBD login's log ("–" on Acupreg). Readings For Mine (Numbers & Stars) are a
+  Readings line in the weekly Income table and count in every income total (`phHubIncSum`'s `rd`).
 - **Code**: a plan table, a five-step stage bar, tap a step to move it.
+- **Numbers & Stars** (after Code, her 16 picks 2026-11-15): My chart (her numbers and signs worked out from her record's
+  birth date, C22's numerology with the Personal Year turning on her birthday; a card she types over wins, "Worked out" goes
+  back) · Imprinting (the Personal Year's 12 months from her birth month, Personal Month 1 = the imprint month in gold; a
+  month's day grid; a day's "What I did" + Matched the number) · Readings (readings she gives: people, worked-out LP / Sun /
+  Earth, GG33 fit, systems, $, For Charity · Mine · Free; totals this year). Data `d.nsme` · `d.nsrd` · `d.nsdl` in her Me row.
+  Code: "NUMBERS & STARS" (`phNs*`).
 - Workouts / rehab / code / travel = her routines read by title (`PH_HUB_RX`); a title with a money word (invoice, bank, BAS, tax,
   bills, payments, lease, rent …, `PH_HUB_RX.money`) is never a workout (her "invoice is not fitness, its financials": "Claude
   auto-run" had matched "run"). A "This week" line in the Me drawer. Code: "MINE HUB" (`phHub*`).
