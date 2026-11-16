@@ -15567,3 +15567,7 @@ Her words: "write categories e.g. dermatology cardiology etc etc". `PH_TC_CATS` 
   step heads, Formula in numbers, Find's formula list. Not checked: her own device and data.
 - **For her:** after the gold Update, Organise › Import cases from a file, the same file (it renames what she has).
 - **LIVE 20261116-165000** (04a2ffaa, her "push live"; C22 published it with its categories build; a stamp-only build 20261116-165200 followed from my queued publish, nothing else in it).
+
+## 2026-11-16: Guide > Cases: categories fold (SAVED, not live)
+
+Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data-tc-cat`, ▾ open / ▸ folded, aria-expanded); `phGdTcCatShut` holds the folded categories, one list for Find lists, Find grid, the case list grouped by Complaint and Summary (bars and grid), all open at first. A folded category keeps its heading and count only. Heading 32px, 13px, 6px corners (tap audit), its name on one line (ellipsis). Tap audit 0 off at 1220 and 360 (the grid's growing cells aside).
