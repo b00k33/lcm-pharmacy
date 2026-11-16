@@ -15571,3 +15571,28 @@ Her words: "write categories e.g. dermatology cardiology etc etc". `PH_TC_CATS` 
 ## 2026-11-16: Guide > Cases: categories fold (SAVED, not live)
 
 Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data-tc-cat`, ▾ open / ▸ folded, aria-expanded); `phGdTcCatShut` holds the folded categories, one list for Find lists, Find grid, the case list grouped by Complaint and Summary (bars and grid), all open at first. A folded category keeps its heading and count only. Heading 32px, 13px, 6px corners (tap audit), its name on one line (ellipsis). Tap audit 0 off at 1220 and 360 (the grid's growing cells aside).
+
+## 2026-11-16: Guide > Cases: the search box finds cases by a sign (SAVED, not live)
+- **Her words:** "i tried to search signs from the cases and it doesnt work" (her screenshot: Cases › Summary, the top bar's
+  search box holding "burning mouth", the list and the count still 400 cases).
+- **Why:** the Guide's search box (`phGdSearch`, "Search a sign or formula") is drawn on Cases too, and its typing repaints
+  the page, but nothing on Cases read it.
+- **Built (`index.html`):** `phTcPass` (the one filter every Cases view shares) also asks `phTcSxOk`: with two letters or more
+  typed, a case stays when one of its lines names the words, read as the patient search reads a finding (`phSynHas`'s rule:
+  the words as typed, or every typed word, read as its meaning, starting a word of that ONE line, so "burning" in one line and
+  "mouth" in another is no match). A case's lines (`phTcSxLines`, kept per case until the case changes): each sign (the
+  observation and the sign it is tagged with, with its everyday words), the complaint, each diagnosis line, the formula and its
+  changes, each herb, each sentence of the notes, each later step's formula, signs and notes, the case's name. `phTcSxHits`
+  reads each case once per render. So the case list, the bar's count, Summary, Timetable, Organise and Find all narrow;
+  Find's lists count only the searched cases (`phTcFindBase`). A found case's row names the line it was found by ("**Sign**
+  Burning sensation in the mouth +1", the rest in the +1's hover; not when the complaint itself, the row's title, is the only
+  match; white on the open row). An empty list reads "No cases for “…”". The list starts at its top when the search changes.
+- **Tested** (sandbox, built on 7ad948a4, 399 cases): "burning mouth" = 4 cases (C265 Burning mouth and chest, C347 Thyroid
+  nodules, C84 Joint pain, dry mouth, C119 Sweet taste, burning mouth), the same 4 on Summary (4 cases · 4 groups), Case, Find,
+  Timetable and Organise; "huang lian" 98 (Herb lines), "bitter taste" 20, "zzzq" none with its line, cleared = all 399; the box
+  keeps her cursor while she types. A searched repaint 0.17 s against 2–3 s for the whole list in the hidden test pane (the
+  unchanged app the same). Tap audit on Cases: `off` empty at 1220 and 360; nothing wider than the screen. No errors.
+- **Not changed:** My patients (its own page); the words a case matches by follow `phSynToks` (a negation, "No bitter
+  taste", still matches, as in the patient search).
+- **Pages checked:** Cases › Summary, Case, Timetable, Find, Organise, the case list on the phone. Not checked: her own device.
+- **SAVED, not live:** goes out only on her own "push live".
