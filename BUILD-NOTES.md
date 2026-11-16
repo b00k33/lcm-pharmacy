@@ -15654,3 +15654,8 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   jl5 Gui Zhi Jia Long Gu Mu Li Tang 50 g (every base herb is there: an added herb).
 - **Tested** (sandbox): the four cases read the herbs; the thyroid case's prescription reads Fu Ling 30 g and, under Da Chai
   Hu Tang, Chai Hu 20 g + Huang Qin 15 g; an older saved copy gets the same; the two open lines unchanged; no errors.
+- **Then her word (same day), the last two** (after "show the full formula currently"): jl10 "tao ren 15g", her popup pick "The gap
+  IS Tao Ren" (the 15 g line = Tao Ren; the dose-less "TR" line was the same herb and goes); jl5 "fu ling 50g". `PH_TC_JN_GAP`
+  fills saved copies too (jl10 drops its dose-less TR once filled). No "(code missing in the notes)" line is left in any case.
+  Tested (sandbox): jl10 reads Da Chai Hu Tang + Gui Zhi 15, Mu Dan Pi 15, Tao Ren 15; jl5 adds Fu Ling 50 g; an older copy the
+  same. SAVED, not live.
