@@ -15712,4 +15712,4 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   phone drawer open, Week unchanged (teal and white). Tap audit at 1280 and 360 on all three tabs: the same list with and without
   the sky (sizes untouched; what it lists is the shell's own, as before). Every word 4.5:1 or more on its surface (the green
   number circles stay 4.3, as on the light page). Not tested: her own devices (Key2 speed with the twinkle).
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE 20261117-100400** (publish 2e1abea9, her "push" 2026-11-17). Her devices get it with the gold Update.
