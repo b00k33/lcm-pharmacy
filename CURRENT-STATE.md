@@ -1658,7 +1658,7 @@ Fitness + Exercises), the rest in Life.
   birth date, C22's numerology with the Personal Year turning on her birthday; a card she types over wins, "Worked out" goes
   back) · Imprinting (the Personal Year's 12 months from her birth month, Personal Month 1 = the imprint month in gold; a
   month's day grid; a day's "What I did" + Matched the number) · Readings (readings she gives: people, worked-out LP / Sun /
-  Earth, GG33 fit, systems, $, For Charity · Mine · Free; totals this year). Data `d.nsme` · `d.nsrd` · `d.nsdl` in her Me row.
+  Earth, Life Path fit, systems, $, For Charity · Mine · Free; totals this year). Data `d.nsme` · `d.nsrd` · `d.nsdl` in her Me row.
   Code: "NUMBERS & STARS" (`phNs*`).
 - Workouts / rehab / code / travel = her routines read by title (`PH_HUB_RX`); a title with a money word (invoice, bank, BAS, tax,
   bills, payments, lease, rent …, `PH_HUB_RX.money`) is never a workout (her "invoice is not fitness, its financials": "Claude
