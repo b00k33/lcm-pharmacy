@@ -15658,4 +15658,4 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   IS Tao Ren" (the 15 g line = Tao Ren; the dose-less "TR" line was the same herb and goes); jl5 "fu ling 50g". `PH_TC_JN_GAP`
   fills saved copies too (jl10 drops its dose-less TR once filled). No "(code missing in the notes)" line is left in any case.
   Tested (sandbox): jl10 reads Da Chai Hu Tang + Gui Zhi 15, Mu Dan Pi 15, Tao Ren 15; jl5 adds Fu Ling 50 g; an older copy the
-  same. SAVED, not live.
+  same. LIVE 20261116-212400 (b9bf349b), her "push live".
