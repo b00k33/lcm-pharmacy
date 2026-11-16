@@ -15643,7 +15643,7 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   table only: a patient's notes never go in the code).
 - **LIVE 20261116-205600** (her "push live", 2026-11-16; 7b3e7d5e). After the gold Update she loads the Lyttleton file again.
 
-## 2026-11-16: June tour: the herbs missing from four doses (SAVED, not live)
+## 2026-11-16: June tour: the herbs missing from four doses (LIVE 20261116-211200)
 - **Her words:** "what does code missing mean? what herb is missing here?" (her screenshot: the thyroid nodules case's Wen Dan
   Tang, a "(code missing in the notes)" line at 30 g). It meant her June notes had a dose with no herb code; it was kept as written.
 - **Her pick:** "Yes, fill the 4 sure ones" (the herb each formula leaves as the only answer): jl4 Wen Dan Tang + Ban Xia Hou Po
