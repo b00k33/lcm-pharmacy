@@ -1660,6 +1660,10 @@ Fitness + Exercises), the rest in Life.
   back) · Imprinting (the Personal Year's 12 months from her birth month, Personal Month 1 = the imprint month in gold; a
   month's day grid; a day's "What I did" + Matched the number) · Readings (readings she gives: people, worked-out LP / Sun /
   Earth, Life Path fit, systems, $, For Charity · Mine · Free; totals this year). Data `d.nsme` · `d.nsrd` · `d.nsdl` in her Me row.
+  **A night sky (her 2026-11-16 picks):** while the page is open the whole screen (top bar, rail, page) is navy fading to black
+  with twinkling stars, glimmers, a shooting star and a crescent moon in the top bar; cards see-through; picked tabs, the rail's
+  open row, Save and Next are gold with dark words. Colours only (the tokens re-set inside it); hand block "NUMBERS & STARS: THE
+  NIGHT SKY".
   Code: "NUMBERS & STARS" (`phNs*`).
 - Workouts / rehab / code / travel = her routines read by title (`PH_HUB_RX`); a title with a money word (invoice, bank, BAS, tax,
   bills, payments, lease, rent …, `PH_HUB_RX.money`) is never a workout (her "invoice is not fitness, its financials": "Claude
