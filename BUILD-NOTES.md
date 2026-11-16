@@ -15660,7 +15660,7 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   Tested (sandbox): jl10 reads Da Chai Hu Tang + Gui Zhi 15, Mu Dan Pi 15, Tao Ren 15; jl5 adds Fu Ling 50 g; an older copy the
   same. LIVE 20261116-212400 (b9bf349b), her "push live".
 
-## 2026-11-16: Fang Bing Ren: the Bing gaps (SAVED, not live; weights DRAFT)
+## 2026-11-16: Fang Bing Ren: the Bing gaps (LIVE 20261117-100400; weights DRAFT)
 - **Her words:** "ok fix those gaps too", after the synth22 survey of the HH JF Mick folder and the jingfangclassics.eng posts
   found that a formula's key today signs often sat in its table only as a Ren (constitution) sign, so ticking them as today's
   Bing, the chief complaint's side (her "bing is taken from patient chief complaint"), scored nothing.
@@ -15690,7 +15690,7 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   as plain rows (no Draft mark there).
 - **Her review:** `mocks/fbr-sources-2026-11-16/gaps-review.html` (local): every sign by formula, its weight as dots, gold =
   her own Ren number, teal = the sources' words, the sources on hover.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE 20261117-100400** (her "push", 2026-11-17; publish 2e1abea9, with the Numbers & Stars night sky de9d162e that was saved before it).
 
 ## 2026-11-16: Numbers & Stars night sky
 - **Her words:** "for the numerology astrology pages, i want the design to be black or dark navy - like hte night sky, with some
