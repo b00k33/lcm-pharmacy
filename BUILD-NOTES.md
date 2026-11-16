@@ -15520,3 +15520,7 @@ Her words: "reference chapter and page number of cases". A cases file's card may
   tax pile read the same readings. Checked: Numbers & Stars, Money, the rail and Next.
 - **Not tested:** her own device and her own data, two devices syncing a reading.
 - **LIVE 20261116-132000** (publish 14d51465, her "push live when done").
+
+## 2026-11-16: Guide > Cases: condition categories as headings (SAVED, not live)
+
+Her words: "can the conditions show major category e.g. gynaecology with subcategories?" + her picks: B "headings" (a category is a heading, not a tick); "One Gynaecology for all women's" (fertility and pregnancy in it, Men's health for male factor, General medicine = the body-system drafts, Other); shown on Find Lists, Find Grid, the Group by Complaint list and Summary (Complaints and its grid). `PH_TC_CATS`, `phTcGrpCat(g)` (from the group's own key, so her renames keep it), `phTcCatSort`, `phTcCatHd`; `.tc-cat` CSS. Grid heading rows: a sticky first cell + empty cells (`tr.tc-ctr`), the group's own row number kept for the entrance delay. Tested in the sandbox (399 cases: Gynaecology 62, Men's health 4, General medicine 282, Other 51); tap audit 0 off at 1220 and 360, no sideways scroll.
