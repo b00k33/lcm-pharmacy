@@ -16145,6 +16145,10 @@
   #pharmacyPage .ph-tc .tcd-pg .tx { flex: 1; min-width: 0; }
   #pharmacyPage .ph-tc .tcd-pg b { display: block; font-size: var(--fs-13); overflow-wrap: anywhere; }
   #pharmacyPage .ph-tc .tcd-pg .fm { display: block; font-size: var(--fs-12-5); color: var(--ph-soft); overflow-wrap: anywhere; }
+  #pharmacyPage .ph-tc .tcd-pg .tcd-hit { display: block; margin-top: 2px; font-size: var(--fs-12-5); line-height: 1.3; color: var(--ph-soft); overflow-wrap: anywhere; }   /* a searched case: the line it was found by */
+  #pharmacyPage .ph-tc .tcd-pg .tcd-hit b { display: inline; font-size: inherit; color: var(--ph-ink); font-weight: 600; }
+  #pharmacyPage .ph-tc .tcd-pg .tcd-hit em { font-style: normal; font-weight: 600; }
+  #pharmacyPage .ph-tc .tcd-pg.on .tcd-hit, #pharmacyPage .ph-tc .tcd-pg.on .tcd-hit b { color: #fff; }
   /* a case's condition tags (her pick A, 2026-11-15): teal on white; white on the lit row */
   #pharmacyPage .ph-tc .tcg { display: flex; flex-wrap: wrap; gap: 4px; margin: 2px 0 1px; min-width: 0; }
   #pharmacyPage .ph-tc .tcg i { font-style: normal; font-weight: 400; font-size: var(--fs-12); line-height: 16px; padding: 0 6px; border: 1px solid var(--ph-herb); border-radius: 6px; color: var(--ph-herb); background: var(--ph-white); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
@@ -97157,7 +97161,39 @@ burning behind her chest|Stomach: heartburn|b`;
   // and complaints, any of them) and a formula side (any ticked formula), the two together; a herb picked on Summary narrows both
   const phTcCondOk = c => (!phGdTcFc.length && !phGdTcFg.length) || phGdTcFg.indexOf(phTcGrp(c)) >= 0 || phGdTcFc.indexOf(phTcCc(c)) >= 0;
   const phTcFmOk = c => !phGdTcFf.length || phTcFms(c).some(f => phGdTcFf.indexOf(f) >= 0);
-  function phTcPass(c) { return phTcCondOk(c) && phTcFmOk(c) && (!phGdTcFh || phTcRx(c).some(r => r.k === phGdTcFh)); }
+  function phTcPass(c) { return phTcCondOk(c) && phTcFmOk(c) && (!phGdTcFh || phTcRx(c).some(r => r.k === phGdTcFh)) && phTcSxOk(c); }
+  // her 2026-11-16 "i tried to search signs from the cases and it doesnt work": the Guide's search box ("Search a sign or formula", phGdSearch) was drawn on Cases but nothing read it.
+  // It now narrows the cases as the patient search reads a finding (phSynHas): the words as typed, or every typed word, read as its meaning, starting a word of ONE line of the case:
+  // a sign (the observation and the sign it is tagged with), the complaint, a diagnosis, the formula and its changes, a herb, a sentence of the notes, a later step's lines, the case's name.
+  // phTcPass carries it, so the list, the count, Summary, Timetable and Find all follow; a case's row names the line it was found by.
+  const phTcSxMemo = { q: null, t: [], m: null }, phTcSxLn = new WeakMap();
+  function phTcSxLines(c) {
+    const sig = JSON.stringify([c.cc, c.name, c.cond, c.symptoms, c.formula, c.fms, c.mod, c.note, c.recipe, c.sessions]), had = phTcSxLn.get(c); if (had && had.sig === sig) return had.l;
+    const lab = phPtSxLab(), out = [], seen = new Set();
+    const put = (src, text, more) => { text = String(text || "").trim(); if (!text || seen.has(src + "|" + text)) return; seen.add(src + "|" + text); const all = text + (more ? " " + more : ""); out.push({ src, text, lo: all.toLowerCase(), cn: " " + phSynToks(all).join(" ") + " " }); };
+    const sx = (src, s) => { if (!s) return; put(src, s.text, phTcLinks(s).map(l => { const k = String(l.sign || ""); return k ? (lab[k] || k.replace(/_/g, " ")) + " " + (PH_BING_ALIAS[k] || "") + " " + (PH_BING_ALIAS[k.replace(/_(tend|now)$/, "")] || "") : ""; }).join(" ")); };
+    const notes = (src, t) => String(t || "").split(/\n+|\s+·\s+|[.;!?]\s+/).forEach(x => put(src, x));
+    put("Complaint", phTcCc(c));
+    (c.symptoms || []).forEach(s => sx("Sign", s));
+    (c.cond || []).forEach(t => put("Diagnosis", t));
+    put("Formula", [phTcFms(c).join(" + "), c.mod].filter(x => String(x || "").trim()).join(" · "));
+    phTcRx(c).forEach(r => put("Herb", r.nm + " " + r.g + " g"));
+    notes("Notes", c.note);
+    (c.sessions || []).forEach(s => { if (!s) return; const st = String(s.label || "").trim() || "Later step"; put(st, [s.formula, s.mod].filter(x => String(x || "").trim()).join(" · ")); (s.symptoms || []).forEach(y => sx(st, y)); notes(st, s.note); });
+    put("Case", c.name);
+    phTcSxLn.set(c, { sig, l: out }); return out;
+  }
+  // the lines of a case that the search names (null: no search; one render reads each case once)
+  function phTcSxHits(c) {
+    const q = String(phGdSearch || "").trim().toLowerCase(); if (q.length < 2) return null;
+    if (phTcSxMemo.q !== q || !phTcSxMemo.m) { const m = new Map(); Object.assign(phTcSxMemo, { q, t: phSynToks(q).filter(w => w.length > 2), m }); Promise.resolve().then(() => { if (phTcSxMemo.m === m) phTcSxMemo.m = null; }); }
+    let h = phTcSxMemo.m.get(c); if (h) return h;
+    const t = phTcSxMemo.t; h = phTcSxLines(c).filter(l => l.lo.indexOf(q) >= 0 || (t.length > 0 && t.every(w => l.cn.indexOf(" " + w) >= 0)));
+    phTcSxMemo.m.set(c, h); return h;
+  }
+  const phTcSxOk = c => { const h = phTcSxHits(c); return !h || h.length > 0; };
+  // the row's line: what the case was found by (the complaint is the row's own title already)
+  const phTcSxHtml = c => { const h = (phTcSxHits(c) || []).filter(l => l.src !== "Complaint"); return h.length ? `<span class="tcd-hit"><b>${esc(h[0].src)}</b> ${esc(h[0].text)}${h.length > 1 ? ` <em title="${esc(h.slice(1, 12).map(l => l.src + ": " + l.text).join("\n"))}">+${h.length - 1}</em>` : ""}</span>` : ""; };
   // a formula's family by its name (its colour, its person, her recipe, its classical recipe); a name no family has borrows the family of a case it leads
   function phTcFmFamFn(cases) {
     const m = new Map(); Object.keys(PH_FORMULAS).forEach(id => m.set(phGdfNorm(phGdfName(id)), id));
@@ -97484,7 +97520,7 @@ burning behind her chest|Stomach: heartburn|b`;
   // (Other last), each opening on its complaints; the formulas A–Z with a search, a combined prescription counted under each of its formulas, none with no case shown
   // unless ticked. Grid: the groups × the 8 formulas with most cases (shown A–Z), a cell = that pair, a group = that group, a total = that formula. Under both, the
   // cases found as a table; a row opens the case on Case, the ticks kept (her "Open it, keep my picks"). Counted from the source picked in From.
-  function phTcFindBase() { const src = phTcSrcFilter(); return phTourCases().filter(c => (!src || src.cases.indexOf(c.n) >= 0) && (!phGdTcFh || phTcRx(c).some(r => r.k === phGdTcFh))); }
+  function phTcFindBase() { const src = phTcSrcFilter(); return phTourCases().filter(c => (!src || src.cases.indexOf(c.n) >= 0) && (!phGdTcFh || phTcRx(c).some(r => r.k === phGdTcFh)) && phTcSxOk(c)); }
   const phTcFindCcs = (base, g) => [...new Set(base.filter(c => phTcGrp(c) === g).map(phTcCc))];
   const phTcFindFms = c => [...new Set(phTcFms(c))];
   const phTcFindGrpSort = (a, b) => phTcCatSort(a, b) || (a === "Other") - (b === "Other") || phAz(phTcGrpName(a), phTcGrpName(b));
@@ -97594,13 +97630,13 @@ burning behind her chest|Stomach: heartburn|b`;
     const focus = multi ? (ticked.find(c => c.id === phGdTcSel) || ticked[0]) : (cases.find(c => c.id === phGdTcSel && ids.indexOf(c.id) >= 0) || cases.find(c => c.id === ids[0]) || null);
     const fid = focus && phGdTcView === "day" ? focus.id : "";   // a row is lit only while the pane shows its case
     // her picks 2026-11-11: no round ticks; a row = the formula's person, "n · complaint", the formula; a case beside the open one (Compare with) is outlined
-    let tcRi = 0; const row = (c, b) => { const f = phTcFms(c).join(" + "), cw = multi && c.id !== fid && phGdTcTick.indexOf(c.id) >= 0, k = phTcSessNo(c, b), tip = [k ? "C" + c.n : "", cw ? "Side by side" : ""].filter(Boolean).join(" · "); return `<button type="button" class="tcd-pg${c.id === fid ? " on" : ""}${cw ? " cw" : ""}" data-tc-dpick="${esc(c.id)}" data-mo-once="tcl:${esc(c.id)}" style="--i:${Math.min(tcRi++, 14)}"${tip ? ` title="${tip}"` : ""}>${phTcPerHtml(c.fam)}<span class="tx">${phTcRowNm(c, k, f)}${phTcTagsHtml(c)}</span>${phTcLogDot(c)}</button>`; };
+    let tcRi = 0; const row = (c, b) => { const f = phTcFms(c).join(" + "), cw = multi && c.id !== fid && phGdTcTick.indexOf(c.id) >= 0, k = phTcSessNo(c, b), tip = [k ? "C" + c.n : "", cw ? "Side by side" : ""].filter(Boolean).join(" · "); return `<button type="button" class="tcd-pg${c.id === fid ? " on" : ""}${cw ? " cw" : ""}" data-tc-dpick="${esc(c.id)}" data-mo-once="tcl:${esc(c.id)}" style="--i:${Math.min(tcRi++, 14)}"${tip ? ` title="${tip}"` : ""}>${phTcPerHtml(c.fam)}<span class="tx">${phTcRowNm(c, k, f)}${phTcTagsHtml(c)}${phTcSxHtml(c)}</span>${phTcLogDot(c)}</button>`; };
     const phone = window.innerWidth <= 640, open = !!(phone && phGdTcPageOpen && focus && phGdTcView === "day"), paneOnly = phone && (open || phGdTcView !== "day"), fold = !phone && phGdTcListFold;
     // the fold (a computer; a phone already shows the list and the case one at a time): ‹ at the top of the list, › at the top of the folded column
     const foldBtn = phone ? "" : `<button type="button" class="tcd-fold" data-tc-listfold="1" aria-expanded="${!fold}" title="${fold ? "Show the case list" : "Fold the case list"}" aria-label="${fold ? "Show the case list" : "Fold the case list"}">${fold ? "›" : "‹"}</button>`;
     const rowS = (c, b) => { const k = phTcSessNo(c, b); return `<button type="button" class="tcd-pn${c.id === fid ? " on" : ""}" data-tc-dpick="${esc(c.id)}" title="${esc((k || c.n) + " · " + (phTcCc(c) || "") + (phTcFms(c).length ? " · " + phTcFms(c).join(" + ") : ""))}">${k || c.n}</button>`; };
     const list = fold ? foldBtn + groups.map((g, i) => (i && g.cs.length ? `<i class="tcd-sep" aria-hidden="true"></i>` : "") + g.cs.map(c => rowS(c, g.b)).join("")).join("")
-      : groups.map((g, i) => g.shut ? (g.catHd || "") + (i === 0 && foldBtn ? `<div class="tcd-bh tcd-bh0">${foldBtn}</div>` : "") : (g.catHd || "") + (g.head ? `<div class="tcd-bh">${i === 0 && foldBtn ? `<span title="${g.head}">${g.head}</span>${foldBtn}` : g.head}</div>` : i === 0 && foldBtn ? `<div class="tcd-bh tcd-bh0">${foldBtn}</div>` : "") + (g.cs.length ? g.cs.map(c => row(c, g.b)).join("") : `<div class="tcd-no">No cases</div>`)).join("");
+      : groups.map((g, i) => g.shut ? (g.catHd || "") + (i === 0 && foldBtn ? `<div class="tcd-bh tcd-bh0">${foldBtn}</div>` : "") : (g.catHd || "") + (g.head ? `<div class="tcd-bh">${i === 0 && foldBtn ? `<span title="${g.head}">${g.head}</span>${foldBtn}` : g.head}</div>` : i === 0 && foldBtn ? `<div class="tcd-bh tcd-bh0">${foldBtn}</div>` : "") + (g.cs.length ? g.cs.map(c => row(c, g.b)).join("") : `<div class="tcd-no">${String(phGdSearch || "").trim().length >= 2 ? `No cases for “${esc(phGdSearch.trim())}”` : "No cases"}</div>`)).join("");
     const sessOk = !multi && focus && phGdTcSess && (focus.sessions || []).some(x => x.id === phGdTcSess), target = sessOk ? phTcFind(phGdTcSess) : focus;
     const focusBar = multi ? `<div class="ph-tc-fc tcd-cb"><b class="ph-tc-lb">Working on</b>${ticked.map(c => `<button type="button" class="gf-chip${c.id === focus.id ? " on" : ""}" data-tc-focus="${esc(c.id)}">C${c.n}</button>`).join("")}</div>` : "";
     // side by side is picked from the open case: "Compare with" lists the other cases by number, a tick each; "Close compare" ends it
@@ -97608,7 +97644,7 @@ burning behind her chest|Stomach: heartburn|b`;
     const cmp = !cwList.length ? "" : `<span class="ph-cmp-add"><button type="button" class="gf-chip${multi ? " on" : ""}" data-tc-cw="${esc(focus.id)}" aria-haspopup="listbox" aria-expanded="${phGdTcPop === "cw"}">${multi ? "Compare with · " + (ticked.length - 1) : "Compare with…"} ▾</button>${phGdTcPop === "cw" ? `<div class="ph-cmp-addl" data-tc-pop-wrap role="listbox">${cwList.map(c => { const on = multi && phGdTcTick.indexOf(c.id) >= 0, f = phTcFms(c).join(" + "); return `<button type="button" class="ph-cmp-addi${on ? " on" : ""}" data-tc-cwpick="${esc(c.id)}" role="option" aria-selected="${on}"><i class="tk"></i><span>C${c.n} · ${esc(phTcCc(c))}</span>${f ? `<em>${esc(f)}</em>` : ""}</button>`; }).join("")}</div>` : ""}</span>${multi ? `<button type="button" class="gf-chip" data-tc-tick-clear="1">Close compare</button>` : ""}`;
     const page = focus ? `${open ? `<div class="ph-tc-fc tcd-cb"><button type="button" class="gf-btn" data-tc-back="1">‹ Day</button></div>` : ""}${focusBar}${phTcCaseBarHtml(focus, target, cmp, multi)}${phTcEditHtml(focus)}${phGdTcTag ? phTcCorrelateHtml(target) : ""}<div style="margin-top:10px${multi || (!phone && phGdTcListFold) ? "" : ";max-width:760px"}">${phTcTableHtml(multi ? ticked : [focus])}</div>${multi ? "" : phTcSessBarHtml(focus, sessOk ? phGdTcSess : "")}${phTcIntegrateHtml(target)}` : `<div class="gf-none" style="padding:16px">No cases</div>`;
     const pick = places.length > 1 ? phTcPlaceSel(places, pk, true) : "";
-    { const lk = [pk, cur, phGdTcGb, phGdTcFc, phGdTcFf, phGdTcFg, phGdTcFh, fold].join("|"), le = document.querySelector("#phGdBody .tcd-list"); phGdTcListAt = { k: lk, y: le && phGdTcListAt.k === lk ? le.scrollTop : 0 }; }   // put back in phGdAfterPaint
+    { const lk = [pk, cur, phGdTcGb, phGdTcFc, phGdTcFf, phGdTcFg, phGdTcFh, fold, phGdSearch.trim()].join("|"), le = document.querySelector("#phGdBody .tcd-list"); phGdTcListAt = { k: lk, y: le && phGdTcListAt.k === lk ? le.scrollTop : 0 }; }   // put back in phGdAfterPaint
     // the right pane: Summary counts what the list shows (the source, its day), the case, the Timetable, or Organise (the places grid: where a place or a case is added)
     if (phGdTcView === "pat") phGdTcPatDay = isTour && /^d\d+$/.test(cur) ? cur : "";
     const pane = phGdTcView === "find" ? phTcFindHtml() : phGdTcView === "pat" ? phTcPatHtml() : phGdTcView === "tt" ? phTcTtHtml() : phGdTcView === "grid" ? (v2 => `<div class="ph-cmp"><div style="margin-bottom:8px"><button type="button" class="gf-chip" data-tc-import="1" title="Load study cards from a cases file on this computer into a book, seminar or friend's cases">Import cases from a file</button><input type="file" accept=".json,application/json" data-tc-importf hidden></div>${v2.length ? phTcGridHtml(v2, []) : `<div class="gf-none" style="padding:16px 18px">No cases match</div>`}</div>`)(phTcVisible()) : page;
