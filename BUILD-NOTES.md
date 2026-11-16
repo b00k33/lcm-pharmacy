@@ -15659,3 +15659,35 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   fills saved copies too (jl10 drops its dose-less TR once filled). No "(code missing in the notes)" line is left in any case.
   Tested (sandbox): jl10 reads Da Chai Hu Tang + Gui Zhi 15, Mu Dan Pi 15, Tao Ren 15; jl5 adds Fu Ling 50 g; an older copy the
   same. LIVE 20261116-212400 (b9bf349b), her "push live".
+
+## 2026-11-16: Fang Bing Ren: the Bing gaps (SAVED, not live; weights DRAFT)
+- **Her words:** "ok fix those gaps too", after the synth22 survey of the HH JF Mick folder and the jingfangclassics.eng posts
+  found that a formula's key today signs often sat in its table only as a Ren (constitution) sign, so ticking them as today's
+  Bing, the chief complaint's side (her "bing is taken from patient chief complaint"), scored nothing.
+- **Built (`index.html`):** `PH_FBR_GAPS_DRAFT` (after `PH_FORMULAS`, before `phFbrFromHalves`) and a loop that fills each
+  family's `bing` / `ren` table at load, only where the table leaves the sign empty. Three kinds (the local list
+  `mocks/fbr-sources-2026-11-16/gaps-added.tsv`, `knowledge.tsv` behind it):
+  - 60 signs the table held only as the Ren twin (`PH_FBR_TWINS_DRAFT`) and a source names as a today sign: the Bing twin
+    at **her own Ren weight** (Xiao Chai Hu Tang's chest and ribs, poor appetite, nausea, bitter taste; Si Ni San's cold hands
+    and feet; Wai Tai Fu Ling Yin's sloshing stomach; Xiao Qing Long Tang's cough, wheeze and watery phlegm ...).
+  - 182 today signs with neither twin on the table, named by two sources or more, or by one as key / main / must-see: the
+    words' weight (must-see / most important 5, key / main / characteristic 4, listed 3, or / may 2). One hand fix: Xiao Chai
+    Hu Tang's "must-see palpitations" (a mistranslation of xin fan xi ou, as the source's own note says) is the clause 96 `or`
+    sign, 2. 397 signs only one source lists, with no key word, were left out.
+  - 17 today signs the pool has only on the Ren side (no Bing twin; Ge Gen Tang's stiff neck, pulses, tongue body): Ren.
+  - 25 `or` lines, so a sign said two ways counts once (sleep, thirst, sweat, coat colour or thickness, chest and ribs,
+    lower belly, nausea and vomiting ...); a line joins her own `or` line when it shares a sign and never joins two of her lines.
+- **Why at load and not in each table:** one block she can read and strike as one, and her edits (`PHARMACY.fbrEdits`,
+  `phFbrEditsApply` over `phFbrPristine`) still win; Chai Gui and Chai Qin Tang take the new Xiao Chai Hu Tang weights from
+  their halves. The one-case tables' `core` still says "each sign the case showed, at 3": their Draft rows are the addition.
+- **Tested** (sandbox, built on c7cb4fef): no errors at load; ten textbook pictures ticked as today's signs alone, the
+  formula's place before → after: Xiao Chai Hu Tang #14 → #1, Si Ni San #39 → #1, Wai Tai Fu Ling Yin #57 → #1, Ge Gen Qin
+  Lian Tang #65 → #1, Xiao Qing Long Tang #29 → #1, Wu Ling San #27 → #1, Chai Hu Jia Long Gu Mu Li Tang #15 → #2 (Gui Zhi Jia
+  Long Gu Mu Li Tang first), Ge Gen Tang #65 → #2 (Ma Huang), Zhen Wu Tang #8 → #2 (Ling Gui Zhu Gan Tang), Huang Qi Gui Zhi
+  Wu Wu Tang #79 → #6. A made-up patient with the Xiao Chai Hu Tang ticks: the Fang Bing Ren page draws, Xiao Chai Hu Tang
+  leads the list. No control changed, so no tap audit.
+- **Pages checked:** Fang Bing Ren (list, ticks). Not checked: her own device; the Guide's family tables show the Draft rows
+  as plain rows (no Draft mark there).
+- **Her review:** `mocks/fbr-sources-2026-11-16/gaps-review.html` (local): every sign by formula, its weight as dots, gold =
+  her own Ren number, teal = the sources' words, the sources on hover.
+- **SAVED, not live:** goes out only on her own "push live".
