@@ -15519,4 +15519,4 @@ Her words: "reference chapter and page number of cases". A cases file's card may
 - **Integration:** her birth date is read from her record (`phPatientPeek`), never copied; Money, the Week page's income and the
   tax pile read the same readings. Checked: Numbers & Stars, Money, the rail and Next.
 - **Not tested:** her own device and her own data, two devices syncing a reading.
-- **SAVED, not live** (her "push live" publishes it).
+- **LIVE 20261116-132000** (publish 14d51465, her "push live when done").
