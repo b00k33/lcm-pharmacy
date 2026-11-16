@@ -15691,3 +15691,25 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
 - **Her review:** `mocks/fbr-sources-2026-11-16/gaps-review.html` (local): every sign by formula, its weight as dots, gold =
   her own Ren number, teal = the sources' words, the sources on hover.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## 2026-11-16: Numbers & Stars night sky
+- **Her words:** "for the numerology astrology pages, i want the design to be black or dark navy - like hte night sky, with some
+  stars glimmering". Mock: chat widget `lcm_numbers_stars_night_sky_mock` (switches A-E). **Her 8 picks:** A navy fading to
+  black · B many stars · C twinkle + a shooting star · D see-through cards · E picked = gold · F the WHOLE screen (top bar, rail,
+  page) · G the same sky on the phone · H a thin crescent moon.
+- **Built:** CSS only, one hand block "NUMBERS & STARS: THE NIGHT SKY" at the end of the main `<style>`, every rule scoped
+  `#pharmacyPage #presPanel:has(.ph-ns)` (it switches off by itself on every other page; no JS, nothing stored). The page's
+  tokens are re-set inside it (`--ph-ink` / `--ph-soft` / `--ph-faint` light, `--ph-white` / `--ph-paper` / `--ph-herb-tint` /
+  `--ph-line` see-through white, `--ph-herb` = gold), so every part of the three tabs reads the night without a rule each.
+  The sky: two star fields (55 + 55 soft dots as gradients on `#presPanel::before/::after`, twinkling out of step), six
+  four-point glimmers (`.ph-pres-panel::before`, `.ph-flow::before`), one shooting star every 9 s (`.ph-pres-panel::after`),
+  the moon in the top bar left of its search (`.ph-pres-band::after`, clear of "+ Reading"). All behind the page
+  (`z-index: -1`, `pointer-events: none`); every animation off under reduced motion. The top bar is night at .86, the rail
+  see-through (solid night when the phone's drawer is open, `.ph-rail-drw`). Picked tab, the rail's open row, Save
+  (`.ph-fast-btn.solid`) and Next (`.ph-pres-stage-next`) = gold with dark words; today = a gold wash; a sign's dot keeps a
+  faint ring (Pisces' dark blue showed on navy only that way). The theme rule in CLAUDE.md names this one dark page.
+- **Tested (sandbox, my made-up record):** My chart, Imprinting (a day open), Readings (a reading open) at 1280 and 360, the
+  phone drawer open, Week unchanged (teal and white). Tap audit at 1280 and 360 on all three tabs: the same list with and without
+  the sky (sizes untouched; what it lists is the shell's own, as before). Every word 4.5:1 or more on its surface (the green
+  number circles stay 4.3, as on the light page). Not tested: her own devices (Key2 speed with the twinkle).
+- **SAVED, not live:** goes out only on her own "push live".

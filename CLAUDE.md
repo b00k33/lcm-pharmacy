@@ -364,7 +364,10 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   Do NOT convert this app to dark mode (a dark-teal accent band for headers/
   stats is fine — that's an accent, not dark mode; so is the patient rail's
   teal band, her pick 2026-11-02, which takes a Gynae / MSK Case's colour like
-  the rest of the panel).
+  the rest of the panel). **One page she asked to be dark:** Numbers & Stars is a
+  night sky (her 2026-11-16 word and 8 picks; the hand block "NUMBERS & STARS: THE
+  NIGHT SKY" before `</style>`, scoped `#presPanel:has(.ph-ns)`, BUILD-NOTES "Numbers &
+  Stars night sky"). Never a precedent for another page.
 - Every teal/accent colour is a CSS variable, one source of truth — no
   one-off shades, colours never drift from screen to screen.
 - **One disclosed, deliberate exception to teal-everywhere**: the Dispense
