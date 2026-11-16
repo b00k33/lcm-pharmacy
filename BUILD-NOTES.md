@@ -15596,3 +15596,48 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   taste", still matches, as in the patient search).
 - **Pages checked:** Cases › Summary, Case, Timetable, Find, Organise, the case list on the phone. Not checked: her own device.
 - **LIVE 20261116-195200** (her "push live", 2026-11-16; 5bc016d8).
+
+## 2026-11-16: Guide > Cases: every case note read as its Fang Bing Ren sign (SAVED, not live)
+- **Her words:** "help organise the symptoms as best to correspond with fang bing ren signs - help coincide themm. this is a
+  big task so mock before building" (her screenshot: C368's case page, notes under REN / BING with no numbers).
+- **Measured first:** 2,154 of 4,582 case notes had a pre-filled sign (47%), and none counted until accepted one by one; C368
+  put "Stress incontinence" under Mood (the word "stress"), "Lower back pain with periods" under Periods, and found no sign for
+  Pale, Small, frail, underweight, Often unwell ("Pale" was offered as Lips: pale).
+- **Mock:** chat widget `case_c368_signs_organised_mock` (Now / Organised, line A/B/C, Ren-Bing switch, tap a line). **Her 11
+  picks:** Claude matches every note of every case, she checks only the unsure (dashed); sure readings count at once (this
+  replaces "nothing scores until she accepts"); line A (the sign's words, hers small under when they say more); Ren / Bing by
+  meaning (build, look, lifelong = Ren; what is wrong now = Bing); a note with no sign stays in its row, "no Fang Bing Ren
+  sign"; a later visit's change = a gold word tag (better · gone · worse · new); a condition that is a sign also shows in its
+  row; a note with two signs = two lines; all cases, My patients too; the family where it is clear; build, then show her.
+- **The reading:** every wording of every case (5,134: tour notes, Lyttleton's notes, 1,347 condition lines, later visits)
+  read once against the 710 catalog signs, in eight parts, each line checked (key on its side, row, change word), then a pass
+  for consistency (first-visit notes that report a change carry better / gone; "better with movement" does not).
+  `phTcRead(c, text, cond)` = the first found of: the case's own map (`c.fbr`, from a cases file: a book's notes never sit in
+  this public code), `PH_TC_FBR` (the tour notes: 2,817 lines, only where the word matcher would read a note otherwise, about
+  160 KB), then the word matcher (her wording list and a sign's own words = sure; a similar-wording match = unsure, dashed).
+  Her own tag always wins (`phTcNoteShown`: s.sign; `s.nosign` = her No sign; `c.condTag` on a condition line).
+- **On the page:** `phTcSrc` draws readings as signs (number 3, the Ren or Bing column by the reading's key), `dr` = dashed
+  gold while every note under a line is unsure, `tg` = the change tag, `ns` = "no Fang Bing Ren sign" under a note in its row
+  (row from the reading, else the sign it was read as, else the words: `PH_TC_SUBJ_RE` now reads incontinence as Urine and
+  BBT / ovulation / mucus as Sex & fertility). A line is a row (`.zl.ln`, role button, Enter / Space; on the tap audit's KEEP
+  list): a tap opens its choices under it (`phTcLnPopHtml`: its sign, the reading's, the word matcher's, as one joined bar +
+  No sign; Find a sign opens Tag on that note): a choice becomes her own tag at once (`phTcLnPick`); Escape or a tap elsewhere
+  closes. Tag n counts the dashed lines; the Tag sheet groups Unsure · check it / Matched / No sign found yet / Tagged / Set
+  aside; Accept and Accept all take the reading. Integrate still lists only accepted signs ("No accepted signs yet" when there
+  are none): a reading counts on the case, but reaches a formula's table only on her tap. The Cases search box reads readings
+  too (`phTcSxLines`: "nocturia" finds C368).
+- **Family where clear** (`phTcAutoFam`): a case with no family whose formula is one of the FBR formulas or starts with its name
+  takes it, once a load (4 cases: two tour, Lyttleton's Liu Jun Zi Tang and Dang Gui Shao Yao San); her "Not matched yet" over
+  it is kept as "".
+- **Lyttleton:** the cases file now carries each card's `fbr` (751 readings); `phTcImport` keeps it on new cards and sets it on
+  cards already loaded. Old file kept as "(before sign readings, 2026-11-16).json"; the Work-folder copy rewritten. **After the
+  gold Update she loads the same file again** (Organise › Import cases from a file).
+- **Tested** (sandbox, built on a8a471d9, 399 cases + the Lyttleton file loaded): every case draws, its Tag sheet and Integrate,
+  no errors; 3,330 of 4,582 notes now carry a sign (2,561 sure, 769 dashed), 1,252 in their rows with no sign, 171 change tags.
+  C368 as mocked (Build, Complexion, Constitution; Immunity dashed; Urine x2; Periods + "better" in Over 5 months; Energy
+  "gone"; BBT and mucus under Sex & fertility, no sign); a dashed line tapped = accepted (dash gone, Tag 1 → Tag); Pale moved
+  to Lips and back; No sign keeps the note in its sign's row; a condition's No sign (condTag "-"); Find a sign opens Tag on
+  the visit's note; Escape, a tap elsewhere and Enter. Tap audit `off` empty at 1280 and 360 (case, a line open, Tag open);
+  nothing wider than 360. Pictures `shots/case-signs-fbr-2026-11-16/`.
+- **Not tested:** her own device and her own tags; My patients with her real visits (read by the word matcher and the tour
+  table only: a patient's notes never go in the code).
