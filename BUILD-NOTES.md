@@ -15529,7 +15529,7 @@ Her words: "can the conditions show major category e.g. gynaecology with subcate
 
 Her words: "write categories e.g. dermatology cardiology etc etc". `PH_TC_CATS` = Gynaecology, Andrology (was Men's health), then A–Z Cardiology, Dermatology, Endocrinology, Gastroenterology, General medicine (Fatigue), Immunology & rheumatology, Musculoskeletal, Nephrology & urology, Neurology & ENT, Oncology, Psychiatry & sleep, Respiratory, then Other; `PH_TC_SPEC` maps each body-system draft to its specialty. The draft words now also catch complaints that sat in Other (dysmenorrhoea, IVF, stroke / infarction, nephritis, uraemia, UTIs, Hep B, cirrhosis, gallstones, coronary disease, Raynaud's, rheumatism, purpura, warts, gait / ataxia, loose stools, myelofibrosis, chemo): Other went from 51 to 7 in the sandbox. A grid's category name stays on one line. Tap audit 0 off at 1220 and 360.
 
-## 2026-11-16: Guide > Cases: Lyttleton's "Original formula" named, a step's own modification line (SAVED, not live)
+## 2026-11-16: Guide > Cases: Lyttleton's "Original formula" named, a step's own modification line (LIVE 20261116-165000)
 - **Her words:** "this is not 'originaly formula'. analyse formulas like this to see what it is e.g. liu wei di huang wan
   modified, or gui shao di huang wan modified. lyttletons formula appendix is a good reference" (her screenshot: Samantha's
   Prescription · Lecture / visit row headed ORIGINAL FORMULA).
@@ -15566,4 +15566,4 @@ Her words: "write categories e.g. dermatology cardiology etc etc". `PH_TC_CATS` 
 - **Pages checked for the names:** the case list, the case head, the case table's Prescription · Lecture / visit row, the
   step heads, Formula in numbers, Find's formula list. Not checked: her own device and data.
 - **For her:** after the gold Update, Organise › Import cases from a file, the same file (it renames what she has).
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE 20261116-165000** (04a2ffaa, her "push live"; C22 published it with its categories build; a stamp-only build 20261116-165200 followed from my queued publish, nothing else in it).
