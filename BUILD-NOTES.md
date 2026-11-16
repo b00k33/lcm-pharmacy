@@ -15597,7 +15597,7 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
 - **Pages checked:** Cases › Summary, Case, Timetable, Find, Organise, the case list on the phone. Not checked: her own device.
 - **LIVE 20261116-195200** (her "push live", 2026-11-16; 5bc016d8).
 
-## 2026-11-16: Guide > Cases: every case note read as its Fang Bing Ren sign (SAVED, not live)
+## 2026-11-16: Guide > Cases: every case note read as its Fang Bing Ren sign (LIVE 20261116-205600)
 - **Her words:** "help organise the symptoms as best to correspond with fang bing ren signs - help coincide themm. this is a
   big task so mock before building" (her screenshot: C368's case page, notes under REN / BING with no numbers).
 - **Measured first:** 2,154 of 4,582 case notes had a pre-filled sign (47%), and none counted until accepted one by one; C368
@@ -15641,3 +15641,4 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   nothing wider than 360. Pictures `shots/case-signs-fbr-2026-11-16/`.
 - **Not tested:** her own device and her own tags; My patients with her real visits (read by the word matcher and the tour
   table only: a patient's notes never go in the code).
+- **LIVE 20261116-205600** (her "push live", 2026-11-16; 7b3e7d5e). After the gold Update she loads the Lyttleton file again.
