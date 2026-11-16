@@ -15468,3 +15468,55 @@ Her words: "reference chapter and page number of cases". A cases file's card may
     once a visit).
 - **Not tested:** her own device.
 - **LIVE 20261116-000600** (publish 9bf7eb4a, her "push live when done").
+
+## Numbers & Stars (2026-11-16)
+- **Her words:** "design a numerology and astrology section in my profile so i can track numerology reading charts i give to
+  others and how much charity money/money i made from it / track my own numerology astrology imprinting chart so i can keep
+  track of how i am imprinting - design this before building / i track numerology western astrology asian astrology etc".
+  Her 16 picks on `mocks/numerology-guide-2026-11-15.html` (mock pictures `mocks/numbers-stars-2026-11-15/`), then "Build as shown".
+- **Built** (`index.html`, "NUMBERS & STARS", `phNs*`), a sixth Mine step after Code (moon icon, `PRES_MINE_RANK` 0.635, so Next
+  reads "Next: Birthdays"), one joined bar My chart · Imprinting · Readings:
+  - **My chart:** Born (her record's birth date) · Time · Place, then three rows of cards: Numerology (Life Path 33/6, Personal
+    Year, Personal Month with its dates, Personal Day and Universal Day today), Western · Vedic · Shadow · Celtic (Sun, Vedic Sun,
+    Saturn's sign, Celtic tree), Earth (her year, trine, enemy with its solar month, this Chinese year and whether it is her trine
+    or enemy, the next imprint month). A card is a button: her typing wins, "Worked out" takes it back (`d.nsme`).
+  - **Imprinting:** the Personal Year's 12 months from her birth month, each with its Personal Month number and how many days she
+    logged; Personal Month 1 has the gold outline (the imprint month). Tap a month for its day grid (Monday first, a Personal Day
+    each, today gold, a logged day a gold dot); tap a day for "What I did" + "Matched the number" Yes · Partly · No + Save
+    (`d.nsdl`). ‹ › circles beside the bar move a year (needed to plan the next imprint month: not in the mock).
+  - **Readings:** one line of totals (readings this year · $ charity · $ mine), then a table (Given · Who · Life Path · Sun ·
+    Earth · $ · For; the phone keeps Given · Who · $ · For). A row opens its editor in place: each person's name, born, time,
+    place with their LP · Sun · Earth worked out as she types the date (in place, no repaint); + Person; the Life Path pairs'
+    GG33 fit ("1 & 3 · Good"); Systems (Numerology · Western · Earth · Vedic · Shadow · Celtic; one "Systems · n ▾" chip on the
+    phone); the day given, $, For Charity · Mine · Free, notes; Save · Delete (Undo in the one toast) · Cancel (`d.nsrd`).
+  - **Money (her pick 4):** a reading For Mine is income: `phHubIncSum` adds `rd` (`phNsMineIn`) to the total, so the Week page,
+    the Money stats and the weekly Income table's new Readings line all count it. The first Mine reading with money puts one
+    "Numbers & Stars readings · Mine" line on the tax pile for Tina (`hubset.nsTax`, once). Charity stays on Numbers & Stars.
+- **The numbers** are C22's (book33 `reduceKeepMaster`, `toSingleDigit`, `universalDay`, `lifePathNumber`, `personalMonth`,
+  `personalDay`), with her pick 13: **the Personal Year turns on her birthday**, so PY 11 runs 15 Apr 2026 – 14 Apr 2027 and the
+  Imprinting year runs Apr → Mar. C22 still turns it on 1 Jan: its correction is C22's own change, under its rules.
+  Worked out and never stored: Sun (C22's SIGNS), Vedic Sun and Celtic tree (date tables), Saturn's sign (Paul Schlyter's orbit
+  method with Jupiter's terms), the Earth year (Cat, not Rabbit; the lunar new year from C22's table 2020–2035, else from the
+  new moons (Meeus) and the December solstice), trine, enemy (the enemy's solar month from C22's CN_MONTHS, so Dragon reads
+  6 Apr–5 May, not the mock's 5 Apr–4 May), GG33 Life Path fit (her GG33 notes' tiers).
+- **Data:** her Me row, entry by entry (`PH_HUB_MAPS` + `nsme`, `nsrd`, `nsdl`). Readings name other people: they live only in
+  her own Me row, never in the code (the repo is public).
+- **Tested** (sandbox, built on 6b291d3d, a made-up record born 15 Apr 1994 and made-up readings):
+  - Her numbers: LP 33/6, PY 11, PM 4 (15 Nov–14 Dec), PD 1 on 15 Nov and 11 on 16 Nov, UD 9 on 15 Nov, Aries, Vedic Aries,
+    Saturn Pisces, Willow, Wood Dog, trine Tiger · Horse · Dog, enemy Dragon, 2026 Fire Horse "your trine", next imprint 15
+    Jul–14 Aug 2027, imprint month Aug 2026. PY 2025–26 = 1, PY 2027–28 = 3. C22's UD examples: 28/1, 22/4, 13/4, 31/4.
+  - Saturn's sign on 10 dates (1980–2026, its 2023 and 2025–26 sign changes); the lunar new year on 27 test years 1966–2019
+    and all of C22's 2020–2035 (only 2034 differs, the leap-month year, and the table covers it).
+  - A card changed and taken back; Time / Place kept; a day logged, matched, saved; months and years moved; a reading added
+    with two people (their numbers appear as the date is typed), saved, opened, deleted, Undo; Escape closes; the tax pile line
+    added once; Money's Readings line ($120 this week, $90 the week before) and the week total.
+  - Tap audit + title-bar audit at 1280 and 360, every state (chart, a card open, Imprinting with a day open, another year,
+    Readings, a reading open, a new one, the phone's Systems list, no birth date): `off` empty. Nothing wider than 360.
+    Calendar days carry `data-keep-size` (CLAUDE.md "Kept": calendar days). The fields' inner boxes take 6px corners and no
+    padding inside this page only (`#pharmacyPage#pharmacyPage .ph-ns .ph-fast-fld input`), as the app-wide text-box rule is
+    !important. The Money page's own older audit lines are unchanged (the Readings line is not tappable).
+  - Pictures: `shots/numbers-stars-build-2026-11-16/` beside the mock's.
+- **Integration:** her birth date is read from her record (`phPatientPeek`), never copied; Money, the Week page's income and the
+  tax pile read the same readings. Checked: Numbers & Stars, Money, the rail and Next.
+- **Not tested:** her own device and her own data, two devices syncing a reading.
+- **SAVED, not live** (her "push live" publishes it).
