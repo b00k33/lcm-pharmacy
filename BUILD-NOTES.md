@@ -15528,3 +15528,42 @@ Her words: "can the conditions show major category e.g. gynaecology with subcate
 ## 2026-11-16: Guide > Cases: categories are specialties (SAVED, not live)
 
 Her words: "write categories e.g. dermatology cardiology etc etc". `PH_TC_CATS` = Gynaecology, Andrology (was Men's health), then A–Z Cardiology, Dermatology, Endocrinology, Gastroenterology, General medicine (Fatigue), Immunology & rheumatology, Musculoskeletal, Nephrology & urology, Neurology & ENT, Oncology, Psychiatry & sleep, Respiratory, then Other; `PH_TC_SPEC` maps each body-system draft to its specialty. The draft words now also catch complaints that sat in Other (dysmenorrhoea, IVF, stroke / infarction, nephritis, uraemia, UTIs, Hep B, cirrhosis, gallstones, coronary disease, Raynaud's, rheumatism, purpura, warts, gait / ataxia, loose stools, myelofibrosis, chemo): Other went from 51 to 7 in the sandbox. A grid's category name stays on one line. Tap audit 0 off at 1220 and 360.
+
+## 2026-11-16: Guide > Cases: Lyttleton's "Original formula" named, a step's own modification line (SAVED, not live)
+- **Her words:** "this is not 'originaly formula'. analyse formulas like this to see what it is e.g. liu wei di huang wan
+  modified, or gui shao di huang wan modified. lyttletons formula appendix is a good reference" (her screenshot: Samantha's
+  Prescription · Lecture / visit row headed ORIGINAL FORMULA).
+- **The analysis (DRAFT, Claude's reading until she reads it):** all 68 unnamed prescriptions of the Lyttleton cases file (28
+  cases, 40 steps) matched against the classical recipes and Lyttleton's appendix "Summary of herbal formulas and their uses in
+  this book" (her own versions of Bu Shen Cu Pai Luan Tang, Wen Yang Hua Tan Fang, Yuan Zhi Chang Pu Yin, Nei Yi Zhi Tong Tang,
+  Chai Hu Tong Liu Yin, Bu Shen Yi Jing Fang ...), and the book's own words where it names one (Barbara: built from Si Jun Zi
+  Tang, Bu Shen Hua Tan Tang and Cang Fu Dao Tan Tang; Millie: the same formula with Kidney Yang tonics; Helen: the
+  after-period formula with herbs added). Each = its base formula(s) in `formula` and the changes in `mod`, the app's own
+  convention ("+ Sha Ren, Chai Hu ...; − Ze Xie; Sheng Di for Shu Di"); 36 sure, 26 likely, 6 loose; 3 steps with no set
+  formula are "Own formula (its aim)". The table: `mocks/formula-names-2026-11-16/Lyttleton formulas named.html` (local:
+  a book's cases never go in this repo). The cases file was rewritten in place (the old one kept beside it, "before formula
+  names") and the copy beside the book in her Work folder too.
+- **Built (`index.html`):**
+  - `phTcStepMod(c, s)`: a step's modification line is its own when it has one (`s.mod`, from a cases file or her edit);
+    else the case's, but only when the step repeats the case's formula or names none. Before, every step showed the case's
+    line (`phTcView` copied `c.mod`), so Phoebe's Tong Jing Wan step read the case's "+ Long Yan Rou" and a "Not recorded"
+    step showed a line too. `phTcView` reads it.
+  - The step box (Sessions › a step) has a **Modified** field under Formula, the whole row wide (`data-tc-s-mod`). Saved
+    as it was drawn, the step keeps following the case; changed, it becomes the step's own.
+  - `phTcImport`: a new card's steps take `mod` from the file. `phTcImpNames(ex, x)`: a card already loaded takes a newer
+    file's formula name and line only where it still says "Original formula" (`PH_TC_UNNAMED`), the case and each step
+    matched by label in order, so a name she typed is never overwritten; the toast counts the cards updated.
+- **Tested** (sandbox, built on 0e4dda58): the first file (38 cards, 28 + 40 "Original formula") then the named one: "31 cases
+  in Infertility by Jane Lyttleton updated", none left; a step renamed by hand first kept its name; the same file again =
+  "These cases are already in". The new file into an empty source (a test copy, taken out after): 38 cards, steps with their
+  own lines. Samantha's Lecture / visit row = GUI SHAO DI HUANG TANG + "Modified + Sha Ren ... − Ze Xie"; Formula in numbers
+  = a Gui Shao Di Huang Tang column (7 herbs) and Added (8) with the line under them. Phoebe's steps: Bu Shen Cu Pai Luan
+  Tang's own line, Tong Jing Wan none, Following 10 months none. Steps still following the case: only the 7 that repeat its
+  formula. The Modified box: Cecily's saved untouched stays the case's; Phoebe's typed "+ Gou Teng" is the step's own. Find:
+  no "Original formula"; Gui Shao Di Huang Tang 9 cases leads. Case list and case heads read "Gui Shao Di Huang Tang,
+  modified". Tap audit (the step box and the page): `off` empty at 1220, 375 and 360; nothing wider than the screen; the box
+  is 16px on the phone. No errors.
+- **Pages checked for the names:** the case list, the case head, the case table's Prescription · Lecture / visit row, the
+  step heads, Formula in numbers, Find's formula list. Not checked: her own device and data.
+- **For her:** after the gold Update, Organise › Import cases from a file, the same file (it renames what she has).
+- **SAVED, not live:** goes out only on her own "push live".
