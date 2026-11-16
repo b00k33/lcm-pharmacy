@@ -15572,7 +15572,7 @@ Her words: "write categories e.g. dermatology cardiology etc etc". `PH_TC_CATS` 
 
 Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data-tc-cat`, ▾ open / ▸ folded, aria-expanded); `phGdTcCatShut` holds the folded categories, one list for Find lists, Find grid, the case list grouped by Complaint and Summary (bars and grid), all open at first. A folded category keeps its heading and count only. Heading 32px, 13px, 6px corners (tap audit), its name on one line (ellipsis). Tap audit 0 off at 1220 and 360 (the grid's growing cells aside).
 
-## 2026-11-16: Guide > Cases: the search box finds cases by a sign (SAVED, not live)
+## 2026-11-16: Guide > Cases: the search box finds cases by a sign (LIVE 20261116-195200)
 - **Her words:** "i tried to search signs from the cases and it doesnt work" (her screenshot: Cases › Summary, the top bar's
   search box holding "burning mouth", the list and the count still 400 cases).
 - **Why:** the Guide's search box (`phGdSearch`, "Search a sign or formula") is drawn on Cases too, and its typing repaints
@@ -15595,4 +15595,4 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
 - **Not changed:** My patients (its own page); the words a case matches by follow `phSynToks` (a negation, "No bitter
   taste", still matches, as in the patient search).
 - **Pages checked:** Cases › Summary, Case, Timetable, Find, Organise, the case list on the phone. Not checked: her own device.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE 20261116-195200** (her "push live", 2026-11-16; 5bc016d8).
