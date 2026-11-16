@@ -15642,3 +15642,15 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
 - **Not tested:** her own device and her own tags; My patients with her real visits (read by the word matcher and the tour
   table only: a patient's notes never go in the code).
 - **LIVE 20261116-205600** (her "push live", 2026-11-16; 7b3e7d5e). After the gold Update she loads the Lyttleton file again.
+
+## 2026-11-16: June tour: the herbs missing from four doses (SAVED, not live)
+- **Her words:** "what does code missing mean? what herb is missing here?" (her screenshot: the thyroid nodules case's Wen Dan
+  Tang, a "(code missing in the notes)" line at 30 g). It meant her June notes had a dose with no herb code; it was kept as written.
+- **Her pick:** "Yes, fill the 4 sure ones" (the herb each formula leaves as the only answer): jl4 Wen Dan Tang + Ban Xia Hou Po
+  Tang 30 g = **Fu Ling** (in both formulas, the only one absent); jl4 Da Chai Hu Tang 15 g = **Huang Qin**; jj20 Chai Qin Tang
+  15 g = **Fang Feng** (the case's own note "+ Jing Jie, Fang Feng"); jl7 Ling Gui Zao Gan Tang 50 g = **Fu Ling**.
+- **Built:** the four lines in `PH_TC_JN`; `PH_TC_JN_GAP` fills a copy a device saved before, in order, once (in `phTourCases`).
+  **Still open (hers to check in her notes):** jl10 Da Chai Hu Tang + Gui Zhi Fu Ling Wan 15 g (Bai Shao or Fu Ling both fit),
+  jl5 Gui Zhi Jia Long Gu Mu Li Tang 50 g (every base herb is there: an added herb).
+- **Tested** (sandbox): the four cases read the herbs; the thyroid case's prescription reads Fu Ling 30 g and, under Da Chai
+  Hu Tang, Chai Hu 20 g + Huang Qin 15 g; an older saved copy gets the same; the two open lines unchanged; no errors.
