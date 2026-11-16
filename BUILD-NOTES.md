@@ -15487,7 +15487,7 @@ Her words: "reference chapter and page number of cases". A cases file's card may
   - **Readings:** one line of totals (readings this year · $ charity · $ mine), then a table (Given · Who · Life Path · Sun ·
     Earth · $ · For; the phone keeps Given · Who · $ · For). A row opens its editor in place: each person's name, born, time,
     place with their LP · Sun · Earth worked out as she types the date (in place, no repaint); + Person; the Life Path pairs'
-    GG33 fit ("1 & 3 · Good"); Systems (Numerology · Western · Earth · Vedic · Shadow · Celtic; one "Systems · n ▾" chip on the
+    Life Path fit ("1 & 3 · Good"); Systems (Numerology · Western · Earth · Vedic · Shadow · Celtic; one "Systems · n ▾" chip on the
     phone); the day given, $, For Charity · Mine · Free, notes; Save · Delete (Undo in the one toast) · Cancel (`d.nsrd`).
   - **Money (her pick 4):** a reading For Mine is income: `phHubIncSum` adds `rd` (`phNsMineIn`) to the total, so the Week page,
     the Money stats and the weekly Income table's new Readings line all count it. The first Mine reading with money puts one
@@ -15498,7 +15498,7 @@ Her words: "reference chapter and page number of cases". A cases file's card may
   Worked out and never stored: Sun (C22's SIGNS), Vedic Sun and Celtic tree (date tables), Saturn's sign (Paul Schlyter's orbit
   method with Jupiter's terms), the Earth year (Cat, not Rabbit; the lunar new year from C22's table 2020–2035, else from the
   new moons (Meeus) and the December solstice), trine, enemy (the enemy's solar month from C22's CN_MONTHS, so Dragon reads
-  6 Apr–5 May, not the mock's 5 Apr–4 May), GG33 Life Path fit (her GG33 notes' tiers).
+  6 Apr–5 May, not the mock's 5 Apr–4 May), Life Path fit (her numerology notes' tiers).
 - **Data:** her Me row, entry by entry (`PH_HUB_MAPS` + `nsme`, `nsrd`, `nsdl`). Readings name other people: they live only in
   her own Me row, never in the code (the repo is public).
 - **Tested** (sandbox, built on 6b291d3d, a made-up record born 15 Apr 1994 and made-up readings):
