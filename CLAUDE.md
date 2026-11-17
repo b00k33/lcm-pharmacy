@@ -729,6 +729,16 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   `phPmComplaint` asks `phApptBrief(a, plan, true)` for the complaint only; `phTpAutoMemoGet` answers empty for a key
   still being worked out (`phTpAutoBusy`). Test: a made-up patient with two open Care Plans, no pain map and a booking
   today must open (BUILD-NOTES "The freeze on load").
+- **Speed foundations** (her 2026-11-17 "audit the codes and foundations", BUILD-NOTES "Speed audit"; measured on her own
+  records, nothing she sees changed): a page change never calls `savePharmacy()` (it wrote the whole 3 MB store and the sync
+  sent a full round trip); a page draw never parses the stored copy (`currentLocationLabel` reads it again only when it changed);
+  a patient page draw runs under `phTriMemoDraw` (each Fang Bing Ren / clue answer once per draw). In that memo a key carries
+  the record object (`phTriRecId`), a list comes out as copies (a reader marks clues), the write doors (`phTriWrite`,
+  `phCxWrite`) run with it off and empty it, saves empty it, the two timed memos start empty each draw, and a draw that
+  changed the open record is drawn again on the settled record. A count kept between draws keys on `phDataRev` (saves,
+  `phDefer`, storage events) + the day + the PHARMACY / PRESC objects. Layout: read every size first, then write; write a
+  style only when it changes (`phDsResizeApply`). Test: the same page text before and after on her records, every main page
+  and every patient step (first draw and again).
 - **The Prescriptions search MUST always filter the list live as typed**, by
   patient name (and herb/notes). This has broken before. After ANY change,
   type a known patient name, confirm the list narrows to matches, clear it,

@@ -16079,3 +16079,41 @@ Her "yes fix those too", to the two follow-ups left by "Appointments: simpler mo
 **Her picks:** "both" (herbs to stock to cover those formulas; her classical-formula notes matched to the ranking).
 **Built (index.html, `ghHtml` and the gy rows in phTcPatHtml):** (1) "Herbs for the 10 most used": the herbs of the group's ten most used formulas (the classics' recipe, else her own saved recipe, else the herbs at least half of that formula's own single-formula cases used), each with how many of the ten need it, its stock word (the jar by name; Dang Shen counts for Ren Shen) and the formulas that need it; the ones to stock (not in inventory, out, stopped, phase out) come first, then by how many formulas need it; top 12 then "All n"; a tap opens the cases using that herb. (2) Each ranked formula has a Notes chip that opens its Guide card (phRxFmlGdId: Fang Bing Ren family, else a notes card), or the words "No notes" where there is none; the header counts the formulas without notes.
 **Tested** (test copy, real June cases, made-up jars) at 1220 and 360: tap audit clean (bar the Conditions table's striped cells); the Notes chip opens the Guide card. The Guide's Herbs table at the foot of the page still has 12px of overhang on a phone (its dose-axis labels; not this build). **Not tested:** her real inventory and notes; formulas with no classical, saved or case recipe show no herbs.
+
+## 2026-11-17: Speed audit, the app's foundations (SAVED, not live)
+- **Her words:** "still laggy" (Guide › Cases › Timetable, on the build with the 2,000-case fix), then "do an audit of the whole
+  app especially the codes and foundations to help the app run smoother", then "make a list of things in descending order of app
+  elements that makes it laggy so i can decide if i want to remove it/change it". Her picks (popup): all four hidden fixes;
+  Dashboard: keep all, make faster; Stats + Inventory: keep both, make faster.
+- **How it was measured:** a test copy on localhost with the browser's own sampling profiler (`Document-Policy: js-profiling`) and a
+  counter on every listener, timer, storage read and JSON call; her 27 Oct export's saved data loaded into the test copy only (no
+  sign-in or sync keys; 267 bookings, 4,188 log entries, 984 prescriptions, 302 herbs), at 1440 wide.
+- **What was slow, biggest first, and what was done (nothing she sees changed):**
+  1. Patient pages 0.9 to 4.8 s: one draw asked the Fang Bing Ren ranking 30 to 38 times and the pattern clues 20 to 25 times.
+     `phTriMemoDraw` puts the whole patient draw (`renderPresPanel`, `presTpMainTabRefresh`, `presFlowRailRefresh`) under the
+     Triangle's one-build memo. Found while testing, all handled: readers tidy the record as they read it (`phTriToday` moves
+     renamed signs, seeding, a diagnosis marked seen), so a draw that changed the open record is drawn again on the settled record;
+     callers pass a working copy of the patient, so keys carry the record (`phTriRecId`); a reader marks clues (`feeds`), so clues
+     come out as copies; the 1.5 s plan memo and the 0.4 s findings memo start empty each draw.
+  2. Communications 1.8 to 2.4 s: `phChartTriageLoad` redrew the whole app when its list came back, now only when the list changed;
+     `phDsResizeApply` took the column widths off and put them back (three full layouts, 0.57 s): defaults read once per sheet,
+     classes and window width, a width written only when it changes; `phDsPlaceLines` reads every edge first; `phCommLayout`
+     measures the sidebar once per state and width.
+  3. Every page change saved the whole 3 MB store (0.1 s) and the sync then pulled, merged and pushed about 3.8 MB each way: the
+     sidebar / drawer / tab bar and a page's own tab no longer save (the app always opens on Appointments, so it saved nothing she
+     used). The other page jumps that save are unchanged.
+  4. The frame on every page: `currentLocationLabel` parsed the 2.85 MB store (66 ms), now only when the stored copy changed;
+     the sidebar's Due badge (`phDashFuDue`, 42 to 117 ms) is kept until her records change (`phDataRev`: every save, every
+     `phDefer`, every storage event; also a new day, the My Cycle list read again, a new PHARMACY / PRESC object).
+- **Measured, before → after (laptop, her records):** a page change, second visit: Dashboard 0.35 → 0.14 s, Appointments 0.31 →
+  0.18, Prescriptions 0.44 → 0.17, Communications 0.83 → 0.47, Inventory 0.53 → 0.34, Refill 0.54 → 0.25, Stats 0.53 → 0.42, Guide
+  0.37 → 0.19. Patient pages (her biggest record): Today 2.7 → 1.1 s, Patterns 2.4 → 1.3, Plan 1.9 → 0.76, Treatment 1.6 → 0.73,
+  Today again 1.9 → 0.66, a sign ticked 2.1 → 0.76.
+- **Tested** (old and new on the same reset data): the same page text on 10 main pages, the same Communications column lines and
+  widths, the same Due badge (110); the badge counts again after a save, a prescription save, a storage event and a new day, and
+  not otherwise; two patient records, 8 steps each, every draw the same as the old build's (first draw and drawn again), except the
+  Care Plan's formula % on its first view, which counts up from 0 (caught mid-way at different moments); no errors; the phone
+  drawer (375) changes pages with the right item lit. No control changed, so no tap audit.
+- **Not exercised:** the live sync (no sign-in in a test copy; a page change now writes nothing, so it starts no sync); her Key2.
+- **Left, her call or later:** Patterns' own size (about 8,300 elements, its layout is most of its 1.3 s); the one big click handler
+  (17 ms a click); 12 MB of code to read at startup (comments already stripped at deploy); 25,800 style rules.
