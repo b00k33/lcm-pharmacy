@@ -13,7 +13,7 @@ labels and "her N picks" belong in BUILD-NOTES.md; here a decision is "(her pick
 her words set the rule. Anything not live or not built says so.
 
 ## Sidebar (the app's menu)
-Her picks [Sidebar tidy-up]: "The clinic" over her name; a **Find a page** box (filters, gold letters, Enter opens, Esc clears);
+Her picks [Sidebar tidy-up]: "The clinic" over her name; a **Find a page** box (filters, gold letters, Enter opens, Esc clears) with the **Back ‹** at the end of its own line (`.ph-sb-top`, a 32px icon circle, her 2026-11-17 pick A: it was a row of its own under the box; `#phBackBtn` shows only once there is a page to go back to, `phTabHistory`; the box is full width without it);
 Every day + Every week open, in her "Grouped by rhythm" order; **Records · Reference · Admin** each one folded line (label · count
 · chevron; remembered on this device in `daybook-ph-sb-folds`; the page's own fold opens); no Minimise row (the leaf at the top
 minimises); one bottom row: the clinic pill + a gear for Settings (the drawer: "Settings" with its word). Code: `phSbFoldsPaint`,
