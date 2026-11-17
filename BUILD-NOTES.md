@@ -15830,3 +15830,44 @@ Her words, with a picture of her 20–22 Nov 3-day grid, Both clinics, the toolb
 
 - **Not tested:** her real week and data, her own computer, the Key2, a real mouse drag, her Me data in the toolbar's panel (the test copy has no sign-in, so the toolbar shows Next and Herbs only); reduced motion was checked by reading the rules, not driven; the Habits page's own due pulse (`.ph-hab-tk.due`) and other pages' loops were not touched.
 - **Pages checked:** Appointments (Grid 3 days, the card, ‹ › Today, a drag, the gold time, Add, search), the same at 360 wide.
+
+## 2026-11-17: No top row (SAVED, not live)
+- **Her words:** "i dont like this top row and first column design. make 2 mocks to make it more simple" (her screenshot: a patient's
+  Messages page, the band and the teal rail). Mocks A · One bar and B · Light & quiet, then her answers: "i dont want the top row at
+  all", Teal, This visit box: Remove it, Book appt. alone; mocks C · All in the column and D · Name left, buttons right
+  (`mocks/head-rail-mock-2026-11-17.html`, drawn on the real app with a made-up patient), her picks D, Next up = a gold dot, step
+  lines dropped, age · CD quiet; then, shown that D's buttons fit the first line of only 4 pages (Messages, Photos, IVF history,
+  Treatment) and need a line of their own on the rest, her pick C · In the column.
+- **Built (`index.html`):**
+  - `presRailIdHtml(t, isNew, isMe)` (new, before `presFlowRailHtml`): the rail's head on a computer: ‹ close, the name (tap
+    edits), age · cycle day (`presBandSubText`, ✦ first visit), red flag (`phRfBandHtml`), saved medical alert
+    (`phBandAlertHtml`; the empty "+ Medical alert" stays hidden, it lives on Patient details), Book appt. (`data-ph-apptcal-book`)
+    · search (`data-ps-ic`) · photo (`data-cap-for`). Her own record: name + CD (`phMeCycleAt`), no age, no Book appt.
+  - `presFlowRailHtml`: the This visit box and the Next up card are gone (`visitDone/Total/Left`, `visitHead`, `nextHtml`,
+    `nextIsOpen` removed; `nextUp` stays); `nx(attr, on)` puts a gold dot on the next page's row (steps, file rows, exam, fertility,
+    Fang Bing Ren rows; none on the open page); the file row's bold gold "todo" look is off (the dot says it once); steps carry
+    their second line as a hover title; group heads lose "once" / "every visit" / "everything dated" / "dated"; the fold chevron
+    moved from the old `.ph-rail-who` to `.ph-rail-foot` at the end. The ⋯ More rows (Patterns · Diagnosis, Treat myself) lose their
+    second line too: what they hold is their hover title, open or folded.
+  - `phRfBandSync`: also `presFlowRailRefresh()`, so a red flag ticked today shows in the rail's head.
+  - CSS block "No top row" (after the teal rail block): from 641px the patient band is hidden when the panel has the rail
+    (`.ph-pres-panel:has(> .ph-flow > #presFlowRail) > .ph-pres-band:not(.ph-ps-sopen)`); while a search is on it shows as the
+    search's bar (box at the right, results, find strip; its other parts hidden). Steps one line (32px, `small` hidden), the
+    step's label row a flex row so a search's match count sits at its right end, the gold dot, the head's styles, the folded
+    head. Every width: `.ph-rail-id` and `.ph-rail-foot` hidden unless 641px+, so the phone drawer has no head and no chevron.
+- **Kept:** the band's markup (the phone's one-row head and rail bar; the profile search's box, results and find strip, whose
+  code is unchanged); the formula pages' band; `.ph-rail-who` and the This visit / Next up CSS are now unused.
+- **Tested** (sandbox, built on 53c3f712, headless Edge at 1440 and 360, a made-up patient): no errors; on a computer no band, the
+  page starts at the top; the head reads "Jane Smith / 32F · CD 49 / Penicillin allergy / Book appt. · search · photo"; no This
+  visit box or Next up card; the gold dot on Today's visit (title "Next up: Re-check"); no step second line shown (it is the
+  step's hover); heads File · Fertility & cycle · Log; the rail's search circle opens the band's box as a bar (focused, name and
+  buttons hidden), "anx" lists 11 results, clearing it hides the bar again; folding gives a 56px rail with three 32px circles
+  and unfolds back; Today's visit and Messages pictured; the phone (360) keeps its one-row band and rail bar.
+- **Sizes** (`tap-audit.js` at 1220 and 360: Messages, Today's visit, Patient details, the rail folded, the phone drawer open):
+  fixed here: a step's own text 13.5px (it read 16 under its label once the steps were 32px), group heads 32px (30), the ‹ fold
+  32px (28), ⋯ More 32px on one line (40), the head's alert and red flag chips 32px / 13px, folded Book appt. a plain circle (its
+  word left out, not hidden). Left, as before this build: the name 16px (the band's was 18px and read the same way; her word decides:
+  the KEEP list or 13px); the folded strip's rows read "text 0" (their words hidden with a 0 font size, unchanged); the
+  phone's band (name 21px tall, search and camera 36px), unchanged.
+- **Not exercised:** a real sign-in, the photo sheet and Book appt. sheet opening from the rail (their handlers are the same
+  document-level ones the band used), a Gynae / MSK Case colour on the head, a long name over two lines.
