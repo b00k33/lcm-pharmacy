@@ -616,6 +616,10 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 - One card style, one sheet, one toast, one undo, one compare, one message
   kind per job (★★★ rule 5). Screens with different jobs can look different
   inside the same system, but never a second look for the same job.
+- One case search, one case view: Cases, a patient's Similar cases and the profile search read a
+  case's lines by one rule (`phTcSxHitsQ`, `phSynHas`), and Similar cases shows the Cases case page
+  itself (her 2026-11-17 picks). Never a second search or a second case page; cases are evidence,
+  ordered, never labelled a pick.
 
 ## Motion — only on a real change
 - **Never put an entrance animation on a base class.** A scoped repaint

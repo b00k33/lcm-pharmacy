@@ -15976,3 +15976,52 @@ Her "yes fix those too", to the two follow-ups left by "Appointments: simpler mo
 **Tested** (Browser pane, test copy, made-up patients, no sign-in) at 1220 and 360: the bin only on rows that can go (not on a dispensed one); strip Keep and Delete; Delete removed the prescription and the record with both tombstones; Select with two ticked, the dispensed rows greyed and not tickable; Delete N → confirm → gone; Undo restored the prescription (new id) and the record, no tombstone left. Tap audit: my parts clean at 1220 and 360 (the list rows themselves are flagged as before). No console errors from the page (only the test copy's offline requests).
 **Not tested / left:** her real data (sync across two devices after a delete and an Undo); the phone Select row with two lines of tags grows taller.
 **Pages checked:** Patient profile list (desktop + phone).
+
+## 2026-11-17: Cases tidy + Similar cases (SAVED, not live)
+- **Her words (synth22, three requests):** (1) a screenshot of Today's visit: a sign row's ▾ menu ("Make it a complaint / Not
+  watching") under the next row, "see the issue?"; (2) "allow me to search similar cases with my patient profile open e.g. if
+  their profile chief complaint is burning mouth syndrome, i want to search other burning mouth syndromes in my database"; (3) a
+  screenshot of Guide › Cases › Summary: "refine this ui and make it more organised, it feels like too many chips but not without
+  logic. use better words and organising displays - show mock". Mock: `mocks/cases-similar-2026-11-17/mock.html` (drawn on the
+  real app, sample cases). Her picks: the bar A as drawn; tags A plain words; Summary A one table; "Condition" A; Similar cases way
+  in A + B + C as one path; Similar = A her complaint's words (a word that finds nothing dropped, the box shows the words); several
+  complaints A a chip each, main first; case pane A the whole case page; "Yes, build all three".
+- **Built (`index.html`):**
+  - (1) CSS: `.ph-cx-row:has(.ph-cx-menu), .ph-cx-hov:has(.ph-cx-menu) { z-index: 45 }`; `.ph-cx-menu button` min-height 32px.
+  - (3) `phTcBarHtml` rewritten: ‹ patient (`data-tc-backpt`) · lead · Condition ▾ / Formula ▾ (`data-tc-menu="cc|fm"`) · the
+    search chip (`data-tc-sxx`) · chips · count · Clear (+ the search, `phTcSearchSet`). Group by left the bar:
+    `phTcListHeadHtml` (`data-tc-gbsel`, a change listener sets `phGdTcGb` / `phGdTcBy`). Shared pieces lifted out of
+    `phTcDayHtml` for Similar cases: `phTcRowHtml`, `phTcFocusBarHtml`, `phTcCmpHtml`. Tags `.tcg i` plain words with a " · "
+    separator; `phTcSxMark` puts the found words in `<mark>` (gold; white on the open row). `phTcPatHtml`: `nmCell` (name, bar,
+    count in one 32px button, `data-tc-pat="g|…"` as before), `catRow` (`colspan` across), `tblHtml` (`.pt-g1`, width = 168px + 96px
+    a formula, so the name column stays 168px); the switch reads Conditions | Formulas; `.pt-sum` and the Complaints ×
+    formulas section are gone.
+  - (2) `phSimCcs`, `phSimCur`, `phSimQOf`, `phSimFind` (memo; word dropping; `PH_SIM_STOP`), `phSimCount`, `phSimChipHtml`,
+    `phSimResHtml` (heads "Same complaint · n" / "In a sign or note · n"; the list rows; the Cases case page: case bar, Edit,
+    Tag, table, sessions, Integrate; `phGdSearch` set to the words while drawing so each row names its line), `phSimPageHtml`,
+    `phSimRepaint`, `phSimBack`; a capture click listener (`data-sim-k`, `data-sim-open`, `data-sim-cases`) and an input listener
+    (`data-sim-q`, 250ms, repaints the list, the count and the rail). `phTcSxHitsQ(c, q, t)` is the search rule with its words
+    passed in (`phTcSxHits` calls it). `phTcClick` also runs inside `.ph-sim`; its row pick keeps `phGdTcView` there and, on the
+    phone, scrolls to the case. `renderPhGdBody` first repaints a Similar page if one is showing. Rail: `PRES_RAIL_ICN.similar`,
+    profSubs carry `cnt`, `profBtn` badges it, the `simHtml` row after Fang Bing Ren. `presAssessSections` adds `similar` (not
+    a formula, not her own record, only with a complaint); grp `sim`. `phCxPnlHtml`: the chip under the complaint's name.
+  - `.ph-flow-sub .ph-rc` margin `0 0 0 auto`: the general `.ph-rc { margin-top: 16px }` (the Guide's Blood tests) made every
+    rail row with a count 34px.
+- **Tested** (sandbox, headless Edge at 1360 / 1260 and true 360 in an iframe, a made-up patient with "Burning mouth syndrome" and
+  "Poor sleep", three signs pinned): no errors. Cases Summary searched "burning mouth": the bar reads All sources · Condition ▾ ·
+  Formula ▾ · "burning mouth" × · 4 of 361 cases · Clear; no Group by; the list head's select (Source*, Condition, Formula),
+  Group: Condition regroups the list; each menu opens its own kind A–Z and closes; the chip's × clears the search (all cases);
+  tags have no box; 6 gold marks; one table, the head Conditions · Draft · Edit groups. The patient: the chip "4 similar
+  cases ›" on the complaint's panel, the rail row "Similar cases 4" after Fang Bing Ren (also in the phone's step menu); the
+  sign row's ▾ menu: both items on top (on the live build both were under the next rows, as in her screenshot); the chip opens the
+  page: "Same complaint · 2" (C4 Burning mouth and chest, C18 Sweet taste, burning mouth), "In a sign or note · 2"; the box
+  "burning mouth" (syndrome dropped), 4 of 361; another row opens its case; Edit opens its fields; Poor sleep 92 and the rail
+  follows; typing "burning" 19, an empty box back to 4; Open in Cases: Summary with ‹ Jane Smith · Like: Burning mouth syndrome,
+  the box "burning mouth"; ‹ back returns to the Similar page, the search cleared. Messages' Next stays Today's visit.
+- **Sizes** (`tap-audit.js` from HEAD, 1260 and 360: Cases Summary, its Condition menu open, Case, Today's visit, the ▾ menu
+  open, Similar cases, Open in Cases, the phone's Similar page and step menu): fixed here, the Summary name cell (41 → 32), the
+  Similar chip (24px 11.5px → 32px 13px), the rail's count rows (34 → 32), the ▾ menu items (30 → 32). Left, as on the live
+  build (Today's visit, the visit-flow build's page): the shell strip and tiles, the ▾ circle, Ask/Look 34px, the phone's 0–10 /
+  % better 18px and chips 10.5px, the phone band's name and back.
+- **Not exercised:** a real patient's data, a complaint with no words left after the stop list, the phone's Edit / Tag on a
+  Similar case, two tabs.
