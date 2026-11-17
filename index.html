@@ -128691,7 +128691,7 @@ Difficult to sweat|no_sweat_tend:r`;
     // the 41 note cases that led with a formula Fang Bing Ren did not have. Built as the six above: every observation of the formula's cases that the match list reads as a catalog
     // sign (PH_TC_MATCH, its side as matched), at 3. A formula seen in several cases holds every sign any of them showed, each still at 3: no weight is made from how often a sign
     // came. An observation with no catalog sign scores nothing ("mouth ulcers", "talks fast"); a note that a sign is absent, a drug's side effect or a change on the herbs is not
-    // a sign; conditions score nothing. `src` names the cases ("hh-" + the PH_TC_HH key): phFbrCeil reads it as "a case table", phTcHhFam links those cases to the formula.
+    // a sign; conditions score nothing. `src` names the cases ("hh-" + the PH_TC_HH key): phTcHhFam links those cases to the formula (the ceiling no longer reads it: phFbrCeil, 2026-11-17).
     // Which herb each sits under is MY pick, hers to correct (PH_REN_FAM_GROUPS). Not book tables: hers to change in Edit. A caption names the cases (who, which session); the
     // signs are the table itself, and the card picture (PH_BTJ `arch`) says them in words
     yuebijiazhu: {
@@ -129035,19 +129035,21 @@ Difficult to sweat|no_sweat_tend:r`;
     (or || []).forEach(g => { const w = g.map(k => (weights[k] > 0 ? weights[k] : 0)); s -= w.reduce((a, b) => a + b, 0) - Math.max(0, ...w); });
     return s;
   }
-  // A case formula's ceiling (her 2026-11-10 case formulas, `src`: one case's signs, each at 3). Measured on the 15 Day 1 cases, a thin table led the
-  // board from two ticks (Case 8's Zhen Wu Tang picture put Zhu Ye Shi Gao Tang first, Case 12's Wen Dan Tang put Shi San Wei Xue Bi Tang first). So a case
-  // table is scored against a typical book table's ceiling, the median of the book tables on that side, until its own grows past it: it still leads its own
-  // case's picture, and every other case keeps the order it had. A book table (no `src`) is its own ceiling, as before. Reset with the other caches.
-  var PH_FBR_CASE_FLOOR = null;
+  // A family's ceiling, her pick "Build 8 strongest" (2026-11-17, after the score test on real cases): each family is scored against its 8 strongest
+  // signs (an `or` line counts once, at its strongest), never its whole list, so a long, well-described table no longer thins every tick (her Xiao Chai
+  // Hu Tang review had dropped its own classic picture from #1 to #3), and against at least 24 (eight signs at 3), so a table of two or three signs cannot
+  // lead from one tick. This replaces the 2026-11-10 case-table floor (a case table scored against the median book table). Tested on 482 cases with an
+  // app formula (148 from her new case files): the given formula first 14% and in the top 8 48% of the new cases (5% and 34% before); first in 8 of the
+  // 10 textbook pictures (5 before). Every share reads it: phFbrRank (the ranking, the lead, the bars) and the Ren page's direct %.
+  var PH_FBR_CASE_FLOOR = null;   // no longer read; the edit cache still resets it
+  const PH_FBR_CEIL_N = 8, PH_FBR_CEIL_MIN = 24;
   function phFbrCeil(f, tab) {
-    const mx = phFbrMax(f[tab], f.or && f.or[tab]);
-    if (!f.src) return mx;
-    if (!PH_FBR_CASE_FLOOR) {
-      const med = a => { const s = a.filter(x => x > 0).sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : 0; }, bk = Object.values(PH_FORMULAS).filter(g => !g.src);
-      PH_FBR_CASE_FLOOR = { bing: med(bk.map(g => phFbrMax(g.bing, g.or && g.or.bing))), ren: med(bk.map(g => phFbrMax(g.ren, g.or && g.or.ren))) };
-    }
-    return Math.max(mx, PH_FBR_CASE_FLOOR[tab]);
+    const w = (f && f[tab]) || {}, gs = (f && f.or && f.or[tab]) || [], used = new Set(), v = [];
+    gs.forEach(g => { const m = Math.max(0, ...g.map(k => (w[k] > 0 ? w[k] : 0))); g.forEach(k => used.add(k)); if (m) v.push(m); });
+    Object.keys(w).forEach(k => { if (!used.has(k) && w[k] > 0) v.push(w[k]); });
+    if (!v.length) return 0;
+    v.sort((a, b) => b - a);
+    return Math.max(v.slice(0, PH_FBR_CEIL_N).reduce((a, b) => a + b, 0), PH_FBR_CEIL_MIN);
   }
   // What ticked keys are worth in one table, `or` pairs counted once -- for places that walk the keys, not the question rows.
   function phFbrSumKeys(weights, picks, or) {
@@ -129225,7 +129227,7 @@ Difficult to sweat|no_sweat_tend:r`;
   function phFbrEditsBust() {
     try { phTriOrderCache = {}; } catch (er) { /* not defined yet */ }
     phFbrSignFamMemo = null;   // a var: never in its dead zone
-    PH_FBR_CASE_FLOOR = null;   // a var too: the book tables' median ceiling, read again after her edits
+    PH_FBR_CASE_FLOOR = null;   // a var, no longer read (phFbrCeil is the 8 strongest signs since 2026-11-17)
     try { phTpAutoBust(); } catch (er) { /* */ }
     try { phWatchMemo.m = Object.create(null); } catch (er) { /* */ }
     try { phTpFxCtxCache.clear(); } catch (er) { /* */ }
@@ -130297,7 +130299,7 @@ Difficult to sweat|no_sweat_tend:r`;
   // one side's table would use that side alone -- none today). Equal fit falls back to raw points.
   function phFbrRank(rec, fam, effD, effP) {
     return Object.keys(PH_FORMULAS).map(id => {
-      const f = PH_FORMULAS[id], orD = f.or && f.or.bing, orP = f.or && f.or.ren, maxD = phFbrCeil(f, "bing"), maxP = phFbrCeil(f, "ren");   // a case table: a typical book ceiling (phFbrCeil)
+      const f = PH_FORMULAS[id], orD = f.or && f.or.bing, orP = f.or && f.or.ren, maxD = phFbrCeil(f, "bing"), maxP = phFbrCeil(f, "ren");   // its 8 strongest signs, at least 24 (phFbrCeil, her 2026-11-17 pick)
       const dS = phTriSum(f.bing, phTriAll("d", fam), phFbrImplied(f.imp && f.imp.bing, effD), orD);
       const pS = Math.min(maxP, phTriSum(f.ren, phTriAll("p", fam), effP, orP));
       const bP = maxD ? Math.min(1, dS / maxD) : 0, rP = maxP ? pS / maxP : 0;
