@@ -16060,3 +16060,10 @@ Her "yes fix those too", to the two follow-ups left by "Appointments: simpler mo
   32px set: the sidebar's own rows (36px, 10px corners), the folded group heads, the brand leaf and name buttons, Find a page's text
   (16px, a type the browser draws), the clinic pill and the gear.
 - **Not exercised:** the installed window's Alt+← and mouse-back (same `phGoBack`), a real long history (20 entries).
+
+## Formula analysis on Guide Summary › Formulas (2026-11-17)
+
+**Her words:** "allow me to analyse formula frequency of use, and whether i have it in my inventory, and what conditions it is commonly used for"; then "i want to specialise in gynaecology ... help build something that helps me shape my work and inventory towards that goal"; then "it is also important that i see the formulas used in other categories".
+**Built (index.html, "THE FORMULA ANALYSIS"):** each Repeated row = the formula, its bar and case count; under it the stock word (exact-name jar lookup, findHerbByName, the herb card's words: In stock / Low / Out / Stopped / Phase out / Untracked / Not in inventory) and its condition groups with counts, most first. Above the rows: All · In inventory · Not in inventory (counts of all formulas, phGdTcPatInv) and "Women's health first" (phGdTcPatFocus, this device, on by default): the formulas of the group named /women|gyn/ lead, every other group still listed. Used once rows carry the stock word too. A stat "in inventory". The Condition ▾ menu still narrows everything to one group, so Women's health + Not in inventory = the formulas she uses for it and does not stock.
+**Kept size (tap audit):** the Repeated rows are two lines (40px), marked data-keep-size; hers to confirm.
+**Tested** (test copy, made-up inventory, the real June cases) at 1220 and 360: tap audit clean apart from the Conditions table's striped cells (another build); no sideways scroll. **Not tested:** her real inventory (names must match a jar exactly; a formula she makes up fresh reads "Not in inventory").
