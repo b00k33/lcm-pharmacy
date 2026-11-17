@@ -15977,7 +15977,7 @@ Her "yes fix those too", to the two follow-ups left by "Appointments: simpler mo
 **Not tested / left:** her real data (sync across two devices after a delete and an Undo); the phone Select row with two lines of tags grows taller.
 **Pages checked:** Patient profile list (desktop + phone).
 
-## 2026-11-17: Cases tidy + Similar cases (SAVED, not live)
+## 2026-11-17: Cases tidy + Similar cases (LIVE 20261117-185000)
 - **Her words (synth22, three requests):** (1) a screenshot of Today's visit: a sign row's ▾ menu ("Make it a complaint / Not
   watching") under the next row, "see the issue?"; (2) "allow me to search similar cases with my patient profile open e.g. if
   their profile chief complaint is burning mouth syndrome, i want to search other burning mouth syndromes in my database"; (3) a
