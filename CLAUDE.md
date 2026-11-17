@@ -214,8 +214,8 @@ dropdowns: A–Z. A new list is A–Z from its first build.
 - **The complaints live on Today's visit only (her 2026-10-18 pick).** There
   the complaint compass (`phCxCardHtml`) is their card; a patient with no
   chief complaint on file gets the plain Came in for card instead. Patient
-  details (hero + 3 cards) has no complaint card. The no-plan gate (a
-  brand-new patient with no plan yet) keeps its own plain `phCcCardHtml(t)`.
+  details (hero + 3 cards) has no complaint card. A patient with no plan yet
+  opens on Today's visit too (the no-plan gate went 2026-11-17, see §2).
 
 ## 2 · The order of a visit
 **First visit (her pick "Examine first"):** 1 Patient details → 2 Medical
@@ -230,21 +230,32 @@ Supplements (confirm) and Blood tests (if new). Then: the complaint compass →
 Cycle (if on) → Tongue · Pulse · Abdomen → Fang Bing Ren as **one line: what
 shifted** → (Timeline, on a fertility plan) →
 Treatment Care Plan as **one line: phase, session** → Treatment → Dispense.
-**Order of WORK, not of record creation:** a plan shell still exists from the
-door (the "plan is the spine" no-plan gate, decision 3), because the exam pages
-live on the plan stage's tabs. **The door has no template to pick (her pick
-"From the concern", 2026-10-27):** Came in for, then one **Start Care Plan ·
-<main concern>** button on the main concern's own course (`phTpDoorStartHtml`,
-`phTpCourseFor`: of the family's courses, the one whose words match hers, else
-its general one, else its first; a man's Fertility = Men's fertility). No
-concern yet = Came in for only; no sex + DOB yet = Start here only. IVF and
-Pregnancy still ask their questions first; the band's Course ▾ switches it
-after. "+ New" (a second plan) keeps the course cards. **Never make her choose
-the case first (her 2026-11-02 picks):** Came in for keeps HER words (top row
-`+ "her words"`, plan types under it); the plan type is read from her words
-or left empty ("Plan type ▾"); Start always shows ("Blank plan" when no course
-fits) with a joined **Course ▾** listing every course at once. Step 9 is when she
-shapes and uses that shell after Fang Bing Ren, not when it is first created.
+**Condition first, the plan after Fang Bing Ren (her 2026-11-17 word, 8 picks
+all A; it replaced the no-plan gate, decision 3 of 2026-09-11):** "i dont want
+picking condition to be picking a treatment plan. i want treatment plan to be
+only after picking condition and collecting fang bing ren history". **No gate:**
+a patient with no plan opens on Today's visit like everyone with sex + DOB in
+(new or returning; Start here stays the one lock), Came in for on top. Every
+visit page, Fang Bing Ren and Treatment work with no plan
+(`presTpMainSections(name, null)`); Treatment logs with none, and starting the
+plan files today's visit as its visit 1 (`phTpFileTodayVisits`). **ONE builder,
+two doors:** `phTpDoorStartHtml` (the course from the condition, `phTpCourseFor`:
+of the family's courses, the one whose words match hers, else its general one,
+else its first, a man's Fertility = Men's fertility; How long from Came in for;
+the Diagnosis Fang Bing Ren reads, shown before it starts; a joined **Course ▾**
+listing every course at once, "Blank plan" when none fits) sits at the end of
+Fang Bing Ren once a pattern is agreed (`phTpFbrStartHtml`, inside
+`#presPatHost`) and on the Care Plan step (`phTpNoPlanCareHtml`: before Fang
+Bing Ren is agreed, "Fang Bing Ren first ›" with a small "Start anyway").
+Starting lands on the filled plan. IVF and Pregnancy still ask their questions
+first. **A second condition, the same rule:** a Main ★ row in Came in for whose
+plan type no running plan covers gets its own door there (`phTpOpenConcerns`;
+also at the top of "+ New", which keeps the course cards). **Appointments never
+pick a plan:** a booking with no plan shows Came in for, her words, on the card
+(`phApptCcHtml`, saved by `phCcSetWords`, the file's own writer). **Never make
+her choose the case first (her 2026-11-02 picks):** Came in for keeps HER words
+(top row `+ "her words"`, types under it); the type is read from her words or
+left empty; the pill never says plan ("Pain ▾", "Type ▾" when empty).
 **Why:** Fang Bing Ren READS tongue, pulse, abdomen. It must come after
 them. (The Oct 10 tab order put it before, so it opened empty on a first
 visit. That is fixed by this law.)
