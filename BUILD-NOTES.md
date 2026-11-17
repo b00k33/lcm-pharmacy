@@ -16041,7 +16041,7 @@ Her "yes fix those too", to the two follow-ups left by "Appointments: simpler mo
 **Not fixed, hers to decide:** Organise (the places grid) has a column for every case: 700 cases = 37,000 elements and 1.8 s (5.3 s before); at 2,000 it is about 100,000 elements and a multi-second freeze. It needs a different shape (for example only the picked place's cases), not a speed-up.
 **Not tested:** her real data, a phone width, tap-audit.js (the person frame size and place are unchanged), the page printed or found with the browser's Find on a row not yet drawn.
 
-## 2026-11-17: Sidebar head, Back beside Find a page (SAVED, not live)
+## 2026-11-17: Sidebar head, Back beside Find a page (LIVE 20261117-223400, carried by another session's publish)
 - **Her words:** a screenshot of the sidebar's head (The clinic · Linh Chinese Medicine, Find a page, a lone ‹ row, Me): "mock a more
   simplified visual of this". Mock `mocks/sidebar-head-2026-11-17/mock.html` (drawn on the real app at 248px): A · Back beside search,
   B · A + a one-line name, C · leaf + search on one line, the name gone. Her pick: **A** (Me sits 34px higher).
