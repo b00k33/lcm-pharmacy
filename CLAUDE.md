@@ -616,6 +616,17 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   nothing.
 - A real change animates only the thing that changed: a chip pops, a row
   slides in, a count rolls, a ring grows.
+- **One short move per change, and no mark that loops** (her 2026-11-17 "audit
+  the app - some of the appointment animations are laggy. make it more simple";
+  BUILD-NOTES "Appointments: simpler motion"). A change moves once, about 0.2 s,
+  on `transform` and `opacity` only, as one piece (the whole grid, the card):
+  never every block or row on its own in a stagger, never a copy flying across
+  the page, never `top` / `left` / `width` / `height` / `box-shadow` / `filter`
+  animated, never a wait before the new thing paints. A mark that waits for her
+  (a due dose, the next step, a running fast) is a still ring, never an
+  `infinite` pulse. A tap that changes one small thing touches only that thing
+  (the card's open state lights Next on the toolbar, it does not work the
+  toolbar out again).
 - **Every animation is off under `prefers-reduced-motion: reduce`**, in the
   CSS and through `phTpReduceMotion()` in JS. Add it with the motion, not after.
 - Anything timed in a hidden tab needs a `setTimeout` way out
