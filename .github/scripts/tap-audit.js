@@ -28,6 +28,8 @@
     "input[type=checkbox]", "input[type=radio]", "input[type=range]", "input[type=color]", "input[type=file]",
     "img", "video", "canvas", "svg", "label",
     ".ph-cal-day", ".ph-cp-day", ".ph-pulse-cell", ".ph-tp-sq",   // calendar days, pulse chart cells, session grid squares
+    ".ph-appt-block", ".ph-apptcal-daylabel", ".ph-atb-today",     // Appointments' calendar: a booking's block (its height is its time), a day's head, Today's date in a circle (2026-11-17)
+    ".ph-tb-i",                                     // the Appointments toolbar's tiles: an icon over its word (her 2026-11-05 toolbar)
     "td", ".ph-cmp-ovl .bar button",                // a table cell that taps (its row is the target); Compare's overlap bar (a chart)
     "[data-keep-size]"                              // a control she agreed to keep at its own size: say which in the build note
   ].join(", ");
@@ -61,18 +63,21 @@
     list.forEach(el => {
       // a joined bar: a segment (square, no line of its own) inside a box with corners that draws the line or clips -> measure the
       // bar once (its height and corners), the segment's text only. The bar is the nearest such box, its parent or the one above.
-      const own = cs(el);
+      // a bare field inside a filled box with corners (the tinted field look: an icon, then the words she types) -> the box is the field
+      const own = cs(el), bare = /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName);
+      const filled = (p, ps) => bare && !/^(transparent|rgba\(0, 0, 0, 0\))$/.test(ps.backgroundColor) && p.getBoundingClientRect().height <= 52;
       let bar = null;
       if (parseFloat(own.borderTopLeftRadius) < 2 && parseFloat(own.borderTopWidth) < 1) {
         for (let p = el.parentElement, k = 0; p && k < 2 && !bar; p = p.parentElement, k++) {
           const ps = cs(p);
-          if (parseFloat(ps.borderTopLeftRadius) >= 4 && (ps.overflow.indexOf("hidden") >= 0 || parseFloat(ps.borderTopWidth) >= 1)) bar = p;
+          if (parseFloat(ps.borderTopLeftRadius) >= 4 && (ps.overflow.indexOf("hidden") >= 0 || parseFloat(ps.borderTopWidth) >= 1 || filled(p, ps))) bar = p;
         }
       }
       const inBar = !!bar, unit = bar || el, s = cs(unit), r = unit.getBoundingClientRect(), h = r1(r.height), w = r1(r.width);
       if (h > 52) return;                                              // a row or a tile
       const es = cs(el), fs = parseFloat(es.fontSize), rad = parseFloat(s.borderTopLeftRadius);
-      const txt = (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT") ? "x" : (el.textContent || "").trim();
+      // words drawn at 0px are hidden (a Button that becomes a circle keeps its word for the screen reader): it is icon-only
+      const txt = (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.tagName === "SELECT") ? "x" : fs < 1 ? "" : (el.textContent || "").trim();
       const icon = !/[\p{L}\p{N}]/u.test(txt);
       const field = /^(INPUT|TEXTAREA)$/.test(el.tagName), search = field && (el.type === "search" || /search/i.test(el.className + " " + (el.placeholder || "")));
       const why = [];

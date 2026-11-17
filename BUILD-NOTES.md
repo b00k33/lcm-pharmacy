@@ -15925,3 +15925,18 @@ plan ▾" pill reads "Pain ▾" · 8 a second condition: the same rule. CLAUDE.m
   Treatment. No errors (the sandbox's missing service worker script only). Pictures: shots/condition-first-*.png.
 - **Not exercised:** IVF / Pregnancy started from the door (their questionnaires replay `presTpInlineCreate`), a real sign-in,
   her own record (One Me) with no plan.
+
+## Appointments sizes + Habits' still due mark (2026-11-17)
+
+Her "yes fix those too", to the two follow-ups left by "Appointments: simpler motion": the Habits page's pulsing due mark, and the Appointments controls under her 32px size. Audit = apply: every line the tap audit listed on Appointments is fixed or kept on purpose.
+
+- **Habits:** a due tick (`.ph-hab-tk.due`, the bar's and the chain's `.due`) keeps its still gold ring; the endless `phHbDue` pulse is gone, and so are its keyframes (nothing else used them).
+- **The days menu** (Day · 3 days · 5 · 6 · 7, and the Add dialog's Colour menu, both `.ph-atb-menu button`): rows 28 → 32px, corners 4 → 6px.
+- **The search box** was already 32px with 6px corners; the field inside it carried the app-wide field rule's hidden 999px corner (`!important`), so the audit measured the field alone. Now `border-radius: 0 !important` (min-width 641px), and the audit reads its box. Nothing visible changed.
+- **The card's name** (and the List card's) was a `<button>` with taps switched off (her 2026-11-01 page audit made it the title); now it is plain words in the title (`<span>`), so there is no dead stop for the keyboard. Full profile opens the profile, as before.
+- **The Add dialog's For bar** (Patient · Me) and the Me page's level bar (`.ph-me-lv`, same rule): 34 → 32px (buttons 30px inside the 1px line).
+- **The phone's Today circle:** its date 12 → 13px.
+- **The tap audit** (`.github/scripts/tap-audit.js`): (1) KEEP adds Appointments' calendar (a booking's block, its height its time; a day's head; Today's date in a circle) and the toolbar's tiles, the "calendar days" and "stat tiles" CLAUDE.md already keeps (that line now names them); (2) a Button whose word is drawn at 0px (the docked card's Cancel circle) counts as icon-only; (3) a bare field inside a filled box with corners, 52px or less (the Add dialog's tinted time and name fields), is measured as its box.
+- **Tested** on a test copy of this commit's parent and of the change (a made-up week, no sign-in), Browser pane at 1220 and 360: the grid, the days menu open, the phone's date menu open, a card open, Add. `off` is empty in every state (before: 6 lines on the grid at 1220 and 5 at 360). The days menu's five rows measure 112x32 with 6px corners; no page errors; no endless animation running on the page.
+- **Not tested:** the Habits page itself was not driven (no habit due on the test copy; checked by reading: the rule has no animation and `phHbDue` is not named anywhere else), her real data, the Key2.
+- **Pages checked:** Appointments (Grid, days menu, card, Add) at 1220 and 360.
