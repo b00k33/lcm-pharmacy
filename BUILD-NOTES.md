@@ -16025,3 +16025,9 @@ Her "yes fix those too", to the two follow-ups left by "Appointments: simpler mo
   % better 18px and chips 10.5px, the phone band's name and back.
 - **Not exercised:** a real patient's data, a complaint with no words left after the stop list, the phone's Edit / Tag on a
   Similar case, two tabs.
+
+## Today's visit sizes (2026-11-17)
+
+**Her words:** "yes fix them" (the tap-audit sizes left on Today's visit after the visit-flow build). One CSS block "TODAY'S VISIT SIZES" at the end of the style: the ▾ on a complaint row is a circle (32px; phone 28px); Ask · Look · Treat bar 32px; the visit dropdown 6px corners; the Cycle / Tongue / Pulse / Abdomen tiles are one 32px line (name, then the summary, ⋯); phone: Energy 1-10, Gone · Better, From baseline · Last visit and 0-10 · % better at 28px and 12.5px with 6px corners, Goal a 28px tinted chip, the sign search 32px, Next 32px.
+**Tested** (Browser pane, test copy, made-up patient) at 1220 and 360: tap audit clean on the page except the rail name (16px, from the No top row build), the Energy row (a table row like the others), and the phone Copy notes circle (the audit counts its hidden word). The ▾ menu still opens on top. No console errors.
+**Not tested:** her real data.
