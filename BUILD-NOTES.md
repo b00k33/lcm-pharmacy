@@ -15769,3 +15769,25 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   never over the name). Tap audit on the head and the band at 1280 and 360: the new chip 32px / 6px / 13px, the camera a 32px (28px
   phone) circle; what it still lists there is the table's and band's own, as before. Not tested: her own devices and formulas.
 - **LIVE 20261117-115800** (publish db4ba2c8, her "push live" 2026-11-17; with a457d485 Xiao Chai Hu Tang review). Her devices get it with the gold Update.
+
+## 2026-11-17: Fang Bing Ren: each formula scored against its 8 strongest signs (SAVED, not live)
+- **Her words:** "yes test it" (a fairer score, after her Xiao Chai Hu Tang review dropped its own classic picture from #1 to #3),
+  then her pick "Build 8 strongest" of the tested ways.
+- **The problem:** a formula's share was what is ticked over its WHOLE list. The better a formula is described (Xiao Chai Hu Tang
+  after her review: 40+ Bing signs), the smaller each tick's share, so a thin table (Wai Tai Fu Ling Yin) beat it on its own
+  classic five. The 2026-11-10 case-table floor only lifted case tables up to the median book table.
+- **Built (`index.html`):** `phFbrCeil(f, tab)` = the sum of the formula's 8 strongest positive weights on that side, an `or`
+  line counted once at its strongest, at least 24 (eight signs at 3): `PH_FBR_CEIL_N = 8`, `PH_FBR_CEIL_MIN = 24`.
+  `PH_FBR_CASE_FLOOR` stays declared (the edit cache still resets it) but nothing reads it. Shares still stop at 100% (`phFbrRank`
+  clamps bP and pS; the Ren page's `directPct` clamps). Two old comments that named the case floor now point here.
+- **Tested** (sandbox, built on db6316fd; the same test as the trial): 482 cases with an app formula and 2+ sure signs, ticked as
+  their signs and ranked, where the given formula lands:
+  - her new case files (148, the fair test): first 14%, top 3 29%, top 8 48% (whole-list share: 5 / 18 / 34%);
+  - the app's tour cases (334; partly circular, they made the one-case tables): 29 / 37 / 55% (was 19 / 33 / 48%);
+  - ten textbook pictures: 8 lead, Zhen Wu Tang and Huang Qi Gui Zhi Wu Wu Tang second (was 5 lead);
+  - the two Day 1 cases the old floor was made for: the thin case tables no longer lead (Case 8: Zhen Wu Tang #10, the leaders
+    Fu Zi Li Zhong / Ba Wei Chu Fan / Ling Gui Zao Gan at 25%; Case 12: Wen Dan Tang #27, was #19 with the floor). Both cases'
+    signs are mostly outside those formulas' tables (Case 8: 2 of 7 Bing ticks in Zhen Wu Tang's table; Case 12: 5 of 9 and
+    0 of 6 Ren): a review job for those formulas, not the score;
+  - no errors; the Guide's Triangle page draws with no broken numbers.
+- **Draft:** the 8 and the 24 are my numbers from the test, hers to change.
