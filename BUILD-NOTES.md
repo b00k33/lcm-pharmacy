@@ -15713,3 +15713,34 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   the sky (sizes untouched; what it lists is the shell's own, as before). Every word 4.5:1 or more on its surface (the green
   number circles stay 4.3, as on the light page). Not tested: her own devices (Key2 speed with the twinkle).
 - **LIVE 20261117-100400** (publish 2e1abea9, her "push" 2026-11-17). Her devices get it with the gold Update.
+
+## 2026-11-17: Fang Bing Ren review: Xiao Chai Hu Tang, her picks (SAVED, not live) + integrate33 for 9 signs
+- **Her words:** "ok build the review pages", then her 26 picks for Xiao Chai Hu Tang from the local review page
+  (`mocks/fbr-sources-2026-11-16/fbr-review.html`, "Copy my picks"), "done".
+- **Built (`index.html`):**
+  - `PH_FORMULAS.xiaochaihu`: the 11 Draft gap rows she read are in its own table (its line left `PH_FBR_GAPS_DRAFT`); the two
+    Disagree rows she left stay hers (palpitations 2, bitter taste 5). Bing added at the weight she left: epigastric tender,
+    low energy, blurred vision, restless, timid, symptoms come and go, vomiting, dry mouth 3; enlarged spleen 2. Ren added:
+    sensitive to temperature changes, catches colds, pulse wiry, timid 3; weight loss 2. Against: the stomach's pi zheng
+    (`epigastric_focal_disten`) -3, the classical line Mick's summary quotes ("full but not painful is pi, Chai Hu is not the
+    one"). Its first `or` lines: irritable or restless; nausea or vomiting.
+  - **integrate33, 9 new signs** (her "make it a sign", the sources' own words): Bing `chest_vexed_now` "Chest & ribs: vexation
+    without vomiting (xiong zhong fan er bu ou)" 2, `sore_throat_now` "Mouth & throat: sore throat" 3, `mo_mo_now` "Mind & mood:
+    quiet, no wish to talk (mo mo)" 3, `cold_sores_now` "Lips: cold sores" 3, `fever_lingering_now` "Fever: lingering, sometimes
+    high, sometimes low" 3, `limbs_hot_now` "Limbs: hot arms and legs" 3, `abd_tone_medium_now` "Abdominal: medium tone, between
+    firm and weak" 3 (her two picks "tone moderate, 3/5" and "between firm and weak" are one fact), `xie_xia_pi_ying` "Abdominal:
+    hard lump under the ribs (xie xia pi ying)" 3; Ren `sore_throat_tend` "Mouth & throat: colds start with a sore throat" 3,
+    the sore throat's twin (`PH_FBR_TWINS_DRAFT`). Wired: `PH_BING_GROUPS` (Subjective, Mind & mood, Skin, Pain & body),
+    `PH_REN_GROUPS` (beside the tonsils), `PH_BING_SITE` (throat, lips, under the ribs, belly), `PH_REN_DRAW` (throat), search
+    words (`PH_BING_ALIAS`), and the abdomen chart: Tension "medium" ticks the medium-tone sign (`PH_FBR_CHART_PREFILL`). No
+    honest match on the tongue, pulse, bloods, Medical history, cycle or Patterns. Chai Gui and Chai Qin Tang take the new Xiao
+    Chai Hu Tang rows from their halves.
+- **Tested** (sandbox, built on dc85a4ad): no errors; every sign a family weighs is in the pool; the 8 Bing signs are in groups;
+  the twin pairs; a belly charted "medium" ticks the medium-tone sign, "soft" does not (it ticks the weak wall); the Fang Bing Ren
+  search finds each new sign; the new-sign picture (no wish to talk, sore throat, lingering fever, hard lump under the ribs,
+  alternating fever) puts Xiao Chai Hu Tang first; with the pi zheng ticked it falls from the lead to #13. **Seen:** its classic
+  five today signs (chest and ribs, poor appetite, nausea, bitter taste, alternating fever) now put it #3 at 15% (was #1 at 20%)
+  behind Wai Tai Fu Ling Yin 18% and Chai Hu Gui Zhi Gan Jiang Tang 17%: a longer table makes each tick a smaller share (the
+  score is a share of the formula's own list). Raised with her; the funnel redesign's Fang check is where it is meant to be fixed.
+- **Pages checked:** Fang Bing Ren (list, search, a charted belly). No control changed, so no tap audit. Not checked: her device.
+- **SAVED, not live:** goes out only on her own "push live".
