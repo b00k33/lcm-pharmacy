@@ -34361,6 +34361,23 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
 /* SUPPLEMENTS, three taps (her 2026-11-17 pick 10 A) */
 #pharmacyPage#pharmacyPage .ph-supp3 { margin: 0 0 14px; }
 #pharmacyPage#pharmacyPage .ph-supp3 .why { margin: 0 0 8px; font-size: var(--fs-12); color: var(--ph-soft); }
+/* DELETE PATIENTS (her 2026-11-17 picks: bin + Select, confirm then Undo) */
+#pharmacyPage#pharmacyPage .ph-pl-selbar { display: flex; align-items: center; justify-content: flex-end; gap: 8px; margin: 0 0 6px; font-size: var(--fs-13); color: var(--ph-ink); }
+#pharmacyPage#pharmacyPage .ph-pl-selbar.on, #pharmacyPage#pharmacyPage .ph-pl-selbar.ask { justify-content: flex-start; padding: 6px 10px; border-radius: 10px; background: var(--ph-herb-tint); }
+#pharmacyPage#pharmacyPage .ph-pl-selbar.ask { background: var(--ph-zero-tint); }
+#pharmacyPage#pharmacyPage .ph-pl-selbar > span, #pharmacyPage#pharmacyPage .ph-pl-delstrip > span { flex: 1; min-width: 0; }
+#pharmacyPage#pharmacyPage .ph-pl-selbtn { display: inline-flex; align-items: center; height: 32px; min-height: 0; padding: 0 12px; box-sizing: border-box; border: 1.5px solid var(--ph-herb); border-radius: 6px; background: var(--ph-white); color: var(--ph-ink); font: 700 var(--fs-13) var(--font-body); cursor: pointer; }
+#pharmacyPage#pharmacyPage .ph-pl-selbtn.del { border-color: var(--ph-zero); background: var(--ph-zero); color: #fff; }
+#pharmacyPage#pharmacyPage .ph-pl-selbtn[aria-disabled="true"] { opacity: .45; cursor: default; }
+#pharmacyPage#pharmacyPage .ph-pl-delstrip { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; padding: 6px 10px; border-radius: 10px; background: var(--ph-zero-tint); font-size: var(--fs-13); color: var(--ph-ink); }
+#pharmacyPage#pharmacyPage .ph-pl-tick { position: absolute; left: 6px; top: 50%; transform: translateY(-50%); display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; margin-right: 8px; border: 1.5px solid var(--ph-herb); border-radius: 4px; background: var(--ph-white); color: #fff; font-size: 12px; }
+#pharmacyPage#pharmacyPage .ph-pl-tick.on { background: var(--ph-herb); }
+#pharmacyPage#pharmacyPage .ph-pl-list .ph-tl-row.ph-pl-row.sel { position: relative; padding-left: 30px; }
+#pharmacyPage#pharmacyPage .ph-pl-row.sel.nodel { opacity: .45; cursor: default; }
+#pharmacyPage#pharmacyPage .ph-pl-row.picked { background: var(--ph-herb-tint); }
+#pharmacyPage#pharmacyPage .ph-pl-bin { display: inline-flex; align-items: center; justify-content: center; }
+#pharmacyPage#pharmacyPage .ph-pl-bin .icn { width: 14px; height: 14px; }
+@media (max-width: 640px) { #pharmacyPage#pharmacyPage .ph-pl-list .ph-pl-bin { display: inline-flex !important; width: 30px; height: 30px; min-width: 30px; min-height: 0; padding: 0; } #pharmacyPage#pharmacyPage .ph-pl-phone .ph-tl-row.ph-pl-row:has(.ph-pl-bin) { padding-top: 2px; padding-bottom: 2px; } }
 </style>
 </head>
 <body>
@@ -80082,6 +80099,62 @@ or changing anything in Cliniko.
     const words = wordsOf(field);
     return wordsOf(q).every(term => words.some(w => w.startsWith(term)));
   };
+  var phPlDelAsk = "", phPlSelOn = false, phPlSel = new Set(), phPlSelAsk = false;
+  // who can go: never dispensed (no script ever dispensed or waiting to be logged, no dispense in the log)
+  function phPlDispKeys() { return new Set((PHARMACY.log || []).filter(e => e.kind === "dispense" && e.patient).map(e => phPatientKey(e.patient))); }
+  function phPlScriptsOf(k) { return PRESC.items.filter(t => !presIsFormula(t) && phPatientKey(presPatientFor(t) || t.name) === k); }
+  function phPlCanDel(k, dk) { return !!k && !(dk || phPlDispKeys()).has(k) && phPlScriptsOf(k).every(t => !t.lastDispensedAt && !t.pendingDispensedAt); }
+  function phPlDelete(keys) {
+    const dk = phPlDispKeys(), ks = keys.filter(k => phPlCanDel(k, dk));
+    if (!ks.length) return;
+    const now = Date.now(), gone = [];
+    ks.forEach(k => {
+      const scripts = phPlScriptsOf(k), rec = PHARMACY.patients[k] || null, name = scripts[0] ? (presPatientFor(scripts[0]) || scripts[0].name) : (rec && rec.name) || k;
+      gone.push({ k, name, scripts: scripts.map(t => JSON.parse(JSON.stringify(t))), rec: rec ? JSON.parse(JSON.stringify(rec)) : null });
+      PRESC.items = PRESC.items.filter(t => !scripts.includes(t));
+      PRESC.deletedItems = PRESC.deletedItems || {}; scripts.forEach(t => { PRESC.deletedItems[t.id] = now; });
+      if (rec) { delete PHARMACY.patients[k]; PHARMACY.deletedPatients = PHARMACY.deletedPatients || {}; PHARMACY.deletedPatients[k] = now; }   // photos are never touched
+    });
+    if (presOpenId && !PRESC.items.some(t => t.id === presOpenId)) presOpenId = null;
+    const okP = savePresc() !== false, okS = savePharmacy() !== false;
+    phPlDelAsk = ""; phPlSel = new Set(); phPlSelOn = false; phPlSelAsk = false;
+    renderPharmacy();
+    if (!okP || !okS) { presSavedToast("That could not be saved — check the warning at the top"); return; }
+    presSavedToast(gone.length === 1 ? `Deleted ${phTitle(gone[0].name)}` : `Deleted ${gone.length} patients`, { undo: () => {
+      // back under a NEW id: the old id's delete mark travels to the cloud and would take it again; the file is stamped newer than its mark
+      const t2 = Date.now();
+      gone.forEach(g => {
+        g.scripts.forEach(t => PRESC.items.unshift(Object.assign(t, { id: uid() })));
+        if (g.rec) { g.rec.updatedAt = t2 + 1; PHARMACY.patients[g.k] = g.rec; if (PHARMACY.deletedPatients) delete PHARMACY.deletedPatients[g.k]; }
+      });
+      savePresc(); savePharmacy(); renderPharmacy();
+    } });
+  }
+  function phPlSelBarHtml() {
+    if (!phPlSelOn) return `<div class="ph-pl-selbar"><button type="button" class="ph-pl-selbtn" data-pl-sel="1">Select</button></div>`;
+    const n = phPlSel.size;
+    if (phPlSelAsk && n) return `<div class="ph-pl-selbar ask"><span>Delete ${n} patient${n === 1 ? "" : "s"}? Their notes and scores go; photos stay.</span><button type="button" class="ph-pl-selbtn" data-pl-selask="0">Keep</button><button type="button" class="ph-pl-selbtn del" data-pl-selgo="1">Delete</button></div>`;
+    return `<div class="ph-pl-selbar on"><span>${n ? `${n} picked` : "Tick who to delete"}</span><button type="button" class="ph-pl-selbtn del" data-pl-selask="1"${n ? "" : ` aria-disabled="true"`}>Delete${n ? " " + n : ""}</button><button type="button" class="ph-pl-selbtn" data-pl-sel="0">Cancel</button></div>`;
+  }
+  // in Select a tap on a row ticks it (it never opens the patient); a row that cannot go is greyed and does nothing
+  document.addEventListener("click", e => {
+    const T = e.target;
+    if (!(T instanceof Element) || !T.closest("#presList")) return;
+    let el;
+    if ((el = T.closest("[data-pl-sel]"))) { e.stopPropagation(); phPlSelOn = el.getAttribute("data-pl-sel") === "1"; phPlSel = new Set(); phPlSelAsk = false; phPlDelAsk = ""; renderPresList(); return; }
+    if ((el = T.closest("[data-pl-selask]"))) { e.stopPropagation(); if (el.getAttribute("aria-disabled") === "true") return; phPlSelAsk = el.getAttribute("data-pl-selask") === "1"; renderPresList(); return; }
+    if (T.closest("[data-pl-selgo]")) { e.stopPropagation(); phPlDelete([...phPlSel]); return; }
+    if ((el = T.closest("[data-pl-del]"))) { e.stopPropagation(); e.preventDefault(); phPlDelAsk = el.getAttribute("data-pl-del"); renderPresList(); return; }
+    if (T.closest("[data-pl-keep]")) { e.stopPropagation(); phPlDelAsk = ""; renderPresList(); return; }
+    if ((el = T.closest("[data-pl-del-yes]"))) { e.stopPropagation(); phPlDelete([el.getAttribute("data-pl-del-yes")]); return; }
+    if (phPlSelOn && (el = T.closest("[data-pl-key]"))) {
+      e.stopPropagation(); e.preventDefault();
+      const k = el.getAttribute("data-pl-key");
+      if (el.classList.contains("nodel")) return;
+      if (phPlSel.has(k)) phPlSel.delete(k); else phPlSel.add(k);
+      phPlSelAsk = false; renderPresList();
+    }
+  }, true);
   function renderPresList() {
     const q = presSearch.trim().toLowerCase();
     const all = PRESC.items.filter(t => !presIsFormula(t));
@@ -80262,6 +80335,7 @@ or changing anything in Cliniko.
       const fbrChip = fbrF ? `<span class="ph-pill" style="color:${fbrC.fg};background:${fbrC.bg};${fbrC.border ? `border:1px solid ${fbrC.border};` : ""}" title="Fang Bing Ren leading family">${esc(fbrF.name)}</span>` : "";
       return `${statusChip}${noHist ? `<span class="ph-pill hx">History</span>` : ""}${phCycleChipHtml(comp)}${fbrChip}`;
     };
+    const plDispKeys = phPlDispKeys();
     const tlRow = p => {
       const t = p.current, k = phPatientKey(t.name);
       const ms = lastMs(t), stale = isStale(t), draft = isDraft(t), today = isToday(t);
@@ -80276,11 +80350,15 @@ or changing anything in Cliniko.
       // "Not seen 6+ months" is the amber date at the row's left (and its hover), not a second pill (her 2026-10-26 audit)
       const badges = `${p.group.length > 1 ? `<span class="ph-pill count">${p.group.length} prescriptions</span>` : ""}${presStatusChipsHtml(t, draft)}${phCondBadgesHtml(t.name)}`;
       const noHerbs = !(t.ingredients && t.ingredients.length) && !presActualFormula(t);
-      return `<div class="ph-tl-row ph-pl-row" data-pres-row-open="${t.id}" role="button" tabindex="0" aria-label="Open ${esc(phTitle(t.name))}">
+      const canDel = phPlCanDel(k, plDispKeys), picked = phPlSelOn && phPlSel.has(k);
+      const tick = phPlSelOn ? `<span class="ph-pl-tick${picked ? " on" : ""}" aria-hidden="true">${picked ? "✓" : ""}</span>` : "";
+      const bin = canDel && !phPlSelOn ? `<button type="button" class="ph-arr-editbtn ph-pl-bin" data-pl-del="${esc(k)}" title="Delete ${esc(phTitle(t.name))}" aria-label="Delete ${esc(phTitle(t.name))}"><svg class="icn" aria-hidden="true"><use href="#i-trash"/></svg></button>` : "";
+      const strip = phPlDelAsk === k && !phPlSelOn ? `<div class="ph-pl-delstrip"><span>Delete <b>${esc(phTitle(t.name))}</b>? Their notes and scores go; photos stay.</span><button type="button" class="ph-pl-selbtn" data-pl-keep="1">Keep</button><button type="button" class="ph-pl-selbtn del" data-pl-del-yes="${esc(k)}">Delete</button></div>` : "";
+      return `<div class="ph-tl-row ph-pl-row${phPlSelOn ? (canDel ? " sel" : " sel nodel") : ""}${picked ? " picked" : ""}" data-pl-key="${esc(k)}" data-pres-row-open="${t.id}" role="button" tabindex="0" aria-label="Open ${esc(phTitle(t.name))}">${tick}
         <span class="ph-tl-time ph-pl-when${ms ? (stale ? " stale" : "") : " never"}" title="${ms ? esc((d => `${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`)(new Date(ms))) + (stale ? " · not seen 6+ months" : "") : noHerbs ? "Never dispensed · no herbs yet" : "Never dispensed"}">${ms ? phRelShort(ms) : "never"}</span><span class="ph-tl-dot ${today ? "done" : draft ? "new" : "chm"}"></span>
         <div class="ph-tl-mid"><div class="l1"><b>${esc(phTitle(t.name))}</b>${ageStr}${badges}</div><div class="l2">${line2(t)}</div>${phPtSxHtml(sxHits.get(t.id))}</div>
-        <div class="ph-tl-end">${times.length ? `<span class="ph-tl-chip none" title="Booked today">${esc(times.join(" · "))}</span>` : ""}<span class="ph-pl-g">${t.totalGrams ? phFmtG(t.totalGrams) + " g" : "—"}</span><button type="button" class="ph-arr-editbtn" data-pres-open="${t.id}" title="Dispense ${esc(phTitle(t.name))}" aria-label="Dispense ${esc(phTitle(t.name))}"><svg class="icn" aria-hidden="true"><use href="#i-pill"/></svg></button><button type="button" class="ph-arr-editbtn" data-pres-open="${t.id}" title="Edit ${esc(phTitle(t.name))}" aria-label="Edit ${esc(phTitle(t.name))}">✎</button></div>
-      </div>`;
+        <div class="ph-tl-end">${times.length ? `<span class="ph-tl-chip none" title="Booked today">${esc(times.join(" · "))}</span>` : ""}<span class="ph-pl-g">${t.totalGrams ? phFmtG(t.totalGrams) + " g" : "—"}</span><button type="button" class="ph-arr-editbtn" data-pres-open="${t.id}" title="Dispense ${esc(phTitle(t.name))}" aria-label="Dispense ${esc(phTitle(t.name))}"><svg class="icn" aria-hidden="true"><use href="#i-pill"/></svg></button><button type="button" class="ph-arr-editbtn" data-pres-open="${t.id}" title="Edit ${esc(phTitle(t.name))}" aria-label="Edit ${esc(phTitle(t.name))}">✎</button>${bin}</div>
+      </div>${strip}`;
     };
     const bandHtml = (key, tone, icon, label, list) => {
       if (!list.length) return "";
@@ -80355,10 +80433,11 @@ or changing anything in Cliniko.
       // The whole row still opens the script (data-pres-row-open).
       ? `<div class="p-sortbar"><span>Sort</span>${sortBtn("recent", "Recent")}${sortBtn("name", "Name")}${sortBtn("grams", "Total")}</div>
       ${window.innerWidth <= 640
-        ? `<div class="ph-tl-list ph-pl-list ph-pl-phone">${shown.map(tlRow).join("")}</div>`
+        ? `<div class="ph-tl-list ph-pl-list ph-pl-phone">${phPlSelBarHtml()}${shown.map(tlRow).join("")}</div>`
         : `<div class="p-cardlist">${shown.map(patientRow).join("")}</div>`}
       ${phPaginationHtml(presPage, presTotalPages, "pres")}`
       : `<div class="ph-tl-list ph-pl-list">
+        ${phPlSelBarHtml()}
         ${q ? `<div class="ph-tl-listhead">${rows.length} match “${esc(presSearch.trim())}”</div>` : ""}
         ${rows.length ? bandHtml("booked", "fu", "cal", "Booked today", bBooked) + bandHtml("today", "ord", "check", "Dispensed today", bToday) + bandHtml("drafts", "plan", "edit", "Drafts", bDrafts) + bandHtml("older", "act", "clock", "Older", bOlder) : `<div class="fam-empty">No one matches — clear the search or pick another chip.</div>`}
       </div>`;
