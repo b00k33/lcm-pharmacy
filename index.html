@@ -16158,6 +16158,7 @@
   #pharmacyPage .ph-tc .tcd-sep { display: block; width: 20px; height: 1px; margin: 6px 0; background: var(--ph-line); }
   #pharmacyPage .ph-tc .tcd-no { padding: 8px 10px; color: var(--ph-faint); font-size: var(--fs-13); }
   #pharmacyPage .ph-tc .tcd-pg { display: flex; align-items: center; gap: 10px; position: relative; flex: none; width: 100%; min-width: 0; min-height: 60px; text-align: left; padding: 6px 22px 6px 6px; border: 0; border-radius: 6px; background: var(--ph-herb-tint); color: var(--ph-ink); font: var(--fs-13) var(--font-body); }
+  #pharmacyPage .ph-tc .tcd-list .tcd-pg { content-visibility: auto; contain-intrinsic-size: auto 64px; }   /* a row off screen is not laid out or drawn: the list stays quick at 2,000 cases and more */
   #pharmacyPage .ph-tc .tcd-pg .tx { flex: 1; min-width: 0; }
   #pharmacyPage .ph-tc .tcd-pg b { display: block; font-size: var(--fs-13); overflow-wrap: anywhere; }
   #pharmacyPage .ph-tc .tcd-pg .fm { display: block; font-size: var(--fs-12-5); color: var(--ph-soft); overflow-wrap: anywhere; }
@@ -92737,7 +92738,7 @@ or changing anything in Cliniko.
   // after a paint of a chart tab: the hidden copies go, a box's popup sits beside its box, a door's note comes into view
   function phGdAfterPaint() {
     phTcTopToBar();
-    if (phGdTab === "tourcases" && phGdTcListAt.y) { const le = document.querySelector("#phGdBody .tcd-list"); if (le) le.scrollTop = phGdTcListAt.y; }   // the case list keeps its place when a tap redraws the page
+    if (phGdTab === "tourcases" && phGdTcListAt.y) { const le = document.querySelector("#phGdBody .tcd-list"); if (le) phTcListPut(le); }   // the case list keeps its place when a tap redraws the page
     if (phGdTab === "triangle") phFtgGuideMount();
     if (!["pulse", "tongue", "abdomen"].includes(phGdTab)) return;
     phGdStripHidden(); phPulsePopPlace(); setTimeout(phPulseStickyTop, 0);
@@ -100756,7 +100757,7 @@ Difficult to sweat|no_sweat_tend:r`;
   }
   // a case's person in the Cases list (her pick 2026-11-11 "the formula's person"): the formula's own build (phFsBuild) on the one body, head and
   // shoulders; drawn once a family into a hidden holder and reused by every row; a case with no family yet keeps the usual person
-  function phTcPerHtml(fam) {
+  function phTcPerDef(fam) {
     const id = fam && PH_FORMULAS[fam] ? fam : "", gid = "phTcPer_" + (id || "none");
     if (!document.getElementById(gid)) {
       let host = document.getElementById("phTcPerDefs");
@@ -100764,7 +100765,37 @@ Difficult to sweat|no_sweat_tend:r`;
       const body = PH_BODY_GEOM.svg("f", "front", { uid: "tcp" + (id || "none"), build: id ? phFsBuild(id) : null, shade: true, details: true, hl: "", overlay: "", face: "sketch", viewBox: "0 -2 220 466" }).replace(/^\s*<svg[^>]*>/, "").replace(/<\/svg>\s*$/, "");
       host.insertAdjacentHTML("beforeend", `<svg width="0" height="0"><g id="${gid}">${body}</g></svg>`);
     }
-    return `<span class="tcd-per" data-keep-size="1" aria-hidden="true"><svg viewBox="40 -2 140 168"><use href="#${gid}"/></svg></span>`;
+    return gid;
+  }
+  // her 2026-11-17 "laggy": a row is only its empty frame (a fixed 40 x 48 box, so nothing moves); the person is put in when the row comes near the screen. Before, every one of
+  // the 401 rows held a <use> of a whole body, and the browser built all of those on every repaint (about 3 s on the Summary beside its list, 1.4 s on Case).
+  let phTcPerIo = null, phTcPerQ = false;
+  function phTcPerFill(el) {
+    if (!el.hasAttribute("data-per")) return;
+    const gid = phTcPerDef(el.getAttribute("data-per"));
+    el.removeAttribute("data-per"); el.innerHTML = `<svg viewBox="40 -2 140 168"><use href="#${gid}"/></svg>`;
+  }
+  function phTcPerArm() {
+    phTcPerQ = false;
+    if (!phTcPerIo && typeof IntersectionObserver === "function") phTcPerIo = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { phTcPerIo.unobserve(e.target); phTcPerFill(e.target); } }), { rootMargin: "300px 0px" });
+    document.querySelectorAll(".tcd-per[data-per]:not([data-arm])").forEach(el => { el.setAttribute("data-arm", "1"); if (phTcPerIo) phTcPerIo.observe(el); else phTcPerFill(el); });
+  }
+  function phTcPerHtml(fam) {
+    if (!phTcPerQ) { phTcPerQ = true; queueMicrotask(phTcPerArm); }   // after the repaint has put the rows in the page
+    return `<span class="tcd-per" data-keep-size="1" aria-hidden="true" data-per="${fam && PH_FORMULAS[fam] ? esc(fam) : ""}"></span>`;
+  }
+  // The case list keeps its place by the ROW it stood on (her 2026-11-17 "i will likely have a 2000 database that will grow"): the rows off screen are not drawn (CSS content-visibility)
+  // and stand at an estimated height, so a saved pixel count would land on another case; the first row in view and its gap from the top are saved, and put back by that row.
+  function phTcListMark(le) {
+    if (!le.scrollTop) return null;
+    const top = le.getBoundingClientRect().top, rows = le.querySelectorAll(".tcd-pg, .tcd-pn");
+    let lo = 0, hi = rows.length - 1, at = -1;   // the rows run down the list: the first whose bottom is below the top edge
+    while (lo <= hi) { const m = (lo + hi) >> 1; if (rows[m].getBoundingClientRect().bottom > top + 1) { at = m; hi = m - 1; } else lo = m + 1; }
+    return at < 0 ? null : { id: rows[at].getAttribute("data-tc-dpick"), d: rows[at].getBoundingClientRect().top - top };
+  }
+  function phTcListPut(le) {
+    const a = phGdTcListAt.a, r = a && [...le.querySelectorAll(".tcd-pg, .tcd-pn")].find(x => x.getAttribute("data-tc-dpick") === a.id);
+    if (r) le.scrollTop += r.getBoundingClientRect().top - le.getBoundingClientRect().top - a.d; else le.scrollTop = phGdTcListAt.y;
   }
   // a case's family: one picker (the case bar; each column of a side-by-side table keeps its own)
   const phTcFamSel = (c, cls) => `<select class="field-bare gf-chip${cls ? " " + cls : ""}" data-tc-fam="${esc(c.id)}" aria-label="Family" title="Family" style="font-size:var(--fs-12-5)"><option value=""${c.fam ? "" : " selected"}>Not matched yet</option>${Object.keys(PH_FORMULAS).sort(phAzBy(phGdfName)).map(id => `<option value="${esc(id)}"${c.fam === id ? " selected" : ""}>${esc(phGdfName(id))}</option>`).join("")}</select>`;
@@ -101015,7 +101046,8 @@ Difficult to sweat|no_sweat_tend:r`;
     // the fold (a computer; a phone already shows the list and the case one at a time): ‹ at the top of the list, › at the top of the folded column
     const foldBtn = phone ? "" : `<button type="button" class="tcd-fold" data-tc-listfold="1" aria-expanded="${!fold}" title="${fold ? "Show the case list" : "Fold the case list"}" aria-label="${fold ? "Show the case list" : "Fold the case list"}">${fold ? "›" : "‹"}</button>`;
     const rowS = (c, b) => { const k = phTcSessNo(c, b); return `<button type="button" class="tcd-pn${c.id === fid ? " on" : ""}" data-tc-dpick="${esc(c.id)}" title="${esc((k || c.n) + " · " + (phTcCc(c) || "") + (phTcFms(c).length ? " · " + phTcFms(c).join(" + ") : ""))}">${k || c.n}</button>`; };
-    const list = fold ? foldBtn + groups.map((g, i) => (i && g.cs.length ? `<i class="tcd-sep" aria-hidden="true"></i>` : "") + g.cs.map(c => rowS(c, g.b)).join("")).join("")
+    const wantList = !(paneOnly || (!phone && phGdTcView === "pat"));   // Summary on a computer has no list beside it: its rows are not built at all (2,000 cases = 2,000 rows to build for nothing)
+    const list = !wantList ? "" : fold ? foldBtn + groups.map((g, i) => (i && g.cs.length ? `<i class="tcd-sep" aria-hidden="true"></i>` : "") + g.cs.map(c => rowS(c, g.b)).join("")).join("")
       : phTcListHeadHtml(isTour, foldBtn) + groups.map((g, i) => g.shut ? (g.catHd || "") : (g.catHd || "") + (g.head ? `<div class="tcd-bh">${g.head}</div>` : "") + (g.cs.length ? g.cs.map(c => row(c, g.b)).join("") : `<div class="tcd-no">${String(phGdSearch || "").trim().length >= 2 ? `No cases for “${esc(phGdSearch.trim())}”` : "No cases"}</div>`)).join("");
     const sessOk = !multi && focus && phGdTcSess && (focus.sessions || []).some(x => x.id === phGdTcSess), target = sessOk ? phTcFind(phGdTcSess) : focus;
     const focusBar = multi ? phTcFocusBarHtml(ticked, focus) : "";
@@ -101024,7 +101056,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const cmp = phTcCmpHtml(focus, cwList, multi, ticked);
     const page = focus ? `${open ? `<div class="ph-tc-fc tcd-cb"><button type="button" class="gf-btn" data-tc-back="1">‹ Day</button></div>` : ""}${focusBar}${phTcCaseBarHtml(focus, target, cmp, multi)}${phTcEditHtml(focus)}${phGdTcTag ? phTcCorrelateHtml(target) : ""}<div style="margin-top:10px${multi || (!phone && phGdTcListFold) ? "" : ";max-width:760px"}">${phTcTableHtml(multi ? ticked : [focus])}</div>${multi ? "" : phTcSessBarHtml(focus, sessOk ? phGdTcSess : "")}${phTcIntegrateHtml(target)}` : `<div class="gf-none" style="padding:16px">No cases</div>`;
     const pick = places.length > 1 ? phTcPlaceSel(places, pk, true) : "";
-    { const lk = [pk, cur, phGdTcGb, phGdTcFc, phGdTcFf, phGdTcFg, phGdTcFh, fold, phGdSearch.trim()].join("|"), le = document.querySelector("#phGdBody .tcd-list"); phGdTcListAt = { k: lk, y: le && phGdTcListAt.k === lk ? le.scrollTop : 0 }; }   // put back in phGdAfterPaint
+    { const lk = [pk, cur, phGdTcGb, phGdTcFc, phGdTcFf, phGdTcFg, phGdTcFh, fold, phGdSearch.trim()].join("|"), le = document.querySelector("#phGdBody .tcd-list"); phGdTcListAt = { k: lk, y: le && phGdTcListAt.k === lk ? le.scrollTop : 0, a: le && phGdTcListAt.k === lk ? phTcListMark(le) : null }; }   // put back in phGdAfterPaint
     // the right pane: Summary counts what the list shows (the source, its day), the case, the Timetable, or Organise (the places grid: where a place or a case is added)
     if (phGdTcView === "pat") phGdTcPatDay = isTour && /^d\d+$/.test(cur) ? cur : "";
     const pane = phGdTcView === "find" ? phTcFindHtml() : phGdTcView === "pat" ? phTcPatHtml() : phGdTcView === "tt" ? phTcTtHtml() : phGdTcView === "grid" ? (v2 => `<div class="ph-cmp"><div style="margin-bottom:8px"><button type="button" class="gf-chip" data-tc-import="1" title="Load study cards from a cases file on this computer into a book, seminar or friend's cases">Import cases from a file</button><input type="file" accept=".json,application/json" data-tc-importf hidden></div>${v2.length ? phTcGridHtml(v2, []) : `<div class="gf-none" style="padding:16px 18px">No cases match</div>`}</div>`)(phTcVisible()) : page;
