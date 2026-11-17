@@ -34198,6 +34198,15 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   /* today = a clear gold wash; a sign's dot keeps a faint ring, so a dark one (water) still shows on the night */
   #pharmacyPage #presPanel:has(.ph-ns) .ns-day.today { background: rgba(217, 174, 71, .34); }
   #pharmacyPage #presPanel:has(.ph-ns) .ns-d { box-shadow: 0 0 0 1px rgba(255, 255, 255, .35); }
+  /* ===== THE FORMULA HER HERBS MAKE (her synth22 2026-11-17): in the herb table's green head, the formula's name (a chip that opens
+     its Guide card; plain bold when it has none, her own formulas) and what differs, "+ Fu Ling − Da Zao" (phRxFmlHeadHtml) ===== */
+  #pharmacyPage .ph-cockpit .ph-ing-cockpit tr.cap .capin:has(.fmls) { flex-wrap: wrap; row-gap: 6px; }   /* a narrow window: the count drops a line, never on top of the name */
+  #pharmacyPage .ph-cockpit .ph-ing-cockpit tr.cap .fmls { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+  #pharmacyPage .ph-cockpit .ph-ing-cockpit tr.cap .fml { height: 32px; padding: 0 10px; border: 1px solid rgba(255, 255, 255, .4); border-radius: 6px; background: rgba(255, 255, 255, .14); color: #fff; font: 600 var(--fs-13)/1 var(--font-body); display: inline-flex; align-items: center; white-space: nowrap; }
+  #pharmacyPage .ph-cockpit .ph-ing-cockpit tr.cap button.fml { cursor: pointer; }
+  #pharmacyPage .ph-cockpit .ph-ing-cockpit tr.cap button.fml:hover { background: rgba(255, 255, 255, .26); }
+  #pharmacyPage .ph-cockpit .ph-ing-cockpit tr.cap b.fml { border-color: transparent; background: none; padding: 0; }
+  #pharmacyPage .ph-cockpit .ph-ing-cockpit tr.cap :is(.fpl, .fdif) { color: #DDEBE1; font-weight: 500; }
 </style>
 </head>
 <body>
@@ -36888,6 +36897,66 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     return phHuData;
   }
   // every key the classics hold (they join the Guide's Herbs list; only her own herbs carry a number)
+  // ---- THE FORMULA HER HERBS MAKE (her synth22 2026-11-17: "show the name of this formula - sometimes i add the ingredients of
+  // formulas and cant remember which formula it is"). Her picks: shown in the herb table's green head with what differs; up to one of
+  // the formula's herbs missing (a formula of 4 herbs or more); the classics (PH_HU_SRC) and her own saved formulas; a stand-in counts
+  // (Dang Shen for Ren Shen; Zhi Gan Cao / Shao Yao already through PH_HU_ALIAS); two formulas joined are named both; the name opens
+  // its Guide card; never written into the prescription (worked out each time the table draws, nothing stored).
+  const PH_RX_STANDIN = { "ren shen": ["dang shen"] };
+  function phRxFmlPool() {
+    const out = phHuFormulas().map(f => ({ n: f.n, own: false, hs: f.hs }));
+    const seen = new Set(out.map(f => phGdfNorm(f.n)));
+    PRESC.items.forEach(t => {
+      if (!presIsFormula(t) || !Array.isArray(t.ingredients)) return;
+      const nm = String(t.name || "").trim(), hs = t.ingredients.map(i => ({ name: String(i.herb || i.name || ""), keys: phHuKeys(i.herb || i.name) })).filter(h => h.keys.length);
+      if (hs.length < 3 || !nm || seen.has(phGdfNorm(nm))) return;
+      seen.add(phGdfNorm(nm)); out.push({ n: nm, own: true, hs });
+    });
+    return out;
+  }
+  function phRxFmlMatch(list) {
+    const mine = (list || []).map(i => phHuKeys(i.herb || i.name)).filter(k => k.length);
+    if (mine.length < 3) return null;
+    const at = k => mine.findIndex(ks => ks.includes(k));
+    const fill = fh => { for (const k of fh.keys) { const i = at(k); if (i >= 0) return i; } for (const k of fh.keys) for (const s of PH_RX_STANDIN[k] || []) { const i = at(s); if (i >= 0) return i; } return -1; };
+    const fits = phRxFmlPool().map(f => { const used = new Set(), miss = []; f.hs.forEach(fh => { const i = fill(fh); if (i >= 0) used.add(i); else miss.push(fh.name); }); return { f, used, miss }; })
+      .filter(r => r.used.size >= 3 && r.miss.length <= (r.f.hs.length >= 4 ? 1 : 0));
+    if (!fits.length) return null;
+    const pack = rs => { const used = new Set(rs.flatMap(r => [...r.used])), miss = rs.flatMap(r => r.miss), left = mine.length - used.size; return { rs, used, miss, left, d: left + miss.length }; };
+    // fewest differences, then fewest missing, then her own formula, then the bigger recipe
+    const better = (a, b) => !b || a.d < b.d || (a.d === b.d && (a.miss.length < b.miss.length || (a.miss.length === b.miss.length && ((a.rs[0].f.own ? 1 : 0) > (b.rs[0].f.own ? 1 : 0) || ((a.rs[0].f.own ? 1 : 0) === (b.rs[0].f.own ? 1 : 0) && a.rs[0].f.hs.length > b.rs[0].f.hs.length)))));
+    let best = null;
+    fits.forEach(r => { const c = pack([r]); if (better(c, best)) best = c; });
+    // two formulas joined: only when the best one leaves 2 or more of her herbs over and a second takes 2 or more of them
+    if (best.left >= 2) {
+      let two = null;
+      for (let a = 0; a < fits.length; a++) for (let b = a + 1; b < fits.length; b++) {
+        const A = fits[a], B = fits[b];
+        if ([...B.used].filter(i => !A.used.has(i)).length < 2 || [...A.used].filter(i => !B.used.has(i)).length < 2) continue;
+        const c = pack(A.used.size >= B.used.size ? [A, B] : [B, A]);
+        if (c.miss.length <= 1 && c.d <= best.d - 2 && (!two || c.d < two.d || (c.d === two.d && c.miss.length < two.miss.length))) two = c;
+      }
+      if (two) best = two;
+    }
+    const plus = mine.map((ks, i) => best.used.has(i) ? "" : phHuTitle(ks[0])).filter(Boolean);
+    return { fs: best.rs.map(r => r.f), plus, minus: best.miss };
+  }
+  // a formula's Guide card: its Fang Bing Ren family, else its notes card (phGdfShow); none = no door
+  const phRxFmlGdId = n => { const k = phGdfNorm(n), id = Object.keys(PH_FORMULAS).find(i => phGdfNorm(PH_FORMULAS[i].name) === k); if (id) return id; const f = phFormulaNotes().find(x => phGdfNorm(x.name) === k); return f ? "n:" + f.id : ""; };
+  function phRxFmlHeadHtml(list) {
+    let m = null;
+    try { m = phRxFmlMatch(list); } catch (e) { return ""; }
+    if (!m) return "";
+    const nm = f => { const id = f.own ? "" : phRxFmlGdId(f.n); return id ? `<button type="button" class="fml" data-rx-fml-gd="${esc(id)}" title="Open in the Guide">${esc(f.n)}</button>` : `<b class="fml">${esc(f.n)}</b>`; };
+    const dif = m.plus.map(x => "+ " + x).concat(m.minus.map(x => "− " + x)).join(" ");
+    return `<span class="fmls">${m.fs.map(nm).join(`<span class="fpl">+</span>`)}${dif ? `<span class="fdif">${esc(dif)}</span>` : ""}</span>`;
+  }
+  document.addEventListener("click", e => {
+    const b = e.target && e.target.closest ? e.target.closest("[data-rx-fml-gd]") : null;
+    if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    phGdfShow(b.dataset.rxFmlGd);
+  });
   const phHuClassicKeys = () => new Set(phHuFormulas().flatMap(f => f.hs.flatMap(h => h.keys)));
   // the classical rows for one key: the herb's dose there, its partners (the formula's pairs that hold it, else the formula's
   // first herb), what the formula is for; the herb's place in the recipe orders the rows (the formulas it leads come first)
@@ -107405,6 +107474,7 @@ Difficult to sweat|no_sweat_tend:r`;
         ${!isF ? phMineBandHtml(t) : ""}
         ${!isF ? phPsFieldHtml() : ""}
         ${!isF && !phFastIsMe(presPatientFor(t) || "") ? `<span class="ph-tbm-bar ph-band-bar"><button type="button" class="ph-tbm-seg main" data-ph-apptcal-book="${esc(presPatientFor(t) || t.name)}" title="Book an appointment"><svg class="icn" aria-hidden="true"><use href="#i-plus"/></svg><span class="tx">Book appt.</span></button><button type="button" class="ph-tbm-seg" data-flow-prof="messages" title="Messages"><svg class="icn" aria-hidden="true"><use href="#i-msg"/></svg><span class="tx">Text</span></button></span>` : ""}
+        ${!isF ? `<button type="button" class="ph-band-cam" data-cap-for="${esc(presPatientFor(t) || t.name)}" aria-label="Take a photo" title="Photo"><svg class="icn" aria-hidden="true"><use href="#i-camera"/></svg></button>` : ""}
         ${!isF ? presRailBarHtml() : ""}
         ${!isF ? `<div class="ph-ps-res" id="phPsRes"></div><div class="ph-ps-find" id="phPsFind"></div>` : ""}
       </div>
@@ -162335,7 +162405,7 @@ Please let me know if you have any questions.`;
       const ph = plan ? phTpLivePhase(phPatientPeek(_clinName), plan) : null;
       const planLbl = plan ? (plan.title || plan.templateName || "Plan") : "";
       const chip = plan ? `${esc(planLbl)}${ph && ph.label ? ` · ${esc(ph.label)}` : ""}` : "No plan";
-      capHtml = `<tr class="cap"><th colspan="5"><span class="capin"><span class="chip">${chip}</span><span class="ttl">formula</span><span class="meta">${list.length} herb${list.length === 1 ? "" : "s"} · ${phFmtG(totalG)} g</span></span></th></tr>`;
+      capHtml = `<tr class="cap"><th colspan="5"><span class="capin"><span class="chip">${chip}</span>${phRxFmlHeadHtml(list) || `<span class="ttl">formula</span>`}<span class="meta">${list.length} herb${list.length === 1 ? "" : "s"} · ${phFmtG(totalG)} g</span></span></th></tr>`;
     }
     // motion only on change: the first paint after opening sweeps the head
     // and lifts the rows in; later a herb she adds slides in with a gold
