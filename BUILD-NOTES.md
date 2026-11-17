@@ -15962,3 +15962,17 @@ Her "yes fix those too", to the two follow-ups left by "Appointments: simpler mo
 **Tested** (Browser pane, test copy, made-up patients, no sign-in) at 1220 and 360: the card with its menu; the grid with two past visits (dot on visit 2); Better / worse taps (store, Re-check mirror, re-tap clears), the Progress table, the chart; the Exam strip moving between pages; the sheet end to end (PCOS found, sex + DOB, Since, ticks, + Add on Enter, scores, Start visit wrote the complaint and three scores and opened step 1); Supplements Yes, a chip tick, More ▾. Tap audit: my parts clean at 1220 and 360. No console errors (only the test copy's offline requests).
 **Not tested / left:** her real data; the narrow (phone) complaint card has no Worse · Same · Better bar or Progress (desktop leads); the other quiet pages (Blood tests, Ren, Ask her, Patterns, IVF) are not yet three-tap; the rail's name row (16px) and Appointments row (34px) flags are from the No top row build. Clinical wording DRAFT.
 **Pages checked:** Appointments card, Today's visit (Better / worse), Tongue / Pulse (strip), Care Plan sessions table, Supplements, New patient.
+
+## Delete patients, faster (2026-11-17)
+
+**Her words:** "make it easier and faster for me to delete patients". **Her 4 picks:** both A (a bin on each row) and B (Select, tick several, "Delete N"); delete takes the row (her prescriptions) and the patient file, photos always stay; a patient who was ever dispensed herbs can never be deleted (no bin; greyed in Select); a confirm strip first, then Undo in the one toast.
+
+**Built** (Patient profile list, `renderPresList`; the helpers sit just above it):
+- `phPlCanDel(k)`: no dispense in `PHARMACY.log` for the patient and no prescription with `lastDispensedAt` / `pendingDispensedAt`.
+- The bin (`.ph-pl-bin`, after ✎; on the phone a 30px circle) opens a red strip under the row: "Delete X? Their notes and scores go; photos stay. Keep · Delete".
+- Select (`phPlSelBarHtml`, top of the list, desktop and phone): tick rows (`.ph-pl-tick`), "N picked · Delete N · Cancel", then the same confirm in the bar.
+- `phPlDelete(keys)`: removes the patient's prescriptions + the patient record, writes the sync tombstones (`PRESC.deletedItems`, `PHARMACY.deletedPatients`), never touches photos, saves both. The toast "Deleted X · Undo" (or "Deleted N patients") puts the prescriptions back under NEW ids (the deleted ids stay tombstoned for good) and the record stamped newer than its tombstone.
+
+**Tested** (Browser pane, test copy, made-up patients, no sign-in) at 1220 and 360: the bin only on rows that can go (not on a dispensed one); strip Keep and Delete; Delete removed the prescription and the record with both tombstones; Select with two ticked, the dispensed rows greyed and not tickable; Delete N → confirm → gone; Undo restored the prescription (new id) and the record, no tombstone left. Tap audit: my parts clean at 1220 and 360 (the list rows themselves are flagged as before). No console errors from the page (only the test copy's offline requests).
+**Not tested / left:** her real data (sync across two devices after a delete and an Undo); the phone Select row with two lines of tags grows taller.
+**Pages checked:** Patient profile list (desktop + phone).
