@@ -15872,7 +15872,7 @@ Her words, with a picture of her 20–22 Nov 3-day grid, Both clinics, the toolb
 - **Not exercised:** a real sign-in, the photo sheet and Book appt. sheet opening from the rail (their handlers are the same
   document-level ones the band used), a Gynae / MSK Case colour on the head, a long name over two lines.
 
-## 2026-11-17: Condition first, the plan after Fang Bing Ren (SAVED, not live)
+## 2026-11-17: Condition first, the plan after Fang Bing Ren (LIVE in build 20261117-140600, publish a98775e6)
 
 Her words, on a screenshot of the "New plan — <patient>" course-card sheet: "i dont want picking condition to be picking a
 treatment plan. i want treatment plan to be only after picking condition and collecting fang bing ren history etc etc". A visual
