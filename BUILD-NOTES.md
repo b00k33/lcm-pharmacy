@@ -16040,3 +16040,23 @@ Her "yes fix those too", to the two follow-ups left by "Appointments: simpler mo
 **Measured, 2,000 cases, hidden pane, forced layout:** Summary about 260-660 ms → 90-140 ms; Case 9.5 s → 0.25 s. At 700 cases: Timetable 4.0 → 0.6 s, Find 3.8 → 0.25 s, Case 2.3 → 0.45 s.
 **Not fixed, hers to decide:** Organise (the places grid) has a column for every case: 700 cases = 37,000 elements and 1.8 s (5.3 s before); at 2,000 it is about 100,000 elements and a multi-second freeze. It needs a different shape (for example only the picked place's cases), not a speed-up.
 **Not tested:** her real data, a phone width, tap-audit.js (the person frame size and place are unchanged), the page printed or found with the browser's Find on a row not yet drawn.
+
+## 2026-11-17: Sidebar head, Back beside Find a page (SAVED, not live)
+- **Her words:** a screenshot of the sidebar's head (The clinic · Linh Chinese Medicine, Find a page, a lone ‹ row, Me): "mock a more
+  simplified visual of this". Mock `mocks/sidebar-head-2026-11-17/mock.html` (drawn on the real app at 248px): A · Back beside search,
+  B · A + a one-line name, C · leaf + search on one line, the name gone. Her pick: **A** (Me sits 34px higher).
+- **Built (`index.html`):** the Back button moved out of the nav's first group into a new `.ph-sb-top` row after Find a page's label
+  (search first, ‹ at the end; the label keeps its own rules, `flex: 1 1 auto; margin: 0` inside the row). `.ph-nav-back` edited in
+  place: 32px circle (was 28px, margin 0 0 6px 6px), tinted `rgba(255,255,255,.08)`, icon 16px, hover `.16`. Collapsed (the leaf's
+  71px strip): the row centres the circle, no row when it is hidden.
+- **Found while testing:** `.ph-nav-back { display: inline-flex }` beat the browser's `[hidden]`, so the ‹ showed on the live build even with
+  nothing to go back to (measured: `hidden` true, display flex). `.ph-nav-back[hidden] { display: none }` now hides it as the 2026-09-03
+  comment says ("Shows only once there is a previous page to return to"); the search is then the whole line.
+- **Tested** (sandbox, headless Edge at 1280 and a true 360 iframe, current build beside the new one): no errors; no history: ‹ hidden, the
+  search 228px; two tab changes: ‹ 32x32 at the end of the search's line (same centre line), search 190px, Me at 105px (was 139);
+  tapping ‹ goes back (Guide → Dashboard) and it stays while history remains; the leaf collapses to 71px with ‹ centred and Find a page
+  hidden, and reopens to 248px; the phone's drawer shows the same head (‹ beside Find a page, Dashboard now in view on a short screen).
+- **Sizes** (`tap-audit.js`, root `#phSidebar`, 1246px): the ‹ is on size (32px circle). Left, as before this build and not part of the
+  32px set: the sidebar's own rows (36px, 10px corners), the folded group heads, the brand leaf and name buttons, Find a page's text
+  (16px, a type the browser draws), the clinic pill and the gear.
+- **Not exercised:** the installed window's Alt+← and mouse-back (same `phGoBack`), a real long history (20 entries).
