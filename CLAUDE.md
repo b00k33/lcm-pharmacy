@@ -1414,8 +1414,7 @@ not repeated here.
   burnt / shiny red tongue). The ranked list is `phFbrRank` over every
   entry; badges, the tally and the exam-page strips follow whichever family
   leads. A sign a family doesn't use weighs 0, never undefined (keeps scores
-  from turning NaN). There is no fixed ceiling: `phFbrMax` sums each family's
-  own positive weights. Rows pre-fill from `phPatClues` where a real source
+  from turning NaN). A family is scored against its 8 strongest signs, at least 24 (`phFbrCeil`, her pick "Build 8 strongest" 2026-11-17), never its whole list; `phFbrMax` still sums a whole list where a total is wanted. Rows pre-fill from `phPatClues` where a real source
   exists (PH_TRI_PREFILL) and Disease ticks carry forward day to day
   (`phTriEffective`'s `prevD`); a tap always overrides either. The family set
   started with Huang Huang's 7 and has grown on her call, one integrate33
