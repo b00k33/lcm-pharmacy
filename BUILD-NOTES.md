@@ -15831,7 +15831,7 @@ Her words, with a picture of her 20–22 Nov 3-day grid, Both clinics, the toolb
 - **Not tested:** her real week and data, her own computer, the Key2, a real mouse drag, her Me data in the toolbar's panel (the test copy has no sign-in, so the toolbar shows Next and Herbs only); reduced motion was checked by reading the rules, not driven; the Habits page's own due pulse (`.ph-hab-tk.due`) and other pages' loops were not touched.
 - **Pages checked:** Appointments (Grid 3 days, the card, ‹ › Today, a drag, the gold time, Add, search), the same at 360 wide.
 
-## 2026-11-17: No top row (SAVED, not live)
+## 2026-11-17: No top row (LIVE 20261117-140600, publish a98775e6)
 - **Her words:** "i dont like this top row and first column design. make 2 mocks to make it more simple" (her screenshot: a patient's
   Messages page, the band and the teal rail). Mocks A · One bar and B · Light & quiet, then her answers: "i dont want the top row at
   all", Teal, This visit box: Remove it, Book appt. alone; mocks C · All in the column and D · Name left, buttons right
