@@ -15768,4 +15768,4 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   Guide on Ban Xia Xie Xin Tang; the camera opened the photo sheet. Pictures at 1280 and 360 (the count drops a line on the phone,
   never over the name). Tap audit on the head and the band at 1280 and 360: the new chip 32px / 6px / 13px, the camera a 32px (28px
   phone) circle; what it still lists there is the table's and band's own, as before. Not tested: her own devices and formulas.
-- **SAVED, not live:** goes out only on her own "push live".
+- **LIVE 20261117-115800** (publish db4ba2c8, her "push live" 2026-11-17; with a457d485 Xiao Chai Hu Tang review). Her devices get it with the gold Update.
