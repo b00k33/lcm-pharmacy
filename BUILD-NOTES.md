@@ -15770,7 +15770,7 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   phone) circle; what it still lists there is the table's and band's own, as before. Not tested: her own devices and formulas.
 - **LIVE 20261117-115800** (publish db4ba2c8, her "push live" 2026-11-17; with a457d485 Xiao Chai Hu Tang review). Her devices get it with the gold Update.
 
-## 2026-11-17: Fang Bing Ren: each formula scored against its 8 strongest signs (SAVED, not live)
+## 2026-11-17: Fang Bing Ren: each formula scored against its 8 strongest signs (LIVE 20261117-123400)
 - **Her words:** "yes test it" (a fairer score, after her Xiao Chai Hu Tang review dropped its own classic picture from #1 to #3),
   then her pick "Build 8 strongest" of the tested ways.
 - **The problem:** a formula's share was what is ticked over its WHOLE list. The better a formula is described (Xiao Chai Hu Tang
@@ -15791,3 +15791,4 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
     0 of 6 Ren): a review job for those formulas, not the score;
   - no errors; the Guide's Triangle page draws with no broken numbers.
 - **Draft:** the 8 and the 24 are my numbers from the test, hers to change.
+- **LIVE 20261117-123400** (her "push live", 2026-11-17; publish f7041e55, with db51bea2 + 6b83834a).
