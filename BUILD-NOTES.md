@@ -15792,3 +15792,7 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   - no errors; the Guide's Triangle page draws with no broken numbers.
 - **Draft:** the 8 and the 24 are my numbers from the test, hers to change.
 - **LIVE 20261117-123400** (her "push live", 2026-11-17; publish f7041e55, with db51bea2 + 6b83834a).
+
+## 2026-11-17: Guide > Cases: the search reads a case's tags; "Bleeding in pregnancy" tag (SAVED, not live)
+
+Her words: "are there any cases of bleeding during pregnancy?" (6, all Lyttleton) then "yes, add the tag". `phTcSxLines` puts each of `phTcTags(c)` as a "Tag" line (and `c.tags` in its sig), so the Guide search finds a tag. The Lyttleton cases file (local, never tracked) gives the tag "Bleeding in pregnancy" to cases 26, 28, 29, 30, 32, 38 (morgan, cheryl, anastasia, phillipa, ariella, freya); edited in place, the other session's sign readings and formula names kept. After the gold Update she loads the file again (6 cases updated). Tested in the sandbox: search "bleeding in pregnancy" = those 6.
