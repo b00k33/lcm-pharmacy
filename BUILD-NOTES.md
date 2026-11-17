@@ -15871,3 +15871,57 @@ Her words, with a picture of her 20–22 Nov 3-day grid, Both clinics, the toolb
   phone's band (name 21px tall, search and camera 36px), unchanged.
 - **Not exercised:** a real sign-in, the photo sheet and Book appt. sheet opening from the rail (their handlers are the same
   document-level ones the band used), a Gynae / MSK Case colour on the head, a long name over two lines.
+
+## 2026-11-17: Condition first, the plan after Fang Bing Ren (SAVED, not live)
+
+Her words, on a screenshot of the "New plan — <patient>" course-card sheet: "i dont want picking condition to be picking a
+treatment plan. i want treatment plan to be only after picking condition and collecting fang bing ren history etc etc". A visual
+guide and 8 popup questions (guide widget `condition_first_plan_after_fbr_guide`); her picks, all A: 1 the booking card's "pick a
+condition" becomes Came in for on the card · 2 a new patient's file opens on the visit, no gate · 3 the Care Plan step before Fang
+Bing Ren: "Fang Bing Ren first ›" + a small "Start anyway" · 4 Start Care Plan at the end of Fang Bing Ren AND on the Care Plan
+step (one builder) · 5 the plan filled in one tap (course from the condition, Diagnosis from Fang Bing Ren, How long from Came in
+for; Course ▾ still switches) · 6 Treatment works with no plan; starting the plan files today's visit as visit 1 · 7 the "Pain
+plan ▾" pill reads "Pain ▾" · 8 a second condition: the same rule. CLAUDE.md §2's "Order of WORK" paragraph is replaced.
+
+- **The gate is gone.** `renderPresPanel`'s `presNoPlanGateHtml` branch, `presNoPlanGateSkip` (and its six adds), the "Skip for
+  now" handler and the gate's CSS are removed. The open's landing (`presStageForId` block): any patient with sex + DOB lands on
+  Today's visit, new ones too (it used to need a past visit); with no plan, `presStage = "plan"`, `presTpMainTab = "today"`.
+- **The visit pages with no plan.** `presTreatmentRowHtml`: no plan at all (not "+ New" / loose) draws
+  `presTpMainTabsHtml(name, null)`. `presTpMainSections` is null-safe: Care Plan = `phTpNoPlanCareHtml`, Treatment =
+  `phTpNoPlanTreatHtml` (the visits table `phTpVisitTableHtml(name, sessions, { planId: null })`), no Notes tab; the default tab is
+  Today's visit. `presTpMainTabRefresh` repaints with none. `presFlowSteps`: `np` (no plan) lights Today's visit / Treatment, lists
+  the exam and fertility rows, and keeps the Care Plan step to its own page (only `on:` and the section source changed; the
+  return shape is the same, peer session told). `presStageNextBtnHtml`: the same Next walk with no plan (FBR and the Care Plan are
+  steps, never skipped as glances, since there is no plan to glance at).
+- **One builder, two doors.** `phTpDoorStartHtml(name, ci)` (ci "main" or a second condition's row id; `phTpDoorKey`): How long
+  (main only), "Start Care Plan · <her words>" (`data-tp-door-start`, handled in the door's own listener → `phTpDoorStart` →
+  `presTpInlineCreate`), Course ▾, and a **Diagnosis** line (`phTpAutoDx(name, null, true)`). Hosted by `phTpDoorHostHtml`
+  (`data-noplan-door` + `data-door-ci`); `phTpDoorRepaint` repaints every door. Doors: `phTpFbrStartHtml` at the end of
+  `#presPatHost` (Patterns · Diagnosis; shown once a pattern is agreed, `phFbrAgreed`; Agree repaints it with the host), and
+  `phTpNoPlanCareHtml` (before agreement: "Fang Bing Ren first ›" `data-flow-go="patterns"` + "Start anyway"
+  `data-tp-start-anyway`, view state `phTpStartAnyway`; no concern: "Came in for first ›"). `phTpDoorStarting` makes
+  `presTpInlineCreate` skip its question-set detour, so Start lands on the filled plan. `phTpFileTodayVisits` (also in
+  `phTpCreate`): today's sessions with no `planId` join the new plan (its current phase's label when blank).
+- **A second condition.** `phTpOpenConcerns(name)`: no plan = the main concern; else each Main ★ secondary row whose type
+  (`phCcGuessIds` on its words) no running plan covers (`templateName` among the type's courses, or a combined condition's
+  `templateId`). `phTpCourseFor(name, cc)` and `phTpCourseLenAdd(name, tpl, since)` take that concern; `phTpCreateSince` carries its
+  own How long into `phTpCourseLenApply`. "+ New" lists these doors over the course cards (`.ph-tp-newdoors`).
+- **Appointments.** The popup's "no plan yet · pick a condition" and the List card's "New Treatment Care Plan" (`data-tp-new` →
+  `phTpOpenNew`, the modal's course cards) are gone, with the handler and `phTpOpenNew`. In their place `phApptCcHtml(name, bare)`:
+  a Came in for box with her words (`data-appt-cc`; Enter or leaving it saves through `phCcSetWords`, the new name-based writer
+  that `phCcAddWords` now calls too; a set type is kept). The List card's heading reads "Came in for" then.
+- **Words.** The type pill: "Pain ▾" (was "Pain plan ▾"), "Type ▾" empty, its menu's "No type", title "What kind of concern it
+  is". Fang Bing Ren's Main line with no plan: "Goes into the plan's Diagnosis" (was "Start a plan first.").
+- **Sizes** (`tap-audit.js`, 1220 + 360, the door's Course menu open): the Course list's rows 32px (were 30; "Blank plan" 6px
+  corners, 32px on the phone); "Start anyway" a 32px quiet button (13px); the card's box 6px corners over the app-wide pill field
+  rule, 16px on the phone. The new parts measure clean; the rail's own leftovers are the No top row build's.
+- **Tested** (sandbox, built on db0082a7, made-up patients, the Browser pane + headless Edge at 1280 and 360): a new patient opens
+  on Today's visit with Came in for on top; the Care Plan step shows Fang Bing Ren first / Start anyway, Start anyway shows the
+  door; Agree on Patterns · Diagnosis brings the door up at the page's end (Course ▾ switches Low back pain ↔ Neck & shoulder);
+  a visit logged on Treatment with no plan (Better) joins the plan as visit 1 (its phase Acute); Start lands on the plan with
+  Low back pain, 4 + 3 + 2 visits from "1–3 years", Diagnosis "Qi stagnation"; a second Main row "Can't sleep, wakes at 3am" got
+  its own door (Insomnia, its own How long) and its own plan, the door then gone; the booking card saved "Neck pain and headaches"
+  (type Pain, no plan made) and the file showed it; the Next walk is Today's visit → Ask her → … → Fang Bing Ren → Care Plan →
+  Treatment. No errors (the sandbox's missing service worker script only). Pictures: shots/condition-first-*.png.
+- **Not exercised:** IVF / Pregnancy started from the door (their questionnaires replay `presTpInlineCreate`), a real sign-in,
+  her own record (One Me) with no plan.

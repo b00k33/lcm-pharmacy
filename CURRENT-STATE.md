@@ -78,7 +78,7 @@ runs on past the last booking, whole hours, to the bottom of the screen; nothing
 from a tap on the date, as a bottom sheet (`phApptDayOpen`, the computer's card); the old under-calendar widget is gone.
 
 **Appointment popup** (any booking tap): avatar, name (the title, not a door: Full profile is), time/kind/ET pills, a plan picker
-(no plan = "no plan yet" + a "pick a condition" chip), a gold "✦ New to you" flag, Start visit (today; the one solid) and Full
+(no plan = **Came in for**, her words, a box on the card: saved to the patient, no plan made, her word), a gold "✦ New to you" flag, Start visit (today; the one solid) and Full
 profile Buttons, then Call / Text 32px circles and Cancel (a red line) on a second line (Appointments page audit 2026-11-01; the
 List card's Profile / Edit and circles match), then one summary line that unfolds the detail rows (Focus, Herbs, Logged, Cycle, Scan) with Book
 another / Edit at its foot. A positive-hCG flag (🌸 + gestational week) shows in the popup and on Grid blocks once
@@ -196,6 +196,18 @@ is a slim stub, never a cutoff.
 **The plan is the spine**: patient → plan → prescriptions. Each phase carries Aim / Points / Formula / Watch / Cadence, dated
 automatically (`sinceKey`/`doneKey`).
 
+**Condition first, the plan after Fang Bing Ren** (her word: "i want treatment plan to be only after picking condition and
+collecting fang bing ren history"; CLAUDE.md §2). No gate: a patient with no plan opens on Today's visit and every visit page,
+Fang Bing Ren and Treatment draw with none (`presTreatmentRowHtml` → `presTpMainTabsHtml(name, null)`; the rail's steps and Next
+follow, `presFlowSteps` `np`). The plan starts from ONE Start door, `phTpDoorStartHtml(name, ci)`: How long chips (main concern),
+"Start Care Plan · <her words>" on the condition's course (Course ▾ switches), the Diagnosis line Fang Bing Ren reads
+(`phTpAutoDx`). It sits at the end of Fang Bing Ren once a pattern is agreed (`phTpFbrStartHtml`, inside `#presPatHost`, so
+Agree repaints it) and on the Care Plan step (`phTpNoPlanCareHtml`: "Fang Bing Ren first ›" + a small "Start anyway" until a
+pattern is agreed, `phTpStartAnyway`). Start (`phTpDoorStart` → `presTpInlineCreate`) lands on the filled plan
+(`phTpDoorStarting` skips the question-set detour) and files today's no-plan visit into it (`phTpFileTodayVisits`). A second
+condition: a Main ★ row whose type no running plan covers (`phTpOpenConcerns`, its type read from its words) gets its own door,
+its course and its own How long (`phTpCreateSince`); "+ New" lists those doors over the course cards.
+
 **The page** (`presTpPlanTabBodyHtml`) = a band over the left column (Findings, then one card: the scans line, the pain map small,
 Also treating; `phTpCcSideHtml`) | the plan (side by side from 1280px; stacked below, that card last) [Care Plan = the findings
 beside the plan] [Care Plan page tidied]. Band: title (tap = rename), stage pill, **Course · <template> ▾** (course picker
@@ -269,7 +281,7 @@ Ren heading reads "→ <formula>".
 Phase (`phCnPhaseText`: "Acute 2/4"; on the day a review moved it "Acute 4/4 → Subacute" / "· staying 2 more visits" / "· plan
 closed"; a cycle plan names its phase only).
 
-**Course length** (her pick): the no-plan door has "How long" chips under Came in for: Weeks / Months / 6–12 months / 1–3 years /
+**Course length** (her pick): the Start door has "How long" chips (the main concern's): Weeks / Months / 6–12 months / 1–3 years /
 Longer (`PH_CC_LEN`) = the main concern's own How long (`complaint.since`): lit chip = the band its date falls in (`phCcLenBand`);
 a tap writes a "~" worked-out date via `phCcMainSinceSet` (her own date stays if in that band). The band adds visits to the first
 two phases when a course starts (`presTpInlineCreate`, `phTpCreate`) or is swapped (`phTpCourseLenApply`): 6–12 months +1 / 0, 1–3
@@ -280,7 +292,7 @@ phases · 9 visits".
 in?" box keeps her own words. While she types, the top row is `+ "her words"` (Enter takes it), the plan types they match sit
 under it (`phCcMenuPaint`); either way her words are the complaint (`phCcAddWords`: `mainText` = her words, `main` = the plan
 type she tapped, else `phCcGuessIds` / the first family the box matches, else none with `autoOff`). Words with no plan type are a
-real main concern: the row shows them with an outlined "Plan type ▾" pill (`phCcOf` / `phCcRibItems` / `phCcTableHtml` accept
+real main concern: the row shows them with an outlined "Type ▾" pill (a type set reads "Pain ▾": never the word plan, her pick) (`phCcOf` / `phCcRibItems` / `phCcTableHtml` accept
 `main: null` + words; `phCcRibItems().main.id` is then null). The door's Start always shows: "Start Care Plan · <her words>",
 "Blank plan" when no course fits, and **Course ▾** joined to it lists every course at once, grouped, the concern's own category
 first, Blank plan last (`phTpDoorStartHtml`, `.ph-tp-dstart` / `.ph-tp-dmenu`, in the page flow). A course picked there also sets
@@ -707,7 +719,7 @@ Compose's rebate list (the old note in the fund cell's hover); the page shows on
 when one is stored, each part a door to where it is kept. A returning patient's Sex / DOB / Phone /
 Email turn amber once changed this visit. **Came in for** shows on Today's visit; the complaint priority ribbon sits on every
 patient page. **Profile search** (header band) searches the whole file (nothing saved; free-text history notes not searched). A
-patient can be linked to their partner from IVF history's head, a man from his Men's fertility timeline [Partner link]. The no-plan gate has "Skip for now" (in memory only). The read-only
+patient can be linked to their partner from IVF history's head, a man from his Men's fertility timeline [Partner link]. A patient with no plan opens on Today's visit (no gate). The read-only
 **Patient Directory** unions six sources keyed by `phPatientKey`. "Profile-first" is history: the Patient Workflow LAW replaced
 it.
 **No band on patient pages (her pick):** no dark three-gauge band on Medical history, Supplements, Photos, IVF history,
