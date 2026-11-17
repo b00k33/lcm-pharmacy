@@ -17,7 +17,10 @@ Her picks [Sidebar tidy-up]: "The clinic" over her name; a **Find a page** box (
 Every day + Every week open, in her "Grouped by rhythm" order; **Records · Reference · Admin** each one folded line (label · count
 · chevron; remembered on this device in `daybook-ph-sb-folds`; the page's own fold opens); no Minimise row (the leaf at the top
 minimises); one bottom row: the clinic pill + a gear for Settings (the drawer: "Settings" with its word). Code: `phSbFoldsPaint`,
-`phSbFind`, `phSbNavFit` above `renderPhShellNav`.
+`phSbFind`, `phSbNavFit` above `renderPhShellNav`. A page change from the sidebar, the phone drawer, the tab bar or a page's own tab
+saves nothing (her 2026-11-17 speed audit: only the open page moved, and the app always opens on Appointments); the sidebar's Due
+badge (`phDashFuDue`) is counted again only when her records change (`phDataRev`), and the location switcher's name is read again
+only when the stored copy changed (`currentLocationLabel`).
 
 ## Opening & the cloud (no internet)
 Her word: "i want it to operate without internet including opening" [Opens without internet]. A device that holds the

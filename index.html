@@ -35630,8 +35630,15 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       phPatientSig.set(k, sig);
     });
   }
+  // her 2026-11-17 speed audit: a count that moves only when her records do (the sidebar's Due badge) is kept until they change.
+  // phDataRev moves on every save, every delayed save scheduled (phDefer), and every copy read in from another window or the
+  // cloud (a storage event, heard before the app's own handlers); a different PHARMACY / PRESC object or a new day also counts.
+  var phDataRev = 0;
+  window.addEventListener("storage", () => { phDataRev = (phDataRev || 0) + 1; }, true);
   function savePharmacy() {
+    phDataRev = (phDataRev || 0) + 1;
     phUsageCache = null;   // stock/log just changed -- recompute usage on next ask
+    if (phTriMemo) phTriMemo.clear();   // a draw's answers are worked out again after any save (her 2026-11-17 speed audit)
     if (PH_DATA_WARNING && PH_DATA_WARNING.kind === "pharmacy-unrecoverable") return false;
     phStampChangedPatients();
     // shrink guard (items 1+2, 2026-08-13): a store that suddenly halves in
@@ -36690,6 +36697,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     return { ...empty, items: seedItems(), seeded: PRES_SEED.length > 0 };
   }
   function savePresc() {
+    phDataRev = (phDataRev || 0) + 1;
+    if (phTriMemo) phTriMemo.clear();   // as savePharmacy (her 2026-11-17 speed audit)
     if (PH_DATA_WARNING && PH_DATA_WARNING.kind === "prescriptions-unrecoverable") return false;
     // same shrink guard + loud-failure rules as savePharmacy (items 1+2)
     if (phSavedCounts.items != null && phSavedCounts.items >= 10 && PRESC.items.length < phSavedCounts.items * 0.5) {
@@ -36734,6 +36743,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // debounced re-render (or save) that reads it never ran.
   const phTimers = {};
   const phDefer = (key, fn, ms) => {
+    phDataRev = (phDataRev || 0) + 1;   // a change is on its way: counts kept until her records change are worked out again (her 2026-11-17 speed audit)
     if (phTimers[key]) clearTimeout(phTimers[key].t);
     phTimers[key] = { fn, t: setTimeout(() => { phTimers[key] = null; fn(); }, ms) };
   };
@@ -39488,11 +39498,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (!card) return;
     const vls = [...card.querySelectorAll(":scope > .ph-ds-vl")];
     const cl = card.getBoundingClientRect().left;
-    [...cols.children].slice(1).forEach((c, i) => {
-      if (!vls[i]) return;
-      vls[i].style.left = Math.round(c.getBoundingClientRect().left - cl) + "px";
-      vls[i].style.right = "auto";
-    });
+    // every edge is read first, then every line is placed: one layout, not one per column (her 2026-11-17 speed audit)
+    const xs = [...cols.children].slice(1).map(c => Math.round(c.getBoundingClientRect().left - cl));
+    xs.forEach((x, i) => { if (!vls[i]) return; vls[i].style.left = x + "px"; vls[i].style.right = "auto"; });
   }
   // ---- the sheet-width handle (her ask 2026-09-03): one per-page width in
   // PHARMACY.sheetW[key], written as --ph-sheet-w on the page's wrap; every
@@ -39506,7 +39514,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       const wrap = document.getElementById(id);
       if (!wrap) return;
       const saved = (PHARMACY.sheetW || {})[key];
-      if (saved) wrap.style.setProperty("--ph-sheet-w", saved + "px"); else wrap.style.removeProperty("--ph-sheet-w");
+      if (wrap.style.getPropertyValue("--ph-sheet-w").trim() !== (saved ? saved + "px" : "")) { if (saved) wrap.style.setProperty("--ph-sheet-w", saved + "px"); else wrap.style.removeProperty("--ph-sheet-w"); }   // written only when it changes (her 2026-11-17 speed audit)
       const card = wrap.querySelector(PH_SHEET_CARD);
       if (card && !card.querySelector(":scope > .ph-sheet-wgrip")) {
         const g = document.createElement("span");
@@ -39555,14 +39563,18 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     document.querySelectorAll(".ph-ds-cols[data-ph-dsresize]").forEach(phDsPlaceLines);
     e.preventDefault();
   });
+  const phDsDefTracks = new Map();
   function phDsResizeApply() {
     phSheetWApply();
     document.querySelectorAll(".ph-ds-cols[data-ph-dsresize]").forEach(cols => {
       const key = cols.dataset.phDsresize;
       const wrap = cols.closest(PH_DS_WRAPS);
       if (!wrap) return;
-      wrap.style.removeProperty("--ph-ds-grid");           // defaults first
-      const tracks = phDsTracks(wrap);
+      // the sheet's default columns are read once per sheet, its classes and the window's width, and a width is written only when it
+      // changes (her 2026-11-17 speed audit: taking the widths off and putting them back drew the whole page three times, 0.57 s)
+      const dk = key + "|" + wrap.id + "|" + wrap.className + "|" + window.innerWidth;
+      let tracks = phDsDefTracks.get(dk);
+      if (!tracks) { wrap.style.removeProperty("--ph-ds-grid"); tracks = phDsTracks(wrap); phDsDefTracks.set(dk, tracks); }   // defaults first
       const flex = tracks.findIndex(t => /fr/.test(t));
       const cells = [...cols.children];
       cells.forEach((c, i) => {
@@ -39575,7 +39587,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         }
       });
       const saved = (PHARMACY.dsColW || {})[key];
-      if (saved && saved.length) wrap.style.setProperty("--ph-ds-grid", tracks.map((t, i) => saved[i] != null && i !== flex ? saved[i] + "px" : t).join(" "));
+      const want = saved && saved.length ? tracks.map((t, i) => saved[i] != null && i !== flex ? saved[i] + "px" : t).join(" ") : "";
+      if (wrap.style.getPropertyValue("--ph-ds-grid").trim() !== want) { if (want) wrap.style.setProperty("--ph-ds-grid", want); else wrap.style.removeProperty("--ph-ds-grid"); }
       phDsPlaceLines(cols);
     });
   }
@@ -42072,7 +42085,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         // guide it always link the two pages" (the sidebar's tab click never reached that handler either)
         const rp = document.getElementById("phRestorePanel");
         if (rp && !rp.hidden) { rp.hidden = true; phPendingRestore = null; phRenderRestorePanel(); }
-        savePharmacy(); renderPharmacy();
+        // no whole-store save for a page change (her 2026-11-17 speed audit): the page is all that moved, and the app always opens on
+        // Appointments (renderPharmacy's boot line), so saving it wrote 3 MB and sent the cloud a full round trip for nothing
+        renderPharmacy();
       });
     }
     const title = document.getElementById("phTopbarTitle");
@@ -63861,9 +63876,15 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // merged herb+acu+gone-quiet list; phCommRowId/phCommRowPatientName/
   // phCommRowMetaLabel (defined by phCommDueRows, further down) do the
   // per-kind branching so this stays a one-line wrapper.
+  // the sidebar's Due badge asks this on every page draw (0.04 to 0.1 s): kept until her records change (phDataRev, a new day, the My Cycle
+  // list read again), her 2026-11-17 speed audit. Every caller only counts it; each gets its own copy of the list.
+  var phDashFuDueMemo = null;
   function phDashFuDue() {
-    const todayKey = keyOf(TODAY);
-    return phCommDueRows().filter(r => !r.done && r.on <= todayKey).sort((a, b) => a.on < b.on ? -1 : 1);
+    const todayKey = keyOf(TODAY), sig = phDataRev + "|" + todayKey + "|" + phChartTriageAt, m = phDashFuDueMemo;
+    if (m && m.sig === sig && m.ph === PHARMACY && m.pr === PRESC) return m.rows.slice();
+    const rows = phCommDueRows().filter(r => !r.done && r.on <= todayKey).sort((a, b) => a.on < b.on ? -1 : 1);
+    phDashFuDueMemo = { sig, ph: PHARMACY, pr: PRESC, rows };
+    return rows.slice();
   }
   // urgent stock -- in-use items empty or under a fortnight of cover,
   // grouped Formulas/Herbs, each ascending by days of cover (her refinement
@@ -66335,7 +66356,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         // page she opened next. Close it here too.
         const rp = document.getElementById("phRestorePanel");
         if (rp && !rp.hidden) { rp.hidden = true; phPendingRestore = null; phRenderRestorePanel(); }
-        savePharmacy(); renderPharmacy(); return;
+        renderPharmacy(); return;   // no whole-store save for a page change, as the sidebar's (her 2026-11-17 speed audit)
       }
       const presSortBtn = e.target.closest("[data-pres-sort]");
       if (presSortBtn) {
@@ -84896,6 +84917,7 @@ or changing anything in Cliniko.
     if (phChartTriageLoading) return;
     if (phChartTriageRows && !force && Date.now() - phChartTriageAt < 5 * 60000) return;
     phChartTriageLoading = true;
+    const was = JSON.stringify(phChartTriageRows || []);
     (async () => {
       try {
         const sb = phRenRelayClient();
@@ -84907,7 +84929,9 @@ or changing anything in Cliniko.
         phChartTriageRows = data || [];
       } catch (e) { phChartTriageRows = phChartTriageRows || []; }
       phChartTriageAt = Date.now(); phChartTriageLoading = false;
-      renderPharmacy();
+      // the whole app is drawn again only when the list really changed (her 2026-11-17 speed audit: Communications was drawn twice
+      // on every visit, about 0.8 s, the second time with the same rows)
+      if (JSON.stringify(phChartTriageRows || []) !== was) renderPharmacy();
     })();
   }
   function phChartTriageMissed() {
@@ -85765,10 +85789,14 @@ or changing anything in Cliniko.
   // the open sidebar), not the window alone: the seven fixed columns need
   // ~1000px or the flexible reason column collapses to nothing (seen at
   // 1024px with the sidebar open). Below 900 the sidebar is off-canvas.
+  // the sidebar's width is measured once per sidebar state and window width (its flex-basis sets it at once, 248 or 60): measuring it
+  // on every draw laid out the page about to be replaced, about 0.2 s (her 2026-11-17 speed audit)
+  let phCommSbW = { k: "", w: 0 };
   const phCommLayout = () => {
     const w = window.innerWidth;
     const sb = w > 900 ? document.getElementById("phSidebar") : null;
-    const avail = w - (sb ? sb.getBoundingClientRect().width : 0);
+    if (sb && phCommSbW.k !== sb.className + "|" + w) phCommSbW = { k: sb.className + "|" + w, w: sb.getBoundingClientRect().width };
+    const avail = w - (sb ? phCommSbW.w : 0);
     return { desktop: w > PH_CK_PAGE_MAX, compact: w > PH_CK_PAGE_MAX && avail < 1120 };
   };
   // the same word-start match Prescriptions' search uses ("mia" finds Mia
@@ -104796,7 +104824,8 @@ Difficult to sweat|no_sweat_tend:r`;
   // in-place repaint of the rail alone (a tab switch inside the plan page
   // never rebuilds the panel -- presTpMainTabRefresh keeps her scroll spot,
   // this keeps the rail's lit step in step with it)
-  function presFlowRailRefresh() {
+  function presFlowRailRefresh() { return phTriMemoDraw(presFlowRailRefreshRun); }   // the rail's steps ask the ranking too (her 2026-11-17 speed audit)
+  function presFlowRailRefreshRun() {
     const rail = document.getElementById("presFlowRail");
     if (!rail) return false;
     const t = PRESC.items.find(x => x.id === presOpenId);
@@ -107823,7 +107852,11 @@ Difficult to sweat|no_sweat_tend:r`;
     presStage = "profile"; presAssessTab = presTpMainTab; presTpMainTab = null;
     return true;
   }
-  function renderPresPanel() {
+  // her 2026-11-17 speed audit ("still laggy", "audit the codes and foundations"): one patient page draw asked the same questions 30 to
+  // 38 times (the Fang Bing Ren ranking, the pattern clues), 0.7 to 1.0 s of every patient page. The draw now shares the Triangle's
+  // one-build memo (phTriMemoDraw, beside phTriMemo): each answer is worked out once per draw.
+  function renderPresPanel() { phTriMemoDraw(renderPresPanelRun); }
+  function renderPresPanelRun() {
     presMineCycleNorm();
     const el = presPanelEl();
     const keep = el && el.id === "presPanel" && presOpenId && presScrollKey === presScrollKeyNow() ? el.scrollTop : 0;
@@ -114284,7 +114317,7 @@ Difficult to sweat|no_sweat_tend:r`;
   }
   function phPatClues(rec, name) {
     if (!phTriMemo || !rec) return phPatCluesRaw(rec, name);
-    return phTriMemoGet("clues|" + phPatientKey(name), () => phPatCluesRaw(rec, name)).slice();
+    return phTriMemoGet("clues|" + phPatientKey(name) + "|" + phTriRecId(rec), () => phPatCluesRaw(rec, name)).map(c => Object.assign({}, c));   // each clue its own copy: a reader marks clues it uses (feeds), never another reader's (her 2026-11-17 speed audit)
   }
   function phPatCluesRaw(rec, name) {
     const out = [], seen = new Set();
@@ -122247,6 +122280,10 @@ Difficult to sweat|no_sweat_tend:r`;
     rec.recheck.at = Date.now();
   }
   function phCxWrite(name, fn) {
+    const m = phTriMemo; phTriMemo = null;   // as phTriWrite: the memo is off while she writes, emptied after (her 2026-11-17 speed audit)
+    try { return phCxWriteRun(name, fn); } finally { if (m) { m.clear(); phTriMemo = m; } }
+  }
+  function phCxWriteRun(name, fn) {
     const rec = name ? phPatientRec(name) : null; if (!rec) return false;
     if (!rec.ccTrack || typeof rec.ccTrack !== "object") rec.ccTrack = { v: 1, scale: "ten", days: {} };
     if (!rec.ccTrack.days || typeof rec.ccTrack.days !== "object") rec.ccTrack.days = {};
@@ -130610,7 +130647,7 @@ Difficult to sweat|no_sweat_tend:r`;
       });
       return out;
     };
-    return phTriMemo ? phTriMemoGet("chno|" + phPatientKey(name) + "|" + kind, make) : make();
+    return phTriMemo ? new Set(phTriMemoGet("chno|" + phPatientKey(name) + "|" + kind + "|" + phTriRecId(rec), make)) : make();   // a copy each time (her 2026-11-17 speed audit)
   }
   // Blood-test pre-fill (2026-10-11, Wu Ling San audit): a sign that IS a lab finding reads the patient's own
   // blood tests, same "a tap always wins" rule as every other pre-fill. A marker counts when its newest result
@@ -130722,7 +130759,7 @@ Difficult to sweat|no_sweat_tend:r`;
   // a copy each time, so a caller that adds to its answer never changes another's (phTriMemo above)
   function phTriEffective(rec, name, kind, picks, prevD) {
     if (!phTriMemo || !rec) return phTriEffectiveRaw(rec, name, kind, picks, prevD);
-    return Object.assign({}, phTriMemoGet("eff|" + phPatientKey(name) + "|" + kind + "|" + JSON.stringify(picks || {}) + "|" + JSON.stringify(prevD || {}), () => phTriEffectiveRaw(rec, name, kind, picks, prevD)));
+    return Object.assign({}, phTriMemoGet("eff|" + phPatientKey(name) + "|" + kind + "|" + phTriRecId(rec) + "|" + JSON.stringify(picks || {}) + "|" + JSON.stringify(prevD || {}), () => phTriEffectiveRaw(rec, name, kind, picks, prevD)));
   }
   function phTriEffectiveRaw(rec, name, kind, picks, prevD) {
     const clueKeys = new Set(phPatClues(rec, name).filter(c => !c.fbrTap).map(c => c.key));   // never the clues her own Fang Bing Ren taps added (no echo)
@@ -133371,6 +133408,30 @@ Difficult to sweat|no_sweat_tend:r`;
   // effective ticks 6 times, the pattern clues 8 times (about 70 of the build's 120 ms). Nothing changes while the page is built, so
   // during ONE build each answer is worked out once (phTriMemo, cleared when the build ends); outside a build every call is fresh.
   var phTriMemo = null;
+  // a patient page draw under one memo (her 2026-11-17 speed audit). Some readers also tidy the record the first time they read it (a
+  // renamed sign moved, the day rolled over, a symptom seeded, a diagnosis marked seen), and an answer kept from before that would be
+  // stale. So the open record is compared before and after: a draw that changed it is drawn once more, on the settled record, with a
+  // fresh memo, and if that changed it again, once more with none (every answer fresh, as before the memo). What she sees is always the
+  // settled record, the page the next visit shows, never a mix of before and after.
+  // the record an answer was worked out from is part of its key: some callers pass a working copy of the patient (her 2026-11-17 speed audit)
+  var phTriRecIds = new WeakMap(), phTriRecN = 0;
+  function phTriRecId(rec) { if (!rec || typeof rec !== "object") return "-"; let i = phTriRecIds.get(rec); if (!i) { i = ++phTriRecN; phTriRecIds.set(rec, i); } return i; }
+  var phTriMemoPasses = 0;
+  function phTriMemoDraw(fn) {
+    if (phTriMemo) return fn();
+    const fp = () => { try { const t = PRESC.items.find(x => x.id === presOpenId), n = t && presPatientFor(t), r = n && phPatientPeek(n); return JSON.stringify(t || null) + (r ? JSON.stringify(r) : ""); } catch (e) { return ""; } };
+    let before = fp(), out;
+    for (let pass = 0; pass < 3; pass++) {
+      phTriMemoPasses++;
+      // the two short-lived memos (the plan summaries' 1.5 s, the Care Plan findings' 0.4 s) start empty too: a draw never reuses an
+      // answer from before it began, however quickly the pages follow each other
+      phTpAutoBust(); try { phTpFxCtxCache.clear(); } catch (e) { /* not built yet */ }
+      if (pass < 2) phTriMemo = new Map();
+      try { out = fn(); } finally { phTriMemo = null; }
+      const now = fp(); if (now === before) break; before = now;
+    }
+    return out;
+  }
   function phTriMemoGet(key, make) {
     if (!phTriMemo) return make();
     if (!phTriMemo.has(key)) phTriMemo.set(key, make());
@@ -133526,7 +133587,12 @@ Difficult to sweat|no_sweat_tend:r`;
       ${hasTicks ? `<div class="ph-btq-foot"><button type="button" class="ph-pfw-link" data-tri-clear="1">Clear the triangle</button></div>` : ""}
     </div>`;
   }
+  // a write runs with a draw's memo off and empties it after (her 2026-11-17 speed audit): whatever is drawn next is worked out afresh
   function phTriWrite(name, fn) {
+    const m = phTriMemo; phTriMemo = null;
+    try { return phTriWriteRun(name, fn); } finally { if (m) { m.clear(); phTriMemo = m; } }
+  }
+  function phTriWriteRun(name, fn) {
     const rec = name ? phPatientRec(name) : null;
     if (!rec) return false;
     const today = phTriToday(rec);
@@ -146781,7 +146847,8 @@ Difficult to sweat|no_sweat_tend:r`;
   // scoped repaint, same shape as presAssessTabRefresh -- swaps only
   // #presTpMainHost, never renderPresPanel, so a tab switch keeps her
   // scroll position and any open sections on the tab she's leaving.
-  function presTpMainTabRefresh() {
+  function presTpMainTabRefresh() { return phTriMemoDraw(presTpMainTabRefreshRun); }   // one memo for the tab's draw, as renderPresPanel (her 2026-11-17 speed audit)
+  function presTpMainTabRefreshRun() {
     if (presMineCycleNorm()) return false;   // her Cycle is a page of hers (ONE ME): the caller repaints the panel
     const host = document.getElementById("presTpMainHost");
     if (!host) return false;
@@ -171440,8 +171507,15 @@ Dosage: {dosage}
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function loadReg() { try { var a = JSON.parse(localStorage.getItem(REG_KEY)); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
   function saveReg(a) { try { _setItem.call(localStorage, REG_KEY, JSON.stringify(a)); } catch (e) {} }
+  // asked on every page draw (the location switcher): the name is read again only when the stored copy changed, never a fresh parse of
+  // the whole 3 MB store each time (her 2026-11-17 speed audit: 66 ms a page)
+  var locLabelRaw = null, locLabelVal = "";
   function currentLocationLabel() {
-    try { var ph = JSON.parse(localStorage.getItem(PH_KEY)); if (ph && ph.locName && String(ph.locName).trim()) return String(ph.locName).trim(); } catch (e) {}
+    try {
+      var raw = localStorage.getItem(PH_KEY);
+      if (raw !== locLabelRaw) { var ph = JSON.parse(raw); locLabelVal = ph && ph.locName && String(ph.locName).trim() ? String(ph.locName).trim() : ""; locLabelRaw = raw; }
+      return locLabelVal;
+    } catch (e) {}
     return "";
   }
   // remember (or refresh) the CURRENT login on this device so it stays switch-able
