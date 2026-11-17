@@ -316,6 +316,7 @@ sex + DOB Start-here lock (with its "Later, open it anyway" override).
 headers, buttons, popups). Patient letters and messages are NOT touched. If the
 rail text cuts off at 360px, only the rail may use "Care Plan" — and tell her.
 Never call it "Treatment plan", "Plan tab" or bare "Plan" in new UI text.
+**The rail's numbered steps (her 2026-11-17 picks, BUILD-NOTES "Visit flow, simpler"):** 1 Better / worse · 2 Exam · 3 Fang Bing Ren · 4 Care Plan · 5 Treatment · 6 Herbs; Profile sits in File after them, File folded once sex + DOB are in. Her yes covers the rail's "Care Plan" and "Herbs"; other UI text keeps the rule above.
 
 ## 8 · Build phases — all built and LIVE
 Phases 0-6 were built on 2026-10-10 and confirmed on `origin/main` 2026-10-18 (the phase table was folded on
