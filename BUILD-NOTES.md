@@ -15744,3 +15744,28 @@ Her words: "make the categories collapsible". `phTcCatHd` is now a button (`data
   score is a share of the formula's own list). Raised with her; the funnel redesign's Fang check is where it is meant to be fixed.
 - **Pages checked:** Fang Bing Ren (list, search, a charted belly). No control changed, so no tap audit. Not checked: her device.
 - **SAVED, not live:** goes out only on her own "push live".
+
+## 2026-11-17: The formula her herbs make + the camera back in the top row (synth22)
+- **Her synth22 batch:** (1) a screenshot of a patient's herb table, "show the name of this formula - sometimes i add the
+  ingredients of formulas and cant remember which formula it is"; (2) "i cant find the camera button in my phone view of the
+  patient profile to upload tongue photos", then (newest word, with a screenshot of her phone on the Treatment Care Plan) "give a
+  camera icon top right row". Mock widgets `lcm_formula_name_from_herbs_options` and `lcm_phone_profile_tongue_camera_options`.
+- **(1) Her picks:** C = in the green head with what differs · up to 1 of the formula's herbs missing (a formula of 4 herbs or more;
+  a 3-herb formula must be whole) · the classics (`PH_HU_SRC`, 52, DRAFT recipes) + her own saved formulas · show only, never the
+  prescription's name · stand-ins count · two formulas joined named both · the name opens its Guide card.
+  **Built:** `phRxFmlPool` (the classics + her formula records with 3+ herbs, one per name), `phRxFmlMatch` (her herbs' keys through
+  `phHuKeys`, so Zhi Gan Cao = Gan Cao and Shao Yao = Bai / Chi Shao; `PH_RX_STANDIN` adds Dang Shen for Ren Shen; fewest
+  differences, then fewest missing, then her own, then the bigger recipe; a second formula only when the best leaves 2+ herbs and
+  the pair explains 2+ more), `phRxFmlGdId` (Fang Bing Ren family, else her notes card; none = plain bold, no door),
+  `phRxFmlHeadHtml` in place of the cap's word "formula" (`presRefreshIngTable`, so it follows every change). The chip
+  (`.fml`, 32px, 6px, white words on the green she kept dark) calls `phGdfShow`. CSS block "THE FORMULA HER HERBS MAKE".
+- **(2)** The first page on her phone had only the face circle's camera; the band's camera (`.ph-band-cam`, `data-cap-for`, its
+  styles and its tap code all still in the app, CURRENT-STATE still naming it) had dropped out of the band's markup in 8def5014.
+  Put back after Book appt. · Text: the phone opens the photo sheet (type chips, Tongue among them), a computer the Photos
+  section. Her earlier pick B (a menu on the face circle) gave way to her newer "top right row"; the face circle is unchanged.
+- **Tested (sandbox, a made-up patient):** her table → "Ban Xia Xie Xin Tang"; without Da Zao, with Fu Ling → "+ Fu Ling − Da
+  Zao"; Gui Zhi Tang; Xiao Chai Hu Tang + Gui Zhi Fu Ling Wan; three unrelated herbs and two herbs → nothing. The chip opened the
+  Guide on Ban Xia Xie Xin Tang; the camera opened the photo sheet. Pictures at 1280 and 360 (the count drops a line on the phone,
+  never over the name). Tap audit on the head and the band at 1280 and 360: the new chip 32px / 6px / 13px, the camera a 32px (28px
+  phone) circle; what it still lists there is the table's and band's own, as before. Not tested: her own devices and formulas.
+- **SAVED, not live:** goes out only on her own "push live".
