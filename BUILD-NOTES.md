@@ -16450,3 +16450,9 @@ Her words: "make this page more quiet - too many buttons for the appointment. ma
   drawer open), Tests & scans (a scan open) and the Summary: nothing new (left: the Musculoskeletal page's 34px step bar, the band's
   name / back / search, the attach tile's "+", the Next button's fill, all as before). Not exercised: her Key2, Print's window, Email's
   mail app, a scan's photo upload (the blood result's tested path).
+
+## Today's visit, Ask step radically simple (2026-11-18)
+Her words: "mock this page to radicaly make it more simple with just essentials minus annotations and retitive buttons", then "i like b".
+- **Built (the wide compass card only, `phCxCardBHtml`; narrower cards keep the old table):** the four answers are named once in the head (Gone · Better · Same · Worse, `.h4`) and a sign row is its name and one dot (the same `data-cx-sx` buttons and handlers, 56 x 32 cells with the dot drawn in `::before`; Worse is red); no SIGN tag, age, since-last column, tick or gold bar (CSS "Today's visit, radically simple"); From / Last visit, the scale, the visit picker and the chart button fold into one ⋯ (`.ph-cx-opt`, the date shows on it while she scores an earlier visit). tap-audit KEEP gains the answer cells.
+- **Not done:** the Journey card's facts (next visit, next period, likely pattern) and Copy notes were not moved (the Journey doors are her 2026-10-29 pick); say if they go too. The since-last column is hidden, not deleted, so a Baseline / Last visit view is still in ⋯ and the data is untouched.
+- **Tested:** scratch copy with a seeded patient at 1280: dots write (Better set), header and dots align, tap-audit clean, style-audit clean. **Not tested:** a patient with several complaints and pains, the earlier-visit scoring state, the narrow card.
