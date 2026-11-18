@@ -16209,3 +16209,11 @@ Her words: "show this chart in a table format that scrolls based on previous rea
 - **Left, her call:** the chips inside each By visit / By type tile (Natural, Flash, Sublingual, Side, Tongue ▾: 24px, 10.5px) and
   its date button (22px) sit in a 109px tile; at the full size the tile would be about twice as tall and the words cut. Also
   Records › Photos' patient name link (14px). Not exercised: her Key2.
+
+
+## 2026-11-18: the OneNote cases join their tours (her "did you fix the tour cases ?")
+Her picture: Cases' source list still showed "Nanjing Study Tour June 2026 · Abdominal lecture 17 Jun (OneNote)", "… · Clinic 18 Jun (OneNote)" and "Nanjing Study Tour Nov 2026 · Days 9-11 (OneNote)" as sources of their own. The import fix (a file titled as a built-in tour joins it) only helps a re-import; her loaded cards stayed on the old rows. She said yes to folding them in.
+- `phTcOneNoteJoin(l, lib)` at the end of `phTcSources`: each such row's cases move to the built-in tour, into the day and block their key gives (`PH_TC_ONENOTE_AT`, 71 keys from the re-made files); the row and its library entry are removed unless the entry holds a note; `phTcGrpX` reset; saved once.
+- `phTcPlaceIn` shared with `phTcImport` (the old inline `place` rebuilt `s.cases` from the days only, dropping a fixed tour's unplaced cases; it now keeps them).
+- Tested in the sandbox: three OneNote rows seeded with cards → 0 rows, 0 library entries; 17 Jun card in June Day 10 afternoon, 18 Jun card Day 11 afternoon, a Nov card Day 9 morning, an unknown key in June unplaced; the source list reads All sources | Oct 2025 | June 2026 | Nov 2026; re-importing the 18 Jun file afterwards: no error, no new source.
+- Not exercised: her real data (the join runs on her device after the gold Update).
