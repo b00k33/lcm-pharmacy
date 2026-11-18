@@ -101447,15 +101447,24 @@ Difficult to sweat|no_sweat_tend:r`;
     const title = d && d.source ? String(d.source.title || "").trim() : "";
     if (!d || d.lcmCases !== 1 || !title || !Array.isArray(d.cases)) { presSavedToast("This file is not a cases file"); return; }
     const kind = ["book", "seminar", "tour", "friend"].indexOf(d.source.kind) >= 0 ? d.source.kind : "book", lib = phSourceLib();
-    let b = lib.find(x => String(x.title || "").trim().toLowerCase() === title.toLowerCase());
-    if (!b) { b = { id: uid(), date: "", notes: "", title, author: String(d.source.author || ""), translator: "", type: kind === "book" ? "book" : "event" }; if (kind !== "book") b.evAs = kind; lib.push(b); }
-    const s = phTcSources().find(x => x.libId === b.id); if (!s) { presSavedToast("This file is not a cases file"); return; }
+    const fx = phTcSources().find(x => x.fixed && x.kind === "tour" && String(x.name).trim().toLowerCase() === title.toLowerCase());   // a file titled as a built-in tour joins it (2026-11-18): its cases may name a day and a block
+    let b = fx ? null : lib.find(x => String(x.title || "").trim().toLowerCase() === title.toLowerCase());
+    if (!b && !fx) { b = { id: uid(), date: "", notes: "", title, author: String(d.source.author || ""), translator: "", type: kind === "book" ? "book" : "event" }; if (kind !== "book") b.evAs = kind; lib.push(b); }
+    const s = fx || phTcSources().find(x => x.libId === b.id); if (!s) { presSavedToast("This file is not a cases file"); return; }
     const list = phTourCases(), str = v => String(v == null ? "" : v).trim(), arr = v => Array.isArray(v) ? v : [], rec = v => arr(v).filter(r => Array.isArray(r) && str(r[0])).map(r => [str(r[0]), str(r[1])]), sym = v => arr(v).map(t => ({ text: str(t) })).filter(x => x.text);
     let n = list.reduce((m, c) => Math.max(m, c.n || 0), 0), added = 0, upd = 0;
+    const place = (c, x) => {   // a case that names its day (x.day) and block (x.block, 0 morning, 1 afternoon) goes into that block of the tour; a missing day is made, dated from x.date
+      const dn = +x.day, ymd = /^\d{4}-\d\d-\d\d$/.test(str(x.date)) ? str(x.date) : ""; if (!dn || !s.days) return;
+      let dd = s.days.find(y => y.n === dn); if (!dd) { dd = { n: dn, date: ymd, blocks: PH_TC_BTIME.map(t => ({ t, k: 0, who: "", cases: [] })) }; s.days.push(dd); s.days.sort((p, q) => p.n - q.n); }
+      if (!dd.date && ymd) dd.date = ymd;
+      s.days.forEach(y => y.blocks.forEach(k => { k.cases = k.cases.filter(m => m !== c.n); }));
+      const bk = dd.blocks[+x.block === 1 ? 1 : 0]; if (bk) bk.cases.push(c.n);
+      s.cases = [...new Set(s.days.flatMap(y => y.blocks.flatMap(z => z.cases)))].sort((p, q) => p - q);
+    };
     d.cases.forEach(x => {
       const id = "imp-" + str(x && x.k), ex = x && str(x.k) ? list.find(c => c.id === id) : null; if (!x || !str(x.k)) return;
       // a card already loaded is left as she has it, but for its condition: a newer file's condition is set, and named first in its diagnosis lines if no line says it yet
-      if (ex) { const g = str(x.grp), tg = arr(x.tags).map(str).filter(Boolean); if (str(x.ref) && ex.ref !== str(x.ref)) { ex.ref = str(x.ref); upd++; } if (tg.length && JSON.stringify(ex.tags || []) !== JSON.stringify(tg)) { ex.tags = tg; upd++; } if (g && ex.grp !== g) { ex.grp = g; if (!(ex.cond || []).some(t => String(t).toLowerCase().indexOf(g.toLowerCase()) >= 0)) (ex.cond = ex.cond || []).unshift(g); upd++; } if (phTcImpNames(ex, x)) upd++; return; }
+      if (ex) { if (fx && +x.day && ex.tour !== s.id) { const o = phTcSources().find(z => z.id === ex.tour); if (o) { o.cases = o.cases.filter(m => m !== ex.n); (o.days || []).forEach(y => y.blocks.forEach(k => { k.cases = k.cases.filter(m => m !== ex.n); })); } ex.tour = s.id; place(ex, x); upd++; } const g = str(x.grp), tg = arr(x.tags).map(str).filter(Boolean); if (str(x.ref) && ex.ref !== str(x.ref)) { ex.ref = str(x.ref); upd++; } if (tg.length && JSON.stringify(ex.tags || []) !== JSON.stringify(tg)) { ex.tags = tg; upd++; } if (g && ex.grp !== g) { ex.grp = g; if (!(ex.cond || []).some(t => String(t).toLowerCase().indexOf(g.toLowerCase()) >= 0)) (ex.cond = ex.cond || []).unshift(g); upd++; } if (phTcImpNames(ex, x)) upd++; return; }
       const c = { id, n: ++n, tour: s.id, added: 1, name: str(x.name) || "Case " + n, cc: str(x.cc), cond: arr(x.cond).map(str).filter(Boolean), formula: str(x.formula) || "Not recorded", fam: x.fam && PH_FORMULAS[x.fam] ? x.fam : null, recipe: rec(x.recipe), mod: str(x.mod), symptoms: sym(x.symptoms) };
       if (Array.isArray(x.fms)) c.fms = x.fms.map(str).filter(Boolean);
       const fb = phTcImpFbr(x); if (fb) c.fbr = fb;
@@ -101464,7 +101473,7 @@ Difficult to sweat|no_sweat_tend:r`;
       if (str(x.grp)) { c.grp = str(x.grp); if (!c.cond.some(t => t.toLowerCase().indexOf(c.grp.toLowerCase()) >= 0)) c.cond.unshift(c.grp); }
       const note = [str(x.label), str(x.note), str(x.outcome) ? "Outcome: " + str(x.outcome) : ""].filter(Boolean).join(" · "); if (note) c.note = note;
       const ss = arr(x.sessions).filter(Boolean).map(y => { const o = { id: uid(), date: "", rdate: "", label: str(y.label), note: str(y.note), symptoms: sym(y.symptoms), cond: [], recipe: rec(y.recipe), formula: str(y.formula) }; if (y.mod != null) o.mod = str(y.mod); return o; }); if (ss.length) c.sessions = ss;
-      list.push(c); s.cases.push(c.n); added++;
+      list.push(c); if (fx && +x.day) place(c, x); else s.cases.push(c.n); added++;
     });
     phTcGrpX.n = -1;
     if ((added || upd) && savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
