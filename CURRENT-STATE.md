@@ -619,8 +619,8 @@ supplier (its chip or name · n items · $sum · n ordered · Copy for email · 
 edit form) · Stock (bar + grams) · Low at · Order (− n + × the size chip, 100 g ⇄ 200 g) · Cost (the bottle price a field, the line's
 total beside it from 2 bottles) · Status (To order / ✓ Ordered <date> / Empty) · Arrived + ⋮, and one Total row at the foot. An
 ordered herb stays in its place ("2 × 100g", ✓ Ordered 30 Oct). **Copy for email is the order**: the supplier's still-to-order herbs
-turn ordered once the copy landed (one toast, Undo; a blocked copy marks nothing); Mark ordered sits only in a row's ⋮ (an order
-placed by phone). **All arrived** takes the supplier's whole list (snoozed excepted). The ⋮ also holds Supplier, Other bottle size…,
+turn ordered once the copy landed (one toast, Undo; a blocked copy marks nothing); a row still to order has its own **Ordered** Button (her 2026-11-18 "need ordered button"; was only in the ⋮):
+beside Arrived on the desktop table, on the row's second line on the phone (`osOrdB`; `phOsbWrite(…, "ordered")`, the gold wash + Undo toast). **All arrived** takes the supplier's whole list (snoozed excepted). The ⋮ also holds Supplier, Other bottle size…,
 Snooze 1 week, the edit form and Take off. The head = **Add to order** (solid; the type-to-search row) + Mark all arrived. A herb that
 changes tab flies into it and that tab's count lights gold. The table draws when its card has 896px (her 1220px window has it,
 `phOstNeed`); a narrower card and the phone draw two lines per herb (the phone: the line's cost as text, Bottle price… in the ⋮). No

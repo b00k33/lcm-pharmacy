@@ -16217,3 +16217,10 @@ Her picture: Cases' source list still showed "Nanjing Study Tour June 2026 · Ab
 - `phTcPlaceIn` shared with `phTcImport` (the old inline `place` rebuilt `s.cases` from the days only, dropping a fixed tour's unplaced cases; it now keeps them).
 - Tested in the sandbox: three OneNote rows seeded with cards → 0 rows, 0 library entries; 17 Jun card in June Day 10 afternoon, 18 Jun card Day 11 afternoon, a Nov card Day 9 morning, an unknown key in June unplaced; the source list reads All sources | Oct 2025 | June 2026 | Nov 2026; re-importing the 18 Jun file afterwards: no error, no new source.
 - Not exercised: her real data (the join runs on her device after the gold Update).
+
+
+## 2026-11-18: an Ordered button on To order (her "need ordered button")
+Her picture: To order, Du Zhong still "To order" with only Arrived and the ⋮ beside it. Marking one herb ordered (an order by phone or online) was only "Mark ordered" in the ⋮.
+- `osOrdB(h)`: an **Ordered** Button on a row still to order (`data-ph-stage-set="id:ordered"`, the same write as before: today's date, the row washed gold where it sits, a toast with Undo). Desktop table: left of Arrived, so Arrived keeps its column. Phone (`osLi`, `osActs(h, stage, true)`): on the second line after the order size, where "✓ Ordered <date>" then shows: beside the name it squeezed a long name (BLOSSOM PHASE 4 ran under it at 360).
+- "Mark ordered" left the ⋮ (the Button replaces it); an ordered row's ⋮ still has Back to To order.
+- Tested in the sandbox at 1220 and 360: tap marks ordered, chip + Undo toast, no sideways scroll; tap audit (a ⋮ open at 360): no finding on the new Button (the remaining three were there before: herb cell height, filter corners, the stepper shape).
