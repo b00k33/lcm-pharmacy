@@ -14815,14 +14815,6 @@
     background: var(--ph-white); margin: 0; padding: env(safe-area-inset-top) 0 0;
   }
   #pharmacyPage #presPanel.ph-pres-full .ph-pres-panel { --ph-pres-bleed: 0px; margin: 0; border-radius: 0; border-left: none; min-height: 100%; max-width: none; box-shadow: none; }
-  /* the patient's coloured side panel runs to the window's foot (her 2026-11-18 screenshot, "see the problem?": on a short page,
-     Better / worse, the rail stopped ~70px above the foot and white showed under it; the record fills the window, min-height 100%
-     above, but its flow was only as tall as its content). The record is a column and the flow takes the rest of its height, so the
-     rail (align-self: stretch) is never shorter than the window. The phone's rail is a drawer; Dispense's fit keeps its own column. */
-  @media (min-width: 641px) {
-    #pharmacyPage #presPanel.ph-pres-full .ph-pres-panel:has(> .ph-flow > #presFlowRail):not(.ph-dsp-fit) { display: flex; flex-direction: column; }
-    #pharmacyPage #presPanel.ph-pres-full .ph-pres-panel:not(.ph-dsp-fit) > .ph-flow:has(> #presFlowRail) { flex: 1 0 auto; }
-  }
   #pharmacyPage #presPanel.ph-pres-full .ph-pres-band { position: sticky; top: 0; z-index: 3; }
   /* Sighted live at ~2000px (2026-09-09): the stage body has never carried a
      side inset (the phone rule "widen it completely across the screen" and
@@ -127241,7 +127233,7 @@ Difficult to sweat|no_sweat_tend:r`;
     // (indented), families ordered by their best score. A formula the table does not list gets a heading of its own.
     const fname = id => esc((PH_FORMULAS[id] || {}).name || id);
     // change since the last visit: Ren points then vs now over the family's own ceiling, same formula both sides so they compare
-    const directPct = (id, picks) => { const f = PH_FORMULAS[id], orP = f && f.or && f.or.ren, mx = f ? phFbrCeil(f, "ren") : 0; if (!f || !mx) return 0; const s = phFbrSumKeys(f.ren, picks, orP); return Math.max(0, Math.min(100, Math.round(s / mx * 100))); };
+    const directPct = (id, picks) => { const f = PH_FORMULAS[id], orP = f && f.or && f.or.ren, mx = f ? phFbrCeil(f, "ren") : 0; if (!f || !mx) return 0; const s = Math.min(mx, phFbrSumKeys(f.ren, picks, orP)) - phFbrNoPts(f, "ren", picks, phFbrRealNo(rec && rec.tri && rec.tri.p, picks)); return Math.max(0, Math.min(100, Math.round(s / mx * 100))); };
     const deltaOf = id => ctx.prevP ? directPct(id, effP || {}) - directPct(id, ctx.prevP) : 0;
     const famRow = (id, kind, dim, sel) => {
       const c = PH_FBR_HERB_COLOUR[id] || { bg: "#D3DEE2" }, labs = byFam.get(id) || [], s = score[id], p = pct(id), d = deltaOf(id);
@@ -130405,6 +130397,34 @@ Difficult to sweat|no_sweat_tend:r`;
     v.sort((a, b) => b - a);
     return Math.max(v.slice(0, PH_FBR_CEIL_N).reduce((a, b) => a + b, 0), PH_FBR_CEIL_MIN);
   }
+  // her 2026-11-18 "currently the formula grading system is only adding to the percentage but not removing ... a formula becomes less likely if it
+  // doesnt fit some of the core signs and symptoms" (her picks: its 8 strongest signs; a No takes away what a Yes adds; the screen shows only the
+  // lower %): a family's CORE is the same 8 strongest lines its ceiling counts (an `or` line once, at its strongest); where signs tie at the
+  // 8th place, the ones her table lists first. A No SHE ANSWERED (her own tap of No, `phFbrRealNo`) on a core line takes away that line's
+  // weight; an `or` line only when none of its signs is Yes. NOT the effective picks' false: phTriEffective writes false for every sign
+  // nothing has said yet (about 400 a patient), and counting those sank every formula to 0 in the test. A No on a smaller sign changes nothing.
+  function phFbrCoreLines(f, tab) {
+    const w = (f && f[tab]) || {}, gs = (f && f.or && f.or[tab]) || [], done = new Set(), v = [];
+    // in her table's own order (an `or` line where its first sign stands), strongest first; equal weights keep her order (the sort is stable)
+    Object.keys(w).forEach(k => {
+      const g = gs.find(x => x.includes(k));
+      if (g) { if (done.has(g)) return; done.add(g); const m = Math.max(0, ...g.map(x => (w[x] > 0 ? w[x] : 0))); if (m) v.push([g, m]); }
+      else if (w[k] > 0) v.push([[k], w[k]]);
+    });
+    return v.sort((a, b) => b[1] - a[1]).slice(0, PH_FBR_CEIL_N);
+  }
+  // her own No taps (raw: rec.tri today's Bing / the Ren that persists) that the picks being scored still hold as No
+  function phFbrRealNo(raw, picks) {
+    const o = {};
+    if (raw) for (const k in raw) if (raw[k] === false && (!picks || picks[k] !== true)) o[k] = 1;
+    return o;
+  }
+  function phFbrNoPts(f, tab, yes, no) {
+    if (!no) return 0;
+    let s = 0;
+    phFbrCoreLines(f, tab).forEach(([ks, w]) => { if (!ks.some(k => yes && yes[k] === true) && ks.some(k => no[k])) s += w; });
+    return s;
+  }
   // What ticked keys are worth in one table, `or` pairs counted once -- for places that walk the keys, not the question rows.
   function phFbrSumKeys(weights, picks, or) {
     let s = 0; for (const k in weights) if (picks[k]) s += weights[k];
@@ -131652,18 +131672,25 @@ Difficult to sweat|no_sweat_tend:r`;
   // families with long tables (max Ren runs 40 to 91). bP / rP are 0..1; fit is 0..1 (a family with only
   // one side's table would use that side alone -- none today). Equal fit falls back to raw points.
   function phFbrRank(rec, fam, effD, effP) {
+    const tt = rec && rec.tri ? phTriToday(rec) : null, noD = phFbrRealNo(tt && tt.d, effD), noP = phFbrRealNo(tt && tt.p, effP);   // her own No's (phFbrNoPts)
     return Object.keys(PH_FORMULAS).map(id => {
       const f = PH_FORMULAS[id], orD = f.or && f.or.bing, orP = f.or && f.or.ren, maxD = phFbrCeil(f, "bing"), maxP = phFbrCeil(f, "ren");   // its 8 strongest signs, at least 24 (phFbrCeil, her 2026-11-17 pick)
-      const dS = phTriSum(f.bing, phTriAll("d", fam), phFbrImplied(f.imp && f.imp.bing, effD), orD);
-      const pS = Math.min(maxP, phTriSum(f.ren, phTriAll("p", fam), effP, orP));
-      const bP = maxD ? Math.min(1, dS / maxD) : 0, rP = maxP ? pS / maxP : 0;
+      const impD = phFbrImplied(f.imp && f.imp.bing, effD);
+      const yD = phTriSum(f.bing, phTriAll("d", fam), impD, orD), yP = phTriSum(f.ren, phTriAll("p", fam), effP, orP);
+      // her 2026-11-18: a No she answered on a core sign takes away what a Yes there adds, from the Yes points the % can show (capped at the ceiling first, so a No always shows)
+      const nD = phFbrNoPts(f, "bing", impD, noD), nP = phFbrNoPts(f, "ren", effP, noP);
+      const netD = Math.min(maxD, yD) - nD, netP = Math.min(maxP, yP) - nP;
+      const dS = Math.max(0, nD ? netD : yD), pS = Math.max(0, netP);
+      const bP = maxD ? Math.max(0, Math.min(1, netD / maxD)) : 0, rP = maxP ? Math.max(0, netP / maxP) : 0;
       const fit = (bP + rP) / 2;   // her "add to fang bing ren" (2026-11-18): a formula with no Ren table yet counts 0 on that side, like one whose Ren the patient has not ticked; scored on Bing alone, the seven Bing-only Draft formulas doubled and outranked the real ones
-      return { id, f, dS, pS, maxD, maxP, bP, rP, fit };
-    }).sort((a, b) => b.fit - a.fit || (b.dS + b.pS) - (a.dS + a.pS) || b.dS - a.dS);
+      // the order reads the signed value: a formula her No's pulled below zero sits under one with nothing answered yet (the % shown stays 0)
+      const bR = maxD ? Math.min(1, netD / maxD) : 0, rR = maxP ? netP / maxP : 0, raw = (bR + rR) / 2;
+      return { id, f, dS, pS, maxD, maxP, bP, rP, fit, nD, nP, bR, rR, raw };
+    }).sort((a, b) => b.raw - a.raw || (b.dS + b.pS) - (a.dS + a.pS) || b.dS - a.dS);
   }
   // The same list ordered by ONE side alone (the Bing leader, the Ren leader): share of that family's own table.
   function phFbrBySide(ranked, kind) {
-    return ranked.slice().sort(kind === "d" ? (a, b) => b.bP - a.bP || b.dS - a.dS : (a, b) => b.rP - a.rP || b.pS - a.pS);
+    return ranked.slice().sort(kind === "d" ? (a, b) => b.bR - a.bR || b.dS - a.dS : (a, b) => b.rR - a.rR || b.pS - a.pS);
   }
   // Where Bing and Ren stand with each other, from a ranked list: "agree" = the family leading overall is also
   // the best on BOTH sides; "split" = each side leans to a different family; "bing" / "ren" = only that side has
