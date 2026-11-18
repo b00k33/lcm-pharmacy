@@ -17,6 +17,27 @@ in `shots/`, price lists and recordings in `refs/`. All four folders are local o
 **Never a real patient in anything committed (audit 2026-11-06, after real names were found in comments, docs and pictures):** no patient name, phone, address or health detail in a code comment, a doc, a commit message, a mock or a picture that is tracked; write "a patient" and use made-up names ("Test Patient", "Zz ...") in examples. A picture of a real record stays in `shots/`. An install picture holds no patient at all.
 **When two lines disagree:** her newest word wins, then the ★ rules at the top of this file, then the rest of this file, then CURRENT-STATE.md, then STYLE-LCM.md, then BUILD-NOTES.md (history). When you find a disagreement, fix the losing line in the same commit.
 
+# ★★★ THE LOOK — one design system (her 2026-11-18 "audit app rules to cement current and future coding to follow minimalistic organised design with consistent chip boxes and fonts")
+
+**This section wins over every older size, weight, colour or chip line further down** (they keep the history; this keeps the rule). A new size, weight, colour or chip look needs her word first.
+
+| | The rule | Where |
+|---|---|---|
+| **Font** | Inter only, words and numbers (print, the bottle label and monospace tokens kept apart) | Theme › Type |
+| **Sizes** | Computer: **20** titles · **18** big numbers · **13** text, names, rows, chips, every box · **11.5** small notes · **10.5** capital labels. Phone: **16** · **13** · **11.5** · **11**. A glyph alone in a circle (‹ › ⋯ ⋮ ✎ ×) = the big-number size (18, 16 on a phone) | CSS "ONE TYPE SCALE"; STYLE-LCM |
+| **Weights** | **400** text and typed values · **600** names, chips, buttons · **700** titles, big numbers, capital labels. Never 500, 800 or 900 (her pick "Three", 2026-11-18) | CSS "ONE CHIP LOOK + THREE WEIGHTS" |
+| **Chip box** | ONE look for every chip, button, dropdown, box you type into and search box: **32px** tall (phone 28–32), **6px** corners, **white**, a **1px `--ph-line`**, **13px ink words at 600** (her pick "Semi-bold"; a typed value 400, 16px on a phone). Picked or the page's main action = **solid `--ph-herb`** (the Case colour on a Case page), white words, one main action a page. An icon alone = a 32px circle. One category = one joined bar (6px, segments edge to edge, a line between). | TAPPABLE THINGS; CSS "ONE CHIP LOOK" |
+| **Colours** | Four: **ink, white, teal, red** (red = empty, short, overdue only). Any other colour is a data mark: a dot, a chart stroke, cycle flow and LH, formula / pattern family colours, the Case colour on a Case page, calendar blocks, All templates' groups, the Guide | "Shaded blocks, four colours" |
+| **Surfaces** | The page standard (58px bar, one left edge, white card with a soft shadow, card titles on a pale band in teal capitals, search first on the tool row, filters a joined bar); a group of rows = one pale block; no box in a box; **no side line** (a dot or a tint) | "One page standard", "No line on the side" |
+| **Not chips** | Rows, tiles, table cells, fold heads, stat tiles, calendar days and blocks keep their own size (tap-audit.js `KEEP` names each) | tap-audit.js |
+
+**Never:** a 1.5px or 2px chip line; a deep-teal, navy or gold-deep fill on a picked chip; a pill or 10px-corner chip; bold (700) chip words; words in 500 / 800 / 900; plain text that taps; a size off the scale; a second font.
+
+**How a build follows it:** write new CSS with the tokens (`--fs-*` sizes, `--ph-herb`, `--ph-line`, `--ph-ink`) and the weights above; never a one-off. **Done** = `.github/scripts/tap-audit.js` and `.github/scripts/style-audit.js` (plus `titlebar-audit.js` when the top bar changes) run at 1220–1280px and at 360px on every page the build touches, its panels and menus open: tap-audit's `off`, style-audit's `offSizes`, `offWeights`, `chipLooks` and `sideLines` are empty, or each line left is named in the build note with why (her word, a data colour, a locked page). The 2026-11-18 sweep (BUILD-NOTES "One chip look") names what it left.
+
+**The rule files on disk lag behind:** sessions commit with `git hash-object` / `update-index` and never touch the working copies, so the CLAUDE.md a new session loads can be days old (on 2026-11-18 it was 2026-11-06's). Read the rules with `git show session-a:CLAUDE.md` (and STYLE-LCM.md) before a UI change, and after committing either file write the committed copy back to disk (`git show HEAD:CLAUDE.md > CLAUDE.md`), so the next session starts from today's rules.
+
+
 # ★★★ ONE APP, WELL INTEGRATED — standing rule (her 2026-10-10 "all builds and developments are integrative. the same information needs to present in all places that reference it ... i want this app to be integratively heavy"; restated in her 2026-10-21 audit ask)
 > Every page reads the same facts from the same place. Applies to every build, every page.
 
@@ -503,7 +524,7 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   640px @media sits in that section -- the big one at its top holds the 85
   folded blocks, one small one further down pairs with its 641-900px twin --
   bar the `.ph-pat-hero` block that must stay above its 480px rule. Never
-  add a `@media (max-width: 640px)` block elsewhere), plus `window.innerWidth <= 640`
+  add a `@media (max-width: 640px)` block elsewhere; the one exception is the dated standard blocks at the very end of the main style, "ONE TYPE SCALE" and "ONE CHIP LOOK + THREE WEIGHTS", which carry their own phone halves), plus `window.innerWidth <= 640`
   branches in the relevant render functions. Desktop is untouched by any of this:
   1. Header is ONE row: ☰ · title · the page's one primary action · ⋯. Every
      other action, the gold Update button and the location switcher live in
@@ -594,7 +615,7 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   shapes were left as they are). Text boxes still read `--field-radius` (999px
   pill) in the code; a value she taps to edit follows TAPPABLE THINGS' Field
   shape (6px, tinted), and TAPPABLE wins where the two disagree. One type scale
-  (title / body / label).
+  and three weights: THE LOOK at the top.
 - **Dead space is a standing preference, desktop included** (her 2026-09-16):
   start a scrollable grid or timeline where real data starts (not hours of
   nothing first) and close up excess gaps between stacked header / toolbar
@@ -689,6 +710,8 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   continuity" under lcm6).
 
 ## Status colours — quiet and consistent
+- **Since 2026-11-18 the colours below are THE LOOK's four** (the tokens were re-pointed: amber and orange draw red, green and blue
+  draw teal, gold a light teal); the shapes and the order below still stand.
 - The inventory status counts (Zero / Low / Phasing out / Temporarily
   stopping) are a compact, aligned set of small chips of equal height — not
   loud full-width solid bars. One clear colour each: zero = red, low =
@@ -698,7 +721,7 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 ## Stock level bar
 - Show the stock-level bar in its OWN column with a % label, never squashed
   under the stock number. % = stock vs the "low at" reorder line, capped at
-  100%; green at/above the line, amber below, red near empty. Same treatment
+  100%; teal at/above the line, red below it (THE LOOK's four colours; it read green / amber / red before 2026-11-18). Same treatment
   on the main Herbal Inventory table. **To Order** (her Cliniko Products pick
   4, 2026-11-02): the bar sits before the grams on one line in its Stock
   column, the % in the hover; never under the number.

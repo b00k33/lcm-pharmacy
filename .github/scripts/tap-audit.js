@@ -32,6 +32,11 @@
     ".ph-appt-block", ".ph-apptcal-daylabel", ".ph-atb-today",     // Appointments' calendar: a booking's block (its height is its time), a day's head, Today's date in a circle (2026-11-17)
     ".ph-tb-i",                                     // the Appointments toolbar's tiles: an icon over its word (her 2026-11-05 toolbar)
     "td", ".ph-cmp-ovl .bar button",                // a table cell that taps (its row is the target); Compare's overlap bar (a chart)
+    ".ph-tl-row", "tr", ".ph-th-sort", ".ph-ost-hb", ".ph-inv-compact-tap",   // list and table rows, a column's sort head, a herb block's head row (rows, not chips; 2026-11-18)
+    ".ph-shell-strip", ".ph-shell-cell",            // the head's stat tiles (number over its word)
+    ".ph-settings-card", ".ph-settings-cardhead", ".ph-reloc-list-head", "summary.ph-hf-label", ".ph-ivf-foldhd",   // fold rows: a section's name that opens it
+    ".field-bare", ".ph-qty-lock",                  // a bare box inside its own bordered box (the box is the measured one); a value she taps to edit (empty shows "—")
+    ".ph-hx-qrow", ".ph-cx-row", ".ph-fbr-row", ".ph-diet-cell", ".ph-rx-card", ".ph-fu-summary", ".ph-tp-fm", ".ph-dose-step-main",   // question rows, tiles and cards that tap
     "[data-keep-size]"                              // a control she agreed to keep at its own size: say which in the build note
   ].join(", ");
   const TAP = "button, select, a[href], input:not([type=hidden]), textarea, [role=button], [role=tab], [role=option]";
@@ -86,7 +91,7 @@
         seen.add(unit);
         if (el.tagName !== "TEXTAREA") {
           if (h < H[0] || h > H[1]) why.push("h " + h + " (want " + (phone ? "28-32" : "32") + ")");
-          if (icon) { if (Math.abs(w - h) > 1.5 || rad < h / 2 - 1) why.push("icon " + w + "x" + h + " r" + rad + " (want a circle)"); }
+          if (icon && !inBar) { if (Math.abs(w - h) > 1.5 || rad < h / 2 - 1) why.push("icon " + w + "x" + h + " r" + rad + " (want a circle)"); }
           else if (rad < R[0] || (rad > R[1] && !inBar)) why.push("corners " + rad + " (want 6)");
           else if (inBar && (rad < R[0] || rad > R[1])) why.push("bar corners " + rad + " (want 6)");
         } else if (rad < R[0] || rad > R[1]) why.push("corners " + rad + " (want 6)");
