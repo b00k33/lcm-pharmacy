@@ -16386,3 +16386,12 @@ Popup picks: which signs = "Its 8 strongest"; how much = "Same as a Yes adds"; s
   Timeline under it; Diagnosis → Treatment, Timeline → Treatment; Better / worse keeps "Care Plan ›". Tap audit of the rail at 1220 and
   360 (drawer open): nothing new (only the name's 18px, as before); the row 32px; no sideways scroll. Not exercised: her Key2, IVF /
   Pregnancy's own start questions (unchanged code).
+
+## 2026-11-18: Fang Bing Ren and Diagnosis are steps on return visits too (SAVED, not live)
+- **Her word:** "yes", to "for a returning patient with a plan, Next still jumps from the exam to Treatment and leaves out Fang Bing Ren
+  (your 10 October choice); since Fang Bing Ren is your top priority, should Next include it on return visits too?"
+- **Done:** the Next button's walk (`presStageNextBtnHtml`, "plan" stage) skips only "timeline" and "plan" now (it also skipped
+  "patterns" and "patdx" on a return visit with a plan); `presVisitNext` adds Fang Bing Ren to the Next-up walk on every visit (it did
+  only when there was no return visit with a plan). Today's visit keeps its one-line glances (`phGlanceHtml`).
+- **Tested** (a pretend returning patient on Natural fertility): Musculoskeletal's Next was "Treatment", now "Fang Bing Ren"; Fang Bing
+  Ren's "Patterns · Diagnosis"; Diagnosis and Timeline "Treatment"; every other page's Next unchanged.
