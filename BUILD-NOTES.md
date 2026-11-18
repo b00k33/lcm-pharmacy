@@ -16189,3 +16189,23 @@ Her words: "show this chart in a table format that scrolls based on previous rea
   at 1220 and 360; the Photos page's own lines (date thumbnails, Select / Add / Hide links, the phone's All dates | Pair bar) are
   the same on the old build, not touched here.
 - **Not exercised:** her real photos; her Key2.
+
+## 2026-11-18: The Photos page's controls at the tap size (SAVED, not live)
+- **Her word:** "continue" after the Photo table went live; that build's tap audit had left the Photos page's own lines (each was the
+  same on the old build), and a build is done when the audit is clean (CLAUDE.md TAPPABLE THINGS).
+- **Done:** Select, Add, Show all / Hide and Select mode's Relabel, Change date, Delete, Cancel are the standard chip in the Photos
+  section (`.ph-photos-sec .ph-tmpl-sec-act`: 32px, 6px corners, 13px; a phone 30px, 12.5px; they were 14px words on a computer and
+  22px herb-bordered pills on a phone); one open (Relabel, Change date) is teal, one not ready faint. The band's photo thumbnails
+  (`.ph-fx .ph-pb-th`) are 32px with 6px corners on a computer (28px was under the 32). On a phone every `.ph-recphotos-seg` bar
+  (the Photos page's By visit | By type | Comparison table, All dates | Pair, the shots; Records › Photos' By date | By type; the
+  directory's Missing a prescription | Everyone; All templates' kinds) is the computer's joined bar at 30px, 28px segments, square
+  inner corners, teal when on (it was a pill with 26px segments); a bar wider than the screen scrolls sideways inside itself
+  (`.ph-recphotos-head` may shrink: All templates' four kinds had wrapped to two lines, a joined bar would have run off the screen).
+  The kind chips under Add and Relabel (`.ph-ck-chip`) are 30px with 6px corners on a phone in this section.
+- **Tested** (the pretend patient, drawn photos): the tap audit of the Photos section clean at 1220 and 360 in every state: the strip,
+  the Comparison table (All dates and Pair), By type with the shots row, Add open, Select with none and one picked, Relabel open;
+  page never wider than the screen; Records › Photos, the directory and All templates at 360: bars 30px, All templates scrolls to
+  Labels.
+- **Left, her call:** the chips inside each By visit / By type tile (Natural, Flash, Sublingual, Side, Tongue ▾: 24px, 10.5px) and
+  its date button (22px) sit in a 109px tile; at the full size the tile would be about twice as tall and the words cut. Also
+  Records › Photos' patient name link (14px). Not exercised: her Key2.
