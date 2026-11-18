@@ -241,7 +241,8 @@ Treatment Care Plan as **one line: phase, session** → Treatment → Dispense.
 one; memory project_lcm_care_plan_optional_2026_11_18):** the visit is Exam · Fang Bing Ren (Similar cases, Diagnosis: Diagnosis shows
 with or without a plan) · Treatment · Herbs, numbered; the Care Plan is one quiet row under Herbs (`.g-cp`): "+ Care Plan" (dashed) until
 she starts one, then "Care Plan" and its live phase with Timeline under it. **Next never goes to the Care Plan or its Timeline** (Diagnosis
-→ Treatment), with or without a plan; `presVisitNext` walks the exam, Fang Bing Ren and Treatment for a patient with no plan too. Her two
+→ Treatment), with or without a plan; `presVisitNext` walks the exam, Fang Bing Ren and Treatment for a patient with no plan too, and
+Fang Bing Ren + Diagnosis are in the walk on return visits too (her "yes" the same day). Her two
 doors to start one: the + Care Plan row (the builder at once, no "Fang Bing Ren first") and the end of Diagnosis (`phTpFbrStartHtml`,
 headed "Treatment Care Plan", never "Next"). No "No plan yet" anywhere: Appointments' list shows her Came in for words, Patient details
 shows no plan line until one exists. Today's visit's "Care Plan ›" only with a plan. Never add a plan gate, nudge or numbered plan step.
@@ -340,8 +341,9 @@ Phases 0-6 were built on 2026-10-10 and confirmed on `origin/main` 2026-10-18 (t
 - **Landing:** a return patient (a visit within 12 months, sex + DOB, one plan or a booked one:
   `presStagePlanAutoOpen`) opens on Today's visit; anyone else opens on the profile.
 - **Next walk** (`presVisitNext`): first visit = file gaps → exam → Fang Bing Ren → Care Plan → Treatment →
-  Dispense; return visit = exam first, file gaps after, and Next skips Fang Bing Ren + Care Plan (their one-line
-  glances, `phGlanceHtml`, open them); Dispense only when herbs; a skip is memory only (`presUpSkip`). The gold
+  Dispense; return visit = exam first, file gaps after. **Since 2026-11-18 (her "yes", Fang Bing Ren her highest priority) Fang Bing
+  Ren and Diagnosis are steps on EVERY visit, return visits with a plan too, and the Care Plan never is** (a tap on its row; the
+  one-line glances, `phGlanceHtml`, stay on Today's visit); Dispense only when herbs; a skip is memory only (`presUpSkip`). The gold
   Up next card is gone (2026-10-14).
 - **Worth a look** (`phTodayNudgesHtml`, return visits): supplements Same / Changed (`rec.suppSeenAt`), history
   "Anything new since <date>?" (`rec.hxSeenAt`); both due = ONE line, "Still the same?" Nothing new · Changed (her 2026-10-29 pick 6).
