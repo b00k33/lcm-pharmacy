@@ -46,7 +46,7 @@ behaves — never go to 15 for a field value.
 | Text field / select row | **48px** |
 | Sex bar (segmented) | 32px tall, inside a 48px row |
 | Toggle row | **48px** (switch itself **44 × 26**) |
-| Chip / button | **28px** (TAPPABLE THINGS) |
+| Chip / button | **28-32px**, 6px corners, a 1px line, 13px words at 600 (CLAUDE.md "THE LOOK") |
 
 Every field is a 48px row: label left (74px, `--m-fs-head`), value right (`--m-fs-value`),
 one 1px `--ph-line` rule between rows. Nothing stacks label-above-value on the phone.
@@ -65,7 +65,7 @@ margin/radius on a full-width section without asking.
 ### Chips
 TAPPABLE THINGS in CLAUDE.md: 6px corners (not a pill: CLAUDE.md wins, her 2026-10-24 "no" to the Zanda finish), 28px tall
 (up to 32px), 1px `--ph-line` line, white; picked = solid
-`--ph-herb`, white text; text is 14px on the phone (`--m-fs-label`), 13px on desktop. One
+`--ph-herb`, white text; text is 13px on the phone and on desktop (`--m-fs-label`, since 2026-11-18). One
 category's chips join into one bar with no side bracket. A chip is for something she
 **picks or has recorded** — never a proposal (CLAUDE.md "NO SUGGESTIONS").
 
@@ -74,7 +74,7 @@ Nothing interactive below 12.5px text. Chips and buttons are 28px; a few phone D
 are 40px on purpose (`.ph-days-opt` / `.ph-pm-opt`). There is no general tap-target floor:
 the 44px rule is retired (her call) — don't bring one back without asking.
 The phone's sizes are measured, not eyeballed: `.github/scripts/tap-audit.js` at 360px (how: its head; CLAUDE.md TAPPABLE
-THINGS "Measured"); there a field you type into is 16px, a chip or button 28-32px with 6px corners and 12.5px text or more.
+THINGS "Measured"); there a field you type into is 16px, a chip or button 28-32px with 6px corners and 13px words at 600 (THE LOOK; tap-audit.js still passes 12.5 and up). Weights on the phone are the computer's three: 400 · 600 · 700.
 
 ---
 
