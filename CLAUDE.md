@@ -523,6 +523,11 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   main disc · ⋯. Calendar blocks take Cliniko's clear colours
   (`phCkClear`; Break alone keeps `phCkTone`), a past day stays full colour
   with its ticks, and the name comes first.
+  **One page standard (her 4 picks, 2026-11-18, "the pages within that group look different"):** on a
+  computer every list page has a 58px top bar, its content 16px under it at the one left edge, the search a
+  280px white box FIRST on the tool row, the filters ONE 32px joined bar (picked = solid teal, count inside),
+  the list in ONE white card (16px corners, the soft shadow, column names inside), card titles a pale band
+  with teal capitals, an empty list one quiet line. CSS block "ONE PAGE FRAME"; a new page follows it.
 - **TOP BAR: every control in a page's bar sits on one centre line** (her 2026-11-09 "see the problem? fix it and prevent from happening in the future": the Guide's bar had Me 8px
   lower than Families, the search box and the Learned pill, because the head beside it kept the 16px bottom margin of the days it was its own row). The bar centres its children, so
   a vertical margin or padding on one of them moves the box it centres and the controls inside look off. A page's head cluster that rides in the bar (`.ph-gd-head`, `.ph-widget-head`,
