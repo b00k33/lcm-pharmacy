@@ -21411,6 +21411,29 @@
   #pharmacyPage .ph-fv-txt .hd b { color: var(--ph-ink); font-size: var(--fs-12); }
   #pharmacyPage .ph-fv-txt .words { font-size: var(--fs-12-5); color: var(--ph-soft); overflow-wrap: anywhere; }
   #pharmacyPage .ph-fv .ph-rtng-act { flex: none; height: 32px; min-height: 0; }
+  /* past visits as a table + trend (her 2026-11-18, mock exam_pages_past_visits_with_charts): Tongue, Pulse, Abdomen */
+  #pharmacyPage .ph-fvt-trend { background: var(--ph-paper); border-radius: 10px; padding: 8px 10px; }
+  #pharmacyPage .ph-fvt-trend .cap, #pharmacyPage .ph-fvt-h { font: 700 var(--fs-10-5)/1.2 var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-soft); }
+  #pharmacyPage .ph-fvt-trend svg { display: block; width: 100%; height: auto; max-height: 90px; }
+  #pharmacyPage .ph-fvt-trend .ax { stroke: var(--ph-line); } #pharmacyPage .ph-fvt-trend .ln { fill: none; stroke: var(--ph-herb); stroke-width: 2; }
+  #pharmacyPage .ph-fvt-trend .pt { fill: var(--ph-herb); } #pharmacyPage .ph-fvt-trend .lb { font: 600 var(--fs-11) var(--font-body); fill: var(--ph-soft); }
+  #pharmacyPage .ph-fvt { display: flex; flex-direction: column; }
+  #pharmacyPage .ph-fvt-h, #pharmacyPage .ph-fvt-r { display: grid; grid-template-columns: 92px 72px minmax(0, 1fr) 96px; gap: 4px 12px; align-items: center; padding: 6px 8px; }
+  #pharmacyPage .ph-fvt.tng .ph-fvt-h, #pharmacyPage .ph-fvt.tng .ph-fvt-r { grid-template-columns: 92px 64px 72px minmax(0, 1fr) 96px; }
+  #pharmacyPage .ph-fvt-r { border-top: 1px solid var(--ph-line); font-size: var(--fs-13); }
+  #pharmacyPage .ph-fvt-r.now { background: var(--ph-herb-tint); border-top: 0; border-radius: 8px; }
+  #pharmacyPage .ph-fvt-r .dt { display: flex; flex-direction: column; } #pharmacyPage .ph-fvt-r .dt b { font-weight: 600; } #pharmacyPage .ph-fvt-r .dt small { font-size: var(--fs-11-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-fvt-r .im { display: flex; align-items: center; justify-content: center; min-height: 46px; }
+  #pharmacyPage .ph-fvt-r .ph { display: block; width: 64px; height: 48px; border-radius: 8px; overflow: hidden; background: var(--ph-paper); }
+  #pharmacyPage .ph-fvt-r .ph .ph-tc-open { display: block; width: 100%; height: 100%; padding: 0; border: 0; background: none; cursor: pointer; } #pharmacyPage .ph-fvt-r .ph img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  #pharmacyPage .ph-fvt-r .ph i, #pharmacyPage .ph-fvt-r .im i { color: var(--ph-faint); font-style: normal; }
+  #pharmacyPage .ph-fvt-r .ac { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+  #pharmacyPage .ph-fvt-r .ph-visit-tng.ro.mini .ph-tng2-svg { width: 36px; height: 54px; display: block; } #pharmacyPage .ph-fvt-r .ph-visit-abd-map.ro.mini .ph-abd2-svg { width: 30px; height: 58px; }
+  @media (max-width: 640px) {
+    #pharmacyPage .ph-fvt-h { display: none; }
+    #pharmacyPage#pharmacyPage .ph-fvt-r, #pharmacyPage#pharmacyPage .ph-fvt.tng .ph-fvt-r { grid-template-columns: 76px auto minmax(0, 1fr); }
+    #pharmacyPage .ph-fvt-r .wd { grid-column: 1 / -1; } #pharmacyPage .ph-fvt-r .ac { grid-column: 1 / -1; justify-content: flex-start; }
+  }
   #pharmacyPage .ph-fv-since { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: var(--fs-12); color: var(--ph-soft); padding: 0 2px; }
   #pharmacyPage .ph-fv-since b { color: var(--ph-ink); }
   #pharmacyPage .ph-fv-since .plus { color: var(--ph-ink); font-weight: 700; }
@@ -125389,7 +125412,36 @@ Difficult to sweat|no_sweat_tend:r`;
         since = `<div class="ph-fv-since"><b>Since ${esc(lbl)}</b>${plus.length ? `<span class="plus">+ ${esc(plus.join(" · "))}</span>` : ""}${minus.length ? `<span class="minus">− ${esc(minus.join(" · "))}</span>` : ""}${!plus.length && !minus.length ? `<span class="same">unchanged</span>` : ""}</div>`;
       }
     } else cell = `<div class="ph-fv-none">Nothing earlier yet.</div>`;
-    return `<div class="ph-fv" data-fv="${part}" data-fv-name="${esc(name)}">${strip}${cell}${since}</div>`;
+    return `<div class="ph-fv" data-fv="${part}" data-fv-name="${esc(name)}">${phFvTrendHtml(rec, part, days, todayD)}${since}${phFvTableHtml(rec, part, name, shown, hidden, todayD)}</div>`;
+  }
+  // the trend over the visits: how many signs were noted at each (the part's own keys, phFndKeys), oldest to today; shown from two points up
+  function phFvTrendHtml(rec, part, days, todayD) {
+    const pts = days.slice(0, 7).reverse().map(d => ({ lbl: phCycShortLbl(d.date), n: phFndKeys(d, part).size }));
+    if (todayD) pts.push({ lbl: "Today", n: phFndKeys(todayD, part).size });
+    if (pts.length < 2) return "";
+    const mx = Math.max(1, ...pts.map(p => p.n)), W = 640, x0 = 40, x1 = W - 40, y = n => 8 + (1 - n / mx) * 34;
+    const xs = pts.map((p, i) => x0 + (x1 - x0) * i / (pts.length - 1)), line = pts.map((p, i) => `${xs[i].toFixed(0)},${y(p.n).toFixed(0)}`).join(" ");
+    return `<div class="ph-fvt-trend"><div class="cap">Trend · signs noted at each visit</div><svg viewBox="0 0 ${W} 66" role="img" aria-label="${esc(`Signs noted at each visit: ${pts.map(p => p.lbl + " " + p.n).join(", ")}`)}"><line x1="${x0}" x2="${x1}" y1="46" y2="46" class="ax"/><polyline points="${line}" class="ln"/>${pts.map((p, i) => `<circle cx="${xs[i].toFixed(0)}" cy="${y(p.n).toFixed(0)}" r="${i === pts.length - 1 ? 5 : 4}" class="pt"/><text x="${xs[i].toFixed(0)}" y="62" class="lb" text-anchor="middle">${esc(p.lbl)}</text>`).join("")}</svg></div>`;
+  }
+  // the past visits as a table, today first then newest to oldest: date, (Tongue) the photo of that day, the part's own drawing, its words, expand + Same
+  function phFvTableHtml(rec, part, name, shown, hidden, todayD) {
+    const pk = phPatientKey(name), tng = part === "tongue";
+    let shots = null;
+    if (tng) {
+      const L = phRenPhotosFor(pk);
+      if (L == null) phRenLoadPhotosFor(pk).then(() => { try { phFvRefresh(name, part); } catch (e) { /* the page is not drawn */ } });
+      else shots = L.filter(r => r.kind === "tongue");
+    }
+    const rank = r => { const v = PH_TONGUE_SHOT_RANK[phRenShotOf(r)]; return v == null ? 9 : v; };
+    const shotOn = date => shots ? shots.filter(r => phRenDateKeyOf(r) === date).sort((a, b) => (rank(a) - rank(b)) || ((b.createdAt || 0) - (a.createdAt || 0)))[0] : null;
+    const photo = date => { const r = shotOn(date); return `<span class="ph">${r ? `<button type="button" class="ph-tc-open" data-ren-tl-open="${esc(r.id)}" data-ren-tl-patient="${esc(pk)}" data-ren-tl-row="${esc(phRenRowKeyOf(r))}" title="Open the photo"><img src="${r.objectUrl}" alt="Tongue photo"></button>` : "<i>—</i>"}</span>`; };
+    const row = (d, isToday) => {
+      const lbl = isToday ? "Today" : phCycShortLbl(d.date);
+      const acts = isToday ? "" : `<button type="button" class="ph-pp-xp ph-fv-xp" data-fv-big="${esc(d.date)}" title="Open big, beside today" aria-label="${esc(`Open ${lbl} big, beside today`)}"><svg class="ph-cc-svgic" aria-hidden="true"><use href="#i-expand"/></svg></button><button type="button" class="ph-rtng-act" data-fv-same="${esc(d.date)}" title="${esc(`Copies the finding of ${lbl} into today`)}">Same</button>`;
+      return `<div class="ph-fvt-r${isToday ? " now" : ""}"><span class="dt"><b>${esc(lbl)}</b>${isToday ? "" : `<small>${esc(phTngCmpAgo(d.date))}</small>`}</span>${tng ? photo(isToday ? keyOf(TODAY) : d.date) : ""}<span class="im">${phFndDrawHtml(d, part) || "<i>—</i>"}</span><span class="wd">${esc(phFndText(d, part))}</span><span class="ac">${acts}</span></div>`;
+    };
+    if (!shown.length && !todayD) return `<div class="ph-fv-none">Nothing earlier yet.</div>`;
+    return `<div class="ph-fvt${tng ? " tng" : ""}"><div class="ph-fvt-h"><span>Visit</span>${tng ? "<span>Photo</span>" : ""}<span>Chart</span><span>Findings</span><span></span></div>${todayD ? row(todayD, true) : ""}${shown.map(d => row(d, false)).join("")}${hidden > 0 ? `<button type="button" class="ph-fv-more" data-fv-more="1">+ ${hidden} more</button>` : ""}</div>`;
   }
   // the block's taps: a day in the strip (view), "+ n more" (view), Same as <date> (one write, through the part's own door)
   // the picked day open big beside today (her synth22 2026-11-12 "allow to expand the previous abdominal chart"; her picks "that day beside
