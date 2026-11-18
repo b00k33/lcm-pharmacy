@@ -14,8 +14,14 @@ her words set the rule. Anything not live or not built says so.
 
 ## Sidebar (the app's menu)
 Her picks [Sidebar tidy-up]: "The clinic" over her name; a **Find a page** box (filters, gold letters, Enter opens, Esc clears) with the **Back ‹** at the end of its own line (`.ph-sb-top`, a 32px icon circle, her 2026-11-17 pick A: it was a row of its own under the box; `#phBackBtn` shows only once there is a page to go back to, `phTabHistory`; the box is full width without it);
-Every day + Every week open, in her "Grouped by rhythm" order; **Records · Reference · Admin** each one folded line (label · count
-· chevron; remembered on this device in `daybook-ph-sb-folds`; the page's own fold opens); no Minimise row (the leaf at the top
+**Her 2026-11-18 three sections** ("no longer just a herbal inventory management app ... patient profile diagnostics record keeping
+as well is for personal profile use"; it replaced the "Grouped by rhythm" Every day / Every week): **Me** one line at the top;
+**Patients** (Appointments, Patient profile, Communications, Intake review, Photos, Patient directory) and **Guide** (Fang Bing Ren,
+Cases, Compare, Diagnostic tools: each opens that Guide tab, `data-gd-go`; `phSbGdPaint` lights the one open, Pulse / Abdomen /
+Bloods light Diagnostic tools, the other Guide tabs Fang Bing Ren) open; **Herbs & stock** (Dashboard first, then Inventory to
+Suppliers) and **Admin** (Relocation, All templates, Back up, Restore, Install) each one folded line (label · count · chevron;
+remembered on this device in `daybook-ph-sb-folds`; the page's own fold opens); the clinic name still opens the Dashboard. A count
+shows only when it needs her: the Due badge hides at 100 or more (a backlog, not a to-do); Formula refill and To order keep theirs; no Minimise row (the leaf at the top
 minimises); one bottom row: the clinic pill + a gear for Settings (the drawer: "Settings" with its word). Code: `phSbFoldsPaint`,
 `phSbFind`, `phSbNavFit` above `renderPhShellNav`. A page change from the sidebar, the phone drawer, the tab bar or a page's own tab
 saves nothing (her 2026-11-17 speed audit: only the open page moved, and the app always opens on Appointments); the sidebar's Due
