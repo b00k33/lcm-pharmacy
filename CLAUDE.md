@@ -257,6 +257,21 @@ Supplements (confirm) and Blood tests (if new). Then: the complaint compass →
 Cycle (if on) → Tongue · Pulse · Abdomen → Fang Bing Ren as **one line: what
 shifted** → (Timeline, on a fertility plan) →
 Treatment Care Plan as **one line: phase, session** → Treatment → Dispense.
+**Her three patients: Herbs · Acu · musculoskeletal · Acu · internal disease (her 2026-11-18 three workflows, "sometimes i will suggest
+herbs"; her 8 picks, all the recommended one; memory project_lcm_three_patient_types_2026_11_18; BUILD-NOTES "Her three patients"):**
+the kind is READ, never stored (`phVisitKind`): a herbs-only booking (`phApptHerbsOnly`) = Herbs; any other booking, or none =
+acupuncture, musculoskeletal when the booking says MUSCULOSKELETAL / MSK or `phMskApplies`, else internal disease. Her tap on the chip
+under the name (`.g-vk`, `phVkChipHtml`) wins (`rec.visitKind`) until "Read from the booking". Each kind's Exam order is `PH_VK_ORDER`
+(Herbs: Ask her · Medical history · Cycle · Tongue · Pulse · Abdomen · Musculoskeletal · Tests & scans; musculoskeletal: Musculoskeletal ·
+Ask her · Cycle · history · tongue · pulse · abdomen · Tests & scans; internal disease: Ask her · Photos · Cycle · history · tongue ·
+pulse · abdomen · musculoskeletal · Tests & scans). A page done only SOMETIMES (`phVkQuiet`: an acupuncture patient's history, tongue,
+pulse, abdomen, and Musculoskeletal for internal disease; a herbs patient's Musculoskeletal unless a pain patient) is lighter (`.quiet`),
+never counted (`phVkParts` for n of m, the Exam ✓, the Next-up walk, the Dispense note) and never Next (`phVkNextOf`). Medical history and
+Tests & scans (Photos too for internal disease) are Exam pages (grp "exam" in `presAssessSections`), out of Her file / Records. Fang Bing
+Ren lists Similar cases · Diagnosis · **Summary for her** (`phVsPageHtml`). Acupuncture patients' step is **Acupuncture**; a herbs patient
+has none (Fang Bing Ren → Herbs; the visits table is "Visits" in Records). An acupuncture patient's Herbs is a dashed **"+ Herbs"** row
+(Next stops after Acupuncture) until a formula is started (`phVkHasFormula`), then step Herbs on every later visit. Never make a page
+the same for all three kinds without her word; never count a sometimes page.
 **A Care Plan is an OPTION, never a step (her 2026-11-18 "i need to remove the requirement for a patient to have a treatment plan",
 "it needs to be an option", "the highest priority is the fang bing ren tongue pulse abdomen etc"; her 8 picks, all the recommended
 one; memory project_lcm_care_plan_optional_2026_11_18):** the visit is Exam · Fang Bing Ren (Similar cases, Diagnosis: Diagnosis shows
@@ -354,7 +369,7 @@ sex + DOB Start-here lock (with its "Later, open it anyway" override).
 headers, buttons, popups). Patient letters and messages are NOT touched. If the
 rail text cuts off at 360px, only the rail may use "Care Plan" — and tell her.
 Never call it "Treatment plan", "Plan tab" or bare "Plan" in new UI text.
-**The rail's numbered steps (her 2026-11-17 picks, BUILD-NOTES "Visit flow, simpler"; the Care Plan left them 2026-11-18, "A Care Plan is an option"):** 1 Better / worse · 2 Exam · 3 Fang Bing Ren · 4 Treatment · 5 Herbs, the Care Plan row under them; Profile sits in File after them, File folded once sex + DOB are in. Her yes covers the rail's "Care Plan" and "Herbs"; other UI text keeps the rule above.
+**The rail's numbered steps (her 2026-11-17 picks, BUILD-NOTES "Visit flow, simpler"; the Care Plan left them 2026-11-18, "A Care Plan is an option"):** 1 Better / worse · 2 Exam · 3 Fang Bing Ren · 4 Treatment · 5 Herbs, the Care Plan row under them (since 2026-11-18 by kind: "Her three patients" above); Profile sits in File after them, File folded once sex + DOB are in. Her yes covers the rail's "Care Plan" and "Herbs"; other UI text keeps the rule above.
 
 ## 8 · Build phases — all built and LIVE
 Phases 0-6 were built on 2026-10-10 and confirmed on `origin/main` 2026-10-18 (the phase table was folded on
