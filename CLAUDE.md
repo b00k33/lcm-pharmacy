@@ -220,6 +220,17 @@ dropdowns: A–Z. A new list is A–Z from its first build.
   today's. Each tile opens its own page. Pain / MSK patients also get a **Musculoskeletal** tile and page after Abdomen (2026-10-11,
   see "Musculoskeletal Assessments page" in BUILD-NOTES.md): the pain map + Pain intake moved onto it, so "Where it hurts" no longer sits on Today's visit for them.
 - **Ask her is no page since 2026-11-18: its questions are lines on Fang Bing Ren (her "simplify ask her page to merge with fang bing ren - because it feeds into it", then "make it even more simplistic"; picks "One line per area", "One or two words", Key signs + all other signs out).** Fang Bing Ren's left side = the lead line (top formula, "Same as last time" on a return visit, the Usually / Now switch), then ONE line per area: Ask next, the complaint's areas, Ask her's areas (the basics and any answered open, the rest under "More areas"); each line = its name, "n of N", a Normal chip (every sign in it No) and short chips. A tap writes the same Fang Bing Ren answer the old page did (`rec.tri` + `rec.askHer`). "askher" links lead to Fang Bing Ren. Every "Ask her" in a rail or Exam order below is history.
+- **The exam pages since 2026-11-18 (her synth22, 9 asks + 12 picks, mock `mocks/synth22-exam-pages-2026-11-18.html`; BUILD-NOTES
+  "synth22 exam pages"):** the Plans row shows on the Care Plan page only (`presTpPlanTabsHtml`); no tab row above the exam pages (the
+  rail is the way between them); a door on a patient page that leaves the patient leaves a "‹ name" chip that brings her back to the
+  same page and scroll (`phTripSync` / `phTripGo`, Esc too); Tongue is two halves like Abdomen (the chart alone left, everything else
+  right); Pulse = the chart, ONE description box (each position's words from the chart, hers win, `p.desc`) with Rate & rhythm as its
+  last line, and the visits table one column a position (no SHPD notes, From your guide, picture or Summary / Rate / Note tabs);
+  Musculoskeletal's panel = Diagnosis · Signs · Plan (the method bar Acupuncture · Motor · Electro · Cupping · Gua sha · Moxa, a
+  point's method on the point, `pts[i].m`); Similar cases ranks by the signs she shares with the case ("n shared", the shared signs
+  as chips, the case's shared lines tinted); Ren's look rows and today's weight sit on Today's visit under the complaint, open on a
+  first visit, one line after (the same answers as the Ren page, which stays for the full board). Never bring back a plans row,
+  an exam tab row or the Pulse page's notes without her word.
 - **Ask her came first after Today's visit (her 2026-10-23 "i need this page to appear sooner. after todays visit"; retired 2026-11-18, line above):** the
   rail lists Ask her, Tongue, Pulse, Abdomen, Musculoskeletal; the Next chain is Today's visit → Ask her → Cycle → Tongue → ...
 - **Tongue, Pulse, Abdomen and Cycle are each their own page** (her pick,

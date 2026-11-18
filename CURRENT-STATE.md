@@ -760,7 +760,31 @@ lines for its search. Patterns' iron clue reads `rec.supplements.iron.on` as bef
 ✕ beside its name: the patient's own row goes; a list row's record (`rec.supplements[kind]`) is cleared, so the row is back to ○ as
 if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped chip ("stopped 29 Oct") wraps inside Taking.
 
+## The exam pages after synth22 (2026-11-18)
+- **Page tops:** the Plans row only on the Care Plan page; no Cycle | Tongue | Pulse | Abdomen | MSK tab row above an exam page.
+- **‹ Back:** a tap inside a patient page that opens another part of the app arms a trip (`phTripArm`); `renderPharmacy` turns it into
+  a floating "‹ name" chip (`#phTripBack`, bottom centre) that returns to the same patient, page (`presStage`, `presTpMainTab`,
+  `presAssessTab`) and scroll; Esc does the same; opening a patient clears it.
+- **Tongue:** `phTngCmpHtml` = two halves (`.ph-tgz-grid.ab`, a wrapping flex): the chart alone on the left, the parts, picks, Reads
+  as, the photos, the visits table and past photos on the right; one column on a phone.
+- **Pulse:** the chart, then the description box (`phPulseDescBoxHtml`): Right and Left, Cun · Guan · Chi each a box filled from
+  the chart's words (`phPulsePosWords`), hers saved as `constitPulse.desc` (cleared when the chart moves aside for a new day), then
+  Rate & rhythm (its chip opens the Hammer form under it). The visits table has a column per position (`.ph-fvt.pls`).
+- **Abdomen side view:** a real back (`PH_ABD_SIDE_BACK`), the chest forward of the belly, the lines fading out at the top and foot.
+- **Similar cases:** the cases the complaint search finds, ordered by shared signs (`phSimPatSigns` = today's Yes on Bing and Ren;
+  `phSimCaseSigns` = the case's notes as read by `phTcNoteShown`; a `_now` / `_tend` pair counts as one), each row "n shared", the
+  open case's shared signs as chips over it and its shared lines tinted (`phSimShared` while `phCmpCaseBox` draws).
+- **Ren on Today's visit:** `phTvRenHtml` under the complaint: the Find the Ren tabs and the row she is on (`phRqTabsHtml`,
+  `phRqOneHtml`, written by `phRqClick`), then Weight (`phBodyWrite`, today's reading). Folded it is one line, "Ren · picks · kg";
+  open on a first visit (`presFirstVisit`), her tap wins for the session (`phTvRenOpen`). The number keys stay the Ren page's.
+
 ## Musculoskeletal page
+**The panel beside the area cards (2026-11-18, synth22 mock E):** three white cards, Diagnosis (a chip per area, its diagnosis or
+name; the picked one is the area + Point adds to, `phMskLit`), Signs (Area / Finding / Side from today's palpation, movements, tests
+and strength: `phMskSignsOf`), Plan (the method bar `PH_MSK_METHODS`, view state `phMskMethod`; then every point, Point / Method /
+Side / ✕, a muscle's marks first; a typed point's Method dropdown writes `pts[i].m`, none = Acupuncture; + Point · Ashi · her set;
+Treatment, → phase, Log ✓ at the foot). It replaced the navy "Today's points" box; its data, writes and the Treatment tab are as
+before (the method rides on the point and on her saved sets; the Treatment tab's point words do not show it yet).
 **Palpation-led** (her picks; full design: memory `project_lcm_msk_redesign_2026_10_27`) [Musculoskeletal page, step 1]: a head
 (Same as last time, the Screen line, a 5-step bar Pain · Palpate · Diagnosis · Points · Re-test); the picture card (pain figures |
 the lit area's muscle diagram | view controls; Add pain · Areas ▾; a first visit taps the body to add a pain); ONE card per area
