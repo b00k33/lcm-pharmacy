@@ -16167,3 +16167,25 @@ Her words: "show this chart in a table format that scrolls based on previous rea
 - **Body photos: the feature already existed** (Meals › Body › Over time, kinds `shapeFront | shapeSide | shapeBack`, her 2026-11-05 build), so no second store was made: `PH_MBT_SHOTS` is now Front · Back · Side · left · Side · right · Arms abducted (`shapeLeft`, `shapeRight`, `shapeArms`) plus the old `shapeSide`, shown only while she holds one (`phMbtViews`); the file-name regexes in `phMbtIsShape` and `phMbtPhLoad` take the new kinds so a phone's relay files them. A Table | One view switch (`phMbtLay`): Table (new) = `phMbtTableHtml`, One view = the old column unchanged (Last beside Today, the strip, Play). Covered until Show, the big viewer, redate and the delete-with-Undo are the old ones; a thumbnail opens its own view's viewer (`data-mbt-kind`). Her weight under a date reads `phBodyReadings` that exact day.
 - **Integration:** Pulse: Tongue / Pulse strips and the Today's visit tile read the same `phFndDays`; nothing else shows the table. Photos: the one photo store (`phRenPhotoPut`), the relay path (`phCapRelayPath` takes any `PH_MBT_SHOTS` kind), the backup (kind rides in the record), Photos pages and Records still leave shape photos out (`phMbtIsShape`).
 - **Not exercised:** a real phone camera and the relay for the three new views; her real photos (tested with drawn pictures); the Table when the Me data is signed in (the table was mounted by hand in the sandbox).
+
+## 2026-11-18: Photo table button on the Tongue page; every photo in the table the same size (SAVED, not live)
+- **Her words:** "how do i view the table view" (Tongue page), then "i want to view the table of photos", then "give a easy quick
+  way to view table format", then on the Comparison table (her screenshot, Natural light, one photo wide and one narrow): "i dont
+  like that this is a large and small view, make the photo size equal".
+- **Photo table:** a button beside Findings trend on the Tongue page (same look, `.ph-ft-doorbtn`; the row wraps with an 8px gap).
+  It uses the rail's own route (`data-flow-prof="photos"`) with `data-gal-door="tongue"`: Show all on (`presPhotosOpen`), the
+  Comparison table (`phRenGalMode`), the Tongue chip (`phRenGalFilter`); the All chip widens it. Tongue only (her page); Abdomen
+  keeps Findings trend alone.
+- **Why the sizes differed:** at Fit the page the table laid out automatically, so a column took its width from the photo file's own
+  pixels (a 1500 x 2000 photo got a wider column than a 600 x 800 one). Now `.ph-gal-table.fit` lays out fixed (the row head
+  140px, the date columns share the rest equally; at least 236px a date, `--n` = the dates drawn, so many dates still scroll
+  sideways inside the card); the phone's Pair stays 100% wide. Every photo sits in one 3:4 frame (`aspect-ratio`, `object-fit:
+  contain`), so a landscape photo shows whole, with paper above and below, never cropped. Small / Medium / Large were already one
+  width each; the frame makes their heights equal too.
+- **Tested** (a pretend patient, four drawn photos of different pixel sizes and one landscape, never her records): old build 347,
+  357 (landscape, 268 tall) and 288 wide; new build every photo 325 x 433 at 1440, 252 x 336 at 1220, 364 x 485 in the Pair, and
+  equal at Small / Medium / Large; at 360 the Pair 91 x 121 each (old 96 and 86), All dates 225 x 300 scrolling inside the card, the
+  page never wider than the screen. The button opens Photos from a page left at By visit / All. Tap audit: the two buttons clean
+  at 1220 and 360; the Photos page's own lines (date thumbnails, Select / Add / Hide links, the phone's All dates | Pair bar) are
+  the same on the old build, not touched here.
+- **Not exercised:** her real photos; her Key2.
