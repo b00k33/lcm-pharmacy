@@ -1418,6 +1418,9 @@ before touching an area that smells similar.
   0; }`), not by adding more overflow rules to the descendant — those were
   already correct and still wouldn't have fired. Hit on `.ph-pf-rec2-l/-r`
   (Patient details' two-up record), 2026-10-10.
+- A grid with no column template makes one auto track, and an auto track grows to its widest row's min-content (a nowrap
+  label): every row then widens with it and runs past the box (2026-11-19: a long Care Plan phase name pushed the patient rail's
+  rows about 35px under the page). Give a one-column grid `grid-template-columns: minmax(0, 1fr)` (the rail's `.ph-rail-in` has it).
 - Print documents (`phPrintDoc`, opened via `document.write`) inherit NO
   app CSS and have no scrollbar fallback — pair `table-layout:fixed` with
   `word-break:break-word` on any inline-styled print table, or a long
