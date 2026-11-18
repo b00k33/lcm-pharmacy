@@ -208,7 +208,8 @@ dropdowns: A–Z. A new list is A–Z from its first build.
   map + pain intake). Nothing lost, only repeats removed.
 - **The rail since 2026-11-18 (her "redesign this based on workflow ... too disorganised", 8 picks + full mock, "Yes, build it"):**
   ONE numbered visit, each step's pages under it (1 Better / worse · 2 Exam: Ask her · Cycle · Tongue · Pulse · Abdomen · 3 Fang Bing Ren:
-  Similar cases · Diagnosis · 4 Care Plan: Timeline · 5 Treatment · 6 Herbs), then "Her file ›" and "Records ›" closed at the foot; a first
+  Similar cases · Diagnosis · 4 Treatment · 5 Herbs; **the Care Plan is no step since 2026-11-18**, see "A Care Plan is an option"),
+  then "Her file ›" and "Records ›" closed at the foot; a first
   visit has Her file open on top and no Better / worse. No Fertility & cycle group, no More row (this replaces the Timeline / More lines
   below for the RAIL only; the pages are unchanged). Her own record: My day · Treat myself · Life · My file. CURRENT-STATE "The rail by workflow".
 - **Timeline** (her picks 2026-10-13 and 2026-10-16): a rail item right after Fang Bing Ren, before Treatment Care Plan, and in the Next walk, only on a Pregnancy / Natural fertility / IVF plan (see "Timeline promoted to its own rail step" in BUILD-NOTES.md). **Since 2026-10-29 (her audit pick) it and Patterns · Diagnosis sit folded under one "⋯ More" row there** (`presFlowMoreOpen`): open on a tap or while one of them is the page, closed when she leaves.
@@ -235,6 +236,16 @@ Supplements (confirm) and Blood tests (if new). Then: the complaint compass →
 Cycle (if on) → Tongue · Pulse · Abdomen → Fang Bing Ren as **one line: what
 shifted** → (Timeline, on a fertility plan) →
 Treatment Care Plan as **one line: phase, session** → Treatment → Dispense.
+**A Care Plan is an OPTION, never a step (her 2026-11-18 "i need to remove the requirement for a patient to have a treatment plan",
+"it needs to be an option", "the highest priority is the fang bing ren tongue pulse abdomen etc"; her 8 picks, all the recommended
+one; memory project_lcm_care_plan_optional_2026_11_18):** the visit is Exam · Fang Bing Ren (Similar cases, Diagnosis: Diagnosis shows
+with or without a plan) · Treatment · Herbs, numbered; the Care Plan is one quiet row under Herbs (`.g-cp`): "+ Care Plan" (dashed) until
+she starts one, then "Care Plan" and its live phase with Timeline under it. **Next never goes to the Care Plan or its Timeline** (Diagnosis
+→ Treatment), with or without a plan; `presVisitNext` walks the exam, Fang Bing Ren and Treatment for a patient with no plan too. Her two
+doors to start one: the + Care Plan row (the builder at once, no "Fang Bing Ren first") and the end of Diagnosis (`phTpFbrStartHtml`,
+headed "Treatment Care Plan", never "Next"). No "No plan yet" anywhere: Appointments' list shows her Came in for words, Patient details
+shows no plan line until one exists. Today's visit's "Care Plan ›" only with a plan. Never add a plan gate, nudge or numbered plan step.
+This overrides the lines below where they say Care Plan step / "Fang Bing Ren first ›" / Next → Care Plan.
 **Condition first, the plan after Fang Bing Ren (her 2026-11-17 word, 8 picks
 all A; it replaced the no-plan gate, decision 3 of 2026-09-11):** "i dont want
 picking condition to be picking a treatment plan. i want treatment plan to be
@@ -321,7 +332,7 @@ sex + DOB Start-here lock (with its "Later, open it anyway" override).
 headers, buttons, popups). Patient letters and messages are NOT touched. If the
 rail text cuts off at 360px, only the rail may use "Care Plan" — and tell her.
 Never call it "Treatment plan", "Plan tab" or bare "Plan" in new UI text.
-**The rail's numbered steps (her 2026-11-17 picks, BUILD-NOTES "Visit flow, simpler"):** 1 Better / worse · 2 Exam · 3 Fang Bing Ren · 4 Care Plan · 5 Treatment · 6 Herbs; Profile sits in File after them, File folded once sex + DOB are in. Her yes covers the rail's "Care Plan" and "Herbs"; other UI text keeps the rule above.
+**The rail's numbered steps (her 2026-11-17 picks, BUILD-NOTES "Visit flow, simpler"; the Care Plan left them 2026-11-18, "A Care Plan is an option"):** 1 Better / worse · 2 Exam · 3 Fang Bing Ren · 4 Treatment · 5 Herbs, the Care Plan row under them; Profile sits in File after them, File folded once sex + DOB are in. Her yes covers the rail's "Care Plan" and "Herbs"; other UI text keeps the rule above.
 
 ## 8 · Build phases — all built and LIVE
 Phases 0-6 were built on 2026-10-10 and confirmed on `origin/main` 2026-10-18 (the phase table was folded on
