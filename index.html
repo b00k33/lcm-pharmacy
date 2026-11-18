@@ -134585,6 +134585,24 @@ Difficult to sweat|no_sweat_tend:r`;
   }
   document.addEventListener("click", e => { if (phTriMenu.size && !(e.target && e.target.closest && e.target.closest(".ph-fbr-menuwrap"))) phTriMenuClose(); });
   document.addEventListener("keydown", e => { if (e.key === "Escape") phTriMenuClose(); });
+  // her 2026-11-18 "when i click on these buttons, theres a lag" (a picture of the Bing / Ren tick buttons): measured, a tick rebuilt the whole page
+  // (8,300 parts: 0.1-0.2 s to build, 0.05 s to morph, 0.1 s to lay out) before the screen moved, 0.45-0.7 s in all. Now the tapped row shows its
+  // new answer at once (read back from what was saved) and the page catches up after that frame is drawn; taps in a row share one catch-up.
+  function phTriPaintNow(btn, name, kind, key) {
+    const row = btn && btn.closest ? btn.closest(".ph-fbr-row") : null; if (!row) return;
+    const rec = phPatientPeek(name), m = rec && rec.tri ? (kind === "d" ? rec.tri.d : rec.tri.p) : null, v = m ? m[key] : undefined;
+    row.classList.toggle("on", v === true); row.classList.toggle("no", v === false); row.classList.remove("auto");
+    const main = row.querySelector(".ph-fbr-main"); if (main) main.setAttribute("aria-pressed", v === true ? "true" : "false");
+    const ck = row.querySelector(".ph-fbr-ck");
+    if (v === true && !ck && main) main.insertAdjacentHTML("beforebegin", `<i class="ph-fbr-ck" aria-hidden="true"><svg class="ph-cc-svgic"><use href="#i-check"/></svg></i>`);
+    if (v !== true && ck) ck.remove();
+    const x = row.querySelector(".ph-fbr-x"); if (x) x.classList.toggle("on", v === false);
+  }
+  let phTriSoonId = 0, phTriSoonName = "";
+  function phTriRefreshSoon(name) {
+    phTriSoonName = name; if (phTriSoonId) return;
+    phTriSoonId = requestAnimationFrame(() => setTimeout(() => { phTriSoonId = 0; phTriRefresh(phTriSoonName); }, 0));
+  }
   function phTriClick(e) {
     const T = e.target; let el;
     // her synth22 2026-10-21 ("found on the way"): Quick assess on Today's visit sits in its own host, so its taps went nowhere; they come here too now
@@ -134597,14 +134615,14 @@ Difficult to sweat|no_sweat_tend:r`;
       // never cycles through "ruled out" (that's the separate ✕ below). Tapping yes again clears
       // back to the default/pre-filled state rather than forcing it false.
       let lkConf = [];
-      if (phTriWrite(name, t => { lkConf = phTriYes(t, kind, key, fam, phPatientPeek(name) || {}, name); })) { phLinkAfterWrite(name, kind, key, lkConf); phTriRefresh(name); }
+      if (phTriWrite(name, t => { lkConf = phTriYes(t, kind, key, fam, phPatientPeek(name) || {}, name); })) { phLinkAfterWrite(name, kind, key, lkConf); phTriPaintNow(el, name, kind, key); phTriRefreshSoon(name); }
       return true;
     }
     if ((el = T.closest("[data-tri-no]"))) {
       const [kind, key] = el.dataset.triNo.split(":");
       // The ✕ always means "ruled out" -- its own independent toggle, no tap count (ruling
       // something out isn't a positive endorsement toward a family).
-      if (phTriWrite(name, t => phTriSetNo(t, kind, key))) { phLinkAsk.delete(phPatientKey(name)); phTriRefresh(name); }
+      if (phTriWrite(name, t => phTriSetNo(t, kind, key))) { phLinkAsk.delete(phPatientKey(name)); phTriPaintNow(el, name, kind, key); phTriRefreshSoon(name); }
       return true;
     }
     // the "Looking at" line (her synth22 2026-10-21), the Show switch, an area's fold and the Twins sheet. View state only: nothing is written.
