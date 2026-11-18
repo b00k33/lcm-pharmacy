@@ -30523,6 +30523,10 @@
   #pharmacyPage .ph-rfc-pbar button:first-child { border-left: 0; }
   #pharmacyPage .ph-rfc-pbar button:last-child { flex: 0 0 32px; padding: 0; }
   #pharmacyPage .ph-rfc-pbar button:hover { background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-rfc-row .act .ph-rfc-btn.go[data-rfc-makenow] { flex: 0 0 auto; margin-right: 6px; }
+  #pharmacyPage .ph-rfc-wg .mkb { display: block; margin-top: 2px; font: 400 12px/1.4 inherit; font-family: inherit; color: var(--ph-mute, #5a6b6b); }
+  #pharmacyPage .ph-rfc-wg .mkb .ph-rfc-wgg { width: 3.4em; font-size: 13px; }
+  #pharmacyPage .ph-rfc-wg .ft .mks { margin-right: 8px; color: #b3261e; font-size: 12px; }
   #pharmacyPage .ph-rfc-pbar button:active { background: var(--ph-herb); color: #fff; }
   /* tick several, plan them together (her pick C) */
   #pharmacyPage .ph-rfc-row .tk { width: 20px; height: 20px; min-height: 0; padding: 0; box-sizing: border-box; border-radius: 6px; border: 1.5px solid var(--ph-faint); background: #fff; color: transparent; font: 700 12px/1 var(--font-body); display: grid; place-items: center; cursor: pointer; }
@@ -65921,6 +65925,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         if (e.target.closest("[data-rfc-sheet-close]")) { phRfcPlanSheet(false); return; }
         const rfcWeigh = e.target.closest("[data-rfc-weigh]");
         if (rfcWeigh) { phRfcWeighTap(rfcWeigh.dataset.rfcWeigh); return; }
+        const rfcNow = e.target.closest("[data-rfc-makenow]");   // her 2026-11-18 "i just need to make it now": Make now on any recipe opens the weighing list, no plan needed
+        if (rfcNow) { const h0 = PHARMACY.herbs.find(x => x.id === rfcNow.dataset.rfcMakenow), rc0 = h0 && phRefillRecipe(h0); if (rc0) phRfcMkOpen(h0.id, h0.refillBatch > 0 ? h0.refillBatch : phRefillBatchFor(h0, rc0), true); return; }
+        if (e.target.closest("[data-rfc-mk-order]")) { const M0 = phRfcMk, h1 = M0 && PHARMACY.herbs.find(x => x.id === M0.id), r1 = h1 && phRefillCanMake(h1, M0.grams); if (r1 && r1.shorts && r1.shorts.length) phRfcOrder(r1.shorts); return; }
         if (e.target.closest("[data-rfc-mk-close]")) { phRfcMkClose(); return; }
         if (e.target.closest("[data-rfc-mk-finish]")) { phRfcMkFinish(); return; }
         const rfcUn = e.target.closest("[data-rfc-unsnooze]");
@@ -168016,7 +168023,7 @@ Dosage: {dosage}
     } else if (onList) {
       act = `${wkBtn}<span class="pill plan">Planned</span>`;
     } else {
-      act = phRfcPlanBarHtml(h.id);
+      act = (recipe ? `<button type="button" class="ph-rfc-btn go" data-rfc-makenow="${h.id}" title="Make it now, no plan needed">Make now</button>` : "") + phRfcPlanBarHtml(h.id);
     }
     if (fixOpen) {
       let fitK = 0;
@@ -168328,10 +168335,10 @@ Dosage: {dosage}
   // Make: the same numbers the workbench weighs (presCalcNumbers at the batch grams); tap each herb as it goes in, the
   // ring, bowl and jar count up, Finish runs the SAME save (phDispenseGate -> refMakeCommit)
   let phRfcMk = null;   // { id, grams, done: Set of row indexes, pop, shownBowl, shownPct } -- view state only
-  function phRfcMkOpen(id, grams) {
+  function phRfcMkOpen(id, grams, now) {
     const h = PHARMACY.herbs.find(x => x.id === id), recipe = h && phRefillRecipe(h);
     // only on the visible refill card's To make list (the card's wrap stays in the page while another tab shows)
-    if (!recipe || !(grams > 0) || PHARMACY.activeTab !== "refill" || !h.refill || phRefillIsSnoozed(h)) return false;
+    if (!recipe || !(grams > 0) || PHARMACY.activeTab !== "refill" || (!now && (!h.refill || phRefillIsSnoozed(h)))) return false;
     phRfcMk = { id, grams: phRound2(grams), done: new Set(), pop: -1, shownBowl: 0, shownPct: 0 };
     phRefFixOpenId = null; phRefDatePopClose();
     phRfcSide = { k: "weigh", id }; phRfcSideFresh = true;
@@ -168360,8 +168367,10 @@ Dosage: {dosage}
   // ticks start over, and leaving the field keeps the amount as this formula's planned batch (h.refillBatch)
   function phRfcMkGrams(el, commit) {
     const M = phRfcMk; if (!M) return;
-    const g = Math.round(parseFloat(String(el.value).replace(/[^\d.]/g, "")));
-    if (!(g >= 1)) { if (commit) el.value = phRound2(M.grams); return; }
+    const isB = !!(el.matches && el.matches("[data-rfc-mk-b]"));   // the batches field: grams = batches x the recipe's total
+    let g = Math.round(parseFloat(String(el.value).replace(/[^\d.]/g, "")));
+    if (isB) { const h0 = PHARMACY.herbs.find(x => x.id === M.id), rc0 = h0 && phRefillRecipe(h0), rs0 = rc0 ? phRound2(refRecipeSum(rc0)) : 0; g = rs0 > 0 ? Math.round(parseFloat(String(el.value).replace(/[^\d.]/g, "")) * rs0) : NaN; }
+    if (!(g >= 1)) { if (commit) { if (isB) { const rc1 = phRefillRecipe(PHARMACY.herbs.find(x => x.id === M.id)), rs1 = rc1 ? phRound2(refRecipeSum(rc1)) : 0; el.value = rs1 > 0 ? phRound2(M.grams / rs1) : ""; } else el.value = phRound2(M.grams); } return; }
     if (g !== M.grams) {
       M.grams = g; M.done = new Set(); M.pop = -1; M.shownBowl = 0; M.shownPct = 0;
       const host = document.getElementById("phRfcSide"), wg = host && host.querySelector(".ph-rfc-wg");
@@ -168369,8 +168378,11 @@ Dosage: {dosage}
       if (wg) [".wh .ring", ".wh .t > span", ".wn", ".pline", ".ph-wg-table", ".ft"].forEach(s => { const a = wg.querySelector(s), b = tmp.querySelector(s); if (a && b) a.replaceWith(b); });
       if (host) phRfcSideSettle(host);
     }
+    { const gE = document.querySelector("#phRfcSide [data-rfc-mk-g]"), bE = document.querySelector("#phRfcSide [data-rfc-mk-b]"), h2 = PHARMACY.herbs.find(x => x.id === M.id), rc2 = h2 && phRefillRecipe(h2), rs2 = rc2 ? phRound2(refRecipeSum(rc2)) : 0;
+      if (gE && gE !== el) gE.value = M.grams;
+      if (bE && (bE !== el || commit) && rs2 > 0) bE.value = phRound2(M.grams / rs2); }
     if (!commit) return;
-    el.value = M.grams;
+    if (!isB) el.value = M.grams;
     const h = PHARMACY.herbs.find(x => x.id === M.id);
     if (!h || h.refillBatch === M.grams) return;
     const had = "refillBatch" in h, old = h.refillBatch;
@@ -168382,7 +168394,7 @@ Dosage: {dosage}
   }
   ["input", "change", "keydown", "focusin", "pointerdown", "mouseup"].forEach(ev => document.addEventListener(ev, e => {
     const t = e.target;
-    if (!t || !t.matches || !t.matches("#phRfcSide [data-rfc-mk-g]")) return;
+    if (!t || !t.matches || !t.matches("#phRfcSide [data-rfc-mk-g], #phRfcSide [data-rfc-mk-b]")) return;
     if (ev === "input" || ev === "change") phRfcMkGrams(t, ev === "change");
     else if (ev === "keydown") { if (e.key === "Enter") { e.preventDefault(); phRfcMkGrams(t, true); t.blur(); } }
     else if (ev === "focusin") t.select();   // the whole number is picked, so typing replaces it
@@ -168396,12 +168408,14 @@ Dosage: {dosage}
     const n = items.length, d = done.size, bowl = phRound2(w.reduce((s, g, i) => s + (done.has(i) ? g : 0), 0));
     const pct = n ? d / n : 0, C = 2 * Math.PI * 17, jar0 = h.qty == null ? 0 : h.qty;
     const missing = items.filter(x => !x.h).length;
+    const rsum = phRound2(refRecipeSum(recipe)), bat = rsum > 0 ? ` <span class="mkb">= <input type="text" inputmode="decimal" class="ph-rfc-wgg field-bare" data-rfc-mk-b="1" value="${phRound2(M.grams / rsum)}" autocomplete="off" aria-label="Batches to make" title="Batches of the recipe (${phFmtG(rsum)} g each)"> batches</span>` : "";
+    const cm = phRefillCanMake(h, M.grams), mkShort = cm && cm.shorts && cm.shorts.length ? `<span class="mks">${cm.shorts.length} herb${cm.shorts.length === 1 ? "" : "s"} short</span><button type="button" class="ph-rfc-btn" data-rfc-mk-order="1">Order short</button>` : "";
     const rows = refWeighRowsHtml({ done, w, already: false, popIdx: M.pop }, items, true, "data-rfc-weigh");
     const jarFill = Math.min(1, (jar0 + (M.shownBowl || 0)) / Math.max(1, jar0 + total));
     const allDone = d === n;
     return `<div class="ph-rfc-wg">
       <div class="wh"><svg class="ring" viewBox="0 0 42 42" aria-hidden="true"><circle class="bg" cx="21" cy="21" r="17"/><circle class="fg" cx="21" cy="21" r="17" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${(C * (1 - (M.shownPct || 0))).toFixed(1)}" data-rfc-to="${(C * (1 - pct)).toFixed(1)}"/></svg>
-        <div class="t"><b>Weigh <input type="text" inputmode="numeric" class="ph-rfc-wgg field-bare" data-rfc-mk-g="1" value="${phRound2(M.grams)}" autocomplete="off" aria-label="Grams to make" title="Grams to make"> g of ${esc(phRfcTitle(h.name))}</b><span>${d} of ${n} weighed</span></div>
+        <div class="t"><b>Weigh <input type="text" inputmode="numeric" class="ph-rfc-wgg field-bare" data-rfc-mk-g="1" value="${phRound2(M.grams)}" autocomplete="off" aria-label="Grams to make" title="Grams to make"> g of ${esc(phRfcTitle(h.name))}${bat}</b><span>${d} of ${n} weighed</span></div>
         <button type="button" class="ph-rfc-btn ghost" data-rfc-mk-close="1">Not now</button></div>
       <div class="wn"><span class="jarto">${phRfcJarSvg({ id: "wg" + h.id, qty: 1, low: 1 }, "").replace("<rect class=\"fill\"", `<rect data-rfc-fill="${(1 - (jarFill)).toFixed(3)}" data-rfc-fillto="${(1 - Math.min(1, (jar0 + bowl) / Math.max(1, jar0 + total))).toFixed(3)}" class="fill"`)}<span>Jar ${phFmtG(jar0)} → <b>${phFmtG(phRound2(jar0 + total))}</b> g</span></span>
         <span class="bowl"><b data-rfc-count="${M.shownBowl || 0}" data-rfc-countto="${bowl}">${phFmtG(M.shownBowl || 0)}</b> g<br>bowl of ${phFmtG(total)} g</span></div>
@@ -168410,7 +168424,7 @@ Dosage: {dosage}
         <thead><tr><th><button type="button" class="ph-wg-all${allDone ? " on" : ""}" data-rfc-weigh-all="1" aria-label="${allDone ? "Untick every herb" : "Tick every herb"}" title="${allDone ? "Untick every herb" : "Tick every herb"}">✓</button></th><th>Herb</th><th class="r">Grams</th><th class="s" title="What the scale should read once this herb is in">Scale reads</th></tr></thead>
         <tbody>${rows}</tbody></table>
       ${missing ? `<div class="ph-ing-warn"><svg class=icn aria-hidden=true><use href=#i-warn></use></svg> ${missing} single herb${missing === 1 ? " isn't" : "s aren't"} in the inventory — weighed, but won't deduct stock.</div>` : ""}
-      <div class="ft"><button type="button" class="ph-rfc-btn go" data-rfc-mk-finish="1"${allDone ? "" : " disabled"}>Finish · add ${phFmtG(M.grams)} g</button></div></div>`;
+      <div class="ft">${mkShort}<button type="button" class="ph-rfc-btn go" data-rfc-mk-finish="1"${allDone ? "" : " disabled"}>Finish · add ${phFmtG(M.grams)} g</button></div></div>`;
   }
   function phRfcWeighTap(i) {
     const M = phRfcMk; i = Number(i);
