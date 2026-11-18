@@ -16242,3 +16242,29 @@ Her picture: the Bing / Ren tick buttons on the Fang Bing Ren board (Chest & bre
 **Built** (CSS block "ONE PAGE FRAME", computer only, ≥901px): bar min 58px; the wrappers' inset gone, 16px under the bar on every page; `#presSearch` / `#phCommSearch` / `#phRfcSearch` / To order's filter = the 280px white box; Formula refill's tab row lifted above its card (search first, `.ph-rfc-tabs` a joined bar, the gold ink hidden); To order's filter sits first on the tabs' row (`.ph-ost` grid, `.ph-ost-body` `display: contents`, so a keystroke still repaints the body alone), its card the white card; Communications' search · Due | More ▾ · kind chips on one row, its column names inside the card; Stocktake and Intake in the white card, Stocktake's and Dashboard's titles the pale band (`#E1EEF2`, teal 11px capitals), Dashboard's cards white; one empty line (`.fam-empty`, `.ph-rfc-empty`, Intake's note). Patient profile's Select moved to the end of the tool row. Markup: Intake review's Refresh is the bar's button (`PH_TOPBAR_ACTIONS.intake`), the head says "N waiting".
 **Tested** (Browser pane, test copy, made-up herbs and patients) at 1220: every page's bar 58 and first box +16; Refresh runs; tap audit: nothing new (left: Inventory's sort heads, To order's herb cell, the More ▾ half of the joined bar, all as before). 360: phone untouched (the rules are ≥901px) except Intake's Refresh, now the head's disc; no page wider than the screen. No console errors.
 **Not changed / left:** the phone layouts; table head looks (To order's pale-blue head row vs Inventory's capitals); the right-of-title words (a count on most, a date on Patient profile / Dashboard, none on Formula refill and To order whose tabs carry the counts); Appointments (a calendar). Her real data not seen.
+
+## 2026-11-18: The sidebar in three sections: Patients, Guide, Herbs & stock (SAVED, not live)
+- **Her words:** "my use of the app has changed dramatically. use that information to help redesign the side bar for navigating.
+  this is no longer just a herbal inventory management app. it is for patient profile diagnostics record keeping as well is for
+  personal profile use" (+ a picture of the old sidebar: Me · Every day · Every week · Records · Reference · Admin).
+- **Measured first** (her saved builds by fortnight; her live data read-only from a page outside the app): diagnosis and study asks
+  0% in September to half in November; herbs and stock 8% to 1%; bookings a week 27 to 9, herbs dispensed 8 to 2, prescriptions made
+  18-39 to 2, no stocktake in November; patient records still edited about 11 a week, clinical photos 15 a week.
+- **Her 8 picks (popups with a mock of A / B / C; all the recommended one):** layout A, three sections; the stock pages one fold,
+  closed; the Guide's main pages listed; Me one line at the top; the Dashboard inside Herbs & stock (the clinic name still opens it);
+  only counts that need her; Photos and Patient directory in Patients; the phone drawer the same as the computer.
+- **Done:** the `<nav class="ph-sb-nav">` rebuilt from the same button lines (ids, badges, `data-ph-tab` kept; only their order and
+  groups changed; the single Guide line became four `data-ph-tab="guide" data-gd-go="families|tourcases|compare|tongue"` lines, the
+  click handler sets `phGdTab` from `data-gd-go`). `PH_SB_GD_OF` / `phSbGdKey` / `phSbGdPaint` (above `renderPhShellNav`) light the
+  Guide line of the open Guide tab, also when she changes tab inside the Guide (`renderPhGuidePage` paints it). The Due badges
+  (`phCommNavBadge`, `phDashFuBadge`) show only from 1 to 99. Fold headings one line (`white-space: nowrap`, ellipsis, letter-spacing
+  0.06em in the sidebar).
+- **Labels changed to fit one line** at 280 wide (the phone drawer): "Tongue · pulse · abdomen" is **Diagnostic tools** (the Guide's own
+  group name for Tongue, Pulse, Abdomen, Bloods); "Herbs and stock" is **Herbs & stock**; "Records and admin" is **Admin** (its five
+  pages are all admin).
+- **Tested** (an empty test copy; no data written): every line opens its page and is the only one lit; Pulse inside the Guide lights
+  Diagnostic tools, Triangle lights Fang Bing Ren; Inventory opens the Herbs & stock fold, Relocation the Admin fold; a 113 Due hides,
+  12 shows; Find a page "case" + Enter opens Cases. At 360 the drawer (280) opens, a Guide line closes it and opens the page, headings fit,
+  no sideways scroll. Tap audit at 1220 and 360: the same lines as the old sidebar (rows 35.5px with 10px corners, fold headings, the
+  brand, Find, the location switcher, Settings), none new; left as they were. Not exercised: her Key2.
+- **Left:** the phone's bottom bar (`#phMobileTabbar`: Order · Refill · Photo · Script · More) still leads with stock; offered to her.
