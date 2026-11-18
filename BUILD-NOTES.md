@@ -16361,3 +16361,28 @@ Popup picks: which signs = "Its 8 strongest"; how much = "Same as a Yes adds"; s
 - Ties: Ban Xia Hou Po Tang's Bing table has five 5s and fifteen 4s; with ties counted its "8" was 20 signs, so ties at the 8th place go by her table's order (Bing core: the three throat signs, chest oppression, white slippery coat, low mood, sticky mouth, nausea / vomiting).
 - Tested (made-up patient, Fertility): Phlegm Yes → Ban Xia Hou Po Tang 11%, 7th; + throat lump No (both sides) → 0%, 116th of 118; No cleared → back to 11%; a No on cough (not core) changes nothing; the lead (Chai Gui Tang 15%) unchanged. Ranking cost +3 ms on about 55 ms. The case tests are unaffected (cases hold no No's).
 - Not exercised: her real patients; the Compass "Gone today" (not counted as a No, it is not her answer on the sign).
+
+## 2026-11-18: A Care Plan is an option, never a step (SAVED, not live)
+- **Her words:** "i need to remove the requirement for a patient to have a treatment plan." / "it needs to be an option" / "the highest
+  priority is the fang bing ren tongue pulse abdomen etc".
+- **Measured** (a pretend patient with no plan, every rail page walked): Care Plan was numbered step 3 (4 on a return visit) and Next
+  walked through it; its page said "No Care Plan yet · <concern>" with "Fang Bing Ren first ›"; the Diagnosis row showed only with a plan
+  (`patSubs: plan && ...`); the Next-up walk (`presVisitNext`) gave a patient with no plan no exam, Fang Bing Ren or Treatment at all,
+  only file gaps then Care Plan; Appointments' list said "No plan yet"; Patient details said "No Treatment Care Plan yet · Start one".
+- **Her 8 picks** (picture of rails A / B / C, then popups; all the recommended one): rail A, the plan a quiet row under Herbs; Diagnosis
+  always; Next Diagnosis → Treatment; start from the + Care Plan row and the end of Diagnosis; her Came in for words instead of "No plan
+  yet", no plan line on Patient details; patients with a plan get the same panel; Next never stops at the Care Plan; Today's visit's
+  "Care Plan ›" only with a plan.
+- **Done:** `presFlowSteps` numbers every step but "plan" (the step object stays for its done / lit state); `presFlowRailHtml` draws it as
+  `.g-cp` under Herbs (`i-plus` "Care Plan" with a dashed outline, `.add`, until a plan exists; then `i-scroll` "Care Plan" + the live
+  phase, `phTpLivePhase`), Timeline under it; `patSubs` from the sections alone; `presVisitNext` walks exam / Fang Bing Ren / Treatment
+  with or without a plan, never the plan; the Next button's walk skips "plan" and "timeline"; `phTpNoPlanCareHtml` shows the builder at
+  once, headed "Treatment Care Plan"; `phTpFbrStartHtml` headed "Treatment Care Plan" (was "Next · Treatment Care Plan");
+  `phApptLsPillHtml` her Came in for words (`.pill.cc`, plain ink); Patient details' no-plan tile keeps only Fang Bing Ren's tile and Next.
+- **Tested** (pretend patients, never her records): no plan, first visit: 1 Exam · 2 Fang Bing Ren (Similar cases, Diagnosis) · 3 Treatment
+  · 4 Herbs · + Care Plan; Fang Bing Ren → Diagnosis → Treatment → Dispense; + Care Plan opens the builder ("Start Care Plan · Irregular
+  periods", How long, Course), no plan words left on Patient details, Fang Bing Ren, Diagnosis, Treatment, Tongue; starting it: "Care Plan
+  · Phase 1", Diagnosis → Treatment. A returning patient on Natural fertility: 1 Better / worse … 5 Herbs, "Care Plan · Menstruation",
+  Timeline under it; Diagnosis → Treatment, Timeline → Treatment; Better / worse keeps "Care Plan ›". Tap audit of the rail at 1220 and
+  360 (drawer open): nothing new (only the name's 18px, as before); the row 32px; no sideways scroll. Not exercised: her Key2, IVF /
+  Pregnancy's own start questions (unchanged code).
