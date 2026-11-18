@@ -16224,3 +16224,11 @@ Her picture: To order, Du Zhong still "To order" with only Arrived and the ⋮ b
 - `osOrdB(h)`: an **Ordered** Button on a row still to order (`data-ph-stage-set="id:ordered"`, the same write as before: today's date, the row washed gold where it sits, a toast with Undo). Desktop table: left of Arrived, so Arrived keeps its column. Phone (`osLi`, `osActs(h, stage, true)`): on the second line after the order size, where "✓ Ordered <date>" then shows: beside the name it squeezed a long name (BLOSSOM PHASE 4 ran under it at 360).
 - "Mark ordered" left the ⋮ (the Button replaces it); an ordered row's ⋮ still has Back to To order.
 - Tested in the sandbox at 1220 and 360: tap marks ordered, chip + Undo toast, no sideways scroll; tap audit (a ⋮ open at 360): no finding on the new Button (the remaining three were there before: herb cell height, filter corners, the stepper shape).
+
+
+## 2026-11-18: Fang Bing Ren, a tick shows at once (her "when i click on these buttons, theres a lag")
+Her picture: the Bing / Ren tick buttons on the Fang Bing Ren board (Chest & breathing). Measured in the sandbox (1220, a made-up patient, 8,300 parts on the card): a tick ran `phTriRefresh` inside the tap: `phTriHtml` 100-210 ms (the board 60, ranking 16, effective 16), `phTriMorph` 30-70 ms, then about 100 ms of layout, so 0.45-0.7 s before the screen moved.
+- `phTriPaintNow(btn, name, kind, key)`: after the write, the tapped row's look is set from the saved answer (`rec.tri.d|p[key]`: true = on + the check circle, false = no + the ✕ on, none = neither), aria-pressed too.
+- `phTriRefreshSoon(name)`: the full refresh after that frame is drawn (requestAnimationFrame + setTimeout 0); taps before it runs share one refresh. Only the two tap paths in `phTriClick` ([data-tri], [data-tri-no]) use it.
+- After: the tap handler 20-30 ms; the tick on screen in about 0.1 s at 1220 and 0.06 s at 360; the row right before and after the catch-up (tick, untick, ✕). Tap audit 1220 + 360: nothing new (the cell-shape notes were there before).
+- Not changed: the refresh's own cost (the rail, Quick assess, the picture and the counts still follow about 0.2-0.4 s later). The "✓" row under Phlegm in her picture is "Phlegm: present" drawn as a tick (`phSignDescHtml`), on purpose.
