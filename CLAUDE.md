@@ -206,6 +206,11 @@ dropdowns: A–Z. A new list is A–Z from its first build.
   Tongue, Pulse and Abdomen pages beside it (her 2026-11-03 "tongue and pulse tab?" + "Add Abdomen too"; no Care Plan needed).
 - **The Review step is retired** — folded into Today's visit (strip + pain
   map + pain intake). Nothing lost, only repeats removed.
+- **The rail since 2026-11-18 (her "redesign this based on workflow ... too disorganised", 8 picks + full mock, "Yes, build it"):**
+  ONE numbered visit, each step's pages under it (1 Better / worse · 2 Exam: Ask her · Cycle · Tongue · Pulse · Abdomen · 3 Fang Bing Ren:
+  Similar cases · Diagnosis · 4 Care Plan: Timeline · 5 Treatment · 6 Herbs), then "Her file ›" and "Records ›" closed at the foot; a first
+  visit has Her file open on top and no Better / worse. No Fertility & cycle group, no More row (this replaces the Timeline / More lines
+  below for the RAIL only; the pages are unchanged). Her own record: My day · Treat myself · Life · My file. CURRENT-STATE "The rail by workflow".
 - **Timeline** (her picks 2026-10-13 and 2026-10-16): a rail item right after Fang Bing Ren, before Treatment Care Plan, and in the Next walk, only on a Pregnancy / Natural fertility / IVF plan (see "Timeline promoted to its own rail step" in BUILD-NOTES.md). **Since 2026-10-29 (her audit pick) it and Patterns · Diagnosis sit folded under one "⋯ More" row there** (`presFlowMoreOpen`): open on a tap or while one of them is the page, closed when she leaves.
 - Other pages (Photos, Appointments, Messages, IVF history, Log, Checklist)
   are unchanged and sit outside this law. (Visit checks and the plan's
