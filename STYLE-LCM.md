@@ -20,13 +20,13 @@ list underneath keeps its scroll spot; ‹ Back returns to it. ☰ is the only n
 
 ---
 
-## The phone type scale — four sizes, no fifth
+## The phone type scale — four sizes, no fifth (her "Phone too", 2026-11-18: the whole phone, not only the patient panel)
 
 | Token | Size | Weight | Used for |
 |---|---|---|---|
 | `--m-fs-value` | **16px** | 600 | anything you type into or tap to change — field values, selects, segmented-option labels that also act as a value, the history summary number |
-| `--m-fs-label` | **14px** | 600–800 | statements and chips — toggle labels, history chips, segmented options (incl. the Sex F/M/— bar) |
-| `--m-fs-help`  | **13px** | 400 | secondary text — empty states, `+ Add`, supplement chips |
+| `--m-fs-label` / `--m-fs-help` | **13px** | 400–800 | text, chips and buttons — names, rows, toggle labels, history chips, segmented options (incl. the Sex F/M/— bar), empty states, `+ Add` (14px until 2026-11-18) |
+| (small) | **11.5px** | 400–600 | small notes — dates, counts, a line under a name |
 | `--m-fs-head`  | **11px** | 800, uppercase, `.06em` | labels and section headings — the only uppercase text on the page |
 
 Exceptions, both deliberate:

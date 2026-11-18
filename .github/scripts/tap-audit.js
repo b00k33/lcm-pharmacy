@@ -9,7 +9,7 @@
    or every line left in it is on the KEEP list below with her word. It measures sizes, not crowding: look at the page too
    (2026-11-08: every control was the right size while four table columns squeezed the words under them to 8px).
 
-   THE SIZE (desktop, wider than 640px): 32px tall, 6px corners, 13px text (a search box 12px), icon-only = a 32px circle,
+   THE SIZE (desktop, wider than 640px): 32px tall, 6px corners, 13px text (a search box too, her 5-size type scale 2026-11-18), icon-only = a 32px circle,
    one category's chips = one joined bar 32px tall (its segments sit inside it). THE PHONE (640px and under, STYLE-LCM.md):
    28-32px tall, 6px corners, text 12.5px or more, a field you type into 16px (less makes the phone zoom), icon-only a
    28-32px circle. Anything over 52px tall is a row or a tile, not a chip, and is not measured. */
@@ -25,6 +25,7 @@
     ".gf-fam-fold", ".gf-picfold-head", ".ph-ftg-foldbar",   // fold heads: a section's capitals label that folds it (a heading)
     ".gf-ks-t", ".fs-scrub", ".gf-ani-th",                        // key-sign picture tiles; the film's scrubber (a slider); the Animation pane's picture buttons (2026-11-10)
     ".ph-tbm-ic",                                   // the top bar's circles (audited 2026-10-24; the phone's bar stays 31px)
+    ".ph-flow-rail button.nm",                      // the patient's name heading the rail: a title, 18px (her 5-size type scale, 2026-11-18)
     "input[type=checkbox]", "input[type=radio]", "input[type=range]", "input[type=color]", "input[type=file]",
     "img", "video", "canvas", "svg", "label",
     ".ph-cal-day", ".ph-cp-day", ".ph-pulse-cell", ".ph-tp-sq",   // calendar days, pulse chart cells, session grid squares
@@ -92,7 +93,7 @@
       }
       if (!icon) {
         if (phone) { if (field && fs < 16) why.push("text " + fs + " (a field wants 16 on the phone)"); else if (fs < 12.5) why.push("text " + fs + " (want 12.5+)"); }
-        else if (search ? (fs < 12 || fs > 13) : (fs < 12.5 || fs > 13.5)) why.push("text " + fs + " (want " + (search ? "12" : "13") + ")");
+        else if (fs !== 13) why.push("text " + fs + " (want 13)");
       }
       checked++;
       if (why.length) add(el, unit, why, w + "x" + h + " r" + rad + " " + fs + "px"); else ok++;
