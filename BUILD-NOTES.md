@@ -16338,3 +16338,26 @@ ask28: options widget `lcm_fbr_cc_signs_options` (A one list · B chips · C one
 - Measured on a made-up patient (Fertility): 13 rows in its area (Diagnosis 1, Periods 7, Sex & fertility 5), key signs Digestion & belly 21, Head, mind & sleep 17, the rest 29. The mock's 19 was sample data.
 - Tested at 1220 + 360: Yes / No show at once (`phTriPaintNow`), rows identical before and after a tap, ↻ brings new questions, an area opens in place, All other signs opens the board without the bands. Tap audit: 1220 clean; 360 one note left, the search box's round corners (the app's search style, as before).
 - Not exercised: her real patients; a patient with two complaints (the second chip); a complaint whose words match no sign.
+
+## 2026-11-18: The patient's coloured side panel reaches the window's foot (SAVED, not live)
+- **Her word:** a screenshot of a Gynae patient's Better / worse page on her computer, "see the problem?": the crimson side panel
+  (`#presFlowRail`, the Case colour since 2026-11-02) stopped about 70px above the window's foot and white showed under it.
+- **Cause:** the full-screen record (`#presPanel.ph-pres-full .ph-pres-panel`) fills the window (min-height 100%), but its `.ph-flow`
+  was only as tall as its content, and the rail stretches to the flow, not the window. Not new today (the same since the panel took the
+  Case colour); the 2026-11-18 rail by workflow folds Her file and Records at the foot, so the rail got shorter and the gap showed on
+  more pages.
+- **Done:** from 641px the record is a flex column and its flow takes the rest of the height (`flex: 1 0 auto`), so the rail is never
+  shorter than the window. Dispense's fit (`.ph-dsp-fit`) keeps its own column; the phone's rail is a drawer, untouched.
+- **Tested** (a pretend patient, never her records): at 1440x1400 every short page (Patient details, Blood tests, Medical history,
+  Tongue, Care Plan, Log, Photos) had a 324-489px white gap, now none; long pages (Ask her, Similar cases) and every page at
+  1440x885 unchanged; the folded rail (56px) reaches the foot too; every page's own layout identical to before (positions of its
+  first twelve elements). Pictures: before / after on Blood tests at 1200x1100. The 1px left at the foot is the panel's own frame line.
+
+
+## 2026-11-18: Fang Bing Ren, a No pulls a formula down (her "the formula grading system is only adding to the percentage but not removing ... lack of plum pit qi doesnt ... redo this")
+Popup picks: which signs = "Its 8 strongest"; how much = "Same as a Yes adds"; show it = "No, just the lower %".
+- `phFbrCoreLines(f, tab)`, `phFbrRealNo(raw, picks)`, `phFbrNoPts(f, tab, yes, no)` beside `phFbrCeil`; `phFbrRank` subtracts the core No's after capping the Yes points at the ceiling (so a No always shows), adds `nD nP bR rR raw`, sorts by `raw`; `phFbrBySide` by `bR` / `rR`; the Ren page's `directPct` the same.
+- First try read No from the effective picks: phTriEffective writes false for every sign nothing has said (430 Bing, 381 Ren on the test patient), so every formula went to 0 and the lead vanished. Now only her own No taps count (Bing: today's; Ren: kept). Last visit's Bing No's do not carry (only Yes carries).
+- Ties: Ban Xia Hou Po Tang's Bing table has five 5s and fifteen 4s; with ties counted its "8" was 20 signs, so ties at the 8th place go by her table's order (Bing core: the three throat signs, chest oppression, white slippery coat, low mood, sticky mouth, nausea / vomiting).
+- Tested (made-up patient, Fertility): Phlegm Yes → Ban Xia Hou Po Tang 11%, 7th; + throat lump No (both sides) → 0%, 116th of 118; No cleared → back to 11%; a No on cough (not core) changes nothing; the lead (Chai Gui Tang 15%) unchanged. Ranking cost +3 ms on about 55 ms. The case tests are unaffected (cases hold no No's).
+- Not exercised: her real patients; the Compass "Gone today" (not counted as a No, it is not her answer on the sign).
