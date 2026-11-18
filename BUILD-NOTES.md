@@ -16413,3 +16413,40 @@ Popup picks: which signs = "Its 8 strongest"; how much = "Same as a Yes adds"; s
 Her words: "make this page more quiet - too many buttons for the appointment. make mock", then "a" (mock A).
 - **Built (computer only; the phone's one-row bar is untouched):** the toolbar is ‹ › date · ONE joined bar Day | 3 days | Week | List (`viewBarHtml`; Day/3 days/Week set the day count, List the view; picking a count from List returns to the grid) · the search as an icon that opens on a tap or while it holds text · Show ▾ (`showMenuHtml`: 5 days, 6 days, Me, Both clinics, Fasting when there is no rail, Show/Hide the Today side). The right-hand toolbar (Fasting, Meals, Body, Next, Herbs, Doses, To-dos) is folded to one "Today" tab until she opens it (`phApsFold`, `phApsHtml`, `data-ph-aps-fold`, kept on this device in `lcm-aps-open`; open shows the rail and a Hide button).
 - **Tested:** scratch copy at 1280 (views, List back to grid, Show menu, fold, search opening; tap-audit clean after the Hide text fix, style-audit clean) and 375 (phone bar unchanged). **Not tested:** a real record with the rail's items, Both clinics chip inside Show, the Me drawer from the menu.
+
+## 2026-11-18: Her three patients: Herbs · Acu · musculoskeletal · Acu · internal disease (SAVED, not live)
+- **Her words:** three workflows, each "see patient / record chief complaint ... / have the fang bing ren read all the above data ... / give
+  patient a summary of findings and conclusions and rough treatment plan overview / ...": herbs (history, tongue pulse abdomen, scans and
+  bloods, formula and label); acupuncture for musculoskeletal ("sometimes i will suggest herbs": MSK testing, ROM, photos first; history and
+  tongue pulse abdomen "sometimes"; "administer acupuncture and record treatment", then herbs); acupuncture for internal disease (the same,
+  signs and symptoms and photos first).
+- **Measured** (a test copy): Medical history folded in Her file, not in Exam; Musculoskeletal last in Exam; Next walked tongue, pulse and
+  abdomen every visit; Blood tests folded in Records and no place for scans; the patient letter only from a Care Plan or a prescription;
+  the booking's kind already read by `phApptKind` / `phApptHerbsOnly`.
+- **Her 8 picks** (a map of the three workflows against the app, then popups with mock rails; all the recommended one): 1 the kind read from
+  the booking, a chip to change it · 2 each kind's own Exam order, Tests & scans last · 3 "sometimes" pages lighter, not counted, Next skips ·
+  4 one Tests & scans page (blood results as they were + scans and reports with date, kind, result, photo or PDF) · 5 a "Summary for her"
+  row after Diagnosis, with or without a Care Plan · 6 "Acupuncture" for acupuncture patients, none for herbs patients · 7 "+ Herbs" until a
+  formula is started · 8 internal disease: Ask her and Photos lead, Musculoskeletal a sometimes page.
+- **Done:** `phVisitKind` / `PH_VK_ORDER` / `phVkQuiet` / `phVkParts` / `phVkHasFormula` / `phVkNextOf` / `phVkChipHtml` (before
+  `presFlowSteps`); `presFlowSteps` reads the kind (Exam order, the Exam ✓ from the counted pages, Acupuncture / no step, `hbAdd`, Visits in
+  Records, Summary under Diagnosis, the Exam caption by kind); `presFlowRailHtml` draws the chip under the name, `.quiet` rows, Her file pages
+  in the Exam (`examRowBtn` via `profBtn`), "+ Herbs" (`.g-hb`, dashed like + Care Plan); `presStageNextBtnHtml` and `presProfNextBtnHtml`
+  (an Exam page of her file) use `phVkNextOf`; `presVisitNext` sorts the exam by kind, drops a sometimes history, adds the Summary on a first
+  visit once a pattern is agreed until one has gone to her, never Acupuncture for herbs, no Herbs while "+ Herbs"; `presAssessSections`
+  makes Medical history, Tests & scans (and Photos for internal disease) grp "exam"; the Exam page strip follows the kind. Tests & scans:
+  `phScnHtml` under the blood results (rec.scans = { id, date, kind, res, photoIds, at }; kinds A–Z; a photo or PDF filed as photo kind
+  "scans", `phScnAttachFiles` the blood result's way), in the Log (as "Tests & scans") and the rail's count. Summary for her: `phVsFilled`
+  (Came in for, today's exam, scans of the last 12 months, the agreed patterns, the Care Plan's course or Acupuncture + the formula and dose,
+  all derived on read), her words per part for the day (`rec.visitSum`, ↺ Fill again), Print (`phPrintDoc`) and Email (into Messages),
+  giving it marks `rec.visitSumAt`.
+- **Tested** (pretend patients "Test Acumsk", "Test Herbone", "Test Acuint", never her records): the read (MUSCULOSKELETAL booking → Acu ·
+  musculoskeletal, Chinese Herbal Medicine → Herbs, Subsequent Acupuncture → internal disease); the chip menu, a tap, Read from the booking;
+  every Next from every Exam page for each kind (musculoskeletal: Musculoskeletal → Ask her → Cycle → Tests & scans → Fang Bing Ren →
+  Diagnosis → Summary → Acupuncture, then none; herbs: Ask her → Medical history → Cycle → Tongue → Pulse → Abdomen → Tests & scans → … →
+  Summary → Dispense; internal disease: Ask her → Photos → Cycle → Tests & scans → …); "+ Herbs" → step 4 Herbs once a formula is named,
+  Next: Dispense; the Next-up dot; a scan added, saved, cancelled (an empty one goes), shown in the Summary's What I found, the Log and the
+  count; the Summary's own words kept for the day, ↺. tap-audit.js + style-audit.js at 1240 and 360 on the rail (kind menu open, phone
+  drawer open), Tests & scans (a scan open) and the Summary: nothing new (left: the Musculoskeletal page's 34px step bar, the band's
+  name / back / search, the attach tile's "+", the Next button's fill, all as before). Not exercised: her Key2, Print's window, Email's
+  mail app, a scan's photo upload (the blood result's tested path).
