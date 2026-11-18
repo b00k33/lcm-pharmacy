@@ -32955,6 +32955,12 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   #pharmacyPage #presFlowRail .ph-flow-sub .cap .cv { width: 14px; height: 14px; margin-left: auto; flex: none; transition: transform .15s ease; }
   #pharmacyPage #presFlowRail .ph-flow-sub .cap[aria-expanded="false"] .cv { transform: rotate(-90deg); }
   #pharmacyPage #presFlowRail .ph-flow-sub.fold > button:not(.cap):not(.on) { display: none; }
+  /* her 2026-11-18 rail by workflow: Her file · Records · My file close to one row at the foot, saying what they hold */
+  #pharmacyPage #presFlowRail .ph-flow-sub.foot { margin-top: 6px; padding-top: 4px; border-top: 1px solid rgba(255, 255, 255, .16); }
+  #pharmacyPage #presFlowRail .ph-flow-sub.foot > .cap { min-height: 32px; color: #fff; font-size: var(--fs-13-5); font-weight: 600; }
+  #pharmacyPage #presFlowRail .ph-flow-sub .cap .cl { display: grid; gap: 1px; min-width: 0; text-align: left; }
+  #pharmacyPage #presFlowRail .ph-flow-sub .cap .cl small { font-size: var(--fs-11-5); font-weight: 500; line-height: 1.25; color: var(--ph-band-faint); }
+  #pharmacyPage #presFlowRail .ph-flow-sub.g-tm > .cap { margin-top: 10px; }
   #pharmacyPage #presFlowRail .ph-flow-sub button:not(.cap) { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 32px; margin: 0; padding: 0 8px 0 10px; border: 0; border-radius: 6px; background: none; box-shadow: none; color: #fff; font-size: var(--fs-13-5); font-weight: 500; line-height: 1.2; text-align: left; }
   #pharmacyPage #presFlowRail .ph-flow-sub button .icn { width: 17px; height: 17px; flex: none; color: var(--ph-band-icon); }
   #pharmacyPage #presFlowRail .ph-flow-sub button:not(.on):hover, #pharmacyPage #presFlowRail .ph-rail-menu:hover { background: var(--ph-band-hover); }
@@ -104890,6 +104896,15 @@ Difficult to sweat|no_sweat_tend:r`;
      script so nothing replays on an ordinary repaint. ==== */
   let presFlowTreatOpen = false;   // her own rail's "Treat myself" row (her 2026-11-13 pick): open on a tap
   let presFlowLast = null, presFlowMoreOpen = "";   // the rail's "⋯ More" rows: "" = all closed, else the one open ("1" = Patterns · Diagnosis and Timeline, her 2026-10-29 pick; "life" · "file" · "log" = her own record's folded pages, the Me audit the same day)
+  // a first visit (her 2026-11-18 pick 3): nothing before today -- no visit, dispense or appointment before today, no "known since"
+  function presFirstVisit(name) {
+    if (!name) return false;
+    const rec = phPatientPeek(name), key = phPatientKey(name), tk = keyOf(TODAY);
+    if (!rec || rec.knownSince) return false;
+    if ((rec.acuSessions || []).some(s => s.date && s.date < tk)) return false;
+    if ((PHARMACY.log || []).some(e => (!e.kind || e.kind === "dispense") && e.at && keyOf(new Date(e.at)) < tk && phPatientKey(e.patient) === key)) return false;
+    return !phApptList().some(a => a.date < tk && a.service !== "Break" && phPatientKey(a.patient) === key);
+  }
   function presFlowSteps(t, isNew) {
     const name = presPatientFor(t) || t.name || "";
     const rec = phPatientPeek(name);
@@ -104925,8 +104940,8 @@ Difficult to sweat|no_sweat_tend:r`;
     const tab = presTpMainTab || (np ? "today" : "plan");
     const sections = plan || np ? presTpMainSections(name, plan) : [];
     const subOf = id => { const s = sections.find(x => x.id === id); return s && s.sub ? s.sub : ""; };
-    const examIds = !(plan || np) || !profileDone ? [] : ["askher", "tongue", "pulse", "abdomen", "msk"].filter(id => sections.some(s => s.id === id));
-    const examOk = id => !!rec && (!!phTodaySkipped(rec, id) || (id === "askher" ? phAhDone(name) : phTodayDonePart(rec, id)));
+    const examIds = !(plan || np) || !profileDone ? [] : ["askher", "cycle", "tongue", "pulse", "abdomen", "msk"].filter(id => sections.some(s => s.id === id));   // Cycle under Exam (her 2026-11-18 pick 4)
+    const examOk = id => !!rec && (!!phTodaySkipped(rec, id) || (id === "askher" ? phAhDone(name) : id === "cycle" ? phTodayPartOk(rec, "cycle") : phTodayDonePart(rec, id)));
     const examDone = examIds.length > 0 && examIds.every(examOk);
     const examGo = examIds.find(id => id !== "askher" && !examOk(id)) || examIds.find(id => id !== "askher") || examIds[0] || "today";
     // her pick 2026-09-30 ("one list"): the profile's own sections sit under
@@ -104934,8 +104949,9 @@ Difficult to sweat|no_sweat_tend:r`;
     // profile's second tab column goes on a desktop
     const profSecs = presAssessSections(t);
     const profSel = (profSecs.find(s => s.id === presAssessTab) || presAssessFirst(profSecs, t) || {}).id;
+    const first = !!rec && !presIsFormula(t) && !phFastIsMe(name) && presFirstVisit(name);
     return {
-      plan, name, tlKind, tlDone,
+      plan, name, tlKind, tlDone, first,
       profSubs: profSecs.map(s => ({ id: s.id, grp: s.grp || "file", label: s.label, mini: s.mini || "", cnt: s.cnt || 0, flags: s.flags || 0, flagTitle: s.flagTitle || (s.flags ? `${s.flags} flagged` : ""), dn: presSecDnHtml(name, s.id), on: presStage === "profile" && s.id === profSel, locked: phPfwLocked(name, s.id) })),
       steps: [
         { id: "profile", label: "Profile", small: "details · history", done: profileDone, on: presStage === "profile", stage: "profile" },
@@ -104955,7 +104971,7 @@ Difficult to sweat|no_sweat_tend:r`;
         { id: "plan", label: "Care Plan", small: "phases · sessions", done: planDone, on: onPlan && (tab === "plan" || (!plan && !np && tab !== "patterns" && tab !== "patdx")), go: "plan" },
         { id: "treatment", label: "Treatment", small: "today's session", done: treatDone, on: onPlan && (!!plan || np) && tab === "treatment", go: "treatment" },
         { id: "dispense", label: "Herbs", small: "dispense · label", done: dispDone, on: presStage === "dispense", stage: "dispense", last: true },
-      ].map((s, i) => ({ ...s, n: i })),
+      ].filter(s => !(first && s.id === "today")).map((s, i) => ({ ...s, n: i })),   // a first visit has no Better / worse (her 2026-11-18 pick 3)
       subs: plan ? [
         { id: "notes", label: "Notes", sub: subOf("notes"), on: onPlan && tab === "notes" },
       ] : [],
@@ -104970,8 +104986,8 @@ Difficult to sweat|no_sweat_tend:r`;
       examSubs: !plan && !np ? [] : rec && !profileDone && !presIsFormula(t)
         ? ["tongue", "pulse", "abdomen"].map(id => ({ id, label: id.charAt(0).toUpperCase() + id.slice(1), locked: true }))
       // her 2026-10-23 "i need this page to appear sooner. after todays visit": Ask her leads the visit pages
-        : ["askher", "tongue", "pulse", "abdomen", "msk"].map(id => sections.find(s => s.id === id)).filter(Boolean)
-        .map(s => ({ id: s.id, label: s.label, sub: s.sub, done: !!rec && (!!phTodaySkipped(rec, s.id) || (s.id === "askher" ? phAhDone(name) : phTodayDonePart(rec, s.id))), on: onPlan && tab === s.id })),
+        : ["askher", "cycle", "tongue", "pulse", "abdomen", "msk"].map(id => sections.find(s => s.id === id)).filter(Boolean)
+        .map(s => ({ id: s.id, label: s.label, sub: s.sub, done: !!rec && (!!phTodaySkipped(rec, s.id) || (s.id === "askher" ? phAhDone(name) : s.id === "cycle" ? phTodayPartOk(rec, "cycle") : phTodayDonePart(rec, s.id))), on: onPlan && tab === s.id })),
       // "Fertility & cycle" (her ask 2026-10-16, "make a fertility/cycle/menstrual category section
       // and put the ivf cycle etc stuff there"; Mock 2 of fertility-rail-mock-*-2026-10-16.html, her
       // picks: the unnumbered-group layout, just these three, same gating as today, sits before Fang
@@ -105072,8 +105088,8 @@ Difficult to sweat|no_sweat_tend:r`;
       const idx = f.steps.indexOf(s);
       const prev = idx > 0 ? f.steps[idx - 1] : null;
       const pulse = !s.done && !s.on && prev && newlyDone.includes(prev.id);
-      const attr = s.stage ? `data-pres-stage="${s.stage}"` : `data-flow-go="${s.go}"`;
-      return `<button type="button" class="ph-flow-step${s.on ? " on" : ""}${s.on && rowOn ? " par" : ""}${s.done ? " done" : ""}${anim ? " anim" : ""}${s.last ? " last" : ""}" ${attr} role="tab" aria-selected="${s.on ? "true" : "false"}"${mini ? tip(s.label) : s.small ? ` title="${esc(s.small)}"` : ""}>
+      const attr = s.attr || (s.stage ? `data-pres-stage="${s.stage}"` : `data-flow-go="${s.go}"`);
+      return `<button type="button" class="ph-flow-step${s.on ? " on" : ""}${s.on && rowOn && !s.solo ? " par" : ""}${s.done ? " done" : ""}${anim ? " anim" : ""}${s.last ? " last" : ""}" ${attr} role="tab" aria-selected="${s.on ? "true" : "false"}"${mini ? tip(s.label) : s.small ? ` title="${esc(s.small)}"` : ""}>
         <span class="c${anim ? " pop" : ""}${pulse ? " pulse" : ""}" aria-hidden="true">${s.done ? "✓" : s.n}</span><span class="t"><b>${esc(s.label)}${s.flags ? `<span class="flag" title="${esc(s.flags + " likely, not yet agreed")}">${s.flags}</span>` : ""}</b><small>${esc(s.small)}</small></span>${nx(attr, s.on)}
       </button>`;
     };
@@ -105082,7 +105098,7 @@ Difficult to sweat|no_sweat_tend:r`;
     // dropped Dispense off the rail and mis-counted "This visit" (caught
     // 2026-10-10 from a live screenshot missing its Dispense bubble).
     const planStep = f.steps.find(s => s.id === "plan");
-    const todayStep = f.steps.find(s => s.id === "today");
+    const todayStep = f.steps.find(s => s.id === "today") || { id: "today", done: false, on: false };   // a first visit has none
     const patStep = f.steps.find(s => s.id === "patterns");
     const treat = f.steps.find(s => s.id === "treatment");
     const dispStep = f.steps.find(s => s.id === "dispense");
@@ -105132,64 +105148,53 @@ Difficult to sweat|no_sweat_tend:r`;
     // 30 days; phMeRailFold); File: Supplements · Blood tests; Clinic: Photos · Messages · Appointments. The page she is on never folds.
     const isMe = phFastIsMe(f.name), foldOf = u => isMe && !u.on && phMeRailFold(u.id);
     const moreRow = (g, cls, items) => items.length ? `<div class="ph-flow-sub ${cls} more${presFlowMoreOpen === g ? " open" : ""}${folds.has(g) ? " fold" : ""}"><button type="button" class="more" data-flow-more="${g}" aria-expanded="${presFlowMoreOpen === g}" title="${esc(items.map(u => u.label).join(" · "))}">${presRailIcn("more")}More${presFlowMoreOpen === g ? "" : `<span class="sub">${items.map(u => esc(u.label)).join(" · ")}</span>`}</button>${presFlowMoreOpen === g ? items.map(profBtn).join("") : ""}</div>` : "";
-    // her pick (2026-11-02): a group's head folds it (▾); the page she is on stays in view
-    const capBtn = (g, cap) => `<button type="button" class="cap" data-flow-fold="${g}" aria-expanded="${!folds.has(g)}">${cap}<svg class="icn cv" aria-hidden="true"><use href="#i-chev-d"></use></svg></button>`;
-    const grpHtml = (g, cap, lead) => {
-      const all = f.profSubs.filter(u => u.grp === g), items = all.filter(u => !foldOf(u)), fold = all.filter(foldOf);
-      const shut = g === "file" && !isMe && prof.done ? !folds.has(g) : folds.has(g);
-      const head = `<button type="button" class="cap" data-flow-fold="${g}" aria-expanded="${!shut}">${cap}<svg class="icn cv" aria-hidden="true"><use href="#i-chev-d"></use></svg></button>`;
-      return (items.length ? `<div class="ph-flow-sub prof g-${g}${prof.done ? " done" : ""}${newlyDone.includes("profile") ? " anim" : ""}${shut ? " fold" : ""}">${head}${lead || ""}${items.map(profBtn).join("")}</div>` : "") + moreRow(g, `prof g-${g}`, fold);
+    // her 2026-11-18 "redesign this based on workflow for patients and for me, right now its too disorganised" (her 8 picks + the full
+    // mock lcm_rail_full_mock_2026_11_18, "Yes, build it"): a patient's rail is ONE numbered visit, each step's pages under it (1 Better /
+    // worse · 2 Exam: Ask her · Cycle · Tongue · Pulse · Abdomen · 3 Fang Bing Ren: Similar cases · Diagnosis · 4 Care Plan: Timeline ·
+    // 5 Treatment · 6 Herbs), then "Her file ›" and "Records ›": closed rows saying what they hold, open on a tap and while one of their
+    // pages is the page. A first visit: Her file open on top, no Better / worse. Gone: the Fertility & cycle group (Cycle went under Exam,
+    // IVF history into Her file), the More row, the second "Fang Bing Ren" row, the Profile row (Patient details is that page).
+    // Her own record: My day · Treat myself (1 Check myself · 2 Fang Bing Ren · 3 Herbs) · Life · My file ›.
+    const capBtn = (g, cap, open) => `<button type="button" class="cap" data-flow-fold="${g}" aria-expanded="${open}">${cap}<svg class="icn cv" aria-hidden="true"><use href="#i-chev-d"></use></svg></button>`;
+    const openGrp = (g, cap, items, cls) => { const shut = folds.has(g) && !items.some(u => u.on); return items.length ? `<div class="ph-flow-sub ${cls} g-${g}${shut ? " fold" : ""}">${capBtn(g, cap, !shut)}${items.map(profBtn).join("")}</div>` : ""; };
+    const goBtn = u => `<button type="button" class="${u.on ? "on" : ""}" data-flow-go="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}"${tip(u.label)}>${presRailIcn(u.id)}${esc(u.label)}${u.sub ? `<span class="sub">${esc(u.sub)}</span>` : ""}</button>`;
+    const SUM_W = { patient: "Details", medhx: "history", ren: "Ren", bloods: "bloods", supplements: "supplements", ivf: "IVF", checklist: "checklist", log: "log", photos: "photos", messages: "messages", apptshist: "appointments", diet: "diet", notes: "notes" };   // the first word is capitalised by sumOf
+    const sumOf = (list, order, n) => { const w = order.filter(id => list.some(u => u.id === id)).slice(0, n).map(id => SUM_W[id]).join(" · "); return w.charAt(0).toUpperCase() + w.slice(1); };
+    // a group closed until she opens it (its key in lcm-rail-fold means OPEN): the name, and while shut what it holds
+    const footHtml = (g, cap, items, extra, order, n, cls) => {
+      if (!items.length && !extra.length) return "";
+      const shut = !folds.has(g) && !items.some(u => u.on) && !extra.some(u => u.on);
+      const head = `<button type="button" class="cap" data-flow-fold="${g}" aria-expanded="${!shut}"${tip(cap)}><span class="cl">${cap}${shut ? `<small>${esc(sumOf(items.concat(extra), order, n))}</small>` : ""}</span><svg class="icn cv" aria-hidden="true"><use href="#i-chev-d"></use></svg></button>`;
+      return `<div class="ph-flow-sub ${cls} foot g-${g}${shut ? " fold" : ""}">${head}${items.map(profBtn).join("")}${extra.map(goBtn).join("")}</div>`;
     };
-    const profRow = `<button type="button" class="${prof.on ? "on" : ""}${prof.done ? " done" : ""}" data-pres-stage="profile" role="tab" aria-selected="${prof.on ? "true" : "false"}"${tip("Profile")}>${presRailIcn("patient")}Profile${prof.done ? `<i class="tk" aria-hidden="true">✓</i>` : ""}${nx(`data-pres-stage="profile"`, prof.on)}</button>`;
-    const fileHtml = grpHtml("file", "File", isMe ? "" : profRow);   // the heads say the group alone (her 2026-11-17 mock C)
-    // her own record (ONE ME, her picks 2026-10-26): Body and Life lead the rail, and no "This visit" box (patients keep it)
-    const mineHtml = grpHtml("body", "Body") + grpHtml("life", "Life");
-    const checkHtml = grpHtml("check", "Today's check");
-    const sumHtml = grpHtml("sum", "Putting it together");
-    const logAll = f.profSubs.filter(u => u.grp === "log"), logItems = logAll.filter(u => !foldOf(u)), logFold = logAll.filter(foldOf);
-    const logHtml = ((logItems.length || f.subs.length) ? `<div class="ph-flow-sub keep log${treat.done ? " done" : ""}${newlyDone.includes("treatment") ? " anim" : ""}${folds.has("log") ? " fold" : ""}">${capBtn("log", isMe ? "Clinic" : "Log")}${logItems.map(profBtn).join("")}${f.subs.map(u => `<button type="button" class="${u.on ? "on" : ""}" data-flow-go="${u.id}" role="tab" aria-selected="${u.on ? "true" : "false"}"${tip(u.label)}>${presRailIcn(u.id)}${esc(u.label)}${u.sub ? `<span class="sub">${esc(u.sub)}</span>` : ""}</button>`).join("")}</div>` : "") + moreRow("log", "keep log", logFold);
-    // PATIENT WORKFLOW LAW (CLAUDE.md, 2026-10-10): Cycle / Tongue / Pulse /
-    // Abdomen are each their own page, listed under Today's visit with a tick
-    // when done today. The tab row itself is hidden on desktop ("the rail IS
-    // that row"), so this list is also their only way in there. It reads
-    // `sections` (via presFlowSteps) so it can't list a page
-    // presTpMainSections wouldn't also show as a tab.
     const examSubBtn = s => s.locked ? `<button type="button" class="locked" data-flow-locked="${s.id}" title="Add sex and date of birth first">${presRailIcn(s.id)}${esc(s.label)}</button>` : `<button type="button" class="${s.on ? "on" : ""}${s.done ? " done" : ""}" data-flow-go="${s.id}" role="tab" aria-selected="${s.on ? "true" : "false"}"${tip(s.label)}>${presRailIcn(s.id)}${esc(s.label)}${s.done ? `<i class="tk" aria-hidden="true">✓</i>` : ""}${s.sub ? `<span class="sub">${esc(s.sub)}</span>` : ""}${nx(`data-flow-go="${s.id}"`, s.on)}</button>`;
     const examSubHtml = f.examSubs.length ? `<div class="ph-flow-sub keep plan${todayStep.done ? " done" : ""}">${f.examSubs.map(examSubBtn).join("")}</div>` : "";
-    // "Fertility & cycle" (her 2026-10-16 pick, Mock 2): Cycle and Timeline navigate like the exam
-    // pages above (data-flow-go, Plan-tab tabs); IVF history navigates like a File/Log page
-    // (data-flow-prof, Profile-stage tab) -- fertSubBtn picks the right attribute per item.
     const fertSubBtn = s => `<button type="button" class="${s.on ? "on" : ""}${s.done ? " done" : ""}" data-flow-${s.kind === "prof" ? "prof" : "go"}="${s.id}" role="tab" aria-selected="${s.on ? "true" : "false"}"${tip(s.label)}>${presRailIcn(s.id)}${esc(s.label)}${s.done ? `<i class="tk" aria-hidden="true">✓</i>` : ""}${s.sub ? `<span class="sub">${esc(s.sub)}</span>` : ""}${nx(`data-flow-${s.kind === "prof" ? "prof" : "go"}="${s.id}"`, s.on)}</button>`;
-    // her 2026-10-29 pick (the usage audit: Patterns · Diagnosis opened for 2 patients, Timeline for 1): both leave the rail
-    // for one folded "⋯ More" row after Fang Bing Ren, open while one of them is the page
-    const moreItems = f.fertSubs.filter(s => s.id === "timeline").concat(f.patSubs.filter(s => s.id === "patdx"));
-    const fertShown = f.fertSubs.filter(s => s.id !== "timeline");
-    const fertHtml = fertShown.length ? `<div class="ph-flow-sub keep plan${todayStep.done ? " done" : ""}${folds.has("fert") ? " fold" : ""}">${capBtn("fert", "Fertility &amp; cycle")}${fertShown.map(fertSubBtn).join("")}</div>` : "";
-    // Fang Bing Ren's two pages (her 2026-10-12 pick D); the gold count stays on the parent row, as in the mock
     const patSubBtn = s => `<button type="button" class="${s.on ? "on" : ""}${s.done ? " done" : ""}" data-flow-go="${s.id}" role="tab" aria-selected="${s.on ? "true" : "false"}"${tip(s.label)}>${presRailIcn(s.id)}${esc(s.label)}${s.done ? `<i class="tk" aria-hidden="true">✓</i>` : ""}${nx(`data-flow-go="${s.id}"`, s.on)}</button>`;
-    const patShown = f.patSubs.filter(s => s.id !== "patdx");
-    const patSubHtml = patShown.length ? `<div class="ph-flow-sub keep plan${patStep.done ? " done" : ""}">${patShown.map(patSubBtn).join("")}</div>` : "";
-    const onMore = moreItems.some(s => s.on);
-    if (onMore && presFlowMoreOpen === "1") presFlowMoreOpen = "";   // the page carries the open state while she is on it; leaving closes the row
-    const moreOpen = presFlowMoreOpen === "1" || onMore;
-    const moreHtml = moreItems.length ? `<div class="ph-flow-sub keep plan more${moreOpen ? " open" : ""}"><button type="button" class="more" data-flow-more="1" aria-expanded="${moreOpen}" title="${esc(moreItems.map(s => s.label).join(" · "))}">${presRailIcn("more")}More${moreOpen ? "" : `<span class="sub">${moreItems.map(s => esc(s.label)).join(" · ")}</span>`}</button>${moreOpen ? moreItems.map(s => s.id === "patdx" ? patSubBtn(s) : fertSubBtn(s)).join("") : ""}</div>` : "";
-    const planSubHtml = f.planSubs.length ? `<div class="ph-flow-sub keep plan${planStep.done ? " done" : ""}">${f.planSubs.map(examSubBtn).join("")}</div>` : "";
-    // her 2026-11-08 "merge with the Me line, space save": the fold chevron sits in the name row now, not its own line above it
     const menu = `<button type="button" class="ph-rail-menu" data-flow-mini="1" aria-expanded="${!mini}"${tip("Menu")}><svg class="icn" aria-hidden="true"><use href="#i-chev-l"></use></svg></button>`;
-    // her 2026-11-17 "i dont want the top row at all" (mock C, head-rail-mock-2026-11-17.html): on a computer the band is gone, and
-    // who this is with Book appt. · search · photo heads the rail (presRailIdHtml); the fold chevron sits at the rail's foot
     const who = presRailIdHtml(t, isNew, isMe), foot = `<div class="ph-rail-foot">${menu}</div>`;
     const examStep = f.steps.find(s => s.id === "exam");
-    // Similar cases (her 2026-11-17 pick A): a page of the patient's under Fang Bing Ren, the cases like her complaint counted at the row's end
     const simU = f.profSubs.find(u => u.id === "similar"), simHtml = simU ? `<div class="ph-flow-sub keep plan${patStep.done ? " done" : ""}">${profBtn(simU)}</div>` : "";
-    const careHtml = `${checkHtml}${sumHtml}${stepHtml(todayStep)}${examStep ? stepHtml(examStep) : ""}${examSubHtml}${fertHtml}${stepHtml(patStep)}${patSubHtml}${simHtml}${moreHtml}${stepHtml(planStep)}${planSubHtml}${stepHtml(treat)}${stepHtml(dispStep)}${logHtml}`;
-    // her own record (her 2026-11-13 pick "One 'Treat myself' row"): Today's visit to Dispense and the Clinic pages fold into one row
-    // after File; it opens on a tap, and stays open while one of its pages is the page
-    const careOn = isMe && ([todayStep, patStep, planStep, treat, dispStep].some(x => x && x.on) || [f.examSubs, f.fertSubs, f.patSubs, f.planSubs, f.subs].some(a => a.some(u => u.on))
-      || f.profSubs.some(u => u.on && ["check", "sum", "log"].includes(u.grp)));
-    const careOpen = careOn || presFlowTreatOpen;
-    const treatHtml = `<div class="ph-flow-sub keep treat more${careOpen ? " open" : ""}"><button type="button" class="more" data-flow-treat="1" aria-expanded="${careOpen}"${mini ? tip("Treat myself") : ` title="Visit · Care Plan · Dispense"`}>${presRailIcn("more")}Treat myself${careOpen ? "" : `<span class="sub">Visit · Care Plan · Dispense</span>`}</button></div>${careOpen ? careHtml : ""}`;
-    const inner = isMe ? `${who}${mineHtml}${fileHtml}${treatHtml}${foot}` : `${who}${careHtml}${fileHtml}${foot}`;
+    const checkHtml = openGrp("check", "Today's check", f.profSubs.filter(u => u.grp === "check"), "prof");
+    const sumHtml = openGrp("sum", "Putting it together", f.profSubs.filter(u => u.grp === "sum"), "prof");
+    const dxS = f.patSubs.find(s => s.id === "patdx"), tlS = f.fertSubs.find(s => s.id === "timeline");
+    const dxHtml = dxS ? `<div class="ph-flow-sub keep plan${patStep.done ? " done" : ""}">${patSubBtn(Object.assign({}, dxS, { label: "Diagnosis" }))}</div>` : "";
+    const tlHtml = tlS ? `<div class="ph-flow-sub keep plan${planStep.done ? " done" : ""}">${fertSubBtn(tlS)}</div>` : "";
+    const careHtml = `${checkHtml}${sumHtml}${f.first ? "" : stepHtml(todayStep)}${examStep ? stepHtml(examStep) : ""}${examSubHtml}${stepHtml(patStep)}${simHtml}${dxHtml}${stepHtml(planStep)}${tlHtml}${stepHtml(treat)}${stepHtml(dispStep)}`;
+    const fileItems = f.profSubs.filter(u => u.grp === "file");
+    const fileHtml = f.first ? openGrp("file1", "Her file", fileItems, "prof g-file") : footHtml("file", "Her file", fileItems, [], ["patient", "medhx", "ren", "bloods", "supplements", "ivf", "checklist"], 3, "prof");
+    const recHtml = footHtml("rec", "Records", f.profSubs.filter(u => u.grp === "log"), f.subs, ["log", "photos", "messages", "apptshist", "diet", "notes"], 3, "keep log");
+    // her own record: My day · Treat myself · Life · My file (Money, Code and a trip join Life once they hold something, phMeRailFold)
+    const meG = g => f.profSubs.filter(u => u.grp === g);
+    let inner;
+    if (isMe) {
+      const mck = meG("mck"), herb = f.profSubs.find(u => u.id === "herbs");
+      const mckDone = mck.some(u => u.id !== "cycle") && mck.filter(u => u.id !== "cycle").every(u => u.mini === "Today");
+      const tm = [mck.length ? { id: "mck", label: "Check myself", small: "cycle · tongue · pulse · abdomen", done: mckDone, on: mck.some(u => u.on), attr: `data-flow-prof="${mck[0].id}"` } : null,
+        Object.assign({}, patStep), herb ? { id: "herbs", label: "Herbs", small: "what I take", done: false, on: !!herb.on, solo: true, attr: `data-flow-prof="herbs"` } : null].filter(Boolean).map((s, k, all) => Object.assign(s, { n: k + 1, last: k === all.length - 1 }));
+      const tmHtml = `<div class="ph-flow-sub keep g-tm"><span class="cap">Treat myself</span></div>` + tm.map(s => stepHtml(s) + (s.id === "mck" ? `<div class="ph-flow-sub keep plan${mckDone ? " done" : ""}">${mck.map(profBtn).join("")}</div>` : "")).join("");
+      inner = `${who}${openGrp("day", "My day", meG("day"), "prof")}${tmHtml}${openGrp("life", "Life", meG("life").filter(u => !foldOf(u)), "prof")}${footHtml("mefile", "My file", meG("file"), [], ["patient", "medhx", "ren", "log", "bloods", "supplements", "photos"], 3, "prof")}${foot}`;
+    } else inner = f.first ? `${who}${fileHtml}${careHtml}${recHtml}${foot}` : `${who}${careHtml}${fileHtml}${recHtml}${foot}`;
     let sig = 0; for (let i = 0; i < inner.length; i++) sig = (sig * 31 + inner.charCodeAt(i)) | 0;   // lets a repaint skip an identical rail
     return `<div class="ph-flow-rail${mini ? " mini" : ""}" id="presFlowRail" role="tablist" aria-label="Where you are" data-sig="${sig}"><div class="ph-rail-in">
       ${inner}
@@ -106640,7 +106645,7 @@ Difficult to sweat|no_sweat_tend:r`;
   // rail shows beside Medical history (her pick: the count lives there only).
   // ONE ME: her own pages' order on her record; under 0.55 = Body, under 1 = Life (her trips sit at 0.7). Health and her Log
   // follow Fitness in Body (her synth22 pick 1, 2026-10-26: "group my personal together, including log stuff")
-  const PRES_MINE_RANK = { cycle: 0.1, tongue: 0.12, pulse: 0.14, abdomen: 0.16, diet: 0.2, fasting: 0.3, herbs: 0.4, "hub-fit": 0.5, "hub-ex": 0.505, "hub-hab": 0.51, "hub-health": 0.52, log: 0.53, "hub-week": 0.6, "hub-work": 0.61, "hub-money": 0.62, "hub-code": 0.63, "hub-ns": 0.635, bdays: 0.8, routines: 0.81 };
+  const PRES_MINE_RANK = { cycle: 0.1, tongue: 0.12, pulse: 0.14, abdomen: 0.16, diet: 0.2, fasting: 0.3, herbs: 0.4, "hub-fit": 0.5, "hub-ex": 0.505, "hub-hab": 0.51, "hub-health": 0.52, log: 0.53, "hub-week": 0.19, "hub-work": 0.61, "hub-money": 0.62, "hub-code": 0.63, "hub-ns": 0.635, bdays: 0.8, routines: 0.81 };
   // her picks (2026-10-29, the Me audit): the pages of hers that fold into their group's "⋯ More" row until they hold data
   function phMeRailFold(id) {
     if (id === "hub-code") return !phHubPlans().length;
@@ -106768,7 +106773,11 @@ Difficult to sweat|no_sweat_tend:r`;
     // Work, Money, Code, trips, Birthdays, Routines), ahead of her patient file; a patient's Diet stays under Log
     const me = phFastIsMe(name);
     const rk = s => me && (PRES_MINE_RANK[s.id] || /^trip-/.test(s.id)) ? PRES_MINE_RANK[s.id] || 0.7 : RANK[s.id] || 8;
-    sections.forEach(s => { const r = rk(s); s.grp = s.id === "ivf" ? "fert" : s.id === "similar" ? "sim" : me && s.id === "fasting" ? "off" : r < 0.55 ? "body" : r < 1 ? "life" : GRP(r); });   // "off": a page of hers with no rail line
+    // her 2026-11-18 rail by workflow (her picks, mock lcm_rail_full_mock_2026_11_18): IVF history is a page of Her file; on her own record
+    // My day (Week · Meals · Fitness · Habits), Check myself (Cycle · Tongue · Pulse · Abdomen), Herbs (Treat myself), Life, and My file for the rest
+    const ME_GRP = { "hub-week": "day", diet: "day", "hub-fit": "day", "hub-hab": "day", cycle: "mck", tongue: "mck", pulse: "mck", abdomen: "mck", herbs: "tm",
+      "hub-work": "life", "hub-money": "life", "hub-code": "life", "hub-ns": "life", bdays: "life", routines: "life" };
+    sections.forEach(s => { const r = rk(s); s.grp = me ? (s.id === "fasting" ? "off" : ME_GRP[s.id] || (/^trip-/.test(s.id) ? "life" : "file")) : s.id === "ivf" ? "file" : s.id === "similar" ? "sim" : GRP(r); });   // "off": a page of hers with no rail line   // "off": a page of hers with no rail line
     return sections.map((s, i) => [s, i]).sort((a, b) => rk(a[0]) - rk(b[0]) || a[1] - b[1]).map(x => x[0]);
   }
   // ---- the Log page (her pick Mock B, 2026-10-06): every dated record for her, newest first, one
@@ -125828,7 +125837,7 @@ Difficult to sweat|no_sweat_tend:r`;
   function presProfNextBtnHtml(sections, selId) {
     const i = sections.findIndex(s => s.id === selId);
     // on her own record (ONE ME) a page of hers leads to her next page, the last one to her file
-    const mine = s => !!s && (s.grp === "body" || s.grp === "life");
+    const mine = s => !!s && ["day", "mck", "tm", "life"].includes(s.grp);
     const nx = i >= 0 ? sections.slice(i + 1).find(s => s.grp === "file" || (mine(sections[i]) && mine(s))) : null;
     if (!nx) return `<button type="button" class="ph-pres-stage-next" data-flow-go="today">Next: Today's visit →</button>`;
     return `<button type="button" class="ph-pres-stage-next" data-flow-prof="${nx.id}">Next: ${esc(nx.label)} →</button>`;
