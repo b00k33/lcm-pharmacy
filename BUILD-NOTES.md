@@ -16278,3 +16278,24 @@ Her picture: the Bing / Ren tick buttons on the Fang Bing Ren board (Chest & bre
 **Built** (CSS block "ONE TYPE SCALE" at the end of the style): two @media token maps point every old token at the scale (≥641px: 9.5–10.5 → 10.5, 11–12 → 11.5, 12.5–15.5 → 13, 18–19 → 18, 20–28 → 20, plus `--fs-hero/name/body/meta/micro/shead`; ≤640px: → 11 / 11.5 / 13 / 16, and `--m-fs-label` 14 → 13); sizes under 9.5px (drawing labels) keep their own. Then the leftovers by class: capital labels the tokens left at 11–11.5 (calendar day names, Dashboard state words and card titles, Stocktake and Suppliers titles, the Guide's family names, row heads, Stock statistics' column names), search and filter boxes 13 (were 12 / 11.5), the Fang Bing Ren formula chips (13.33), the visit outcome chips and comment box, and the patient's name heading the rail 18 (was 16). tap-audit.js: a search box wants 13 like every control (was 12), any control text other than 13 is flagged, and the rail's name heading is on its KEEP list (18, her scale). CLAUDE.md "Type scale" line; STYLE-LCM's phone table (14 → 13 and the 11.5 small step).
 **Tested** (Browser pane, test copy, made-up patients and herbs): 1220px: 2,127 texts = exactly 10.5 / 11.5 / 13 / 18 / 20, one font, every capital label 10.5, tap audit: no text finding left (rows as before); 360px: 11 / 11.5 / 13 / 16 (one 10.5 "i" info dot, a glyph), every capital label 11 but the patient list's count chips (chips, 13), no page wider than the screen, tap audit: only the two findings that were there before (Inventory's compact name tap, Refill's history link).
 **Not tested:** her real data; pages behind a sign-in (Intake review's list); printed sheets and letters (their own fonts, untouched).
+
+## 2026-11-18: No bottom bar at tablet size either, "Like the phone" (SAVED, not live)
+- **Her word:** "yes redesign to match" (the bottom bar, after the sidebar became Me · Patients · Guide). I had told her the phone's
+  bottom bar still led with stock; measured, the phone has had no bottom bar since her 2026-09-07 Phone law 2. The bar showed only at
+  641-900 wide (a tablet, a half-width window): To order · Refill · Photo · Prescription. I said so, with a picture of each size.
+- **Her picks (popups after the picture, all the recommended one):** the phone keeps ☰ only; the tablet-size bar A, "Like the phone",
+  no bar. (Her answers for a bar that stayed, Appts · Patients · Guide · Photo with no counts, are unused.)
+- **Done** (CSS, one `@media (min-width: 641px) and (max-width: 900px)` block before the `min-width: 901px` one): `#phMobileTabbar` and
+  the ⋯ dot that peeked it (`.ph-pres-fab`) hidden; the page's 84px kept clear for the bar is the phone's 24px. Nothing is lost: To
+  order and Formula refill are in the sidebar's Herbs & stock, a new prescription is Patient profile's New patient, a photo is a
+  patient's 📷, as on the phone. The Dashboard's own To Order | Formula refill row (`.ph-dash-actrow`) stays hidden: her 2026-11-14
+  pick B keeps the Dashboard header free of actions at every width (I had brought it back for this width, then took it out).
+  The bar's markup and JS stay (hidden at every width, reversible).
+- **Found and fixed on the way:** at this width the page's top band (`.ph-shell-topblock`) sat 4px past each side and 5px above the
+  top on every page (the ≤900 -16px bleed against #pharmacyPage's 12px sides and the content's 11px top); now `margin: -11px -12px 0`,
+  flush, as the phone's own rule already was.
+- **Tested** (an empty test copy): at 800 six pages (Dashboard, Appointments, Guide, Patient profile, directory, Inventory) have no
+  bar, no ⋯ dot (also with a patient panel open, and with the old peek class on), 24px at the bottom, the band at 0,0 full width, no
+  sideways scroll; ☰ opens the drawer (Patients, Guide, Herbs & stock, Admin) and a Guide line opens its page. Tap audit of the six
+  pages at 800: only Inventory's compact rows (`.ph-inv-compact-tap`, the same on the old build). At 360 and 1220 every measurement
+  and audit line is identical to the old build. Not exercised: a real tablet.

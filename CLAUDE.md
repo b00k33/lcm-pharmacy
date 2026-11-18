@@ -489,7 +489,8 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   1. Header is ONE row: ☰ · title · the page's one primary action · ⋯. Every
      other action, the gold Update button and the location switcher live in
      the ⋯ sheet (`phMoreSheetOpen`). Never add a second row or action.
-  2. No bottom verb bar, no FAB, no footer band. ☰ is the only nav.
+  2. No bottom verb bar, no FAB, no footer band. ☰ is the only nav. The bar and its ⋯ dot are gone at 641-900 too (her 2026-11-18
+     pick A, "Like the phone", after the sidebar became Me · Patients · Guide): no width shows `#phMobileTabbar`.
   3. Tapping a patient opens the script FULL-SCREEN (`#presPanel.ph-pres-full`);
      the list underneath keeps its scroll spot; ‹ Back returns to it.
   4. Patient profile order: search box → today's patients → everyone. Day
