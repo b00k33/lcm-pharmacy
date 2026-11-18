@@ -1410,7 +1410,7 @@ under. The model (`phMbfSim`; its figures in BUILD-NOTES) and every word are DRA
 - *Over time* (her "include my physical circumference and physical body images similar to tongue pictures so i can view overtime",
   her 8 picks). Left, **Tape**: Waist · Hips · Bust · Thigh · Upper arm, each a cm box (today's reading on her record,
   `body.tape`, `phTapeWrite`; an older day is never edited), a small line through her readings, the change since the first; under
-  them Waist to height · Waist to hip. Right, **Photos**: Front · Side · Back; Last (or the Past one picked from the strip)
+  them Waist to height · Waist to hip. Right, **Photos** (her 2026-11-18: five views, Front · Back · Side · left · Side · right · Arms abducted, the one "Side" she already had shows only while she holds one; and a Table | One view switch, this device's `lcm-mbt-lay`, Table first: views down, dates across, Today first, her weight that day under each date, an empty Today square the camera with that view's pose guide, `phMbtTableHtml`; the text below describes One view): Front · Side · Back; Last (or the Past one picked from the strip)
   beside Today, the strip of earlier dates, **Play** flips through the dates, **Show / Cover** (covered with a blur each time the
   tab opens; a first tap on a covered photo uncovers it). A photo opens big: ‹ ›, its date (hers to change), Delete with the
   usual Undo; Escape closes it and nothing behind it. Body photos are kinds `shapeFront | shapeSide | shapeBack` in her own
@@ -2114,6 +2114,11 @@ line; Small compressed holds up to 3 per cell (`n` on the mark). DEEP and FLOATI
 never stored): below the position's normal depth = Deep, Skin row = Floating; their chips light up (`.auto`) and Patterns, Fang Bing Ren and
 the SHPD notes read them as if ticked. The pulse knowledge base (`PH_PULSE_KB_SEED`) only shows hints, never writes. Bell's palsy
 is scored none / partial / normal (don't change the scale).
+  **Chart | Table** (her 2026-11-18 "show this chart in a table format that scrolls based on previous readings"; mock `pulse-table-body-photos-mock-2026-11-18.html`, her picks): a joined bar above the page
+  switches the grid for `phPulseTableHtml`: one row per box marked on any day (Right then Left, in the chart's order, `Stomach Guan · Qi`), Today first then the earlier days
+  across (`phFndDays`, the one read; up to 24), the row names held while it scrolls sideways; the layer tabs are the four quality groups (`presPulseGrp`), a cell is the shape + its word (Today
+  ink, earlier grey, Normal green), a gold dot where a cell differs from the reading before, Depth and Rest rate rows under it. A day's heading opens that day beside today (`phFvBigOpen`). Read only: the grid stays
+  the one place a mark is written. The earlier-days strip under the page is hidden while the table is on (its columns are the days). View state only (`presPulseView`).
 
 ## Timeline & intake form
 **Timeline** is a rail item right after Fang Bing Ren, on IVF / Natural fertility / Pregnancy plans only (`phTlKindOf`); since
