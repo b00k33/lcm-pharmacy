@@ -22,7 +22,8 @@ Bloods light Diagnostic tools, the other Guide tabs Fang Bing Ren) open; **Herbs
 Suppliers) and **Admin** (Relocation, All templates, Back up, Restore, Install) each one folded line (label · count · chevron;
 remembered on this device in `daybook-ph-sb-folds`; the page's own fold opens); the clinic name still opens the Dashboard. A count
 shows only when it needs her: the Due badge hides at 100 or more (a backlog, not a to-do); Formula refill and To order keep theirs; no Minimise row (the leaf at the top
-minimises); one bottom row: the clinic pill + a gear for Settings (the drawer: "Settings" with its word). Code: `phSbFoldsPaint`,
+minimises); under 901 wide ☰ opens it as a drawer and no width has a bottom bar (her 2026-11-18 "Like the phone": the
+tablet-size To order · Refill · Photo · Prescription bar is gone); one bottom row: the clinic pill + a gear for Settings (the drawer: "Settings" with its word). Code: `phSbFoldsPaint`,
 `phSbFind`, `phSbNavFit` above `renderPhShellNav`. A page change from the sidebar, the phone drawer, the tab bar or a page's own tab
 saves nothing (her 2026-11-17 speed audit: only the open page moved, and the app always opens on Appointments); the sidebar's Due
 badge (`phDashFuDue`) is counted again only when her records change (`phDataRev`), and the location switcher's name is read again
