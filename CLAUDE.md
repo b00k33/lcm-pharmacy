@@ -218,7 +218,8 @@ dropdowns: A–Z. A new list is A–Z from its first build.
   Cycle / Tongue / Pulse / Abdomen as tiles with a ✓ when done today and last visit's finding beside
   today's. Each tile opens its own page. Pain / MSK patients also get a **Musculoskeletal** tile and page after Abdomen (2026-10-11,
   see "Musculoskeletal Assessments page" in BUILD-NOTES.md): the pain map + Pain intake moved onto it, so "Where it hurts" no longer sits on Today's visit for them.
-- **Ask her comes first after Today's visit (her 2026-10-23 "i need this page to appear sooner. after todays visit"):** the
+- **Ask her is no page since 2026-11-18: its questions are lines on Fang Bing Ren (her "simplify ask her page to merge with fang bing ren - because it feeds into it", then "make it even more simplistic"; picks "One line per area", "One or two words", Key signs + all other signs out).** Fang Bing Ren's left side = the lead line (top formula, "Same as last time" on a return visit, the Usually / Now switch), then ONE line per area: Ask next, the complaint's areas, Ask her's areas (the basics and any answered open, the rest under "More areas"); each line = its name, "n of N", a Normal chip (every sign in it No) and short chips. A tap writes the same Fang Bing Ren answer the old page did (`rec.tri` + `rec.askHer`). "askher" links lead to Fang Bing Ren. Every "Ask her" in a rail or Exam order below is history.
+- **Ask her came first after Today's visit (her 2026-10-23 "i need this page to appear sooner. after todays visit"; retired 2026-11-18, line above):** the
   rail lists Ask her, Tongue, Pulse, Abdomen, Musculoskeletal; the Next chain is Today's visit → Ask her → Cycle → Tongue → ...
 - **Tongue, Pulse, Abdomen and Cycle are each their own page** (her pick,
   reversing the earlier one-card fold). Cycle has ONE home: its own page,
