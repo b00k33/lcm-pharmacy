@@ -53,7 +53,7 @@
     const phone = W.innerWidth <= 640, scale = phone ? SCALE_PH : SCALE_PC, allow = opts.palette === "app" ? ["neutral", "teal", "red", "gold"] : ["neutral", "teal", "red"];
     const cs = el => W.getComputedStyle(el), sizes = {}, offS = new Map(), offC = new Map(), side = new Map(), offW = new Map(), chipL = new Map(), looks = new Set();
     const WEIGHTS = ["400", "600", "700"];
-    const NOT_CHIP = "[class*='fold'], [class*='head'], [class*='hd'], .ph-flow-rail *, tr, td, th, .ph-tl-row, .ph-tb-i, .ph-appt-block, .ph-cal-day, .ph-cp-day, .ph-pulse-cell, .gf-row, .sg, .gf-pr, .tcd-pg, .gf-t, .ph-inv-compact-tap, .ph-hx-qrow, .ph-cx-row, .ph-fbr-row, .ph-diet-cell, .ph-rx-card, .ph-fu-summary, .ph-dose-step-main, button.item[class*='cat-'], .ph-fbr-t, .ph-shell-cell, .zl, .ph-pat-lg";
+    const NOT_CHIP = "[class*='fold'], [class*='head'], [class*='hd'], .ph-flow-rail *, tr, td, th, .ph-tl-row, .ph-tb-i, .ph-appt-block, .ph-cal-day, .ph-cp-day, .ph-pulse-cell, .gf-row, .sg, .gf-pr, .tcd-pg, .gf-t, .ph-inv-compact-tap, .ph-hx-qrow, .ph-cx-row, .ph-fbr-row, .ph-diet-cell, .ph-rx-card, .ph-fu-summary, .ph-dose-step-main, button.item[class*='cat-'], .ph-fbr-t, .ph-shell-cell, .zl, .ph-pat-lg, .gf-ani-th, .ph-log-row, .ph-pat-cl, .ph-dash-srow, .ph-tgz-zl, .ph-cx-gl, .ph-rfc-wt, .ph-apptcal-daylabel, .ph-dp-row, .ph-sec-toggle, .ph-band-name, .ph-mc-grp > .gl";   // + the 2026-11-19 sweep: sign rows, log rows, day labels, the name band
     const TAPS = "button, select, summary, a[href], [role=button], input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=color]):not([type=file])";
     const hexRgb = h => { h = String(h || "").trim(); const m = /^#([0-9a-f]{6})$/i.exec(h); return m ? { r: parseInt(m[1].slice(0, 2), 16), g: parseInt(m[1].slice(2, 4), 16), b: parseInt(m[1].slice(4, 6), 16) } : rgb(h); };
     let texts = 0;
@@ -65,6 +65,7 @@
       if ([...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim())) {
         texts++;
         const px = Math.round(parseFloat(st.fontSize) * 100) / 100;
+        if (px === 0) return;   // words hidden on purpose (a dot-only chip keeps them for screen readers)
         sizes[px] = (sizes[px] || 0) + 1;
         if (!scale.some(v => Math.abs(v - px) < 0.06)) note(offS, px + "px", el);
         if (!WEIGHTS.includes(st.fontWeight)) note(offW, "weight " + st.fontWeight, el);
@@ -83,6 +84,7 @@
       // a coloured line down ONE side: a 2px+ border on a single edge in a colour that is not a hairline grey
       const sides = ["Top", "Right", "Bottom", "Left"].map(s => ({ s, w: parseFloat(st["border" + s + "Width"]) || 0, st: st["border" + s + "Style"], f: family(rgb(st["border" + s + "Color"])) }));
       const thick = sides.filter(x => x.w >= 2 && x.st !== "none" && x.f && x.f !== "neutral");
+      if ((el.textContent || "").trim() === "" && r.height < 30) return;   // a short empty connector (a dashed joining line) is a drawing, not a side line on a card
       if (thick.length === 1 && sides.filter(x => x.w > 0 && x.st !== "none").length === 1 && (thick[0].s === "Left" || thick[0].s === "Right")) note(side, thick[0].s.toLowerCase() + " " + thick[0].f, el);
     });
     // ROWS LINE UP: tables with a head row, and CSS-grid rows that share their column template with a head row before them
