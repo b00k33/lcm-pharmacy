@@ -16705,3 +16705,22 @@ same list.
   muscles (the front of the shoulder: 20) plus that row runs ~40px past the screen on Palpate.
 - **One way forward a step** (MY call, after the save): the page's own foot button (`.ph-pres-stage-next`, "Tests & scans") showed
   under every step beside "Next: <step>"; it now shows only on Re-test, where the steps' Next stops (CSS `:has(.ph-msk[data-mk-step])`).
+
+## Appointments: Summary + Goal, empty columns drop (2026-11-19)
+Her words, on a screenshot of Appointments › List at Acupreg: "make this page more simple, allow the list to include appointment
+treatment goals and summary column especially in acupreg", then her Friday Zanda list as the example (one line a patient, "time  Name:
+summary"). Before: eight columns, five of them "—" or "never" on every Acupreg row; five practitioner chips with four at 0; "LINH" on
+every row; Today's IVF work a band + card reading "Transfer from undefined NaN undefined NaN". Mock
+`mocks/appointments-summary-goal-mock-2026-11-19.html` (A two columns, B the goal under the summary, A at Sydney CBD); her 8 picks, all
+the recommended one.
+- **Code:** `PH_APPT_LT_COLS`, `phApptLtOnePrac`, `data-k` / `data-e` cells in `phApptLtRowHtml`, the column pass at the end of
+  `phApptCalListHtml` (spans written as 10 / 9 / 8 for the full width, then set to the columns shown), `phApptPracChipsHtml` hides,
+  `phApptParseSummary` (first in `phApptParse`), `phIvfTodayWorkBandHtml` one line (CSS "APPOINTMENTS SUMMARY + GOAL"), `phFuDateLabel`
+  guard, the phone row's cell without `phApptBriefSrcHtml`.
+- **Checked** (test copy, made-up bookings on Fri 20 Nov): the list paste attached a misspelled name to the booking at its time and made a
+  new booking for a new name; with no herbs the table is Time · Patient · Age · Summary · Goal, and a prescription on one patient brings
+  back Prescription and Grams, the spans following; the chips row is gone with one practitioner; the IVF line reads "Results call ·
+  transfer Tue 10 Nov 2026"; `phFuDateLabel("5/11/2026")` is "". tap-audit and titlebar-audit clean at 1220; style-audit leaves only
+  the booking-type dots (Cliniko / Zanda colours, a data mark). At 360 nothing is wider than the screen and no size is off the scale;
+  tap-audit still lists the phone list's own rows and empty-day lines (rows, which THE LOOK keeps out of the chip rule; they are not on
+  its KEEP list yet). Not tried: her real Acupreg data, a real IVF round with a results call.

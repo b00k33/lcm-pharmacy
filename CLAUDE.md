@@ -702,6 +702,15 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   viewing", pick A of `mocks/appointments-list-table-mock-2026-11-19.html`):** Time · Patient · Age · Last · Prescription · Fang Bing
   Ren · Cycle · Grams, a day a group row (a tap = the day summary), free gaps and the Now line as thin rows; a tap on a booking opens
   its popup, as on the grid. The card beside the list is gone. 900px and under keep their own list.
+  **Summary + Goal, and only the columns with something in them (her 2026-11-19 "make this page more simple, allow the list to
+  include appointment treatment goals and summary column especially in acupreg", pick A of
+  `mocks/appointments-summary-goal-mock-2026-11-19.html`, her 8 picks all the recommended one):** the columns are Time · Patient ·
+  Age · Last · Prescription · Fang Bing Ren · Cycle · Summary · Goal · Grams, and a column empty for every row on screen drops out
+  (Acupreg: Time · Patient · Age · Cycle · Summary · Goal). Summary = the booking's own words, else her last, else the record; Goal =
+  the plan's goal (`phApptBrief`, the popup's words). Her own day list ("Fri 20 Nov · Zanda", then "12:00–12:30  Name: words") pasted
+  into Add appointments puts the words on that booking's Summary (`phApptParseSummary`). The practitioner chips show only when two or
+  more people are booked in the days shown (a chip at 0 hides), and the rows drop their name tag then. Today's IVF work is one slim
+  line. Never bring back an always-empty column or the Zanda / Cliniko source tag on a row without her word.
   **ONE LIST LOOK on every page (her 2026-11-19 "audit all pages to give it these elements to keep design consistent with code and
   simplicity"; CSS block "ONE LIST LOOK"):** on a computer a page's bar is its one main action + ⋯ (every other action in the ⋯;
   `keep: true` in `PH_TOPBAR_ACTIONS` is the only way one stays beside it); tiles that filter are ONE joined bar (`phShellStripHtml`

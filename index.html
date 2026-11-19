@@ -35372,6 +35372,14 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   #pharmacyPage#pharmacyPage #phDashboardWrap .ph-dash-t :is(th, td) { padding: 0 8px; }
   #pharmacyPage#pharmacyPage #phDashboardWrap .ph-dash-fbar .ph-ltr-qual { padding: 0 9px; }
 }
+/* APPOINTMENTS SUMMARY + GOAL (her 2026-11-19 "make this page more simple, allow the list to include appointment treatment goals and summary
+   column especially in acupreg"): Today's IVF work is one slim line, each patient a chip that opens her. */
+#pharmacyPage#pharmacyPage .ph-ivfw { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; margin: 8px 0; padding: 4px 14px; min-height: 40px; box-sizing: border-box; background: var(--ph-white); border-radius: 10px; }
+#pharmacyPage#pharmacyPage .ph-ivfw .lbl { font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-herb); white-space: nowrap; }
+#pharmacyPage#pharmacyPage .ph-ivfw-r { display: inline-flex; align-items: center; gap: 8px; height: 32px; min-height: 0; margin: 0; padding: 0 12px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); color: var(--ph-ink); font: 600 var(--fs-13) var(--font-body); cursor: pointer; white-space: nowrap; max-width: 100%; overflow: hidden; }
+#pharmacyPage#pharmacyPage .ph-ivfw-r:hover { border-color: var(--ph-herb); }
+#pharmacyPage#pharmacyPage .ph-ivfw-r b { font-weight: 600; }
+#pharmacyPage#pharmacyPage .ph-ivfw-r span { font-weight: 400; color: var(--ph-soft); overflow: hidden; text-overflow: ellipsis; }
 /* APPOINTMENTS LIST AS ONE TABLE (her 2026-11-19 "i like that table for the appointment list viewing", pick A): the Patient profile
    table's look, full width: Time · Patient · Age · Last · Prescription · Fang Bing Ren · Cycle · Grams, a day a group row, the Now line
    a teal rule; a tap opens the booking's popup. Two sizes (13, capitals 10.5; free gaps and the Now word 11.5), 400/600/700. */
@@ -44860,7 +44868,34 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     });
     return out.length ? out : null;
   }
+  // her 2026-11-19 pick: her own day list, one line a patient ("Fri 20 Nov · Zanda", then "12:00–12:30  Name: 39/40, birth prep"); the
+  // words after the colon are the booking's Summary (a.focus, briefSrc "paste"). A booking already at that date + time with that name
+  // takes it, else the one booking at that time (her list may spell a name differently), else it is a new booking.
+  function phApptParseSummary(text, fallbackDateKey) {
+    const lines = String(text || "").replace(/[​-‍﻿ ‪-‮⁦-⁩]/g, " ").split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const re = /^(\d{1,2}(?::\d{2})?\s*(?:am|pm)?\s*[–—-]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?)\s+([^:\d][^:]{0,60}?):\s*(\S.*)$/i;
+    const hits = lines.filter(l => re.test(l)).length;
+    if (!hits || hits < Math.ceil(lines.length / 2)) return null;
+    let date = fallbackDateKey || keyOf(TODAY);
+    const out = [];
+    lines.forEach(l => {
+      const m = l.match(re);
+      if (!m) { const d = phApptParseDateLine(l.split(/[·|]/)[0].trim()); if (d) date = d; return; }
+      const span = m[1].replace(/\s+/g, ""), time = phApptParseTime(span), dur = phApptParseDuration(span);
+      if (!time) return;
+      let patient = m[2].trim();
+      const at = phApptList().filter(a => a.date === date && a.time === time && a.service !== "Break" && a.patient);
+      const same = at.find(a => phPatientKey(a.patient) === phPatientKey(patient));
+      if (same) patient = same.patient; else if (at.length === 1) patient = at[0].patient;
+      const en = { date, time, patient, service: "", phone: "", focus: m[3].trim() };
+      if (dur) en.durationMin = dur;
+      out.push(en);
+    });
+    return out;
+  }
   function phApptParse(text, fallbackDateKey) {
+    const sum = phApptParseSummary(text, fallbackDateKey);
+    if (sum && sum.length) return sum;
     const table = phApptParseTable(text, fallbackDateKey);
     if (table && table.length) return table;
     const list = phApptParseList(text);
@@ -45361,7 +45396,10 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const cnt = {}; let total = 0;
     (days || []).forEach(d => phApptFor(d.key).forEach(a => { if (a.service === "Break" || !a.patient) return; total++; const p = phApptPractitioner(a); if (p) cnt[p] = (cnt[p] || 0) + 1; }));
     const chip = (k, label, n) => `<button type="button" class="ph-apptlens-chip${phApptCalLens === k ? " on" : ""}" data-ph-apptcal-lens="${esc(k)}" aria-pressed="${phApptCalLens === k}">${esc(label)} <b>${n}</b></button>`;
-    return `<div class="ph-apptlens ph-pracrow" role="group" aria-label="Practitioner">${chip("all", "Everyone", total)}${names.map(n => chip("prac:" + n, n, cnt[n] || 0)).join("")}</div>`;
+    // her 2026-11-19 pick: the row shows only when two or more people have bookings in the days shown; a chip at 0 hides unless picked
+    if (names.filter(n => cnt[n]).length < 2 && phApptCalLens === "all") return "";
+    const shown = names.filter(n => cnt[n] || phApptCalLens === "prac:" + n);
+    return `<div class="ph-apptlens ph-pracrow" role="group" aria-label="Practitioner">${chip("all", "Everyone", total)}${shown.map(n => chip("prac:" + n, n, cnt[n] || 0)).join("")}</div>`;
   }
   function phApptPracFieldHtml(a) {
     const names = phPracNames();
@@ -46443,6 +46481,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // Cycle · Grams, a day a group row (its own tbody, so the Now line walks one day); a tap opens the booking's popup, as on the grid;
   // the card beside the list is gone. A red dot before the grams = herbs short (the old status dot's warning), its words on hover.
   let phApptLtLast = null;   // patient key -> last dispense (ms), built once a draw
+  let phApptLtOnePrac = false;   // one practitioner booked in the days shown: the rows drop their name tag (her 2026-11-19 pick)
+  // the table's columns, in order, with their share of the width; a column empty for every row on screen drops out (her 2026-11-19 pick)
+  const PH_APPT_LT_COLS = [["age", "Age", 5], ["last", "Last", 7], ["fx", "Prescription", 14], ["fbr", "Fang Bing Ren", 14], ["cy", "Cycle", 12], ["sm", "Summary", 20], ["gl", "Goal", 17], ["g", "Grams", 7]];
   function phApptLtLastMs(k) {
     if (!phApptLtLast) {
       phApptLtLast = new Map();
@@ -46460,7 +46501,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const pop = phApptCalOpenId === a.id ? " sel" : "";
     const mins = phApptListMin(a.time);
     const tm = `<td class="tm"><i class="ck" style="${phCkStyle(a.service)}" aria-hidden="true"></i>${esc(phCkTime12(a.time))}</td>`;
-    if (a.service === "Break" || !a.patient) return `<tr class="r brk${pop}${dim}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" data-ph-ls-min="${mins}">${tm}<td colspan="7" class="no">${esc(a.patient ? phTitle(a.patient) : "Break")} · ${phApptMins(a)} min</td></tr>`;
+    if (a.service === "Break" || !a.patient) return `<tr class="r brk${pop}${dim}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" data-ph-ls-min="${mins}">${tm}<td colspan="9" class="no">${esc(a.patient ? phTitle(a.patient) : "Break")} · ${phApptMins(a)} min</td></tr>`;
     const k = phPatientKey(a.patient), nm = phTitle(a.patient);
     const rec = phPatientPeek(a.patient), age = rec ? phAgeOf(rec.dob) : null;
     const ageS = age != null ? `${age}${rec.sex ? esc(rec.sex) : ""}` : "";
@@ -46477,11 +46518,18 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     try { const x = phApptListCdOf(a); if (x) cyc = `${x.approx ? "~" : ""}Day ${x.comp.day} · ${esc(x.comp.phaseLabel)}`; } catch (e) { /* a row never breaks on it */ }
     const st = phApptLsStatus(a), warn = st.k === "short" || st.k === "zero";
     const g = t && t.totalGrams ? phFmtG(t.totalGrams) : "";
+    // her 2026-11-19 picks: Summary (the booking's own words, else her last, else the record) + Goal (the plan's), the popup's own words
+    let brief = { focus: "", goal: "" };
+    try { brief = phApptBrief(a); } catch (e) { /* a row never breaks on it */ }
+    const no = `<span class="no">—</span>`;
+    const cell = (k, v) => `<td data-k="${k}"${v ? "" : " data-e"}>${v || no}</td>`;
+    const cellT = (k, v) => v ? `<td data-k="${k}" title="${esc(v)}">${esc(v)}</td>` : `<td data-k="${k}" data-e>${no}</td>`;
     return `<tr class="r${done ? " done" : ""}${pop}${dim}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" data-ph-ls-min="${mins}" aria-label="${esc(nm)}">`
-      + tm + `<td class="nm"><b>${esc(nm)}</b>${phApptPracTagHtml(a)}</td>`
-      + `<td>${ageS || `<span class="no">—</span>`}</td><td>${last}</td>`
-      + `<td>${fx ? esc(fx) : `<span class="no">—</span>`}</td><td>${fbr || `<span class="no">—</span>`}</td><td>${cyc || `<span class="no">—</span>`}</td>`
-      + `<td class="r">${warn ? `<i class="warn" title="${esc(st.txt)}" aria-label="${esc(st.txt)}"></i>` : ""}${g || `<span class="no">—</span>`}</td></tr>`;
+      + tm + `<td class="nm"><b>${esc(nm)}</b>${phApptLtOnePrac ? "" : phApptPracTagHtml(a)}</td>`
+      + cell("age", ageS) + `<td data-k="last"${ms ? "" : " data-e"}>${last}</td>`
+      + cell("fx", fx ? esc(fx) : "") + cell("fbr", fbr) + cell("cy", cyc)
+      + cellT("sm", brief.focus) + cellT("gl", brief.goal)
+      + `<td class="r" data-k="g"${g ? "" : " data-e"}>${warn ? `<i class="warn" title="${esc(st.txt)}" aria-label="${esc(st.txt)}"></i>` : ""}${g || no}</td></tr>`;
   }
   function phApptCalListRowHtml(a) {
     if (window.innerWidth > 900) return phApptLtRowHtml(a);   // her 2026-11-19 pick A: a table row (was List C's lean row + card)
@@ -46514,7 +46562,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // her pick 2026-09-09: an empty cell is a grey placeholder, not a bold
     // green link -- what she has actually written is the thing that should
     // stand out, not the prompt to write it. Still opens the popup in brief mode.
-    const cell = (v, s, what) => v ? `${esc(v)}${phApptBriefSrcHtml(s)}` : `<button type="button" class="ph-name-link ph-apptls-add" data-ph-appt-pop-brief="${esc(a.id)}">add ${what}</button>`;
+    // her 2026-11-19 audit: the Summary alone on a phone row (the 9px Zanda / Cliniko source tag was off the type scale and a source tag)
+    const cell = (v, s, what) => v ? esc(v) : `<button type="button" class="ph-name-link ph-apptls-add" data-ph-appt-pop-brief="${esc(a.id)}">add ${what === "focus" ? "summary" : what}</button>`;
     if (window.innerWidth <= 900) {
       // Care Plan part 3, step 3: a booking today with its plan line / what is due gets them as a second line
       let D = { line: "", tags: [] }; try { D = phApptPlanDue(a); } catch (e) { /* a row never breaks on it */ }
@@ -46851,25 +46900,28 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       phApptLsAnim = phApptLsEnterKey !== rk ? { n: 0 } : null;
       phApptLsEnterKey = rk;
       phApptLtLast = null;   // the table's Last column reads the log once a draw
+      const pracs = new Set();
+      days.forEach(d => phApptFor(d.key).forEach(a => { if (a.service !== "Break" && a.patient) pracs.add(phApptPractitioner(a) || ""); }));
+      phApptLtOnePrac = pracs.size <= 1;
     }
     const body = days.map(d => {
       const appts = phApptFor(d.key).concat(phOthFor(d.key)).sort((x, y) => x.time < y.time ? -1 : x.time > y.time ? 1 : 0);   // + the other clinic's (BOTH CLINICS ON ONE CALENDAR)
       // an empty day in a multi-day range is ONE quiet line, not a head plus
       // a "Nothing booked." row (a week of them was most of the screen)
-      if (!appts.length && showDayHead && lean) return `<tbody><tr class="grp empty${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}"${dayAttrs(d)}><td colspan="8"><span class="lb">${esc(phDashShortDate(parseKey(d.key)))}</span><span class="c">nothing booked</span></td></tr></tbody>`;
+      if (!appts.length && showDayHead && lean) return `<tbody><tr class="grp empty${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}"${dayAttrs(d)}><td colspan="10"><span class="lb">${esc(phDashShortDate(parseKey(d.key)))}</span><span class="c">nothing booked</span></td></tr></tbody>`;
       if (!appts.length && showDayHead) return `<div class="ph-apptls-day empty${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}"${dayAttrs(d)}>${esc(phDashShortDate(parseKey(d.key)))}<span class="sub">· nothing booked</span></div>`;
-      const dayHead = lean ? `<tr class="grp${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}"${dayAttrs(d)}><td colspan="8"><span class="lb">${esc(phDashShortDate(parseKey(d.key)))}${d.today ? " · today" : ""}</span><span class="c">${appts.length} patient${appts.length === 1 ? "" : "s"}</span></td></tr>`
+      const dayHead = lean ? `<tr class="grp${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}"${dayAttrs(d)}><td colspan="10"><span class="lb">${esc(phDashShortDate(parseKey(d.key)))}${d.today ? " · today" : ""}</span><span class="c">${appts.length} patient${appts.length === 1 ? "" : "s"}</span></td></tr>`
         : showDayHead ? `<div class="ph-apptls-day${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}"${dayAttrs(d)}>${esc(phDashShortDate(parseKey(d.key)))}<span class="sub">· ${appts.length} patient${appts.length === 1 ? "" : "s"}</span></div>` : "";
       let prevEnd = null, needNow = lean && !!d.today;
       const rows = appts.map(a => {
         const s = phApptListMin(a.time);
-        const free = prevEnd != null && s - prevEnd >= 45 ? (lean ? `<tr class="free"><td colspan="8">free · ${phApptListFreeText(s - prevEnd)}</td></tr>` : `<div class="ph-apptls-free"><span>free · ${phApptListFreeText(s - prevEnd)}</span></div>`) : "";
+        const free = prevEnd != null && s - prevEnd >= 45 ? (lean ? `<tr class="free"><td colspan="10">free · ${phApptListFreeText(s - prevEnd)}</td></tr>` : `<div class="ph-apptls-free"><span>free · ${phApptListFreeText(s - prevEnd)}</span></div>`) : "";
         prevEnd = Math.max(prevEnd == null ? 0 : prevEnd, s + phApptMins(a));
         let now = "";
         if (needNow && s > nowMin) { needNow = false; now = phApptLsNowHtml(nowMin); }
         return now + free + (a.oth ? phOthListRowHtml(a) : phApptCalListRowHtml(a));
       }).join("") + (needNow ? phApptLsNowHtml(nowMin) : "");
-      if (lean) return `<tbody>${dayHead}${rows.replace(/<div class="ph-apptls-now" aria-hidden="true"><span>([^<]*)<\/span><i><\/i><\/div>/, `<tr class="ph-apptls-now now" aria-hidden="true"><td colspan="8"><span>$1</span></td></tr>`)}</tbody>`;
+      if (lean) return `<tbody>${dayHead}${rows.replace(/<div class="ph-apptls-now" aria-hidden="true"><span>([^<]*)<\/span><i><\/i><\/div>/, `<tr class="ph-apptls-now now" aria-hidden="true"><td colspan="10"><span>$1</span></td></tr>`)}</tbody>`;
       return `${dayHead}${appts.length ? rows : `<div class="ph-dash-empty">Nothing booked.</div>`}`;
     }).join("");
     phApptLsAnim = null;
@@ -46877,8 +46929,17 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const more = days.length === 1 ? phApptListDayBlockHtml(days[0].key) : "";
     if (!lean) return `<div class="ph-apptls">${head}${body}${more}</div>`;
     // her 2026-11-19 pick A: ONE table, the card beside the list gone (a tap opens the booking's popup, as on the grid)
-    return `<div class="ph-apptls ph-apptls-tbl"><div class="ph-applt"><table><colgroup><col class="c-tm"><col class="c-nm"><col class="c-age"><col class="c-last"><col class="c-fx"><col class="c-fbr"><col class="c-cy"><col class="c-g"></colgroup>
-      <thead><tr><th>Time</th><th>Patient</th><th>Age</th><th>Last</th><th>Prescription</th><th>Fang Bing Ren</th><th>Cycle</th><th class="r">Grams</th></tr></thead>${body}</table></div>${more}</div>`;
+    // her 2026-11-19 picks: Summary + Goal columns; a column empty for every row on screen drops out (Acupreg: no herb columns)
+    const cols = PH_APPT_LT_COLS.filter(([k]) => new RegExp(`data-k="${k}"(?! data-e)`).test(body));
+    let tb = body;
+    PH_APPT_LT_COLS.forEach(([k]) => { if (!cols.some(c => c[0] === k)) tb = tb.replace(new RegExp(`<td[^>]*\\bdata-k="${k}"[^>]*>.*?</td>`, "g"), ""); });
+    const n = 2 + cols.length;
+    tb = tb.replace(/colspan="(8|9|10)"/g, (m, v) => `colspan="${n - (10 - +v)}"`);
+    const w = [9, 15].concat(cols.map(c => c[2])), sum = w.reduce((x, y) => x + y, 0), pc = v => `${(v / sum * 100).toFixed(2)}%`;
+    const cg = `<col class="c-tm" style="width:${pc(w[0])}"><col class="c-nm" style="width:${pc(w[1])}">` + cols.map((c, i) => `<col class="c-${c[0]}" style="width:${pc(w[i + 2])}">`).join("");
+    const th = `<th>Time</th><th>Patient</th>` + cols.map(([k, label]) => `<th${k === "g" ? ` class="r"` : ""}>${label}</th>`).join("");
+    return `<div class="ph-apptls ph-apptls-tbl"><div class="ph-applt"><table><colgroup>${cg}</colgroup>
+      <thead><tr>${th}</tr></thead>${tb}</table></div>${more}</div>`;
   }
   // her ask 2026-09-07: the same Day-summary numbers Patient-profile's
   // Today's-timeline shows for one day, scoped instead to whatever range the
@@ -55946,7 +56007,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const st = `${phApptCalOpenId === "oth:" + a.id ? " sel" : ""}${q && !String(a.patient || "").toLowerCase().includes(q) ? " dim" : ""}`;
     const col = `<span class="col" style="${phOthCk(a)}" aria-hidden="true"></span>`, tm = `<span class="tm">${esc(phCkTime12(a.time))}</span>`;
     const nm = `${esc(phTitle(a.patient))}${phOthTagHtml()}`, lab = `${esc(phTitle(a.patient))}, ${esc(phOthV().name)}`;
-    if (window.innerWidth > 900) return `<tr class="r oth${st}" role="button" tabindex="0" data-ph-oth="${esc(a.id)}" data-ph-ls-min="${phApptListMin(a.time)}" aria-label="${lab}"><td class="tm"><i class="ck" style="${phOthCk(a)}" aria-hidden="true"></i>${esc(phCkTime12(a.time))}</td><td class="nm"><b>${nm}</b></td><td colspan="6" class="no">${esc(a.service || "")}</td></tr>`;   // her 2026-11-19 table
+    if (window.innerWidth > 900) return `<tr class="r oth${st}" role="button" tabindex="0" data-ph-oth="${esc(a.id)}" data-ph-ls-min="${phApptListMin(a.time)}" aria-label="${lab}"><td class="tm"><i class="ck" style="${phOthCk(a)}" aria-hidden="true"></i>${esc(phCkTime12(a.time))}</td><td class="nm"><b>${nm}</b></td><td colspan="8" class="no">${esc(a.service || "")}</td></tr>`;   // her 2026-11-19 table (its span follows the columns shown)
     return `<div class="ph-apptls-row compact oth${st}" role="button" tabindex="0" data-ph-oth="${esc(a.id)}" aria-label="${lab}">${col}${tm}<span></span><span class="nm">${nm}</span><span class="fg1">${esc(a.service || "")}</span></div>`;
   }
   // what #phApptPop shows for an "oth:<id>" open
@@ -82870,7 +82931,7 @@ or changing anything in Cliniko.
   const PH_FU_WEEKDAY_TEXT = "Mon – Fri";
   const PH_FU_WEEKEND_TEXT = "Sat & Sun";
   const DOW_SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  const phFuDateLabel = k => { if (!k) return ""; const d = parseKey(k); return `${DOW_SHORT[d.getDay()]} ${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`; };
+  const phFuDateLabel = k => { if (!k || !/^\d{4}-\d{2}-\d{2}/.test(String(k))) return ""; const d = parseKey(String(k).slice(0, 10)); return `${DOW_SHORT[d.getDay()]} ${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()}`; };
   // whether a script's Days control can be trusted, and if so what counts as
   // a dosing day. "Restrict to set days" OFF -> every day counts, same
   // resolved-default fallback chain the editor's own fields already use.
@@ -111925,7 +111986,8 @@ Difficult to sweat|no_sweat_tend:r`;
       const due = phIvfQuickDue(rec);
       if (!due.kind) return;
       const m = PH_IVF_QUICK_MOMENTS.find(x => x[0] === due.kind) || ["", "", due.kind, ""];
-      const sub = due.kind === "results" && due.transfer && due.transfer.date ? `Transfer from ${phFuDateLabel(due.transfer.date)} — ${m[3]}` : m[3];
+      const tl = due.kind === "results" && due.transfer ? phFuDateLabel(due.transfer.date) : "";   // a date that is not a key no longer prints "undefined NaN"
+      const sub = tl ? `transfer ${tl}` : m[3];
       out.push({ key, name: dir.get(key) || phTitle(key), label: m[2], sub });
     });
     return out.sort((a, b) => a.name.localeCompare(b.name));
@@ -111933,11 +111995,8 @@ Difficult to sweat|no_sweat_tend:r`;
   function phIvfTodayWorkBandHtml() {
     const rows = phIvfTodayWorkRows();
     if (!rows.length) return "";
-    const cards = rows.map(r => `<div class="ph-fu-card">
-        <div class="ph-fu-card-top"><span class="ph-fu-card-name"><button type="button" class="ph-name-link" data-ph-dash-patient-open="${esc(r.name)}">${esc(r.name)}</button></span><span class="ph-fu-badge review">${esc(r.label)}</span></div>
-        <div class="ph-fu-card-line ph-fu-sub2">${esc(r.sub)}</div>
-      </div>`).join("");
-    return `<div class="ph-ds-band plan"><svg class="icn bi" aria-hidden="true"><use href="#i-egg"/></svg>Today's IVF work<span class="cnt">${rows.length} patient${rows.length === 1 ? "" : "s"}</span></div><div class="ph-cq-cards">${cards}</div>`;
+    // her 2026-11-19 pick: one slim line, each patient a chip that opens her (was a band + a card each)
+    return `<div class="ph-ivfw"><span class="lbl">Today's IVF work</span>${rows.map(r => `<button type="button" class="ph-ivfw-r" data-ph-dash-patient-open="${esc(r.name)}"><b>${esc(r.name)}</b><span>${esc(r.label)} · ${esc(r.sub)}</span></button>`).join("")}</div>`;
   }
   // "R8 L6 · lining 7.2 · E2 1200" -- the one short form every surface shares
   function phIvfScanSummary(s, short) {

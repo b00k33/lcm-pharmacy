@@ -95,6 +95,17 @@ another / Edit at its foot. A positive-hCG flag (🌸 + gestational week) shows 
 `rec.pregTest.result ===
 "positive"`. Edit opens on an autofocused Date field (no separate Reschedule). The Service field is a `<select>` of the 21 Cliniko
 types + Home Visit/Break + "Other — type it…".
+**Summary + Goal, the columns that have something (her 2026-11-19 picks, mock A of `mocks/appointments-summary-goal-mock-2026-11-19.html`):**
+every content cell of a row names its column (`data-k`) and says when it is empty (`data-e`); `phApptCalListHtml` keeps the columns of
+`PH_APPT_LT_COLS` (age, last, fx, fbr, cy, sm, gl, g, each with its share of the width) that have one filled cell on screen, takes the
+others' cells out, sets each `col` width from the shares, and sets every row-wide span to the columns shown. Summary (`sm`) =
+`phApptBrief(a).focus` (the booking's own, her last, the plan's diagnosis, the Care Plan title), Goal (`gl`) = its `.goal`; the full
+words on hover. `phApptLtOnePrac` (one practitioner booked in the days shown) drops the rows' name tag, and `phApptPracChipsHtml`
+draws nothing then (a chip at 0 hides unless picked). `phApptParseSummary` (first in `phApptParse`) reads her day list: a date line,
+then "time–time  Name: words"; the words become `focus` with `briefSrc: "paste"` on the booking with that date + time and name, else the
+one booking at that time, else a new booking. Today's IVF work is one line (`.ph-ivfw`, a chip a patient); `phFuDateLabel` returns ""
+for a date that is not a key (it printed "undefined NaN"). The phone's compact row shows the Summary alone (no source tag), "add summary"
+when empty.
 **List view on a computer is ONE table (her 2026-11-19 pick A, "i like that table for the appointment list viewing"):** `phApptLtRowHtml`
 (from `phApptCalListRowHtml` over 900px) inside `phApptCalListHtml`'s `.ph-applt` card: Time (the booking type's colour dot) · Patient
 (600, practitioner tag) · Age · Last (the last dispense, `phApptLtLastMs`, read from the log once a draw; ✓ when dispensed that day, a red
