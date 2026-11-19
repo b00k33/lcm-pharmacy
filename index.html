@@ -54225,11 +54225,11 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     rec.body = rec.body || { readings: [] }; rec.body.comp = Array.isArray(rec.body.comp) ? rec.body.comp : [];
     rec.body.readings = Array.isArray(rec.body.readings) ? rec.body.readings : [];
     const L = rec.body.comp, R = rec.body.readings; let s = L.find(x => x && x.d === d), r = R.find(x => x && x.d === d);
-    if (!s) { const all = phMscList(rec), p = phMscPrev(all, d) || all[0]; s = { d, v: {}, r: p && p.r ? JSON.parse(JSON.stringify(p.r)) : {} }; L.push(s); }
+    if (!s) { const all = phMscList(rec), p = phMscPrev(all, d) || all[0]; s = { d, v: {}, r: p && p.r ? JSON.parse(JSON.stringify(p.r)) : {} }; L.push(s); if (rec.body.compGone) delete rec.body.compGone[d]; }
     s.v = s.v || {}; s.r = s.r || {};
     const was = {}, r1 = v => Math.round(v * 10) / 10;
     PH_MSC_READ.forEach(([k]) => { was[k] = s.v[k]; });
-    fn(s);
+    fn(s); s.at = Date.now();
     PH_MSC_READ.forEach(([k, f]) => {
       const v = s.v[k], lim = PH_BODY_LIM[f];
       if (v === was[k]) return;
@@ -54411,16 +54411,18 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (P.n) presSavedToast(`✓ Scan · ${P.n} numbers${P.miss ? ` · ${P.miss} ${P.miss === 1 ? "line" : "lines"} not read` : ""}`, P.miss ? 3200 : undefined);
   }
   // Remove takes the scan, and its numbers back out of the day's reading (phMscWrite); Undo puts the scan and every reading back as they were
-  function phMscRemove() {
+  async function phMscRemove() {
     const Y = phMbfYou(), host = document.querySelector("#pharmacyPage .ph-msc[data-msc-day]"), d = host && host.dataset.mscDay; if (!Y.name || !d) return;
     const rec = phPatientPeek(Y.name), s = rec ? phMscList(rec).find(x => x.d === d) : null; if (!s) return;
+    // her 2026-11-19: the 8 Oct scan went missing; a scan is never removed without a question first
+    if (!(await phAsk({ message: `Remove the scan of ${phShortDate(d)}?`, yes: "Remove", danger: true }))) return;
     const was = JSON.stringify(s), wasR = JSON.stringify(phBodyReadings(rec));
-    if (!phMscWrite(Y.name, d, x => { x.v = {}; })) return;
+    if (!phMscWrite(Y.name, d, x => { x.v = {}; const b = phPatientRec(Y.name).body; b.compGone = Object.assign({}, b.compGone, { [d]: Date.now() }); })) return;
     phMsc.d = ""; phMsc.blank = ""; phDietRefresh();
     presSavedToast("Scan removed", { undo: () => {
       const rc = phPatientRec(Y.name); if (!rc) return;
       rc.body = rc.body || { readings: [] }; rc.body.comp = (Array.isArray(rc.body.comp) ? rc.body.comp : []).filter(x => x && x.d !== d);
-      rc.body.comp.push(JSON.parse(was)); rc.body.readings = JSON.parse(wasR);
+      rc.body.comp.push(Object.assign(JSON.parse(was), { at: Date.now() })); rc.body.readings = JSON.parse(wasR); if (rc.body.compGone) delete rc.body.compGone[d];
       if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
       phMsc.d = d; phDietRefresh();
     } });
@@ -173785,6 +173787,39 @@ Dosage: {dosage}
      stamped just keeps today's behaviour (falls back to the outer pick) --
      this starts protecting a record from its next edit onward, not
      retroactively. */
+  /* ---- body scans + readings survive the whole-record pick (her 2026-11-19 "previously i added evolt scan scores - why didnt it
+     update my file?": her 8 Oct scan, entered 6 Nov, was gone by 17 Nov). mergePatientsByRecency keeps ONE whole copy of a patient,
+     so a device holding an older copy of her file, edited for anything else, carried a file with no scan back over the cloud. Here,
+     after that pick: a scan the other copy has (by day) is added back, the copy stamped later (s.at) wins a day both have, and a day
+     Remove marked (body.compGone[day] = when) stays removed unless the scan was written after the mark. A body reading the other copy
+     has on a day this one lacks is added back too (readings are dated and never removed as a row, so a missing day is always a loss). */
+  function lcmBodyUnion(w, o) {
+    var ob = o && o.body;
+    if (!w || !ob || typeof ob !== "object") return w;
+    var oc = Array.isArray(ob.comp) ? ob.comp : [], og = ob.compGone && typeof ob.compGone === "object" ? ob.compGone : {};
+    var orr = Array.isArray(ob.readings) ? ob.readings : [];
+    if (!oc.length && !orr.length && !Object.keys(og).length) return w;
+    var wb = w.body = (w.body && typeof w.body === "object") ? w.body : { readings: [] };
+    wb.readings = Array.isArray(wb.readings) ? wb.readings : [];
+    var wc = Array.isArray(wb.comp) ? wb.comp : [], gone = {};
+    [wb.compGone || {}, og].forEach(function (g) { Object.keys(g).forEach(function (d) { if (!(gone[d] >= g[d])) gone[d] = g[d]; }); });
+    var dead = function (s) { return !!(s && gone[s.d] && gone[s.d] >= (s.at || 0)); };
+    oc.forEach(function (s) {
+      if (!s || !s.d || !s.v || !Object.keys(s.v).length || dead(s)) return;
+      var i = -1; wc.forEach(function (x, j) { if (x && x.d === s.d) i = j; });
+      if (i < 0) wc.push(JSON.parse(JSON.stringify(s)));
+      else if ((s.at || 0) > (wc[i].at || 0)) wc[i] = JSON.parse(JSON.stringify(s));
+    });
+    wc = wc.filter(function (s) { return s && !dead(s); });
+    if (wc.length || Array.isArray(wb.comp)) wb.comp = wc;
+    if (Object.keys(gone).length) wb.compGone = gone;
+    orr.forEach(function (r) {
+      if (!r || !r.d || gone[r.d]) return;
+      if (!wb.readings.some(function (x) { return x && x.d === r.d; })) wb.readings.push(JSON.parse(JSON.stringify(r)));
+    });
+    wb.readings.sort(function (a, b) { return a.d < b.d ? -1 : a.d > b.d ? 1 : 0; });
+    return w;
+  }
   function mergePatientsByRecency(pickStr, lStr, cStr) {
     var pick, l, c;
     try { pick = JSON.parse(pickStr); } catch (e) { return pickStr; }
@@ -173821,6 +173856,7 @@ Dosage: {dosage}
           winner = ta !== tb ? (ta > tb ? a : b) : (JSON.stringify(pickPatients[key]) === strB ? b : a);
         }
       }
+      if (a && b && JSON.stringify(a) !== JSON.stringify(b)) winner = lcmBodyUnion(winner, winner === a ? b : a);
       if (gone[key] && (winner.updatedAt || 0) <= gone[key]) {
         if (!((window.__lcmAllowShrinkUntil || 0) > Date.now())) { if (pickPatients[key]) changedIt = true; return; }
         winner.updatedAt = Date.now();   // a deliberate restore put this record back: it outlives the tombstone
