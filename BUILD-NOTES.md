@@ -16768,3 +16768,18 @@ taking, Stopping = no Herbs today and no run-out reminders, anyone dispensed her
   "stopping" and `phHbsStoppedSince` holds; Treatment's Still taking on writes Continuing, off writes Finished, the chip follows; the
   visits cell reads Finished / Finished · Zz Gui Pi Tang / Continuing / Stopping. tap-audit and style-audit empty for the line and the open
   chip at 1220, the line at 360 (304px, nothing wider than the phone). Not tried: her real patients, a saved visit end to end.
+
+## 2026-11-20: No book circle on Dispense herb rows · Inventory rows by supplier (SAVED, not live)
+- **Her words:** "i dont need this book icon in prescription page. only in the inventory" (screenshot: the herb table, Chai Hu's
+  How it's used pop open), then "colour the row as faded green for koda herbs, and white for formulas made in house, faded green
+  (lighter than koda) for gmp, and faded yellow for kpc. faded orange for evergreen" (screenshot: Inventory).
+- **Done:** the Dispense herb table's book circle (`.ph-hu-btn`, `data-ph-hu`) is gone with its pop (`phHuOpen` / `phHuClose`,
+  `.ph-hu-pop`, `.ph-hu-x`); How it's used stays in the Inventory drawer (`phHerbUseFill`) and Guide › Herbs (`phHuCardHtml`).
+  Inventory rows take `phInvSupRowCls(h)` from the active supplier: `ph-sup-koda` #E2F1E6, `ph-sup-gmp` #F1F8F2, `ph-sup-kpc`
+  #FBF4D6, `ph-sup-evergreen` #FCE9D9 (tokens `--ph-sup-*` on #pharmacyPage), `ph-sup-house` white for any in-house source (In
+  house, Huang Huang, Mick, Lyttleton, Doane). The wash beats the stripes and the pale HH / phasing-out wash; the hover still
+  shows. MY calls: Jing Shen and no supplier keep the old look; on a tinted row the edit boxes (supplier, code, Bottle $, stock)
+  are white at 60% so they read as a lighter shade of the row, not pale-blue stripes across it.
+- **Tested** (pretend herbs "Test Koda Herb" etc. and a pretend patient "Test Herb"; never her records) at 1220 x 887 and 360 x
+  740: the herb rows keep 46px with no circle, no errors; every supplier's row its colour on the table and the phone list;
+  tap-audit.js + style-audit.js: none left (the colour audit names the supplier washes, marks by her word).
