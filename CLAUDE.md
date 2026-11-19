@@ -282,6 +282,14 @@ name and Acute / Chronic · how long beside it (a phone: the nuance on its own l
 complaint's NAME opens its details under its row (`phCxEd`, `phCxEdRowHtml`: Name · More info · How long · ★ Main · Remove; a second
 tap closes), because the side panel stays off on the simple visit. The first table, the details strip and the phone drawer keep THE
 LOOK (32px boxes and chips, 6px corners).
+**More info picks up Bing signs (her 2026-11-19 "the more info should be able to pickup bing signs"):** every More info box (the
+first table's chief complaint and other complaints, a complaint's details on the visit card and phone drawer) lists the Bing signs
+the words being typed match (the words after the last comma, "and" or "with"; every typed word must be in the sign, so a loose
+word lists nothing), the complaint's own kind of sign first; Enter takes the top one, `Keep "x" as typed` is the quiet last row,
+Esc or a tap away keeps her words. A pick ticks the sign Yes on Fang Bing Ren (`phCcSignYes`) and writes Fang Bing Ren's words in
+place of the typed ones (no subject when it is the complaint's own), the cursor waiting after ", ". One write door for More info:
+`phCcNiSave`. The list sits in the open visit page's fixed layer (#presPanel), never inside a card that clips. "MOTNI" reads as
+"wakes in the night" everywhere words are read (`phSynPhrases`).
 **Came in for is always a step, and its lists are BING only (her 2026-11-19 "where do i find her chief complaint and symptoms page",
 "this is critical in the workflow", "the came in for row only uses treatment plan options. this should be only for bing"; BUILD-NOTES
 "Came in for: a first-visit step, Bing-only lists"):** step 1 of every visit is the Came in for page: "Better / worse" on a return visit,

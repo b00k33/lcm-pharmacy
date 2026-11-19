@@ -16565,3 +16565,29 @@ Her words: "mock this page to radicaly make it more simple with just essentials 
 - **Left as they were (measured, not part of this ask):** on a phone the FIRST table still scrolls sideways to reach Diagnosis / How long
   (it did before: 516px of columns in a 274px card); a newly added complaint still starts with the Main's start date, so it reads the
   Main's Acute / Chronic until its own How long is set; the Care Plan type pill still sits on the Came in for row (asked her).
+
+## 2026-11-19: More info picks up Bing signs (SAVED, not live)
+- **Her words** (right after the nuance build went live): "the more info should be able to pickup bing signs".
+- **Read as** her convention for the Came in for boxes (terse = the rule): More info lists the Bing signs its words match, the same
+  one search, the same order and keys (her pick 4: signs first, Enter = the top one, "as typed" last). No popup: built, calls told.
+- **Done:**
+  - `phCcNiPaint` / `phCcNiPick` / `phCcNiPlace` / `phCcNiClose` on `[data-cc-main-note]`, `[data-cc-sec-note]`, `[data-cx-ccnote]`:
+    the words after the last comma / "and" / "with" go through `phCcSecSignOptions`; a sign is listed only when EVERY typed word is
+    in it (my call: "worse after coffee" listed four signs sharing "worse"); the complaint's own kind of sign leads (my call: "MOTNI"
+    under a sleep complaint put Urine: At Night first); the complaint's own sign is left out. Arrows move, Enter takes the
+    highlighted row, Esc / a tap away closes and keeps her words; `Keep "x" as typed` is the last row.
+  - A pick: `phCcNiSave` writes Fang Bing Ren's words in place of the typed ones (my call, pick 3's convention; the subject left off
+    when it is the complaint's own: "Wakes in the Night or Very Early" under Sleep: Poor, Light), `phCcSignYes` ticks the sign (never
+    flips an answer), the cursor waits after ", ". The sign shows under Signs to check on the next draw (update in place: the open
+    card is not redrawn under her cursor).
+  - `phCcNiSave` = the one write door for More info (the three change handlers use it; trailing ", " is trimmed).
+  - The list lives in the nearest fixed layer (#presPanel): appended to #pharmacyPage it drew under the visit page (z 60), and the
+    first table scrolls sideways (clips). 32px rows, 6px corners.
+  - `phSynPhrases`: "MOTNI" / "middle of the night insomnia|waking" read as "wakes in the night" (her own shorthand).
+- **Tested** (pretend patients "Test Nuance", "Test Also"; never her records) with real typing at 1440 and 360: "insomnia" → Sleep:
+  Poor, Light; More info "MOTNI" + Enter → "Wakes in the Night or Very Early, " and sleep_wakes Yes; "hard to fall asl" + a tap →
+  Hard to Fall Asleep Yes; "worse after coffee" lists nothing and saves as typed; on the visit card Period Pain's details "clots" +
+  Enter → "Dark Blood or Clots", the row's words follow, the sign Yes and under Signs to check after a redraw; the first table's
+  other-complaint box "clots" + Esc keeps "clots", " day 1" saves "clots day 1", nothing ticked; the phone drawer's list sits on top,
+  inside the screen. tap-audit.js on the list: 3 of 3 at 1440; at 360 a two-line sign name is a taller row (text wraps, as the
+  Came in for list does).
