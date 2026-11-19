@@ -95,7 +95,16 @@ another / Edit at its foot. A positive-hCG flag (🌸 + gestational week) shows 
 `rec.pregTest.result ===
 "positive"`. Edit opens on an autofocused Date field (no separate Reschedule). The Service field is a `<select>` of the 21 Cliniko
 types + Home Visit/Break + "Other — type it…".
-**List view**, desktop (>900px): a lean list with a sticky card beside it (row: colour strip, time, name + practitioner tag + one
+**List view on a computer is ONE table (her 2026-11-19 pick A, "i like that table for the appointment list viewing"):** `phApptLtRowHtml`
+(from `phApptCalListRowHtml` over 900px) inside `phApptCalListHtml`'s `.ph-applt` card: Time (the booking type's colour dot) · Patient
+(600, practitioner tag) · Age · Last (the last dispense, `phApptLtLastMs`, read from the log once a draw; ✓ when dispensed that day, a red
+dot when not seen 6+ months) · Prescription (`phApptScriptFor`: its formula, else "n herbs") · Fang Bing Ren (the lead family, a dot in
+its colour, once a sign is ticked) · Cycle (`phApptListCdOf`: "Day n · phase") · Grams (a red dot before it = herbs short, the old
+status dot's words on hover). Each day is its own `tbody` (a `tr.grp` head that opens the day summary, `tr.free` gaps, the Now line
+`tr.ph-apptls-now.now`, which `phApptLsNowTick` walks within the day); a Break is one row; the other clinic's booking a row with its
+service. A tap opens the popup (`data-ph-appt-pop`; the card `#phApptLsCard` is no longer drawn, so `phApptLsCardShown()` is false).
+The day stats and "Herbs to prepare today" stay under the table. The paragraph below is the list before it.
+**List view**, desktop (>900px) before 2026-11-19: a lean list with a sticky card beside it (row: colour strip, time, name + practitioner tag + one
 line of focus, the plan as a pill in its family colour, a status dot; the card: plan buttons, cycle day, focus and goal in full)
 [The Appointments List: a lean list with a card beside it]. At ≤900px the compact one-line row and the phone stack are the older
 code. A single-day List appends the day stats + "Herbs to prepare today" and the cross-patient **Today's IVF work** list.
