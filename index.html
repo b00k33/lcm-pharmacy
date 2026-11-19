@@ -36832,6 +36832,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       if (phPatientSig.get(k) === sig) return;
       rec.updatedAt = now;
       phPatientSig.set(k, sig);
+      try { if (k === phSelfKey()) phSelfOutSoon(); } catch (e) { /* the Me part is not set up yet on this boot */ }
     });
   }
   // her 2026-11-17 speed audit: a count that moves only when her records do (the sidebar's Due badge) is kept until they change.
@@ -47869,6 +47870,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     phTripNorm(v, d);   // her trips (TRIPS · HER TRAVEL LIVES IN LCM)
     phHubNorm(v, d);   // her week, money and code plans (MINE HUB)
     phHbNorm(v, d);   // her herb doses (HERBS · HER OWN DOSES)
+    d.self = v.self && v.self.rec && typeof v.self.rec === "object" && !Array.isArray(v.self.rec) ? { rec: v.self.rec, up: +v.self.up || 0 } : null;   // her own file (HER OWN FILE IN BOTH LOCATIONS)
     return d;
   }
   // read once, then kept: this tab's own writes update it, another tab's write clears it (the storage listener)
@@ -47940,6 +47942,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     phTripMerge(a, b, out);   // her trips (TRIPS · HER TRAVEL LIVES IN LCM)
     phHubMerge(a, b, out);   // her week, money and code plans (MINE HUB)
     phHbMerge(a, b, out);   // her herb doses (HERBS · HER OWN DOSES)
+    out.self = phSelfMergeMe(a.self, b.self);   // her own file (HER OWN FILE IN BOTH LOCATIONS)
     return out;
   }
   // does `mine` hold anything `theirs` has not seen yet
@@ -47949,6 +47952,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (phTripAhead(mine, theirs)) return true;   // her trips (TRIPS · HER TRAVEL LIVES IN LCM)
     if (phHubAhead(mine, theirs)) return true;   // her week, money and code plans (MINE HUB)
     if (phHbAhead(mine, theirs)) return true;   // her herb doses (HERBS · HER OWN DOSES)
+    if (mine.self && (!theirs.self || (mine.self.up || 0) > (theirs.self.up || 0))) return true;   // her own file
     if ((mine.modesUp || 0) > (theirs.modesUp || 0) || (mine.brought || 0) > (theirs.brought || 0) || (mine.profileUp || 0) > (theirs.profileUp || 0)) return true;
     return ["items", "todos", "bdays", "pre"].some(k => Object.keys(mine[k] || {}).some(id => { const y = (theirs[k] || {})[id]; return !y || (mine[k][id].up || 0) > (y.up || 0); }));
   }
@@ -47985,10 +47989,70 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       }
     } catch (e) {} finally { phMeBusy = false; }
     if (JSON.stringify(phMeS().d) !== before || JSON.stringify(phMeS().who) !== whoBefore) phMeRepaint(false);
+    phSelfIn();   // her own file: what the other location changed comes in (HER OWN FILE IN BOTH LOCATIONS)
     if (phMeAgain) { phMeAgain = false; phMePushSoon(); }
   }
   window.addEventListener("lcm-sync-caught-up", () => setTimeout(() => phMeSync(false), 900));
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") setTimeout(() => phMeSync(false), 600); });
+  /* ==== HER OWN FILE IN BOTH LOCATIONS (her 2026-11-19 "my profile should sync between cbd and acupreg because it won't change",
+     after her 8 Oct body scan was found in Acupreg's copy of her file while she looked at CBD's). Each login keeps its own
+     patients, so her own patient file (the record her Me profile names) was two files. Now it also rides in the Me row both
+     logins share: d.self = { rec: her record, up: when it last changed }. Her record's save (phStampChangedPatients) sends it
+     (phSelfOut); every Me read brings the other location's in (phSelfIn). Two copies join, never replace (phSelfJoin): the copy
+     changed later wins a part both have, a part only one has stays, a blank part never wipes a filled one (the Acupreg copy was
+     empty boxes), and Body joins scan by scan and day by day (the sync layer's lcmBodyUnion). Only her own file; patients
+     never travel between logins. ---- */
+  const phSelfEmpty = v => v == null || v === "" || (Array.isArray(v) ? !v.length : typeof v === "object" && !Object.keys(v).length);
+  function phSelfKey() { const n = phMeOk() ? phDietMeName() : ""; return n ? phPatientKey(n) : ""; }
+  function phSelfJoin(older, newer) {
+    const out = JSON.parse(JSON.stringify(older || {})), nw = newer || {};
+    Object.keys(nw).forEach(k => {
+      if (k === "updatedAt" || k === "body") return;
+      if (phSelfEmpty(nw[k]) && !phSelfEmpty(out[k])) return;
+      if (out[k] != null && nw[k] != null && (Array.isArray(out[k]) !== Array.isArray(nw[k]) || typeof out[k] !== typeof nw[k])) return;   // a part kept as a list never becomes a box (the page reading it would break)
+      out[k] = JSON.parse(JSON.stringify(nw[k]));
+    });
+    if (nw.body || out.body) {
+      const w = { body: JSON.parse(JSON.stringify(nw.body || out.body)) };
+      if (nw.body && out.body && typeof window.lcmBodyUnion === "function") window.lcmBodyUnion(w, { body: out.body });
+      out.body = w.body;
+    }
+    return out;
+  }
+  function phSelfMergeMe(a, b) {
+    if (!a || !a.rec) return b && b.rec ? b : null;
+    if (!b || !b.rec) return a;
+    if (phSelfSig(a.rec) === phSelfSig(b.rec)) return (b.up || 0) > (a.up || 0) ? b : a;
+    const [o, n] = (b.up || 0) > (a.up || 0) ? [a, b] : [b, a];
+    return { rec: phSelfJoin(o.rec, n.rec), up: Math.max(a.up || 0, b.up || 0) };
+  }
+  // the same content in any key order is the same file (two joins can list parts differently), its own stamp aside
+  const phSelfCanon = v => Array.isArray(v) ? v.map(phSelfCanon) : v && typeof v === "object" ? Object.keys(v).sort().reduce((o, k) => { if (v[k] !== undefined) o[k] = phSelfCanon(v[k]); return o; }, {}) : v;
+  const phSelfSig = r => JSON.stringify(phSelfCanon(Object.assign({}, r || {}, { updatedAt: undefined })));
+  let phSelfT = 0, phSelfBusy = false;
+  function phSelfOutSoon() { clearTimeout(phSelfT); phSelfT = setTimeout(phSelfOut, 800); }
+  function phSelfOut() {
+    if (phSelfBusy) return;
+    const k = phSelfKey(), local = k && PHARMACY.patients ? PHARMACY.patients[k] : null; if (!local) return;
+    const S = phMeD().self;
+    if (S && phSelfSig(S.rec) === phSelfSig(local)) return;
+    phMeSave((d, now) => { const cur = d.self; d.self = { rec: cur && cur.rec ? phSelfJoin(cur.rec, local) : JSON.parse(JSON.stringify(local)), up: now }; delete d.self.rec.updatedAt; });
+    phSelfIn();
+  }
+  function phSelfIn() {
+    if (phSelfBusy) return;
+    let k = ""; try { k = phSelfKey(); } catch (e) { return; }
+    const S = k ? phMeD().self : null; if (!S || !S.rec || !PHARMACY.patients) return;
+    const local = PHARMACY.patients[k];
+    if (local && phSelfSig(local) === phSelfSig(S.rec)) return;
+    const joined = !local ? JSON.parse(JSON.stringify(S.rec)) : (local.updatedAt || 0) > (S.up || 0) ? phSelfJoin(S.rec, local) : phSelfJoin(local, S.rec);
+    if (local && phSelfSig(joined) === phSelfSig(local)) { phSelfOutSoon(); return; }   // nothing new here: the shared copy is behind
+    phSelfBusy = true;
+    try { PHARMACY.patients[k] = joined; savePharmacy(); } finally { phSelfBusy = false; }
+    phSelfOutSoon();
+    try { if (typeof phBodyRefresh === "function") phBodyRefresh(phDietMeName()); } catch (e) {}
+  }
+  window.addEventListener("lcm-sync-caught-up", () => setTimeout(() => { try { phSelfIn(); phSelfOutSoon(); } catch (e) {} }, 2500));
   window.addEventListener("storage", e => { if (e.key === PH_ME_KEY) { phMeCache = null; phMeRepaint(false); } });
   // ---- which days a thing falls on ----
   function phMeOccursRaw(it, k) {
@@ -174005,6 +174069,7 @@ Dosage: {dosage}
     wb.readings.sort(function (a, b) { return a.d < b.d ? -1 : a.d > b.d ? 1 : 0; });
     return w;
   }
+  window.lcmBodyUnion = lcmBodyUnion;   // her own file in both locations (phSelfJoin) joins Body the same way
   function mergePatientsByRecency(pickStr, lStr, cStr) {
     var pick, l, c;
     try { pick = JSON.parse(pickStr); } catch (e) { return pickStr; }
