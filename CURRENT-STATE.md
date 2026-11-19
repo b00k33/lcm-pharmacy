@@ -2146,7 +2146,15 @@ Dispense opens. Doors: the Today's visit step bar, Done · Copy for Cliniko, the
 toast after "add another session".
 **Ending a visit (her treatment-session audit picks, 2026-10-29; BUILD-NOTES "Treatment session: one button ends the visit"):**
 Start visit (Up next, the booking popup; `phVisitStart`) opens today's booking where an open lands (Today's visit for a return
-patient with a plan); a herbs-only booking (`phApptHerbsOnly`) opens on Dispense. Worth a look's two checks are one "Still the
+patient with a plan); a herbs-only booking (`phApptHerbsOnly`) opens on Dispense. **Herbs at the start of a visit** (her 2026-11-19 picks; BUILD-NOTES "Herbs at
+the start of a visit"; `phHbs*`, `.ph-hbs`, `.g-hbs`): a patient dispensed herbs before today has one answer, Finished · Continuing ·
+Stopping, as the first line of Today's visit (Herbs · her last formula · "ran out n days ago" with a red dot, or "n days left" · the
+joined bar) and a chip under her name in the rail ("Herbs: Finished ▾", its menu the three). Pre-picked on read (`phHbsOf`): Stopping
+said since those herbs went out = Stopping, the run-out day passed = Finished, days left = Continuing, no run-out day = nothing; her tap
+is `rec.herbsSay[today]` (`phHbsWrite`), and saving the visit keeps a pre-pick as said. Continuing or Stopping tick the Herbs step
+("still taking" / "stopping", so Next passes it); Continuing is Treatment's Still taking (`presAcuHbIn`; a tap on Still taking writes
+Continuing, off writes Finished); Stopping leaves Due's check-in and review for those herbs and the booking's "Herbs ran out" tag
+(`phHbsStoppedSince`). The visits table's Herbs cell starts with the word (Finished · formula, Continuing formula, Stopping). Worth a look's two checks are one "Still the
 same?" line when both are due (Nothing new stamps both · Changed opens the two). A missing sex, birth date or phone is a line there too (`phTodayAskHtml`, the Patient details fields and handlers; her 2026-11-01 data-check pick), and Today's visit opens on that line for a patient without sex and birth date. Today's visit's Treat card ends with the visit's one
 **Note** (`data-visit-note` = `presAcuComment`, the same words as Treatment's Note cell) and **Done · Copy for Cliniko**
 (`phVisitDone`): saves today's visit when nothing is saved for the plan today, copies, marks `session.copiedAt` only after a real

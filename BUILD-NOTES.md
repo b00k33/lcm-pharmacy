@@ -16750,3 +16750,21 @@ view bar, a camera square for today, her own record only, 6 days across and olde
   61 kg · 34% beside 16 Nov 59 kg · 32%, −2 kg, −2% fat, 12 wk; a photo three days old took today's reading), a day picked (26 Oct, +1 kg,
   3 wk, no fat that day), Back (3 columns), the big view, Show / Cover, a new weight repainting today's column, another patient gets none.
   tap-audit and style-audit empty at 1220 and 360 (after the + took `--fs-18`); nothing wider than the phone. Not tried: her real photos.
+
+## Herbs at the start of a visit (2026-11-19)
+Her words: "i need to be able to signal at the start of the session whether patient has finished herbs, continuing, or stopping herbs"
+(her screenshot: a patient's Fang Bing Ren Summary). Before: only Treatment's "Still taking" chip, at the end of the session. Mock
+`mocks/herbs-start-of-visit-mock-2026-11-19.html` (A the first line of the visit, B a chip under the name, C the booking card); her 8 picks:
+A and B both, pre-pick from the run-out day, Finished = Herbs becomes the step with her last formula, Continuing = tick Herbs as still
+taking, Stopping = no Herbs today and no run-out reminders, anyone dispensed herbs before, no reason asked, the word on the visits table.
+- **Code:** `PH_HBS_LBL`, `phHbsLast` (the newest follow-up before today, else the newest dispensed prescription), `phHbsOf`, `phHbsNow`,
+  `phHbsStoppedSince`, `phHbsWrite` (the one door; sets `presAcuHerbInstruct` to match), `presAcuHbIn` (every read of Still taking now
+  calls it: 9 places), `phHbsLineHtml` (top of `phTodayVisitHtml`), `phHbsChipHtml` (after the visit-kind chip, `.g-vk.g-hbs`, the same
+  look and menu), `phHbsPaint`, one click listener; `presFlowSteps`' Herbs step done + small word; `presAcuLogNow` keeps a pre-pick as
+  said; `phTpVrFacts`' Herbs cell; `phFuContactRows` and `phApptBrief` skip herbs she said Stopping on. Finished needs no new code: the
+  Herbs step stays undone, so Next reaches it, and Dispense opens on her prescription as before. CSS "HERBS AT THE START OF A VISIT".
+- **Checked** (test copy, a made-up return patient, Zz Xiao Yao San run out 3 days ago): pre-pick Finished and "ran out 3 days ago";
+  9 days left = Continuing "9 days left"; Continuing ticks Herbs "still taking", `presAcuHbIn()` true; the chip's menu Stopping ticks it
+  "stopping" and `phHbsStoppedSince` holds; Treatment's Still taking on writes Continuing, off writes Finished, the chip follows; the
+  visits cell reads Finished / Finished · Zz Gui Pi Tang / Continuing / Stopping. tap-audit and style-audit empty for the line and the open
+  chip at 1220, the line at 360 (304px, nothing wider than the phone). Not tried: her real patients, a saved visit end to end.

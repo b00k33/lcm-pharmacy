@@ -480,6 +480,12 @@ Phases 0-6 were built on 2026-10-10 and confirmed on `origin/main` 2026-10-18 (t
   Up next card is gone (2026-10-14).
 - **Worth a look** (`phTodayNudgesHtml`, return visits): supplements Same / Changed (`rec.suppSeenAt`), history
   "Anything new since <date>?" (`rec.hxSeenAt`); both due = ONE line, "Still the same?" Nothing new · Changed (her 2026-10-29 pick 6).
+- **Herbs at the start of a visit** (her 2026-11-19 "signal at the start of the session whether patient has finished herbs, continuing,
+  or stopping herbs", her 8 picks of `mocks/herbs-start-of-visit-mock-2026-11-19.html`): anyone dispensed herbs before today gets ONE
+  answer, Finished · Continuing · Stopping, as the first line of the visit AND a chip under the name (the same answer, `rec.herbsSay`
+  by day, one door `phHbsWrite`), pre-picked from the last dispense's run-out day. Finished = Herbs stays the visit's step; Continuing
+  = Herbs ticked as still taking (Treatment's Still taking is this same answer); Stopping = no Herbs today and no run-out reminder for
+  those herbs. No reason asked. Never a second store for it.
 - **Findings:** `phExamMirrorToday`'s known edge: a part cleared after it was mirrored stays in that day's dated copy.
 - **Left on purpose:** the stored default plan title "New treatment plan" (code compares to it); letters, printed
   plan records and message templates keep "treatment plan".
