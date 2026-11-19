@@ -308,6 +308,16 @@ and grey, the words with capitals; "+ n more signs" at its end, the caps as befo
 only (a wide card, from the next visit on). The asked order and the panel's Next follow the parts (`phCxModel` M.parts, `phCxPartsHtml`).
 An area's "Same as last time" takes that area's signs only (`data-cx-rest="<area>|sx"`). The same three parts on a phone. Never mix her
 complaints and the signs in one list again without her word.
+**A complaint's details open under its row, a pain's with its body drawing (her 2026-11-19 "how do i add details to the chief complaint
+or any complaints? ... where you add the visual pain diagram" + "keep it simple and simplified"; her pick B of three mocks
+`shots/came-in-for-mock-*-2026-11-19.png`; memory project_lcm_came_in_for_details_body_2026_11_19; BUILD-NOTES "Came in for: details
+under the row"):** on a wide card every complaint (the Main, her typed ones, every pain; not Energy, not a sign on the bar) has a 32px
+round ▾ by its name; it (or the name) opens ONE line of details under the row, the label over each box: a pain = Side · Diagnosis · How
+long · More info (the pain's own detail words) · ★ Main · Remove, with the Musculoskeletal page's front + back before it (this pain full
+colour, the others faint; a tap on the body adds a pain there); a typed complaint = Name (not when it is Fang Bing Ren's words) · More
+info · How long · ★ Main · Remove. Nothing open = just the list. The slider sits beside the name (the name column 320px at most) and
+Progress is a column a visit (names 200px, 72px a visit, capitals), never the card's full width. Never move the body drawing back
+behind a menu, or spread these over the card's width, without her word.
 **Her three patients: Herbs · Acu · musculoskeletal · Acu · internal disease (her 2026-11-18 three workflows, "sometimes i will suggest
 herbs"; her 8 picks, all the recommended one; memory project_lcm_three_patient_types_2026_11_18; BUILD-NOTES "Her three patients"):**
 the kind is READ, never stored (`phVisitKind`): a herbs-only booking (`phApptHerbsOnly`) = Herbs; any other booking, or none =

@@ -779,6 +779,16 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
   `phRqOneHtml`, written by `phRqClick`), then Weight (`phBodyWrite`, today's reading). Folded it is one line, "Ren · picks · kg";
   open on a first visit (`presFirstVisit`), her tap wins for the session (`phTvRenOpen`). The number keys stay the Ren page's.
 
+## Came in for: details under the row (2026-11-19, her pick B)
+- **The ▾:** `phCxRowHtml` (wide card, `M.b`) puts `.ph-cx-edb` inside the name for keys `main`, `s:*`, `p:*`; the name's own tap
+  handler toggles `phCxEd` (now also for `p:` keys). A Side change on an open pain moves `phCxEd` to the new key so it stays open.
+- **The line:** `phCxEdRowHtml(r, M, name)`: a pain = `phCxEdBodyHtml` (phPainMapHtml drawn with `phPmScoreCtx = P.pid`, its
+  `.ph-pm-stage` only, other spots `.dim`, the `.mk2-hit` places tap through `phMskBodyTap`) + `phCxPainLineHtml`; a typed complaint
+  = `phCxCcLineHtml`. Same data attributes as the panel's forms (`data-pm-side/diag/since/detail/del`, `data-cx-ccname/ccnote/ccsince/
+  ccrm/star`), so the same handlers save. The panel's forms (`phCxPainFormHtml`, `phCxCcFormHtml`) are unchanged.
+- **Grid + Progress:** `.ph-cx.b .ph-cx-rows` = `minmax(180px, 320px) 224px minmax(0, 1fr)`; `.ph-cx-pgt` table `width: auto`,
+  `col.c0` 200px, a visit 72px, row names `phSymCase`. Phone: the card is the narrow one (no ▾); its Add / + Pick areas are 28px.
+
 ## Musculoskeletal page
 **The panel beside the area cards (2026-11-18, synth22 mock E):** three white cards, Diagnosis (a chip per area, its diagnosis or
 name; the picked one is the area + Point adds to, `phMskLit`), Signs (Area / Finding / Side from today's palpation, movements, tests
