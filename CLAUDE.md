@@ -504,7 +504,8 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   green hex for any of those again. Kept raw on purpose: her named herb-row
   green `#15803D` ("green 3", her own pick on the visit table), the Dispense
   head and jar art above, Acupreg's `#8AAB99`, the Cliniko type colours and
-  the Cycle page's own palette (`--cp-*`, her picks).
+  the Cycle page's own palette (`--cp-*`; her 2026-11-19 pick C "reduce colours":
+  red for the period, teal for fertile + ovulation, a pale grey luteal, white other days, the band and boxes white).
 - **Case / category colour families**, one per condition, each with `-tint` /
   `-card` / `-deep` / `-press` / `-solid`; reuse one before inventing a new
   one: Musculoskeletal `--ph-msk*`, Gynaecology `--ph-gyn*`, Stress
