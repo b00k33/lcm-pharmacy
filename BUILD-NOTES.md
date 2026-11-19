@@ -16591,3 +16591,6 @@ Her words: "mock this page to radicaly make it more simple with just essentials 
   other-complaint box "clots" + Esc keeps "clots", " day 1" saves "clots day 1", nothing ticked; the phone drawer's list sits on top,
   inside the screen. tap-audit.js on the list: 3 of 3 at 1440; at 360 a two-line sign name is a taller row (text wraps, as the
   Came in for list does).
+- **Same day, corrected before it went live:** "every typed word in the sign" hid Hard to Fall Asleep while "asl" was half typed (the
+  sign's words are read as "sleep"). Now both of two words, or two of three (3 of 4 ...): "hard to fall asl" lists it, "worse after
+  coffee" still lists nothing, "MOTNI", "night sweats", "clots" as before. Tested again with real typing at 1440.

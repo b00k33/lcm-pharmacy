@@ -284,8 +284,8 @@ tap closes), because the side panel stays off on the simple visit. The first tab
 LOOK (32px boxes and chips, 6px corners).
 **More info picks up Bing signs (her 2026-11-19 "the more info should be able to pickup bing signs"):** every More info box (the
 first table's chief complaint and other complaints, a complaint's details on the visit card and phone drawer) lists the Bing signs
-the words being typed match (the words after the last comma, "and" or "with"; every typed word must be in the sign, so a loose
-word lists nothing), the complaint's own kind of sign first; Enter takes the top one, `Keep "x" as typed` is the quiet last row,
+the words being typed match (the words after the last comma, "and" or "with"; both of two typed words, or two of three, must be in the
+sign, so a loose word lists nothing), the complaint's own kind of sign first; Enter takes the top one, `Keep "x" as typed` is the quiet last row,
 Esc or a tap away keeps her words. A pick ticks the sign Yes on Fang Bing Ren (`phCcSignYes`) and writes Fang Bing Ren's words in
 place of the typed ones (no subject when it is the complaint's own), the cursor waiting after ", ". One write door for More info:
 `phCcNiSave`. The list sits in the open visit page's fixed layer (#presPanel), never inside a card that clips. "MOTNI" reads as
