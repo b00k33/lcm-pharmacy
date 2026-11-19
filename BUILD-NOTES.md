@@ -16643,3 +16643,24 @@ Her words: "mock this page to radicaly make it more simple with just essentials 
 **Fixed:** all of the above (CLAUDE.md "ONE LIST LOOK"). Shot `shots/one-list-look-before-after-2026-11-19.png` (Inventory, Stock movements, Suppliers, Dispense history; the test browser has no mouse, so the row actions still show in it).
 **Tested:** the ⋯ menus list the moved actions (Refill history opens from it); the joined bars filter through the tiles' own taps; the hover rule (run without its mouse condition): every row's ⋮ / × hidden, the focused row's shown, the others still hidden; tap-audit + style-audit on 13 pages at 1220: nothing off (left: Communications' More ▾ is the square-cornered half of its joined bar, on purpose). The phone (640 and under) and 641-900 are untouched (both changes are computer-only).
 **Kept on purpose:** the search on the title line on Stock movements and Dispense history (her 2026-11-08 word); count tiles that don't filter (Dispense history, Stock statistics); the Dashboard; the Guide pages; Patient directory's filters in its bar.
+
+## Dashboard as one table (2026-11-19)
+Her words: "make the dashboard more simple - show mock". Before (made-up stock in the test copy, `shots/dashboard-before-2026-11-19.png`):
+one herb could show three times (Urgent stock, Order these, Refill these formulas), four card styles, an Order and a Plan ▾ button on
+every row, two count lines in their own card, End of day a full-width card. Mock `mocks/dashboard-simple-mock-2026-11-19.html`
+(A one table, B two tables, C jobs only); her 8 picks, all the recommended one: A; a row opens its Plan line; no buttons on a row;
+Count formulas / Count herbs as two chips; Going out today a band on top; End of day the bar's button; words + red dot; the phone the
+same list.
+- **Code:** `phDashTRows`, `phDashTWord`, `phDashTPlanHtml`, `phDashTOutHtml`, `phDashTHtml`, `phDashToolsHtml`, view state `phDashT`
+  (filter, search, all, the open Plan line), before "the simple Dashboard's pieces". `renderPhDashboardPage` draws head · relocation
+  line · the count grid while open · tool row · `#phDashT` · the stocktake nudge; the `workCards` build is gone. `PH_TOPBAR_ACTIONS.dashboard`
+  is a function (End of day from `phEodIsOn()`; the unused "New prescription" went) and `phTitlebarMerge` no longer skips the Dashboard's
+  list. `phEodSelfCheck` (1) reads that action. CSS block "DASHBOARD AS ONE TABLE" (before "APPOINTMENTS LIST AS ONE TABLE").
+- **Kept:** every write the old menus made (`data-ph-order-add/pick/remove/snooze`, `data-ph-refill-add/pick/remove/snooze`,
+  `data-ph-dash-refill-open`, `data-ph-dash-made`, `data-ph-dash-herb-edit`, `data-ph-cnt-open`, `data-ph-dash-prep-open`,
+  `data-ph-dash-fixaddr*`) through their own handlers; the relocation line; the Formula count grid; the stocktake nudge.
+- **Checked** (test copy, made-up stock and two made-up patients): a row opens its Plan line, Order today writes "Order · planned"
+  and closes it; To refill shows Made [g] ✓ · Make it now · This week · Next week · Pick a week… · Snooze; the search narrows the
+  table and keeps the cursor; Fix opens the address line; Going out today shows as the top band. tap-audit, style-audit and
+  titlebar-audit clean at 1220 (with a Plan line and the address line open) and at 360 (three columns, no sideways scroll).
+  Not tried: her real stock, the 641-900px width by eye.
