@@ -30752,6 +30752,13 @@
   #pharmacyPage#pharmacyPage .ph-cx .ph-cc-r .mcp { width: 32px; height: 32px; }
   #pharmacyPage#pharmacyPage .ph-cx .ph-cc-in { height: 32px; border-radius: 6px; --field-radius: 6px; --field-radius-sm: 6px; }
   #pharmacyPage#pharmacyPage .ph-cx .ph-cc-sec-name { min-height: 32px; padding: 0 4px; border-radius: 6px; }
+  /* More info's Bing list (her 2026-11-19 "the more info should be able to pickup bing signs"): the Came in for list's look, fixed
+     under the box so no card or table clips it */
+  #pharmacyPage .ph-ni-menu { position: fixed; z-index: 50; box-sizing: border-box; padding: 4px; border: 1px solid var(--ph-line); border-radius: 10px; background: var(--ph-white); box-shadow: 0 10px 28px rgba(20,31,35,.14); }
+  #pharmacyPage#pharmacyPage .ph-ni-menu button { display: flex; align-items: center; width: 100%; min-height: 32px; height: auto; margin: 0; padding: 6px 10px; border: 0; border-radius: 6px; background: none; text-align: left; font: 600 var(--fs-13) var(--font-body); color: var(--ph-ink); cursor: pointer; box-shadow: none; }
+  #pharmacyPage#pharmacyPage .ph-ni-menu button.hl, #pharmacyPage#pharmacyPage .ph-ni-menu button:hover { background: var(--ph-herb-tint); }
+  #pharmacyPage#pharmacyPage .ph-ni-menu button.alt { margin-top: 2px; border-top: 1px solid var(--ph-line); border-radius: 6px; color: var(--ph-faint); }
+  #pharmacyPage#pharmacyPage .ph-ni-menu button.alt.hl, #pharmacyPage#pharmacyPage .ph-ni-menu button.alt:hover { color: var(--ph-ink); }
   #pharmacyPage#pharmacyPage .ph-cx.b .pills.w { display: grid; grid-template-columns: repeat(4, 1fr); width: 224px; border: 0; background: none; box-shadow: none; }
   #pharmacyPage#pharmacyPage .ph-cx.b .pills.w .ph-cx-pill { position: relative; width: 100%; min-width: 0; height: 32px; padding: 0; border: 0; border-radius: 6px; background: none; box-shadow: none; font-size: 0; color: transparent; }
   #pharmacyPage .ph-cx.b .pills.w .ph-cx-pill::before { content: ""; position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; box-sizing: border-box; border-radius: 50%; border: 1.5px solid #b4c3c9; background: #fff; }
@@ -123054,14 +123061,12 @@ Difficult to sweat|no_sweat_tend:r`;
     // More info on the chief complaint (her 2026-11-19 pick 1): saved quietly like the others' notes
     if (el.matches("[data-cc-main-note]")) {
       const name = phPfwName(); if (!name) return;
-      const v = el.value.trim().slice(0, 140);
-      if (phCcWrite(name, c => { c.note = v; })) { phTpAutoBust(); phCcSeedSymptoms(name); phCcSavedFlash(); }
+      phCcNiSave(name, "main", el.value); el.value = phCcNiClean(el.value);
       return;
     }
     if (el.matches("[data-cc-sec-note]")) {
       const name = phPfwName(); if (!name) return;
-      const id = el.dataset.ccSecNote, v = el.value.trim().slice(0, 140);
-      if (phCcWrite(name, c => { const s = (c.secondary || []).find(x => x.id === id); if (s) s.note = v; })) { phTpAutoBust(); phCcSeedSymptoms(name); phCcSavedFlash(); }
+      phCcNiSave(name, "s:" + el.dataset.ccSecNote, el.value); el.value = phCcNiClean(el.value);
       return;
     }
     // her 2026-10-15 ask: Diagnosis (type-and-match a pattern/family name), saved quietly like the
@@ -124989,17 +124994,118 @@ Difficult to sweat|no_sweat_tend:r`;
     document.querySelectorAll(`#pharmacyPage [data-cx-row="${CSS.escape(key)}"] .cxhl`).forEach(x => { x.textContent = r ? phCcRelAc(r.iso) : ""; });   // the row's Acute / Chronic · how long follows
     phCcSavedFlash();
   });
-  // More info (her 2026-11-19 pick 1): one free line per complaint (complaint.note, secondary[].note), saved on change; the words after
-  // the row's name follow in place
+  // More info (her 2026-11-19 pick 1): one free line per complaint (complaint.note, secondary[].note), saved on change through
+  // phCcNiSave; the words after the row's name follow in place
   document.addEventListener("change", e => {
     const el = e.target && e.target.closest ? e.target.closest("[data-cx-ccnote]") : null; if (!el) return;
     const name = phCxNameOf(el); if (!name) return;
-    const key = el.dataset.cxCcnote, isMain = key === "main", id = key.slice(2), v = el.value.trim().slice(0, 140);
-    if (!phCcWrite(name, c => { const o = isMain ? c : (Array.isArray(c.secondary) ? c.secondary : []).find(s => s && s.id === id); if (o) o.note = v; })) return;
+    phCcNiSave(name, el.dataset.cxCcnote, el.value); el.value = phCcNiClean(el.value);
+  });
+  /* ==== More info picks up Bing signs (her 2026-11-19 "the more info should be able to pickup bing signs") ====
+     The three More info boxes (the first table's chief complaint and other complaints, a complaint's details on the visit card)
+     list the Bing signs the words being typed match (the words after the last comma, "and" or "with"), through the Came in for
+     boxes' one search (phCcSecSignOptions: Bing only, best matches, plainest first). Same convention as her pick 4 for the chief
+     complaint: signs first, Enter takes the top one, "Keep ... as typed" the quiet last row. A pick ticks the sign Yes on Fang Bing
+     Ren (phCcSignYes, never flips an answer) and writes Fang Bing Ren's words in place of the typed ones (pick 3's convention; the
+     subject is left off when it is the complaint's own), then the cursor waits after ", " for the next words. The list is fixed to
+     the screen under the box, in the nearest fixed layer (the open visit page), so no card or sideways-scrolling table clips it. */
+  const PH_NI_SEL = "[data-cc-main-note],[data-cc-sec-note],[data-cx-ccnote]";
+  var phCcNi = { el: null, opts: [], hl: 0 };
+  function phCcNiClean(v) { return String(v || "").replace(/[\s,;]+$/, "").trim().slice(0, 140); }
+  function phCcNiKey(el) { return el.dataset.ccMainNote ? "main" : el.dataset.ccSecNote ? "s:" + el.dataset.ccSecNote : (el.dataset.cxCcnote || ""); }
+  function phCcNiSel(el, key) { return el.dataset.ccMainNote ? "[data-cc-main-note]" : el.dataset.ccSecNote ? `[data-cc-sec-note="${CSS.escape(el.dataset.ccSecNote)}"]` : `[data-cx-ccnote="${CSS.escape(key)}"]`; }
+  function phCcNiOwn(name, key) {
+    const c = phCcOf(name) || {};
+    if (key === "main") return { text: c.mainText || "", sign: c.mainFbrKey || "" };
+    const s = (Array.isArray(c.secondary) ? c.secondary : []).find(x => x && "s:" + x.id === key) || {};
+    return { text: s.text || "", sign: s.fbrKey || "" };
+  }
+  // the one write door for a complaint's More info (main = complaint.note, "s:<id>" = that complaint's note)
+  function phCcNiSave(name, key, v) {
+    v = phCcNiClean(v);
+    const isMain = key === "main", id = key.slice(2);
+    if (!phCcWrite(name, c => { const o = isMain ? c : (Array.isArray(c.secondary) ? c.secondary : []).find(s => s && s.id === id); if (o) o.note = v; })) return false;
     try { phTpAutoBust(); phCcSeedSymptoms(name); } catch (x) { /* no plan yet */ }
     document.querySelectorAll(`#pharmacyPage [data-cx-row="${CSS.escape(key)}"] .nm .nu`).forEach(x => { x.textContent = v; });
     phCcSavedFlash();
+    return true;
+  }
+  function phCcNiPhrase(v) { return String(v || "").split(/[,;.\/+&\n]|\b(?:and|with|but|also)\b/i).pop().trim(); }
+  function phCcNiClose() { const m = document.querySelector("#pharmacyPage .ph-ni-menu"); if (m) m.remove(); phCcNi = { el: null, opts: [], hl: 0 }; }
+  function phCcNiPlace() {
+    const el = phCcNi.el, m = document.querySelector("#pharmacyPage .ph-ni-menu"); if (!el || !m) return;
+    if (!el.isConnected) { phCcNiClose(); return; }
+    const r = el.getBoundingClientRect(), w = Math.min(Math.max(r.width, 280), innerWidth - 16);
+    m.style.left = "0px"; m.style.top = "0px"; m.style.width = w + "px";
+    const o = m.getBoundingClientRect();   // where a fixed box's 0,0 lands (an ancestor can be its containing block)
+    m.style.left = (Math.max(8, Math.min(r.left, innerWidth - w - 8)) - o.left) + "px";
+    m.style.top = (r.bottom + 4 - o.top) + "px";
+  }
+  function phCcNiPaint(el) {
+    const name = phCxNameOf(el), key = phCcNiKey(el); if (!name || !key) { phCcNiClose(); return; }
+    const own = phCcNiOwn(name, key), q = phCcNiPhrase(el.value);
+    // in a complaint's More info its own kind of sign leads ("MOTNI" under a sleep complaint: Sleep: Wakes in the Night before Urine: At Night)
+    const subj = phSignSubj(own.text).toLowerCase(), same = o => subj && phSignSubj(o.r[1]).toLowerCase() === subj ? 0 : 1;
+    // a free line lists a sign only when every word being typed is in it ("worse after coffee" lists nothing: "worse" alone is in many)
+    const need = phCsToks(q).length;
+    const opts = phCcSecSignOptions(q).filter(o => o.r[0] !== own.sign && o.score >= need).map((o, i) => ({ o, i })).sort((a, b) => same(a.o) - same(b.o) || a.i - b.i).map(x => x.o);
+    if (!opts.length) { phCcNiClose(); return; }
+    if (phCcNi.el !== el) phCcNi.hl = 0;
+    phCcNi.el = el; phCcNi.opts = opts; phCcNi.hl = Math.min(phCcNi.hl, opts.length);   // opts.length = the Keep row
+    // the list lives in the nearest fixed layer (the open visit page, #presPanel), so it stacks over the card and nothing clips it
+    let host = el.parentElement; while (host && host.id !== "pharmacyPage" && getComputedStyle(host).position !== "fixed") host = host.parentElement;
+    host = host || document.getElementById("pharmacyPage");
+    let m = document.querySelector("#pharmacyPage .ph-ni-menu");
+    if (m && m.parentElement !== host) { m.remove(); m = null; }
+    if (!m) { m = document.createElement("div"); m.className = "ph-ni-menu"; m.setAttribute("role", "listbox"); host.appendChild(m); }
+    m.innerHTML = opts.map((o, k) => `<button type="button" role="option" class="${k === phCcNi.hl ? "hl" : ""}" data-ni-pick="${esc(o.r[0])}">${esc(phSymLab(o.r[1]))}</button>`).join("")
+      + `<button type="button" role="option" class="alt${phCcNi.hl === opts.length ? " hl" : ""}" data-ni-keep="1">Keep "${esc(q)}" as typed</button>`;
+    phCcNiPlace();
+  }
+  function phCcNiPick(signKey) {
+    const el = phCcNi.el; if (!el) return;
+    const name = phCxNameOf(el), key = phCcNiKey(el), label = phSignLabel(signKey);
+    if (!name || !key || !label || label === signKey) return;
+    const own = phCcNiOwn(name, key), subj = phSignSubj(own.text);
+    let words = phSymLab(label);
+    if (subj && phSignSubj(label).toLowerCase() === subj.toLowerCase()) words = words.slice(words.indexOf(": ") + 2);
+    const v = el.value, q = phCcNiPhrase(v), cut = q ? v.lastIndexOf(q) : -1;
+    const text = phCcNiClean((cut >= 0 ? v.slice(0, cut) : v.replace(/\s*$/, " ")) + words), sel = phCcNiSel(el, key);
+    phCcNiClose();
+    phCcNiSave(name, key, text);
+    phCcSignYes(name, signKey);
+    // the writes can draw the box again: find it, put the cursor after ", " for the next words
+    const back = first => {
+      const box = el.isConnected ? el : document.querySelector("#pharmacyPage " + sel); if (!box) return;
+      if (first || phCcNiClean(box.value) === text) box.value = text + ", ";   // later: only while she has not typed on
+      if (document.activeElement !== box) box.focus({ preventScroll: true });
+      const n = box.value.length; try { box.setSelectionRange(n, n); } catch (x) { /* not a text box */ }
+    };
+    back(true); setTimeout(() => back(false), 120);
+  }
+  document.addEventListener("input", e => {
+    const el = e.target; if (!el || !el.matches || !el.matches(PH_NI_SEL) || !el.closest("#pharmacyPage")) return;
+    phCcNiPaint(el);
   });
+  // keys while the list shows (capture: before the card's and the page's own Enter / Esc)
+  document.addEventListener("keydown", e => {
+    const T = e.target; if (!phCcNi.el || T !== phCcNi.el || !document.querySelector("#pharmacyPage .ph-ni-menu")) return;
+    const n = phCcNi.opts.length;
+    if (e.key === "ArrowDown") { e.preventDefault(); phCcNi.hl = Math.min(phCcNi.hl + 1, n); phCcNiPaint(T); }
+    else if (e.key === "ArrowUp") { e.preventDefault(); phCcNi.hl = Math.max(phCcNi.hl - 1, 0); phCcNiPaint(T); }
+    else if (e.key === "Enter") { e.preventDefault(); e.stopImmediatePropagation(); if (phCcNi.hl < n) phCcNiPick(phCcNi.opts[phCcNi.hl].r[0]); else phCcNiClose(); }
+    else if (e.key === "Escape") { e.preventDefault(); e.stopImmediatePropagation(); phCcNiClose(); }
+  }, true);
+  document.addEventListener("mousedown", e => { if (e.target.closest && e.target.closest(".ph-ni-menu")) e.preventDefault(); }, true);   // the box keeps the cursor
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest(".ph-ni-menu button"); if (!b) return;
+    e.preventDefault(); e.stopPropagation();
+    if (b.dataset.niPick) phCcNiPick(b.dataset.niPick);
+    else { const el = phCcNi.el; phCcNiClose(); if (el && el.isConnected) el.focus({ preventScroll: true }); }
+  }, true);
+  document.addEventListener("focusout", e => { if (e.target === phCcNi.el) setTimeout(() => { if (phCcNi.el && document.activeElement !== phCcNi.el) phCcNiClose(); }, 150); });
+  addEventListener("scroll", () => { if (phCcNi.el) phCcNiPlace(); }, true);
+  addEventListener("resize", () => { if (phCcNi.el) phCcNiPlace(); });
   /* ==== SIGN SEARCH at the top of the Compass (her 2026-10-23 ask: "to save me going to the fang bing ren page, allow me to type in
      and search/select fang bing ren signs"; mock fbr-sign-search-mock-2026-10-23.html, her 8 picks + 1). An always-visible box under
      "Compass · came in for"; it replaced "+ add". Typing searches the Fang Bing Ren signs with that page's own search (phCsToks /
@@ -137027,7 +137133,7 @@ Difficult to sweat|no_sweat_tend:r`;
       [/\b(scared|afraid|fearful|frightened|fears?|hates?|dislikes?|dreads?|intolerant|intolerance|averse|aversion|sensitivity|sensitive) (of |to )?(the )?cold\b|\bcold (intolerance|intolerant|sensitive|sensitivity|aversion)\b|\bfeels? the cold\b|\balways (feels? )?cold\b|\b(feels?|gets?) cold easily\b/g, " sensitive to cold "],
       [/\bheat (intolerance|intolerant|sensitive)\b|\bintolerant (of|to) heat\b|\b(hates?|dislikes?|can't stand|cannot stand) (the )?heat\b|\bsensitive to heat\b/g, " averse to heat "],
       [/\b(trouble|difficulty|difficult|hard|struggles?|struggling|problems?) (with )?(falling|getting|to fall|to get) (asleep|to sleep)\b|\btakes? (a )?long (time )?to (fall asleep|get to sleep)\b|\bsleep onset( insomnia)?\b/g, " hard to fall asleep "],
-      [/\b(wakes?|waking|woken|wake) (up )?(often|frequently|easily|during the night|in the night|at night|through the night|early|in the early morning)\b|\bearly (morning )?waking\b|\bnight waking\b|\bbroken sleep\b/g, " wakes in the night "],
+      [/\b(wakes?|waking|woken|wake) (up )?(often|frequently|easily|during the night|in the night|at night|through the night|early|in the early morning)\b|\bearly (morning )?waking\b|\bnight waking\b|\bbroken sleep\b|\bmotni\b|\bmiddle of (the )?night (insomnia|waking|wakings)\b/g, " wakes in the night "],
       [/\binsomnia\b|\bcan't sleep\b|\bcannot sleep\b|\bunable to sleep\b|\b(trouble|difficulty|problems?) sleeping\b|\bsleep(s|ing)? (badly|poorly)\b|\bdisturbed sleep\b|\blight sleep(er)?\b|\bunrefreshing sleep\b|\brestless sleep\b/g, " poor sleep "],
       [/\bnightmares?\b|\b(frequent|many|lots of|a lot of|excessive|much|vivid|bad|disturbing|intense) dreams?\b|\bdreams? (a lot|often|frequently)\b|\bdream ?disturbed( sleep)?\b|\bdreaming a lot\b/g, " vivid dreams "],
       [/(low|flat|down|depressed|sad) mood|mood (is )?(low|flat|down)|feeling (down|low|flat|blue)/g, " low mood "],
