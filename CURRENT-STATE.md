@@ -694,6 +694,15 @@ sheet on the phone); Cancel a chip, Save the one solid; Edit the move, Open the 
 list ⋯ and row ⋮ circles; the row and dialog fields tint; the notices filters and How they did joined bars; Print / Export the
 Button.
 
+**One list look on every page (her 2026-11-19 audit, CSS "ONE LIST LOOK"):** the computer bar = main action + ⋯ (`phTopbarActionSet`:
+`shown` = actions marked `keep`); Inventory's seven tiles and Stock movements' range tiles are joined bars (`phShellStripHtml`, `.ph-shell-fbar`,
+the same `data-ph-inv-tile` / `data-ph-log-tile` taps; 0-count segments hidden unless picked; "2 distinct patients" as words); Inventory's
+Twin jars, Formula refill's New formula recipe · Plan ahead · Refill history · Print making sheet, and To order's Mark all arrived are in
+the ⋯; one table head (pale tint, teal 10.5px capitals) on Inventory, Stock statistics, Dispense history, Suppliers, To order and the
+Stock movements sheet; Dispense history's table in the white card, its × 18px; ⋮ × ✎ on Inventory, Stock movements, Dispense history and
+Suppliers rows show on hover / focus (a touch screen keeps them); Suppliers' own "Add a supplier" hides (the bar's button clicks it);
+Photos' search first. Kept: Dispense history and Stock movements keep the search on the title line (her 2026-11-08 "merge these lines
+into one"); Dispense history and Stock statistics keep their count tiles (they count, they don't filter); the Dashboard and the Guide.
 **Patient profile on a computer is one table (her 2026-11-19 "make this view more simple", pick "one table, i dont need fang bing ren
 cycle prescription columns"):** `plTableHtml` inside `renderPresList` (over 900px): `.ph-plt`, the white card; columns Patient (600) ·
 Age (`phAgeOf` + sex) · Last (`phRelShort`, a red dot when not seen 6+ months, the full date on hover) · Booked (today's times) · Grams;
