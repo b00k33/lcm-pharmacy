@@ -123300,7 +123300,8 @@ Difficult to sweat|no_sweat_tend:r`;
   function phCcNow() { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()); }
   function phCcIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; }
   function phCcAgo(n, u) { const d = phCcNow(); if (u === "d") d.setDate(d.getDate() - n); else if (u === "m") d.setMonth(d.getMonth() - n); else d.setFullYear(d.getFullYear() - n); return phCcIso(d); }
-  function phCcFmtDate(s) { const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ""); return m ? `${m[3]}/${m[2]}/${m[1]}` : ""; }
+  const PH_CC_ONGOING = "ongoing", phCcIsOngoing = s => s === PH_CC_ONGOING;   // How long "Ongoing" (her 2026-11-19): no start date, never Acute / Chronic
+  function phCcFmtDate(s) { if (phCcIsOngoing(s)) return "Ongoing"; const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ""); return m ? `${m[3]}/${m[2]}/${m[1]}` : ""; }
   function phCcParseDate(t) {
     // her 2026-10-11 ask: "how long" in her own words -- "2 years", "6 mo", "3 wk", "10 days" count back from today
     const w = /^(\d+(?:\.\d+)?)\s*(d|day|days|w|wk|wks|week|weeks|m|mo|mos|month|months|y|yr|yrs|year|years)\.?$/i.exec(String(t || "").trim());
@@ -123322,6 +123323,7 @@ Difficult to sweat|no_sweat_tend:r`;
   // true); a typed year or month/year is exact, just imprecise -- never shown with the "~" estimate mark.
   function phCcParseDatePrec(t) {
     const s = String(t || "").trim();
+    if (/^ongoing$/i.test(s)) return { iso: PH_CC_ONGOING, prec: "d", est: false };
     const w = /^(\d+(?:\.\d+)?)\s*(d|day|days|w|wk|wks|week|weeks|m|mo|mos|month|months|y|yr|yrs|year|years)\.?$/i.test(s);
     if (w) { const iso = phCcParseDate(s); return iso ? { iso, prec: "d", est: true } : null; }
     const y = /^(\d{4})$/.exec(s);
@@ -123337,6 +123339,7 @@ Difficult to sweat|no_sweat_tend:r`;
   // the box's own displayed value, precision-aware: "2026" / "08/2026" / dd/mm/yyyy -- never expands
   // a year/month-only date into a fake full one when she reopens the box later.
   function phCcFmtDatePrec(s, prec) {
+    if (phCcIsOngoing(s)) return "Ongoing";
     const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ""); if (!m) return "";
     if (prec === "y") return m[1];
     if (prec === "m") return `${m[2]}/${m[1]}`;
@@ -123350,6 +123353,7 @@ Difficult to sweat|no_sweat_tend:r`;
   // old same-current-year branch ignored est (and would have ignored prec too) and always printed a
   // day it did not have.
   function phCcStartTxt(s, est, prec) {
+    if (phCcIsOngoing(s)) return `<span class="ph-cc-st">Ongoing</span>`;
     const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ""); if (!m) return "";
     const y = +m[1], mo = MON_SHORT[+m[2] - 1], d = +m[3], same = y === phCcNow().getFullYear();
     const t = prec === "y" ? `${y}` : prec === "m" ? `${mo} ${y}` : same ? `${d} ${mo}` : est ? `${mo} ${y}` : `${d} ${mo} ${y}`;
@@ -123363,8 +123367,9 @@ Difficult to sweat|no_sweat_tend:r`;
     const cut = phCcNow(); cut.setMonth(cut.getMonth() - 3);
     return new Date(+m[1], +m[2] - 1, +m[3]) > cut ? "Acute" : "Chronic";
   }
-  function phCcRelAc(s) { const a = phCcAc(s); return a ? a + " · " + phCcRel(s) : ""; }
+  function phCcRelAc(s) { if (phCcIsOngoing(s)) return "Ongoing"; const a = phCcAc(s); return a ? a + " · " + phCcRel(s) : ""; }
   function phCcRel(s) {
+    if (phCcIsOngoing(s)) return "Ongoing";
     const m = /^(\d{4})-(\d\d)-(\d\d)$/.exec(s || ""); if (!m) return "";
     const days = Math.round((phCcNow() - new Date(+m[1], +m[2] - 1, +m[3])) / 864e5);
     if (days < 14) return days + (days === 1 ? " day" : " days");
@@ -123511,7 +123516,7 @@ Difficult to sweat|no_sweat_tend:r`;
   function phCcDxListHtml() { return `<datalist id="phCcDxList">${[...PH_PM_DX_TERMS.slice().sort(phAz), ...phDxPatternOptions()].map(t => `<option value="${esc(t)}">`).join("")}</datalist>`; }   // the musculoskeletal terms first (her 2026-11-19), then the patterns
   // her 2026-10-18 ask ("do the same for all how long buttons in the app"): the same combobox
   // mechanism as the Pain table's phPmSinceList -- one shared datalist, the day box points at it.
-  const PH_CC_SINCE_LIST_HTML = `<datalist id="phCcSinceList">${PH_SINCE_OPTS.map(q => `<option value="${esc(q[0])}">`).join("")}</datalist>`;
+  const PH_CC_SINCE_LIST_HTML = `<datalist id="phCcSinceList">${PH_SINCE_OPTS.map(q => `<option value="${esc(q[0])}">`).join("")}<option value="Ongoing"></datalist>`;
   // her 2026-10-17 ask ("improve display, more organised, like table format"): the complaint rows
   // are now a real <table> -- Complaint/Diagnosis/Since/star/Note/x, one row per complaint, her
   // own "a merged widget's header row is the table's own thead" rule. Mock
@@ -123525,7 +123530,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const x = (attr, id, label) => `<span class="x" ${attr}="${id}" role="button" title="Remove" aria-label="Remove ${esc(label)}"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-x"/></svg></span>`;
     // her 2026-10-15 ask: a Diagnosis field (type-and-match against the real pattern/family names)
     // on every row, main or secondary -- one consistent table whether it's pain or not.
-    const dxIn = (val, attr, label) => `<input type="text" class="field-bare ph-cc-dx" list="phCcDxList" ${attr} value="${esc(val || "")}" maxlength="80" placeholder="Diagnosis" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${esc(label)}">`;
+    const dxIn = (val, attr, label) => `<input type="text" class="field-bare ph-cc-dx" list="phCcDxList" ${attr} value="${esc(val || "")}" maxlength="120" placeholder="Diagnosis" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${esc(label)}">`;
     // her 2026-10-15 ask ("i dont like links ... make the chips consistent, show me again"): "how
     // long" is now an ACT chip (whChip) that opens the same quick picks + date box under the row
     // (phCcActive, "main" for the chief row, no Done -- tapping the chip again closes it, as the
@@ -125321,7 +125326,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const bwTxt = bw ? `Best ${bw.pains[s.id].best != null ? bw.pains[s.id].best : "–"} · Worst ${bw.pains[s.id].worst != null ? bw.pains[s.id].worst : "–"}<small>${esc(phCycShortLbl(bw.day))}</small>` : "–";
     return `<div class="pf" style="--c:${col}"><label>Side</label><span class="ph-pm-seg" role="group" aria-label="Side">${opts.map(([v, t]) => `<button type="button" class="${p.s === v ? "on" : ""}" data-pm-side="${id}|${v}" aria-pressed="${p.s === v}">${t}</button>`).join("")}</span>
       <label>Detail</label><div class="ph-pm-dwrap ph-cx-dwrap${feelOpen ? " on" : ""}" style="--c:${col}">${feels.map(([, l]) => `<span class="ph-pm-ftag">${esc(l)}</span>`).join("")}<input type="text" class="ph-cx-pin" data-pm-detail="${id}" value="${esc(p.d || "")}" maxlength="200" autocomplete="off" spellcheck="false" aria-label="Detail for ${nmE}" aria-expanded="${feelOpen}"></div>${strip ? `<span></span>${strip}` : ""}
-      <label>Diagnosis</label><input type="text" class="ph-cx-pin" list="phPmDxList" data-pm-diag="${id}" value="${esc(p.dx || "")}" maxlength="80" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${nmE}">
+      <label>Diagnosis</label><input type="text" class="ph-cx-pin" list="phPmDxList" data-pm-diag="${id}" value="${esc(p.dx || "")}" maxlength="120" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${nmE}">
       <label>How long</label><div class="ph-cx-since2"><input type="text" class="ph-cx-pin" list="phPmSinceList" data-pm-since="${id}" value="${esc(phCcFmtDatePrec(p.since || "", p.sincePrec))}" placeholder="date, 2 yr, 08/2026 or 2026" autocomplete="off" aria-label="${nmE} started"><span class="rel${p.since ? "" : " empty"}">${p.since ? esc(phCcRel(p.since)) : "since when?"}</span></div>
       <label>Best · Worst</label><span class="meta">${bwTxt}</span>
       <label></label><span class="ph-cx-pbtns"><button type="button" class="ph-cx-chip${s.star ? " on" : ""}" data-cx-star="${esc(s.key)}" aria-pressed="${!!s.star}">★ Main</button><button type="button" class="ph-cx-chip" data-pm-del="${id}">Remove</button></span></div>`;
@@ -125444,7 +125449,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const feels = phPmFeelsOf(p), feelOpen = phPmFeelOpen === `${P.pid}|${idx}`, col = PH_PM_COLOURS[p.c] || PH_PM_COLOURS[0];
     const strip = feelOpen ? `<div class="ph-pm-strip ph-pm-feels" data-pm-feelrow="${id}" role="group" aria-label="What ${nmE} feels like" style="--c:${col}">${PH_PM_FEELS.map(([k, l]) => { const on = !!(p.f && p.f.includes(k)); return `<button type="button" class="ph-pm-q ph-pm-feel${on ? " on" : ""}" data-pm-feel="${id}|${k}" aria-pressed="${on}">${esc(l)}</button>`; }).join("")}</div>` : "";
     return `<div class="ph-cx-line" style="--c:${col}">${phCxLineF("Side", `<span class="ph-pm-seg" role="group" aria-label="Side">${opts.map(([v, t]) => `<button type="button" class="${p.s === v ? "on" : ""}" data-pm-side="${id}|${v}" aria-pressed="${p.s === v}">${t}</button>`).join("")}</span>`)}
-      ${phCxLineF("Diagnosis", `<input type="text" class="ph-cx-pin" list="phPmDxList" data-pm-diag="${id}" value="${esc(p.dx || "")}" maxlength="80" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${nmE}">`, "dx")}
+      ${phCxLineF("Diagnosis", `<input type="text" class="ph-cx-pin" list="phPmDxList" data-pm-diag="${id}" value="${esc(p.dx || "")}" maxlength="120" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${nmE}">`, "dx")}
       ${phCxLineF("How long", `<input type="text" class="ph-cx-pin" list="phPmSinceList" data-pm-since="${id}" value="${esc(phCcFmtDatePrec(p.since || "", p.sincePrec))}" placeholder="6 wk" autocomplete="off" aria-label="${nmE} started">`, "hl")}
       ${phCxLineF("More info", `<div class="ph-pm-dwrap ph-cx-dwrap${feelOpen ? " on" : ""}" style="--c:${col}">${feels.map(([, l]) => `<span class="ph-pm-ftag">${esc(l)}</span>`).join("")}<input type="text" class="ph-cx-pin" data-pm-detail="${id}" value="${esc(p.d || "")}" maxlength="200" autocomplete="off" spellcheck="false" aria-label="More about ${nmE}" aria-expanded="${feelOpen}"></div>`, "mi")}
       <span class="ph-cx-pbtns"><button type="button" class="ph-cx-chip${s.star ? " on" : ""}" data-cx-star="${esc(s.key)}" aria-pressed="${!!s.star}">★ Main</button><button type="button" class="ph-cx-chip" data-pm-del="${id}">Remove</button></span></div>${strip}`;
@@ -145820,13 +145825,39 @@ Difficult to sweat|no_sweat_tend:r`;
     "Lumbar strain", "Lumbar myospasm", "Mechanical low back pain", "Lumbar spinal stenosis", "Degenerative disc disease", "Coccydynia",
     "Cervical strain", "Whiplash-associated disorder", "Postural neck pain", "Thoracic strain", "Costochondritis", "Intercostal strain",
     "Gluteal tendinopathy", "Hip osteoarthritis", "Knee osteoarthritis", "Hamstring strain", "Calf strain", "Medial tibial stress syndrome",
-    "Morton's neuroma", "Rheumatoid arthritis", "Gout"];
+    "Morton's neuroma", "Rheumatoid arthritis", "Gout",
+    // her 2026-11-19 synth22 ask 2 ("use this website to include musculoskeletal conditions like instability conditions"):
+    // Physiopedia's condition pages by body area, read that night; every instability it lists first
+    "Cervical instability", "Thoracic instability", "Lumbar instability", "Shoulder instability", "Anterior shoulder instability",
+    "Posterior shoulder instability", "Multidirectional shoulder instability", "Shoulder subluxation", "Knee rotary instability",
+    "Patellofemoral instability", "Chronic ankle instability", "Lunate instability", "Midcarpal instability", "Scapholunate dissociation",
+    "Lunotriquetral dissociation", "Peroneal tendon subluxation", "ECU subluxation", "Pubic symphysis dysfunction", "Sacroiliac joint syndrome",
+    "Hypermobile meniscus", "Patellar dislocation", "Shoulder dislocation", "Hip dysplasia", "Hip microinstability",
+    "Acute neck pain", "Chronic neck pain", "Mechanical neck pain", "Cervical discogenic pain", "Cervical myelopathy", "Cervical spondylosis",
+    "Cervical stenosis", "Torticollis", "Levator scapulae syndrome", "Forward head posture", "Upper crossed syndrome", "Cervicobrachial syndrome",
+    "Rotator cuff tear", "Supraspinatus tendinopathy", "Calcific tendinopathy of the shoulder", "Subacromial pain syndrome", "Internal impingement",
+    "Shoulder bursitis", "Acromioclavicular joint disorder", "SLAP lesion", "Scapular dyskinesia", "Snapping scapula", "Shoulder osteoarthritis",
+    "Long head biceps rupture", "Frozen shoulder", "Cubital tunnel syndrome", "Radial tunnel syndrome", "Olecranon bursitis",
+    "Triceps tendinopathy", "Distal biceps rupture", "Elbow osteoarthritis", "Elbow ligament injury", "Valgus extension overload",
+    "Intersection syndrome", "Ganglion cyst", "Guyon canal syndrome", "TFCC injury", "Ulnar impaction syndrome", "Wrist sprain",
+    "Thoracic back pain", "Tietze syndrome", "Slipping rib syndrome", "T4 syndrome", "Thoracic disc syndrome", "Thoracic hyperkyphosis",
+    "Scheuermann's kyphosis", "Scoliosis", "Low back pain", "Chronic low back pain", "Lumbar discogenic pain", "Disc herniation",
+    "Lumbar radiculopathy", "Spondylolisthesis", "Spondylolysis", "Lumbar lateral shift", "Lower crossed syndrome", "Postural syndrome",
+    "Baastrup syndrome", "Ankylosing spondylitis", "Sacroiliitis", "Pregnancy-related pelvic pain", "Deep gluteal pain syndrome",
+    "Greater trochanteric pain syndrome", "Femoroacetabular impingement", "Hip labral tear", "Iliopsoas tendinopathy", "Iliopsoas bursitis",
+    "Adductor tendinopathy", "Snapping hip", "Myofascial pelvic pain", "Pudendal neuralgia", "Diastasis recti", "Patellar tendinopathy",
+    "Chondromalacia patellae", "Patellofemoral osteoarthritis", "Degenerative meniscal tear", "ACL injury", "PCL injury", "MCL injury",
+    "LCL injury", "Pes anserine bursitis", "Baker's cyst", "Fat pad syndrome", "Osgood-Schlatter disease", "Popliteus tendinopathy",
+    "Quadriceps strain", "Posterior knee pain", "Ankle sprain", "Lateral ankle ligament injury", "High ankle sprain", "Ankle impingement",
+    "Achilles rupture", "Peroneal tendinopathy", "Posterior tibial tendon dysfunction", "Plantar heel pain", "Heel fat pad syndrome",
+    "Retrocalcaneal bursitis", "Sinus tarsi syndrome", "Tarsal tunnel syndrome", "Metatarsalgia", "Hallux valgus", "Hallux rigidus",
+    "Pes planus", "Pes cavus", "Turf toe", "Plantar plate injury"].filter((t, i, a) => a.findIndex(x => x.toLowerCase() === t.toLowerCase()) === i);
   const PH_PM_DX_LIST_HTML = `<datalist id="phPmDxList">${PH_PM_DX_TERMS.slice().sort(phAz).map(t => `<option value="${esc(t)}">`).join("")}</datalist>`;
   // her 2026-10-18 ask ("make the how long type in or dropdown, mock A: one combobox"): the quick picks
   // are a native datalist on the SAME box instead of a separate dropdown row -- typing still works
   // exactly as before (phCcParseDate already reads "2 yr"/"6 mo" text), and every PH_SINCE_OPTS label
   // ("2 wk", "6 mo", ...) is already in that same accepted shape, so picking one needs no new write path.
-  const PH_PM_SINCE_LIST_HTML = `<datalist id="phPmSinceList">${PH_SINCE_OPTS.map(q => `<option value="${esc(q[0])}">`).join("")}</datalist>`;
+  const PH_PM_SINCE_LIST_HTML = `<datalist id="phPmSinceList">${PH_SINCE_OPTS.map(q => `<option value="${esc(q[0])}">`).join("")}<option value="Ongoing"></datalist>`;
   function phPmTableHtml(name, plan, list, pdMode) {
     if (!list.length) return "";
     const R = PH_PAIN_REGIONS.REGIONS, pid = esc(plan.id), rec = phPatientPeek(name) || {};
@@ -145870,7 +145901,7 @@ Difficult to sweat|no_sweat_tend:r`;
         <td><div class="ph-pm-nm"><button type="button" class="mcp${p.main ? " on" : ""}" data-pm-main="${pid}|${idx}" aria-pressed="${!!p.main}" title="${p.main ? "Main complaint" : "Make main complaint"}"><span class="ic">★</span></button><button type="button" class="ph-pm-dot" data-pm-dot="${pid}|${idx}" aria-label="Change colour of ${esc(nm)}" aria-expanded="${palOpen}"></button><span class="ph-pm-what"${sc && PH_PM_ZOOMS.some(z => z.regions.includes(p.r)) ? ` data-msk="zoom" data-v="${idx}" title="Open its close-up"` : ""}>${esc(nm)}<small>${where}${tOnly ? " · tension" : ""}</small></span></div></td>
         <td><span class="ph-pm-seg" role="group" aria-label="Side">${opts.map(([v, t]) => `<button type="button" class="${p.s === v ? "on" : ""}" data-pm-side="${pid}|${idx}|${v}" aria-pressed="${p.s === v}">${t}</button>`).join("")}</span></td>
         <td><div class="ph-pm-dwrap${feelOpen ? " on" : ""}">${feels.map(([, l]) => `<span class="ph-pm-ftag">${esc(l)}</span>`).join("")}<input type="text" class="field-bare ph-pm-detail" data-pm-detail="${pid}|${idx}" value="${esc(p.d || "")}" maxlength="200" placeholder="${feels.length ? "" : "detail"}" autocomplete="off" spellcheck="false" aria-label="Detail for ${esc(nm)}" aria-expanded="${feelOpen}"></div></td>
-        <td><input type="text" class="field-bare ph-pm-diag" list="phPmDxList" data-pm-diag="${pid}|${idx}" value="${esc(p.dx || "")}" maxlength="80" placeholder="Diagnosis" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${esc(nm)}"></td>
+        <td><input type="text" class="field-bare ph-pm-diag" list="phPmDxList" data-pm-diag="${pid}|${idx}" value="${esc(p.dx || "")}" maxlength="120" placeholder="Diagnosis" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${esc(nm)}"></td>
         <td><div class="ph-pm-since"><input type="text" class="field-bare ph-pm-sin" list="phPmSinceList" data-pm-since="${pid}|${idx}" value="${esc(phCcFmtDatePrec(p.since || "", p.sincePrec))}" placeholder="date, 2 yr, 08/2026 or 2026" title="A date (dd/mm/yyyy), how long (2 years, 6 mo, 3 wk), or just mm/yyyy or yyyy if that's all you know -- tap for quick picks" autocomplete="off" aria-label="${esc(nm)} started"><span class="rel${p.since ? "" : " empty"}">${p.since ? esc(phCcRel(p.since)) : "since when?"}</span></div></td>
         ${sc ? KS.map(([k]) => `<td class="c">${box(mine[k], last[k], `data-pm-sc="${pid}|${idx}|${k}"`)}</td>`).join("") : pdMode ? `<td class="c">${box(pdNow, null, "", true)}</td>` : ""}
         <td class="x"><button type="button" class="ph-pm-delx" data-pm-del="${pid}|${idx}" aria-label="Remove ${esc(nm)}">×</button></td></tr>`);
@@ -157808,7 +157839,7 @@ Difficult to sweat|no_sweat_tend:r`;
       <div class="mk2-ahd"><span class="dot" aria-hidden="true"></span><span class="nm">${esc(nm)}</span><span class="ph-tng2-seg mk2-jb" role="group" aria-label="Side">${opts.map(([v, t]) => `<button type="button" class="ph-ltr-qual${p.s === v ? " on" : ""}" data-pm-side="${pid}|${idx}|${v}" aria-pressed="${p.s === v}">${t}</button>`).join("")}</span>${since}<span class="sp"></span><button type="button" class="mk2-ic${p.main ? " on" : ""}" data-pm-main="${pid}|${idx}" aria-pressed="${!!p.main}" title="${p.main ? "Main complaint" : "Make main complaint"}">★</button><button type="button" class="mk2-ic" data-pm-del="${pid}|${idx}" aria-label="Remove ${esc(nm)}" title="Remove this pain">✕</button></div>
       ${row("pain", "Pain", score)}
       ${rk ? row("palp", "Palpate", `${phMskChipsHtml(ctx, p)}<div class="mk2-foot">${mkBtn}<button type="button" class="mk2-btn" data-pm-cause-toggle="${pid}|${idx}" aria-expanded="${causeOpen}">${phMskIc("plus")}Cause</button></div>${cause}`) + (PH_MSK_ROM[rk] ? row("move", "Move", phMskMoveHtml(ctx, p, key)) + row("tests", "Tests", phMskTestsHtml(ctx, p, key)) : "") : mkBtn ? row("palp", "Palpate", `<div class="mk2-foot">${mkBtn}</div>`) : ""}
-      ${row("dx", "Diagnosis", `<input type="text" class="mk2-dx field-bare" list="phPmDxList" data-pm-diag="${pid}|${idx}" value="${esc(p.dx || "")}" maxlength="80" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${esc(nm)}">${dxSrc ? `<div class="mk2-dxsrc">${dxSrc}</div>` : ""}`)}
+      ${row("dx", "Diagnosis", `<input type="text" class="mk2-dx field-bare" list="phPmDxList" data-pm-diag="${pid}|${idx}" value="${esc(p.dx || "")}" maxlength="120" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${esc(nm)}">${dxSrc ? `<div class="mk2-dxsrc">${dxSrc}</div>` : ""}`)}
     </div>`;
   }
   function phMskCardsHtml(ctx) {
@@ -157872,7 +157903,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const srcs = ctx.list.map(p => { const sk = phMskSetKey(p.dx), set = sk && sets[sk]; return sk ? (set && (set.pts || []).length ? `<span class="mk2-tag">your set</span>${esc(set.pts.map(x => x.p).join(", "))}` : `<span class="mk2-on">No set saved</span>`) : ""; }), any = srcs.some(Boolean);
     const rows = ctx.list.map((p, idx) => {
       const key = phMskPainKey(p), nm = phPmSideName(PH_PAIN_REGIONS.REGIONS[p.r], p.s), rk = phMskRegOf(p) || "";
-      return `<tr class="mk2-prow${ctx.lit === key ? " lit" : ""}" data-mk-area="${esc(key)}" data-pm-row="${idx}"${rk ? ` data-mk-reg="${rk}"` : ""} style="--c:${PH_PM_COLOURS[p.c] || PH_PM_COLOURS[0]}"><td class="a"><span class="dot" aria-hidden="true"></span>${esc(nm)}</td><td class="dx"><input type="text" class="mk2-dx field-bare" list="phPmDxList" data-pm-diag="${pid}|${idx}" value="${esc(p.dx || "")}" maxlength="80" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${esc(nm)}"></td>${any ? `<td class="src">${srcs[idx]}</td>` : ""}</tr>`;
+      return `<tr class="mk2-prow${ctx.lit === key ? " lit" : ""}" data-mk-area="${esc(key)}" data-pm-row="${idx}"${rk ? ` data-mk-reg="${rk}"` : ""} style="--c:${PH_PM_COLOURS[p.c] || PH_PM_COLOURS[0]}"><td class="a"><span class="dot" aria-hidden="true"></span>${esc(nm)}</td><td class="dx"><input type="text" class="mk2-dx field-bare" list="phPmDxList" data-pm-diag="${pid}|${idx}" value="${esc(p.dx || "")}" maxlength="120" autocomplete="off" spellcheck="false" aria-label="Diagnosis for ${esc(nm)}"></td>${any ? `<td class="src">${srcs[idx]}</td>` : ""}</tr>`;
     }).join("");
     return `<table class="mk2-dtab"><thead><tr><th class="a">Area</th><th>Diagnosis</th>${any ? "<th>Your set</th>" : ""}</tr></thead><tbody>${rows}</tbody></table>`;
   }
