@@ -686,7 +686,11 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   others in the bar's own ⋯. The phone keeps one row: ☰ · title · the one
   main disc · ⋯. Calendar blocks take Cliniko's clear colours
   (`phCkClear`; Break alone keeps `phCkTone`), a past day stays full colour
-  with its ticks, and the name comes first.
+  with its ticks, and the name comes first. **Her own events on the calendar are shades of ONE slate** (her 2026-11-19 "more
+  monochromatic and less colour diverse", pick B of `mocks/my-events-monochrome-mock-2026-11-19.html`): a shade a group, deep to
+  pale (Fitness, Work, Home, Self-care, Together, Meals), a hand-picked colour follows the look; the patients keep their Cliniko
+  colours, Me's own pages keep the group colours, birthdays stay coral. Never bring the six group colours back to the calendar
+  without her word.
   **One page standard (her 4 picks, 2026-11-18, "the pages within that group look different"):** on a
   computer every list page has a 58px top bar, its content 16px under it at the one left edge, the search a
   280px white box FIRST on the tool row, the filters ONE 32px joined bar (picked = solid teal, count inside),

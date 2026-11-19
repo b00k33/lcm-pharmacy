@@ -16724,3 +16724,15 @@ the recommended one.
   the booking-type dots (Cliniko / Zanda colours, a data mark). At 360 nothing is wider than the screen and no size is off the scale;
   tap-audit still lists the phone list's own rows and empty-day lines (rows, which THE LOOK keeps out of the chip rule; they are not on
   its KEEP list yet). Not tried: her real Acupreg data, a real IVF round with a results call.
+
+## My events on the calendar: shades of one slate (2026-11-19)
+Her words: "i want to make my personal appointment colours more monochromatic and less colour diverse". Before: her events were solid
+blocks in six group colours (green, blue, gold, purple, coral, cyan) plus any colour she picked by hand, beside the patients' Cliniko
+colours. Mock `mocks/my-events-monochrome-mock-2026-11-19.html` (A one slate, B shades of slate, C greys); her 4 picks: B; a hand-picked
+colour follows the look; calendar only; birthdays stay coral.
+- **Code:** `PH_C22_CAL_SLATE`, `phC22CalCol`, `phC22CalInk` (beside `phC22Ink`), read by `phC22Mark`, the stack rows, `phC22LifeHtml`,
+  `phC22FoldHtml`, `phC22PopHtml`'s title and the Appointments modal's `.ap-me-row`. `phC22Col` / `phC22Ink` are unchanged for Me's pages
+  (the hub, habits, fasting, the fitness card).
+- **Checked** (test copy, seven made-up events on today, one with a hand-picked pink): each group drew its shade (Fitness rgb(47,69,80) …
+  Meals rgb(157,182,192)), the pink one drew the plain slate, words white on the deep shades and ink on Self-care, Together and Meals.
+  Not tried: her real events, the phone grid by eye.

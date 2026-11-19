@@ -193,8 +193,11 @@ day" beside Undo (`presSavedToast` `o.acts`); a dragged PATIENT block drops into
 confirms (Cliniko stays the truth, nothing moves silently); on a phone a long-press lifts (the page held still). Code: "ONE
 CALENDAR, WORK + LIFE".
 **My events: solid blocks** (her "my personal events look too small and insignificant and hard to differentiate", then "solid
-block like patient blocks"). Her events (one-offs and routines) are SOLID in their own colour (her Mode colour or group), white or
-ink words by measured contrast (`phC22Ink` → `phCkInkByContrast`), and share the time with the visits like another booking
+block like patient blocks"). Her events (one-offs and routines) are SOLID, since 2026-11-19 in a shade of ONE slate a group (her pick B,
+`PH_C22_CAL_SLATE` / `phC22CalCol`: Fitness #2F4550 · Work #3E5662 · Home #557080 · Self-care #6C8794 · Together #83A0AC · Meals #9DB6C0 ·
+none #4E6470; a hand-picked or Mode colour is kept on the item and not shown here), white or ink words by measured contrast
+(`phC22CalInk` → `phCkInkByContrast`); the block, its fold chip, a stack's marks and rows, its card's title and the Appointments modal's
+Me rows read it; Me's own pages keep `phC22Col` (the group colours) and the birthday chip stays coral, and share the time with the visits like another booking
 (`phC22JointLay`): blocks that start together split the width evenly, a later one sits over the earlier from 45% across; a cluster
 of visits alone keeps its own layout. Done = faded + ✓. The chips above and below the day are solid too, 26px. In a narrow block
 the name wins over the time.
