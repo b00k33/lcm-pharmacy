@@ -696,6 +696,11 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   280px white box FIRST on the tool row, the filters ONE 32px joined bar (picked = solid teal, count inside),
   the list in ONE white card (16px corners, the soft shadow, column names inside), card titles a pale band
   with teal capitals, an empty list one quiet line. CSS block "ONE PAGE FRAME"; a new page follows it.
+  **Her body photos sit on her own Body card (her 2026-11-19 "put my body photos relating to my body measurements", her 8 picks of
+  `mocks/body-card-photos-mock-2026-11-19.html`):** on her own record only, under the readings: the first photo beside the newest, the
+  kg and fat change between them, then a column a day (photo · kg · fat, the reading within 7 days), a tap picks the day on the left;
+  covered until Show; Front with the views as one bar; a camera square for today. The same photos as Meals › Body (never a second store).
+  Never on a patient's card without her word.
   **Patient profile on a computer is ONE table (her 2026-11-19 "make this view more simple -use apps codes", then "one table, i dont
   need fang bing ren cycle prescription columns"; `mocks/patient-list-simple-mock-2026-11-19.html`):** Patient · Age · Last · Booked ·
   Grams, the bands (Booked today · Dispensed today · Drafts · Older) its group rows; the whole row opens the patient, no buttons, chips,

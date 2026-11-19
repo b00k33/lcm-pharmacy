@@ -16736,3 +16736,17 @@ colour follows the look; calendar only; birthdays stay coral.
 - **Checked** (test copy, seven made-up events on today, one with a hand-picked pink): each group drew its shade (Fitness rgb(47,69,80) …
   Meals rgb(157,182,192)), the pink one drew the plain slate, words white on the deep shades and ink on Self-care, Together and Meals.
   Not tried: her real events, the phone grid by eye.
+
+## Body card photos (2026-11-19)
+Her words: "put my body photos relating to my body measurements" (her screenshot: her own Patient details, the Body card). Her body photos
+lived only on Meals › Body › Over time. Mock `mocks/body-card-photos-mock-2026-11-19.html` (A a photo on each reading row, B photos across
+with kg and fat under, C first beside today); her 8 picks: B and C together, covered until Show, a reading pairs within 7 days, Front with a
+view bar, a camera square for today, her own record only, 6 days across and older a scroll.
+- **Code:** `phBpc` (view, picked day per view, shown), `phBpcMine`, `phBpcVal`, `phBpcInner`, `phBpcHtml`, `phBpcPaint`, one click
+  listener; drawn under `.ph-body-read` in `phPdPageHtml`'s Body card and `phBodyCardHtml`. Reads `phMbtPhs` / `phMbtOf` / `phMbtViews`,
+  adds through `phMbtPick`, opens `phMbtBigRender`; `phMbtPaint` and `phBodyRefresh` repaint it in place. CSS block "BODY CARD PHOTOS".
+  The Show / Cover chip draws solid `--ph-herb` when pressed (the Meals chip's deep fill was flagged by style-audit).
+- **Checked** (test copy, a made-up record set as My profile, four made-up readings, stand-in Front and Back photos): the pair (27 Aug
+  61 kg · 34% beside 16 Nov 59 kg · 32%, −2 kg, −2% fat, 12 wk; a photo three days old took today's reading), a day picked (26 Oct, +1 kg,
+  3 wk, no fat that day), Back (3 columns), the big view, Show / Cover, a new weight repainting today's column, another patient gets none.
+  tap-audit and style-audit empty at 1220 and 360 (after the + took `--fs-18`); nothing wider than the phone. Not tried: her real photos.

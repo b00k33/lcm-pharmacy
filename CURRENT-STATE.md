@@ -782,7 +782,13 @@ pale-blue head + stripes.
 **Patient details** (`phPdPageHtml`) = a hero + 2 cards, Contact and Body (her 2026-10-30 pick; 3 cards from 2026-10-19), every
 control 32px Zanda-style (6px boxes, joined 6px bars, white value boxes, the send-the-form circle): tap to edit in place, age from
 DOB, BMI bar, a filled-in ring (n of 7: name, sex, DOB, phone, email, height, weight), Call / Text / Email chips [Patient details =
-hero + 2 cards]. **The extras live where they are read** (`phPdOnFileHtml`; BUILD-NOTES "Patient details extras"): the partner
+hero + 2 cards]. **On her own record the Body card carries her body photos** (her 2026-11-19 picks B + C of
+`mocks/body-card-photos-mock-2026-11-19.html`; BUILD-NOTES "Body card photos"; `phBpc*`, `.ph-bpc`): a view bar (Front · Back · Left ·
+Right · Arms, Side only while she holds one) and Show / Cover; the first photo of that view beside the newest, with the kg and fat change
+and the weeks between; under them a column a day, newest first (an empty Today square = the camera with the pose guide), 6 across and
+older a scroll, each with the kg and fat read within 7 days (`phBpcVal`); a tap on a day puts it on the left, a tap on a photo opens the
+Meals › Body big view. Covered each time the page opens, a first tap uncovers. It reads `phMbtPhs` and her Body readings and repaints with
+them (`phBpcPaint` from `phMbtPaint` and `phBodyRefresh`). **The extras live where they are read** (`phPdOnFileHtml`; BUILD-NOTES "Patient details extras"): the partner
 on IVF history's head, the addresses in a booking's Delivery step (Save to her file · ✎ · ×), the health fund and rebate in
 Compose's rebate list (the old note in the fund cell's hover); the page shows one grey **On file** line under the cards only
 when one is stored, each part a door to where it is kept. A returning patient's Sex / DOB / Phone /
@@ -1567,7 +1573,7 @@ under. The model (`phMbfSim`; its figures in BUILD-NOTES) and every word are DRA
   beside Today, the strip of earlier dates, **Play** flips through the dates, **Show / Cover** (covered with a blur each time the
   tab opens; a first tap on a covered photo uncovers it). A photo opens big: ‹ ›, its date (hers to change), Delete with the
   usual Undo; Escape closes it and nothing behind it. Body photos are kinds `shapeFront | shapeSide | shapeBack` in her own
-  record's photo store; like meal photos they show here only (`phMbtIsShape` keeps them out of her Photos pages and Records), and
+  record's photo store; like meal photos they show here and on her own Body card only (`phMbtIsShape` keeps them out of her Photos pages and Records), and
   a phone sends them on by the photo relay. A photo from the gallery keeps the day it was taken.
 - *Her figure follows her tape*: a woman's newest waist and hips bend the figure at the waist and hips (`phBodyBuild`'s `tf`; the
   forecast holds today's bend through the weeks).
