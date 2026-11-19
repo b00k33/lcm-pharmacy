@@ -232,6 +232,16 @@ dropdowns: A–Z. A new list is A–Z from its first build.
   as chips, the case's shared lines tinted); Ren's look rows and today's weight sit on Today's visit under the complaint, open on a
   first visit, one line after (the same answers as the Ren page, which stays for the full board). Never bring back a plans row,
   an exam tab row or the Pulse page's notes without her word.
+- **Musculoskeletal is one step at a time (her 2026-11-19 "i dont like the long scroll on this page. help redesign it", after "this is
+  too small for me to click - make it larger in the context of the whole page"; 8 picks, all the recommended one):** the 5-step bar
+  (Pain · Palpate · Diagnosis · Points · Re-test) is the page's tabs, one screen a step (`phMskStep`, the host's `data-mk-step`; a
+  page opened afresh starts on the first step not done; "Next: <step> ›" at a step's foot, none on Re-test, where the page's own
+  foot button goes on). Pain = the body as tall as the screen allows (`--mk-figh`) beside the pains as ONE table (Area · Side · How
+  long · Base · Last once there are any · Today · After · ★ · ✕; `phMskPainTblHtml`); Palpate = the muscle pictures on ONE row with a
+  Surface | Deep switch (`phMskDgLayer`) beside the chips of the pain she is on (`phMskPickHtml`; the area card's Palpate · Move ·
+  Tests); Diagnosis = one line a pain (`phMskDxTblHtml`) beside Diagnosis + Signs; Points = the picker over Plan; Re-test = the
+  pains table. The view buttons are one row under the body. Every part stays on the page, hidden by step, so every tap keeps its
+  handler. Never bring back the long page (every card open, both muscle rows) without her word.
 - **Ask her came first after Today's visit (her 2026-10-23 "i need this page to appear sooner. after todays visit"; retired 2026-11-18, line above):** the
   rail lists Ask her, Tongue, Pulse, Abdomen, Musculoskeletal; the Next chain is Today's visit → Ask her → Cycle → Tongue → ...
 - **Tongue, Pulse, Abdomen and Cycle are each their own page** (her pick,

@@ -16664,3 +16664,42 @@ same list.
   table and keeps the cursor; Fix opens the address line; Going out today shows as the top band. tap-audit, style-audit and
   titlebar-audit clean at 1220 (with a Plan line and the address line open) and at 360 (three columns, no sideways scroll).
   Not tried: her real stock, the 641-900px width by eye.
+
+## 2026-11-19: Musculoskeletal one step at a time (SAVED, not live)
+- **Her words:** "this is too small for me to click - make it larger in the context of the whole page" (the body figure was 140px),
+  then, while that was being built, "i dont like the long scroll on this page. help redesign it". Measured at 1440 x 915: 2,077px
+  (picture card 814, four pain cards 1,076, the panel 318 with ~800px of white beside the cards).
+- **Asked (ask28):** widget `lcm_msk_page_long_scroll_redesign_options` (Now / A Body beside / B One step at a time / C Same,
+  tighter, to scale with the one-screen line) + 8 popup questions. Her picks, all the recommended one: B; pains = one table; muscles
+  one row, Surface | Deep; Palpate = only the pain she is on; the body as tall as the screen allows; the panel split by step
+  (Diagnosis + Signs on 3, Plan on 4); opens on the first step not done; Next at a step's foot.
+- **Done:**
+  - `phMskStep` (view state) + the host's `data-mk-step`; `phMskStepGo` (the bar and Next): the bar, the cards and the panel repaint
+    in place (`phMskRefresh(["head","plan"])`), the page goes to its top, and on a computer the step's first empty box takes the
+    cursor (Today, the diagnosis, After). `phMskPageHtml` picks `phMskStepFirst` only when no Musculoskeletal page for this patient
+    is on screen, so a repaint never moves her.
+  - `phMskCardsHtml` by step: the pains table (`phMskPainTblHtml`, the card's own boxes and buttons, so every handler is the card's),
+    the picker + the picked pain's card (Palpate · Move · Tests; a pain with no drawn muscles shows no card), the diagnosis table
+    (`phMskDxTblHtml`, "Your set" only once a diagnosis brings one), the picker alone (Points). The panel's three cards carry
+    `mk3-cdx` / `mk3-csg` / `mk3-cpl` and hide by step; Plan on Points is two columns (bar, + Point, where they go | the points).
+  - The body: each figure half its column, never taller than `--mk-figh` (100dvh - 330px, 300-760); Turn and Side sized to the same
+    height; the view buttons ONE row (a joined bar + Labels + Enlarge) under the body, a 2 x 2 box on a phone. Enlarge goes up to 300px.
+  - Muscles: `phMskDiagramPanesHtml` draws ONE row (the layer `phMskDgLayer`, switch `phMskLayerSw`, act `dg-layer`) wherever the
+    picture is tappable; the legs' Side row is unchanged.
+  - Next: "Next: <step>" (`phMskNextHtml`); none on Re-test (MY call: the page's own foot button already goes on to the next page;
+    two different Nexts would disagree).
+  - MY calls, told her: Base / Last columns appear once a pain has them (keep every real number); the current step uses the page
+    colour (`--ph-herb`, the MSK blue on an MSK patient), so do the side / tools / layer switches (were always `--ph-msk`); the pains
+    table head is ONE LIST LOOK's pale band; the phone's steps bar is one 32px line naming only the current step.
+- **Tested** (pretend patients "Test Chest", "Test Shoulder"; never her records) at 1440 x 915 (sidebar open and folded), 1220 x
+  887 and 360 x 740: every step fits one screen on a computer (Pain bottom 879 / 915, Palpate 817, Turn 911, Side 903); a body tap
+  adds a pain (the knee zone is 27 x 28px, was ~14 x 15); Today scores typed in the table tick Pain without moving the step; leaving
+  and coming back opens Palpate; a chip tap marks Tender + MP and the picture follows; a diagnosis saves and counts; + Point adds to
+  the picked pain; Surface | Deep turns both the page's and the Enlarge copy. tap-audit.js + style-audit.js: none left at 1220 and
+  360 on all five steps (fixed in the pass: score boxes 6px, steps bar 32px, the phone's Add pain box / Areas / Add, joined bars).
+  3D stays above the table (its card is its own height).
+- **Last pass, on the newest build** (a pretend patient with a tender neck and no neck pain): "Not a pain" was a 19px text link,
+  now an `mk-btn` beside "Add neck to the pains"; the body takes `100dvh - 450px` while that row shows (`:has(.mk-offer)`), so the
+  Pain step still fits 915px (bottom 903); Palpate is `1fr 1fr` (was 1.2fr 1fr) so a long list wraps three chips a row; the MP tag
+  `.mk2-ch .mps` 600 13px (was 700 11px); the phone's `.mk-btn` 32px with 6px corners. Left: at 1220 x 887 a pain with many
+  muscles (the front of the shoulder: 20) plus that row runs ~40px past the screen on Palpate.
