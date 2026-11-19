@@ -526,9 +526,10 @@ picks on the Cycle page mocks, canvas 1HUfAZbcfH7vCoSuK65UFS [Cycle page: two ha
 chip of the card's day, Pregnant? with its popover under it) and the pane sit on the Fast block's light band (one shared band
 rule, `.cp-band`). On the Calendar tab a LEFT white box holds the head (`phCpHeadHtml`: "CD 4" + Fertile · Ovulation · Period,
 each with its colour mark; late = the days late + the last period) and the day card ALWAYS (today until she taps a day); a RIGHT
-white box holds the chart (`phCycDgHtml`: the hormone curves, a drawing, over a labelled phase bar sized by days, date + CD under
-each day, a gold line on the card's day that glides on a tap; the wheel, lining and follicle are gone) and ONE month (this month
-until she moves it; every day a whole block: period by flow, follicular grey, fertile green, ovulation dark green, luteal lilac,
+white box holds the chart (`phCycDgHtml`: the hormone curves, a drawing, over a labelled phase bar sized by days, the date under
+each day (the CD row under it went 2026-11-19: the calendar says each day's CD), a gold line on the card's day that glides on a tap; the wheel, lining and follicle are gone) and ONE month (this month
+until she moves it; every day a whole block: period red by flow, follicular white with a hairline, fertile pale teal, ovulation teal, luteal pale
+grey (her 2026-11-19 pick C; hormone lines grey, progesterone darker, LH teal; the band and boxes white),
 the next cycle drawn from her latest cycle's shape, only the next period paler; CD on every day; today gold-ringed, the card's day
 teal-ringed). Temperature and Past cycles: the head + their pane in one white box. When the page first shows (`phCpFirstSight`,
 `.in`; never on a repaint) the halves rise, the curves wipe in, the blocks grow, the line drops, the days come in as a wave and
