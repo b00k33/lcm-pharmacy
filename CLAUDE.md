@@ -270,6 +270,15 @@ Supplements (confirm) and Blood tests (if new). Then: the complaint compass →
 Cycle (if on) → Tongue · Pulse · Abdomen → Fang Bing Ren as **one line: what
 shifted** → (Timeline, on a fertility plan) →
 Treatment Care Plan as **one line: phase, session** → Treatment → Dispense.
+**Came in for is always a step, and its lists are BING only (her 2026-11-19 "where do i find her chief complaint and symptoms page",
+"this is critical in the workflow", "the came in for row only uses treatment plan options. this should be only for bing"; BUILD-NOTES
+"Came in for: a first-visit step, Bing-only lists"):** step 1 of every visit is the Came in for page: "Better / worse" on a return visit,
+**"Came in for"** on a first visit (ticked once a chief complaint is on file; Next up while there is none). Never hide the page that
+holds the chief complaint. Both Came in for boxes ("What brought her in?" and "+ Add") list **Bing signs only** (`phCcSecSignOptions`:
+`PH_BING_SIGNS`, the best-scoring matches, no tongue or pulse finding): never a Care Plan type, never a Ren sign, nothing while the box
+is empty; her own words stay the top row. A picked sign is ticked Yes on Fang Bing Ren (`phCcSignYes`) and the chief complaint remembers
+it (`complaint.mainFbrKey`, read only while the words are still that sign's). The Care Plan type is read from her words, changed on the
+row's pill or in the Care Plan.
 **Came in for in three parts (her 2026-11-19 "i cant see clearly whats main complaint and whats additional symptoms"; her 8 picks, all
 the recommended one; memory project_lcm_came_in_for_three_parts_2026_11_19; BUILD-NOTES "Came in for in three parts"):** the table is
 MAIN COMPLAINT (every starred complaint, her order, large on a soft tint of its area's colour, the area and how long under it, no Main
