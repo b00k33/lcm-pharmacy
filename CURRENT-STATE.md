@@ -643,10 +643,22 @@ changes tab flies into it and that tab's count lights gold. The table draws when
 `phOstNeed`); a narrower card and the phone draw two lines per herb (the phone: the line's cost as text, Bottle price… in the ⋮). No
 column sorting (TAPPABLE THINGS). **Its look:** every act is the Button (32px, 1.5px herb line; Order now red; a supplier's All
 arrived solid), the size a chip, the bottle price a tinted field, status tags that never tap, a pale-blue head row, striped rows,
-numbers right, 28px on a phone. **Every count of the list** (top bar, side badge, Dashboard, Stock statistics, Mark all arrived) reads `phOnOrderList`, so a snoozed item not yet ordered is left out everywhere, as on the page [To order page audit]. Dashboard's Order/Refill cards are TWO PLAIN LISTS,
+numbers right, 28px on a phone. **Every count of the list** (top bar, side badge, Dashboard, Stock statistics, Mark all arrived) reads `phOnOrderList`, so a snoozed item not yet ordered is left out everywhere, as on the page [To order page audit]. Until 2026-11-19 the Dashboard's Order/Refill cards were TWO PLAIN LISTS,
 empty first then fewest days of cover; a Refill row also shows the formula's next booking (her pick); a long name wraps on both.
 Under Order these, See all and To order share one line; from 641 to 900px both cards keep the computer's 14px inner edge, so the
 caption band's words line up with the rows [Dashboard page audit, second pass].
+**The Dashboard is ONE table (her 2026-11-19 picks, LIVE when she says "push live"):** `phDashTHtml` reads Urgent stock
+(`phDashUrgentItems`, a jar not counted in 3 weeks left out), the refill list (`phDashRefillList`) and every herb at zero / low
+(`phHerbStatusKey`) into one list, each herb once (`phDashTRows`): empty first, then fewest days of cover (`phDashCover`), a
+snoozed one last, then A-Z. Next is Order for a bought jar and Refill for one made here (`phMadeInHouse`), with its state
+(`phDashTWord`: Order · planned, Ordered, Refill · Wk 48, Snoozed). A tap on a row opens its Plan line (`phDashTPlanHtml`, view
+state `phDashT.plan`): the same `data-ph-order-*` / `data-ph-refill-*` writes the Plan ▾ menus make, Make it now, Made [g] ✓ for a
+jar made here (`phBatchMade`), Edit (the edit drawer); a write closes it. The tool row (`phDashToolsHtml`): the search (repaints the
+table only), All · To order · To refill · Empty (a segment at 0 hides unless picked), Count formulas (the Formula count grid, drawn
+above the tool row while open) and Count herbs (Stocktake). Going out today (`phDashMustGoToday`) is a band on top of the table
+under All with no search, each a row (a tap = Prepare, or Fix and its address line). End of day is the bar's one action from 4 pm
+(`PH_TOPBAR_ACTIONS.dashboard`). A phone draws Herb · Left · Next. The Urgent stock card, the two cards and the count lines are
+no longer drawn (their functions stay for the phone's old paths and history).
 Picking a supplier pulls in that supplier's recorded price.
 **Side panel (her 2026-11-18 "yes, build mock"):** tap a herb on To order, Running low, Arrived or Snoozed and a panel opens beside the list like Formula refill's (`phOsSide`, `osSideHtml`): 1 Stock (jar, bar, grams, low line), 2 Used by (the formulas whose recipe holds the herb, A-Z, grams a batch), 3 Order (the bottle stepper, size chip, price field, supplier; a Running low herb gets Add to order), Edit and Close in its head. The To order row is one line: herb, stock, "2 x 100g · $16.50", status, Ordered + Arrived + the dots; the table is 5 columns, so it keeps drawing beside the panel until the card is under 640px; the phone puts the panel above the list. The name no longer opens the edit form (Edit in the panel and the dots do). Each supplier block is one pale block, Arrived the one solid act. **Formula refill To make is a table** from 861px of list: Formula · In jar · Lasts · Booked · Wk + Make · Recipe under a capitals head (`.ph-rfc-colhead`, `.jg`, `.ls`; the sub line and the 12-week bars give way there; narrower, the old row stays).
 **A formula she makes is priced by its recipe** (her 2026-10-31 pick "Its recipe, always"): a made-in-house jar

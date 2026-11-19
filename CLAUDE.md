@@ -646,10 +646,19 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 - **Dashboard + landing laws** (phone AND desktop alike): the app OPENS on
   Appointments (her daily schedule check). The Dashboard is drastically
   simple and herbs-only (her 2026-09-15 "exclusive for herbal inventory
-  management, i rely on appointments page to organise appointments"): Wrap up
-  the day → Going out today → Urgent stock → the count lines (Formula count
-  grid weekly, Herbs last counted after 6 weeks; her 2026-10-29 picks) →
-  Order/Refill cards (+ the stocktake nudge while a count is open). NO patient lists, NO week calendar, no month view, no "Recent
+  management, i rely on appointments page to organise appointments"). **Since
+  her 2026-11-19 picks it is ONE table** ("make the dashboard more simple", pick A of
+  `mocks/dashboard-simple-mock-2026-11-19.html`, her 8 picks all the recommended one):
+  the search, the filters ONE joined bar (All · To order · To refill · Empty) and two
+  chips (Count formulas n · Count herbs) on one tool row; then one white card, Code ·
+  Herb · Kind · Left · Days · Next, **each herb once** (what Urgent stock, Order these
+  and Refill these formulas listed), empty first then fewest days, Next = Order (bought)
+  or Refill (made here); a row has no buttons and opens its **Plan line** under it (the
+  old Plan ▾ items as chips, Made [g] ✓ for a jar made here, Edit); Going out today is
+  a band on top of the table on days there are some; End of day is the bar's one
+  button from 4 pm. A phone draws the same table as Herb · Left · Next. Never bring
+  back the Urgent stock card, the two Order / Refill cards, a second listing of one herb
+  or buttons on a row without her word. NO patient lists, NO week calendar, no month view, no "Recent
   activity" feed, no Monday bands — several sections have been explicitly
   removed on her word (Communications-due strip, a day-list, a chart); don't
   add any section back without a mock and her sign-off. **Dashboard stays
@@ -936,8 +945,8 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 - **Study library** (`phStu*`: her study entries, typed in a trip session's Study row; step 1a saved 2026-11-06). Her study words are private and are not clinic data: they live only in IndexedDB `lcm-study` and localStorage `lcm-study-outbox`, never in `lcm-me`, a `daybook*` key, the clinic's cloud row, the backup file, a console log, a mock, a note file or this repo. Never read, copy or quote her entries; test with made-up entries marked made up. The box is only ever a new entry; a row is changed where it sits; the store is never written before it has been read; "One copy on this device" is worked out by `phStuOneSet`, never set by hand. After any edit near it, on the test copy: type in the box, repaint (`phTripRepaint()`) mid-sentence, Ctrl+Enter, open a row, Backspace it to nothing (it must hold its words), reload, and check that both copies hold the entries.
 - **Fang Bing Ren key check** (`phFbrKeyCheck()` returns the weights whose sign is in no pool; warns in console on load. It must be `[]`: read it on the test copy after any edit to `PH_REN_SIGNS`, `PH_BING_SIGNS` or a family's table. A row left at the end of a `//` comment once dropped a sign for three days.)
 - **End of day self-check** (`phEodSelfCheck()` warns in console on load if
-  broken): (1) before 16:00 the Dashboard's "Wrap up the day" row is absent,
-  at/after 16:00 present; (2) the generated Cliniko prompt lists exactly as
+  broken): (1) before 16:00 the Dashboard's End of day button (its bar's one action, since
+  2026-11-19) is absent, at/after 16:00 present; (2) the generated Cliniko prompt lists exactly as
   many `- ` lines as items in "Today from LCM"; (3) every price in the
   prompt matches the price shown in the list; (4) the "Copied" state
   survives a reload on the same day, is gone on a new date. The page only
