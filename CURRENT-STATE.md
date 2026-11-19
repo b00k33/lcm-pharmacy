@@ -789,6 +789,15 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
 - **Grid + Progress:** `.ph-cx.b .ph-cx-rows` = `minmax(180px, 320px) 224px minmax(0, 1fr)`; `.ph-cx-pgt` table `width: auto`,
   `col.c0` 200px, a visit 72px, row names `phSymCase`. Phone: the card is the narrow one (no ▾); its Add / + Pick areas are 28px.
 
+## Came in for as one table (2026-11-19, her pick A, Galcott-style)
+- A wide card (`M.b`) draws `phCxTblHtml(M, name, plan)` (`.ph-cxt`) in place of the row list and the Progress table: Complaint · How
+  long · First (the first score before today) · Last (the latest before today) · Today (`data-cx-n` box, written by `phCxScoreWrite`;
+  empty = cleared) · Change (`phCxtChg`, worked out) · More info (`data-cx-ccnote`, or a pain's `data-pm-detail`). Energy's row:
+  `data-cx-en` am / pm / ev boxes (`phEnWrite`, then `phEnRefresh`). Signs: `data-cx-sx` on `.ph-tng2-seg` / `.ph-ltr-qual`.
+  Details: `phCxEdRowHtml` in a full-width row under its row. Enter moves to the next score box; `phCxRefresh` keeps the cursor in a
+  table box (`phCxtSel`). The chart is closed until ⋯ › Chart (`phCxChartOpen[pk] === true`). The measured rows and red flags stay
+  rows under the table. The narrow card (a phone) is unchanged.
+
 ## Today's visit steps table (2026-11-19, her pick B; two columns since her same-day "Yes, build it")
 - **Now:** the card is the page's full width and first on Today's visit; the list 240px, the step beside it. `phTvRenHtml(name, cx)`
   always gets the Came in for card (empty or full) and `cc`'s pane is that card + Next; nothing above the card. `phCxRefresh` inside the
