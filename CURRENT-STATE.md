@@ -859,6 +859,12 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
   fatigue_pulse_sunken_lax Low, sunken pulse.
 
 ## Musculoskeletal page
+**One step at a time (2026-11-19, her 8 picks; BUILD-NOTES "Musculoskeletal one step at a time"):** the 5-step bar is the page's tabs
+(`phMskStep`, `data-mk-step` on the host; opens on the first step not done; Next at a step's foot). Pain = the body as tall as the
+screen allows beside the pains table (`phMskPainTblHtml`); Palpate = the muscle pictures (one row, Surface | Deep, `phMskDgLayer`)
+beside the picked pain's card (`phMskPickHtml`); Diagnosis = `phMskDxTblHtml` beside Diagnosis + Signs; Points = the picker over
+Plan; Re-test = the pains table. `phMskCardsHtml` draws what the step needs; the picture card and panel parts hide by step (CSS).
+The paragraphs below describe the parts; the long single page they describe is gone.
 **The panel beside the area cards (2026-11-18, synth22 mock E):** three white cards, Diagnosis (a chip per area, its diagnosis or
 name; the picked one is the area + Point adds to, `phMskLit`), Signs (Area / Finding / Side from today's palpation, movements, tests
 and strength: `phMskSignsOf`), Plan (the method bar `PH_MSK_METHODS`, view state `phMskMethod`; then every point, Point / Method /
