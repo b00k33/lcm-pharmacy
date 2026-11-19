@@ -270,13 +270,25 @@ Supplements (confirm) and Blood tests (if new). Then: the complaint compass →
 Cycle (if on) → Tongue · Pulse · Abdomen → Fang Bing Ren as **one line: what
 shifted** → (Timeline, on a fertility plan) →
 Treatment Care Plan as **one line: phase, session** → Treatment → Dispense.
+**The chief complaint is picked from Fang Bing Ren, then given its nuance (her 2026-11-19 "i need the chief complaint to be picked from
+fang bing ren, then i want to be able to add more nuance e.g. insomnia acute 1 week, insomnia chronic 10 years, MOTNI and light sleep";
+her 4 picks, all the recommended one; BUILD-NOTES "Chief complaint: pick from Fang Bing Ren, then the nuance"):** in both Came in for
+boxes the Bing signs come FIRST, the plainest (shortest) leading, and Enter picks the top one; **"+ Add "x" as typed"** is the quiet
+LAST row. A picked chief complaint shows Fang Bing Ren's words, fixed (no Name box while `complaint.mainFbrKey` still matches its words).
+The nuance is ONE free line per complaint, **More info** (`complaint.note`, `secondary[].note`; the cursor lands in it after a pick or
+an add): never a second structured field for it. **Acute / Chronic is worked out from How long, never typed, never stored** (`phCcAc`:
+under 3 months = Acute, 3 months or more = Chronic; `phCcRelAc` = "Chronic · 10 yr"). Every complaint row shows the nuance after its
+name and Acute / Chronic · how long beside it (a phone: the nuance on its own line, whole, never cut to "..."). On a computer a
+complaint's NAME opens its details under its row (`phCxEd`, `phCxEdRowHtml`: Name · More info · How long · ★ Main · Remove; a second
+tap closes), because the side panel stays off on the simple visit. The first table, the details strip and the phone drawer keep THE
+LOOK (32px boxes and chips, 6px corners).
 **Came in for is always a step, and its lists are BING only (her 2026-11-19 "where do i find her chief complaint and symptoms page",
 "this is critical in the workflow", "the came in for row only uses treatment plan options. this should be only for bing"; BUILD-NOTES
 "Came in for: a first-visit step, Bing-only lists"):** step 1 of every visit is the Came in for page: "Better / worse" on a return visit,
 **"Came in for"** on a first visit (ticked once a chief complaint is on file; Next up while there is none). Never hide the page that
 holds the chief complaint. Both Came in for boxes ("What brought her in?" and "+ Add") list **Bing signs only** (`phCcSecSignOptions`:
 `PH_BING_SIGNS`, the best-scoring matches, no tongue or pulse finding): never a Care Plan type, never a Ren sign, nothing while the box
-is empty; her own words stay the top row. A picked sign is ticked Yes on Fang Bing Ren (`phCcSignYes`) and the chief complaint remembers
+is empty; the signs come first and her own words are the quiet last row (the paragraph above). A picked sign is ticked Yes on Fang Bing Ren (`phCcSignYes`) and the chief complaint remembers
 it (`complaint.mainFbrKey`, read only while the words are still that sign's). The Care Plan type is read from her words, changed on the
 row's pill or in the Care Plan.
 **Came in for in three parts (her 2026-11-19 "i cant see clearly whats main complaint and whats additional symptoms"; her 8 picks, all

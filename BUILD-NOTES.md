@@ -16523,3 +16523,45 @@ Her words: "mock this page to radicaly make it more simple with just essentials 
   Yes, the step ticked; "+ Add" → "sleep" listed Bing sleep signs, a pick saved and ticked; the three-part table drew both. tap-audit.js
   + style-audit.js on the box with its list open: nothing left. Not exercised: the booking card's Came in for box (it lists nothing, saves
   words through `phCcSetWords` as before).
+
+## 2026-11-19: Chief complaint: pick from Fang Bing Ren, then the nuance (SAVED, not live)
+- **Her words:** "i need the chief complaint to be picked from fang bing ren, then i want to be able to add more nuance e.g. insomnia acute
+  1 week, insomnia chronic 10 years, MOTNI and light sleep etc".
+- **Her 4 picks** (mock + popup, all the recommended one): 1 the nuance is ONE free "More info" line beside the complaint, the cursor
+  lands in it after the pick, How long stays its own chip · 2 Acute / Chronic is worked out from How long, never typed (under 3 months
+  Acute, 3 months or more Chronic) · 3 the complaint shows Fang Bing Ren's words · 4 Fang Bing Ren matches first, Enter picks the top
+  one, "+ Add as typed" is the quiet last row.
+- **Measured before building:** the chief complaint row had no More info (the other complaints have `secondary[].note`; the Log already
+  read `complaint.note`, nothing wrote it); on a computer the complaint's details (Name, How long, ★ Main, Remove) had no home once the
+  three-part table shows, because the side panel is off on the simple visit (`.ph-tv.simple .ph-cx-pnl { display: none }`); "insomnia"
+  listed its three signs A–Z, so Enter took "Digestion: upset along with poor sleep".
+- **Done:**
+  - `phCcMenuPaint`: signs first, `+ Add "x" as typed` last (`.alt`, the wording "+ Add" already used); `phCcSecSignOptions` orders the
+    best matches plainest first (shortest words, then A–Z), so Enter on "insomnia" = Sleep: Poor, Light.
+  - `phCcAddSign` / `phCcAddWords`: the cursor lands in More info (`[data-cc-main-note]`).
+  - `phCcTableHtml` (the first table): a picked chief complaint is fixed text (`.ph-cc-main-name`, Fang Bing Ren's words with capitals),
+    her own words stay a box; a More info box beside it (`complaint.note`, saved on change); an x on the Main row (`phCxRemoveMain`,
+    Undo as always); the How long chips read `phCcRelAc`; the other complaints' names and the timeline labels take capitals (`phSymLab`).
+  - `phCcAc` / `phCcRelAc`: Acute / Chronic from the start date, derived on read.
+  - `phCxItems` carries `note`; `phCxRowHtml` draws `.nu` (the nuance after the name) and `.cxhl` (Acute / Chronic · how long: under the
+    Main, after the name on an Also row; a phone: beside the Goal box, and the nuance takes its own line).
+  - `phCxCcFormHtml`: Name is fixed text for a picked Main, a More info box for every complaint (`[data-cx-ccnote]`, its own change
+    listener: saves through `phCcWrite`, the row follows in place); How long updates the row's Acute / Chronic in place.
+  - a wide card: a complaint's name opens that form under its row (`phCxEd`, `phCxEdRowHtml` through `phCxPartsHtml`'s `after`); a
+    second tap or Remove closes it.
+  - `phCcSetWords` drops the note when the words change; `phCxRemoveMain` clears `note` + `mainFbrKey` and carries the promoted
+    complaint's note and sign.
+  - THE LOOK, found by tap-audit.js on the surfaces this touches and fixed in the same pass: the first table's chips (22.5px, 10px
+    corners, 1.5px line → 32px, 6px, 1px), type pill (16px → 32px), x and ★ (→ 32px), date box (28px / 999 → 32px / 6px); the phone
+    drawer's boxes (26px), chips (24px) and "Move baseline to today" (23px) → 32px.
+- **Tested** on pretend patients ("Test Nuance", "Test Typed", "Test Also", "Test Promote"; never her records) at 1440 and 360, with real
+  typing: "insomnia" + Enter → Sleep: Poor, Light, sign Yes, cursor in More info; "MOTNI and light sleep" saved; How long "10 yr" →
+  "Chronic · 10 yr", "1 wk" → "Acute · 7 days"; words that match nothing → only "+ Add ... as typed", saved as her words with a Name box;
+  x on the Main → removed with Undo, Undo brings the nuance back; "+ Add" → "period pain" + Enter → Periods: Painful; the three-part
+  table shows the nuance and Acute / Chronic on Main and Also rows; a name tap opens / closes the details, edits follow in place;
+  removing the Main promotes the next complaint with its nuance and sign and closes the details; the phone drawer shows More info.
+  tap-audit.js + style-audit.js: the first table 42 of 42 at rest (41 while the new row pops), the phone card with the drawer open
+  71 of 72 (the Main's name line, a text row as before); nothing new on the style audit.
+- **Left as they were (measured, not part of this ask):** on a phone the FIRST table still scrolls sideways to reach Diagnosis / How long
+  (it did before: 516px of columns in a 274px card); a newly added complaint still starts with the Main's start date, so it reads the
+  Main's Acute / Chronic until its own How long is set; the Care Plan type pill still sits on the Came in for row (asked her).
