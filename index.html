@@ -21329,6 +21329,13 @@
   /* Phase 4 (law 2026-10-10): "worth a look" one-tap lines on a return visit (gold tint, no lines) and the
      one-line Fang Bing Ren / Care Plan glance (teal tint) */
   #pharmacyPage .ph-today-nudges { background: var(--ph-gold-tint); border-radius: 10px; padding: 8px 12px 6px; margin: 0 0 12px; }
+  /* HERBS AT THE START OF A VISIT (her 2026-11-19 picks): one line on top of the visit, the same answer as the chip under the name */
+  #pharmacyPage .ph-hbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-hbs .l { font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .06em; text-transform: uppercase; color: var(--ph-soft); }
+  #pharmacyPage .ph-hbs b { font: 600 var(--fs-13) var(--font-body); color: var(--ph-ink); }
+  #pharmacyPage .ph-hbs em { font: 400 var(--fs-11-5) var(--font-body); font-style: normal; color: var(--ph-soft); }
+  #pharmacyPage .ph-hbs em.out::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--ph-zero); vertical-align: middle; }
+  #pharmacyPage .ph-hbs .ph-meal-bar { margin-left: auto; }
   #pharmacyPage .ph-today-nudges .cap { font-size: var(--fs-10-5); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ph-ink); margin: 0 0 2px; }
   #pharmacyPage .ph-today-nudge { display: flex; align-items: center; gap: 8px; padding: 6px 0; transition: opacity .2s ease; }
   #pharmacyPage .ph-today-nudge.gone { opacity: 0; pointer-events: none; }
@@ -46747,7 +46754,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       } catch (e) {}
     }
     const key = phPatientKey(name), fu = (PHARMACY.followups || []).filter(r => r.patientKey === key && r.ok && r.emptyOn).sort((p, q) => (q.dispensedAt || 0) - (p.dispensedAt || 0))[0];
-    if (fu && fu.emptyOn <= today && (parseKey(today) - parseKey(fu.emptyOn)) / 864e5 <= 60) tag("warn", fu.emptyOn === today ? "Herbs run out today" : `Herbs ran out ${phTpDayLabel(fu.emptyOn).replace(/^\S+ /, "")}`, `${fu.formulaLabel || "Herbs"}, dispensed ${fu.dispensedDate || ""}`);
+    if (fu && fu.emptyOn <= today && !phHbsStoppedSince(name, fu.dispensedDate) && (parseKey(today) - parseKey(fu.emptyOn)) / 864e5 <= 60) tag("warn", fu.emptyOn === today ? "Herbs run out today" : `Herbs ran out ${phTpDayLabel(fu.emptyOn).replace(/^\S+ /, "")}`, `${fu.formulaLabel || "Herbs"}, dispensed ${fu.dispensedDate || ""}`);
     return out;
   }
   const phApptDueTagsHtml = (D, cls) => D.tags.length ? `<div class="ph-appt-due${cls ? " " + cls : ""}">${D.tags.map(g => `<span class="tg${g.k ? " " + g.k : ""}" title="${esc(g.tip)}">${esc(g.t)}</span>`).join("")}</div>` : "";
@@ -73497,6 +73504,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         return;
       }
       if (e.target.closest("[data-pres-acu-herbinstruct]")) {
+        const hbT = (PRESC.items || []).find(x => x.id === presOpenId), hbN = hbT ? presPatientFor(hbT) || hbT.name || "" : "";
+        if (hbN && phHbsOf(hbN)) { if (phHbsWrite(hbN, presAcuHbIn() ? "fin" : "cont")) phHbsPaint(hbN); return; }   // Still taking IS her start-of-visit Continuing: one answer
         presAcuHerbInstruct = !presAcuHerbInstruct;
         presAcuOpenRefresh();
         return;
@@ -83173,6 +83182,7 @@ or changing anything in Cliniko.
     PHARMACY.followups.forEach(rec => {
       if (!rec.review && !rec.checkIn) return;
       if ((rec.dispensedAt || 0) < (latest.get(rec.patientKey || phPatientKey(rec.patient)) || 0)) return;   // outgrown: new herbs went out after it
+      if (phHbsStoppedSince(rec.patient, rec.dispensedDate)) return;   // she said Stopping at a visit since these herbs went out (her 2026-11-19 pick)
       // decision 12, read-side: a record made while herbs were on stops
       // surfacing the moment she turns them off for that patient -- old
       // records aren't deleted (never destroy the record), just no longer due
@@ -106451,6 +106461,80 @@ Difficult to sweat|no_sweat_tend:r`;
     }
     return null;
   }
+  // ==== HERBS AT THE START OF A VISIT (her 2026-11-19 "i need to be able to signal at the start of the session whether patient has
+  // finished herbs, continuing, or stopping herbs"; mocks/herbs-start-of-visit-mock-2026-11-19.html, her 8 picks: the first line of the
+  // visit AND a chip under the name, pre-picked from the run-out day, Finished = Herbs stays the visit's step with her last formula,
+  // Continuing = Herbs ticked as still taking, Stopping = no Herbs today and no run-out reminders, anyone dispensed herbs before, no
+  // reason asked, the word on the visits table). One store: rec.herbsSay = { "YYYY-MM-DD": "fin" | "cont" | "stop" }, her tap, through
+  // phHbsWrite (the one door); the pre-pick is worked out on read and kept as said when the visit is saved. ====
+  const PH_HBS_LBL = { fin: "Finished", cont: "Continuing", stop: "Stopping" };
+  let presHbsMenu = false;   // view state: the chip's menu is open
+  // her last herbs before today: the newest dispense's follow-up (its run-out day), else her newest dispensed prescription
+  function phHbsLast(name) {
+    const key = phPatientKey(name), tk = keyOf(TODAY);
+    const fu = (PHARMACY.followups || []).filter(r => r && r.patientKey === key && r.dispensedDate && r.dispensedDate < tk).sort((p, q) => (q.dispensedAt || 0) - (p.dispensedAt || 0))[0];
+    if (fu) return { at: fu.dispensedDate, emptyOn: fu.ok && fu.emptyOn ? fu.emptyOn : "", fx: fu.formulaLabel || "" };
+    const ps = (PRESC.items || []).filter(x => x && !presIsFormula(x) && x.lastDispensedAt && keyOf(new Date(x.lastDispensedAt)) < tk && phPatientKey(presPatientFor(x) || x.name || "") === key).sort((p, q) => q.lastDispensedAt - p.lastDispensedAt)[0];
+    return ps ? { at: keyOf(new Date(ps.lastDispensedAt)), emptyOn: "", fx: presActualFormula(ps) } : null;
+  }
+  // today's answer: hers, else the pre-pick (Stopping said since these herbs went out = Stopping; run-out day passed = Finished; days
+  // left = Continuing; no run-out day known = nothing picked). Null = she has had no herbs before today: no question.
+  function phHbsOf(name) {
+    const rec = name ? phPatientPeek(name) : null; if (!rec) return null;
+    const L = phHbsLast(name); if (!L) return null;
+    const tk = keyOf(TODAY), said = rec.herbsSay && typeof rec.herbsSay === "object" ? rec.herbsSay : {};
+    const mine = PH_HBS_LBL[said[tk]] ? said[tk] : "";
+    const stopped = Object.keys(said).some(d => d >= L.at && d < tk && said[d] === "stop");
+    const auto = stopped ? "stop" : L.emptyOn ? (L.emptyOn <= tk ? "fin" : "cont") : "";
+    const gap = L.emptyOn ? Math.round((parseKey(L.emptyOn) - parseKey(tk)) / 864e5) : null;
+    const note = gap == null ? "" : gap > 0 ? `${gap} day${gap === 1 ? "" : "s"} left` : gap === 0 ? "run out today" : `ran out ${-gap} day${gap === -1 ? "" : "s"} ago`;
+    return { v: mine || auto, mine: !!mine, last: L, note, out: gap != null && gap <= 0 };
+  }
+  const phHbsNow = name => { const h = name ? phHbsOf(name) : null; return h ? h.v : ""; };
+  // she said Stopping on or after day d (these herbs' dispense day): no run-out reminder for them
+  function phHbsStoppedSince(name, d) { const r = name ? phPatientPeek(name) : null, s = r && r.herbsSay; return !!s && typeof s === "object" && Object.keys(s).some(k => (!d || k >= d) && s[k] === "stop"); }
+  function phHbsWrite(name, v) {
+    const rec = phPatientRec(name); if (!rec) return false;
+    const tk = keyOf(TODAY);
+    rec.herbsSay = rec.herbsSay && typeof rec.herbsSay === "object" ? rec.herbsSay : {};
+    if (PH_HBS_LBL[v]) rec.herbsSay[tk] = v; else delete rec.herbsSay[tk];
+    if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return false; }
+    presAcuHerbInstruct = v === "cont";   // Still taking on the Treatment page is this same answer
+    return true;
+  }
+  // Still taking on the Treatment page: her tap there, or Continuing today
+  function presAcuHbIn() {
+    if (presAcuHerbInstruct === true) return true;
+    const t = (PRESC.items || []).find(x => x.id === presOpenId), n = t ? presPatientFor(t) || t.name || "" : "";
+    return !!n && phHbsNow(n) === "cont";
+  }
+  function phHbsLineHtml(name) {
+    const h = phHbsOf(name); if (!h) return "";
+    const bar = `<span class="ph-meal-bar" role="radiogroup" aria-label="Herbs">${Object.keys(PH_HBS_LBL).map(k => `<button type="button" class="${h.v === k ? "on" : ""}" data-hbs-set="${k}" role="radio" aria-checked="${h.v === k}">${PH_HBS_LBL[k]}</button>`).join("")}</span>`;
+    return `<div class="ph-hbs" data-hbs-line="${esc(name)}"><span class="l">Herbs</span>${h.last.fx ? `<b>${esc(h.last.fx)}</b>` : ""}${h.note ? `<em${h.out ? ' class="out"' : ""}>${esc(h.note)}</em>` : ""}${bar}</div>`;
+  }
+  function phHbsChipHtml(name) {
+    const h = name ? phHbsOf(name) : null; if (!h) return "";
+    const opt = k => `<button type="button" data-hbs-set="${k}" role="menuitemradio" aria-checked="${k === h.v}">${PH_HBS_LBL[k]}${k === h.v ? `<i class="tk" aria-hidden="true">✓</i>` : ""}</button>`;
+    const menu = presHbsMenu ? `<div class="vkm" role="menu">${Object.keys(PH_HBS_LBL).map(opt).join("")}</div>` : "";
+    const tip = ["Herbs", h.last.fx, h.note].filter(Boolean).join(" · ");
+    return `<div class="ph-flow-sub keep g-vk g-hbs${presHbsMenu ? " open" : ""}"><button type="button" class="vk" data-hbs-open="1" aria-haspopup="menu" aria-expanded="${presHbsMenu}" title="${esc(tip)}"><svg class="icn" aria-hidden="true"><use href="#i-leaf"></use></svg><span class="l">${h.v ? "Herbs: " + PH_HBS_LBL[h.v] : "Herbs"}</span><svg class="icn cv" aria-hidden="true"><use href="#i-chev-d"></use></svg></button>${menu}</div>`;
+  }
+  // in place: the line(s), the rail (its chip, the Herbs step, Next) and the Treatment page's Still taking
+  function phHbsPaint(name) {
+    document.querySelectorAll("#pharmacyPage [data-hbs-line]").forEach(n => { if (n.dataset.hbsLine === name) n.outerHTML = phHbsLineHtml(name); });
+    presFlowRailRefresh();
+    try { if (document.querySelector("#pharmacyPage [data-pres-acu-herbinstruct]")) presAcuOpenRefresh(); } catch (e) { /* the Treatment page is not open */ }
+  }
+  document.addEventListener("click", e => {
+    const T = e.target; if (!T || !T.closest) return;
+    if (T.closest("#pharmacyPage [data-hbs-open]")) { presHbsMenu = !presHbsMenu; presFlowRailRefresh(); return; }
+    const el = T.closest("#pharmacyPage [data-hbs-set]"); if (!el) return;
+    const t = (PRESC.items || []).find(x => x.id === presOpenId), name = t ? presPatientFor(t) || t.name || "" : "";
+    presHbsMenu = false;
+    if (!name) { presFlowRailRefresh(); return; }
+    if (phHbsWrite(name, el.dataset.hbsSet)) phHbsPaint(name);
+  });
   // the chip under her name (pick 1): the kind, a tap opens the three kinds, A–Z, and "Read from the booking" once she has set one
   function phVkChipHtml(f) {
     const k = f.vk; if (!k) return "";
@@ -106486,7 +106570,8 @@ Difficult to sweat|no_sweat_tend:r`;
     const profileDone = !!(rec && rec.sex && rec.dob);
     const planDone = plans.some(p => p.status === "active" && (p.phases || []).some(ph => ph.status === "current") && (p.phases || []).some(ph => phTpSessionsOf(ph) > 0));
     const treatDone = !!(rec && (rec.acuSessions || []).some(s => s.date === today));
-    const dispDone = !!(t.lastDispensedAt && keyOf(new Date(t.lastDispensedAt)) === today);
+    const hbsV = phHbsNow(name);   // her answer at the start of the visit (2026-11-19): Continuing or Stopping = no herbs to give today
+    const dispDone = !!(t.lastDispensedAt && keyOf(new Date(t.lastDispensedAt)) === today) || hbsV === "cont" || hbsV === "stop";
     // her ask (2026-10-16, "i need a menstrual/ivf/cycle step/section purely for tracking that"): the
     // Timeline page (egg collection/transfer/scans/bloods, pregnancy weeks) was a sub-tab buried under
     // Treatment Care Plan -- promoted to its own numbered step, only on the plan types that already
@@ -106544,7 +106629,7 @@ Difficult to sweat|no_sweat_tend:r`;
         { id: "plan", label: "Care Plan", small: "phases · sessions", done: planDone, on: onPlan && (tab === "plan" || (!plan && !np && tab !== "patterns" && tab !== "patdx")), go: "plan" },
         { id: "treatment", label: phVkIsAcu(vkK) ? "Acupuncture" : "Treatment", small: phVkIsAcu(vkK) ? "points · record" : "today's session", done: treatDone, on: onPlan && (!!plan || np) && tab === "treatment", go: "treatment" },
         // an acupuncture patient's Herbs is a "+ Herbs" row, no step, until a formula is started (her 2026-11-18 pick 7)
-        { id: "dispense", label: "Herbs", small: "dispense · label", done: dispDone, on: presStage === "dispense", stage: "dispense", last: true, hbAdd: phVkIsAcu(vkK) && !phVkHasFormula(t, name) },
+        { id: "dispense", label: "Herbs", small: hbsV === "stop" ? "stopping" : hbsV === "cont" ? "still taking" : "dispense · label", done: dispDone, on: presStage === "dispense", stage: "dispense", last: true, hbAdd: phVkIsAcu(vkK) && !phVkHasFormula(t, name) },
       ].filter(s => !(vkK === "herb" && s.id === "treatment")).map((s, i, a) => ({ ...s, n: a.slice(0, i).filter(x => x.id !== "plan" && !x.hbAdd).length })),   // a herbs patient has no Acupuncture step (her 2026-11-18 pick 6)   // a first visit has no Better / worse (her 2026-11-18 pick 3); the Care Plan is no numbered step (her 2026-11-18 "it needs to be an option": its own row under Herbs)
       subs: (plan ? [
         { id: "notes", label: "Notes", sub: subOf("notes"), on: onPlan && tab === "notes" },
@@ -106789,7 +106874,7 @@ Difficult to sweat|no_sweat_tend:r`;
         Object.assign({}, patStep), herb ? { id: "herbs", label: "Herbs", small: "what I take", done: false, on: !!herb.on, solo: true, attr: `data-flow-prof="herbs"` } : null].filter(Boolean).map((s, k, all) => Object.assign(s, { n: k + 1, last: k === all.length - 1 }));
       const tmHtml = `<div class="ph-flow-sub keep g-tm"><span class="cap">Treat myself</span></div>` + tm.map(s => stepHtml(s) + (s.id === "mck" ? `<div class="ph-flow-sub keep plan${mckDone ? " done" : ""}">${mck.map(profBtn).join("")}</div>` : "")).join("");
       inner = `${who}${openGrp("day", "My day", meG("day"), "prof")}${tmHtml}${openGrp("life", "Life", meG("life").filter(u => !foldOf(u)), "prof")}${footHtml("mefile", "My file", meG("file"), [], ["patient", "medhx", "ren", "log", "bloods", "supplements", "photos"], 3, "prof")}${foot}`;
-    } else { const vkHtml = phVkChipHtml(f); inner = f.first ? `${who}${vkHtml}${fileHtml}${careHtml}${recHtml}${foot}` : `${who}${vkHtml}${careHtml}${fileHtml}${recHtml}${foot}`; }
+    } else { const vkHtml = phVkChipHtml(f) + (f.first ? "" : phHbsChipHtml(presPatientFor(t) || t.name || "")); inner = f.first ? `${who}${vkHtml}${fileHtml}${careHtml}${recHtml}${foot}` : `${who}${vkHtml}${careHtml}${fileHtml}${recHtml}${foot}`; }
     let sig = 0; for (let i = 0; i < inner.length; i++) sig = (sig * 31 + inner.charCodeAt(i)) | 0;   // lets a repaint skip an identical rail
     return `<div class="ph-flow-rail${mini ? " mini" : ""}" id="presFlowRail" role="tablist" aria-label="Where you are" data-sig="${sig}"><div class="ph-rail-in">
       ${inner}
@@ -127889,7 +127974,7 @@ Difficult to sweat|no_sweat_tend:r`;
     // table for a pain patient whose compass has no pain rows yet (her 2026-10-19 ask, phPfPainBlockHtml)
     const cx = phCxCardHtml(t, plan);
     const ren = phTvRenHtml(name, cx);   // the steps card (her 2026-11-19 two columns) holds Came in for as step 1, empty or not
-    const ask = (ren.indexOf('class="ph-tvs') >= 0 ? "" : cx) + ren + phTodayNudgesHtml(name, rec) + phMskWarnHtml(rec) + (phMskApplies(rec) && cx.indexOf('data-cx-pain="1"') < 0 ? phPfPainBlockHtml(name) : "");
+    const ask = phHbsLineHtml(name) + (ren.indexOf('class="ph-tvs') >= 0 ? "" : cx) + ren + phTodayNudgesHtml(name, rec) + phMskWarnHtml(rec) + (phMskApplies(rec) && cx.indexOf('data-cx-pain="1"') < 0 ? phPfPainBlockHtml(name) : "");
     // Treat: Fang Bing Ren's quick assess (return visits) above the three steps; the phase review on a phase's last visit (part 2)
     const treat = plan ? phTodayCarePlanEssentialsHtml(name, plan) : "";   // + the cycle review (part 3, step 5)
     setTimeout(phTodayStickyTop, 0);
@@ -141698,7 +141783,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const checkItems = !activePlan || !treatedPhase || presAcuNoTreatment ? [] : [
       { id: "ask", done: presAcuTicks.has("ask"), html: `<b>Ask</b> ${watchChips.length ? esc(watchChips.join(" · ")) : "how things have been since last visit"}` },
       { id: "needle", done: presAcuTicks.has("needle") || loggedToday, html: `<b>Needle</b> ${chosenPts.length ? esc(chosenPts.join(", ")) : "<span class=\"mut\">no points planned</span>"}` },
-      { id: "herbs", done: dispensedToday || presAcuHerbInstruct || presAcuTicks.has("herbs"), html: `<b>Herbs</b> ${dispensedToday ? "given today" : `${esc(instructFormula)} <span class="mut">· dispense or instruct to continue</span>`}` },
+      { id: "herbs", done: dispensedToday || presAcuHbIn() || presAcuTicks.has("herbs"), html: `<b>Herbs</b> ${dispensedToday ? "given today" : `${esc(instructFormula)} <span class="mut">· dispense or instruct to continue</span>`}` },
       { id: "book", done: !!nextBooking || presAcuTicks.has("book"), html: `<b>Book</b> ${nextBooking ? `next visit ${esc(schedDateStr(nextBooking.date))}` : `next visit <span class="mut">· ${treatedPhase.cadence ? esc(treatedPhase.cadence) : "as the plan says"}</span>`}` },
       { id: "log", done: loggedToday, html: `<b>Log</b> today's session` },
     ];
@@ -141745,7 +141830,7 @@ Difficult to sweat|no_sweat_tend:r`;
       Object.keys(presTsOut).some(k => k.startsWith("o:")) || ["tongue", "pulse", "abdomen"].some(id => phTodayDonePart(rec, id)) ? "objfind" : "",
       presAcuNoTreatment || (todaySign && todaySign.cm) || (presVisitFndDraft && !phVisitFndEmpty(presVisitFndDraft)) ? "findings" : "",
       presAcuNoTreatment || loggedToday || presAcuPointsChecked !== null || presAcuPointsCustom.length || presAcuTicks.has("needle") ? "needle" : "",
-      dispensedToday || presAcuHerbInstruct || presAcuTicks.has("herbs") ? "herbs" : "",
+      dispensedToday || presAcuHbIn() || presAcuTicks.has("herbs") ? "herbs" : "",
       nextBooking || presAcuTicks.has("book") ? "next" : "",
       loggedToday ? "log" : "",
     ].filter(Boolean);
@@ -141773,14 +141858,14 @@ Difficult to sweat|no_sweat_tend:r`;
       </div>
       <div class="ph-acu-row2">
         <span class="lbl">Herbs</span>
-        <span class="${dispensedToday || presAcuHerbInstruct ? "" : "faint"}">${dispensedToday ? "✓ given today" : presAcuHerbInstruct ? "✓ still taking" : "none today"}</span>
+        <span class="${dispensedToday || presAcuHbIn() ? "" : "faint"}">${dispensedToday ? "✓ given today" : presAcuHbIn() ? "✓ still taking" : "none today"}</span>
       </div>
       ${!dispensedToday ? `<div class="ph-acu-row2 ph-acu-herbactions">
         <span class="lbl"></span>
         <span class="ph-acu-herbcol">
           <button type="button" class="ph-acu-phasechip ph-acu-fdd${presAcuFPickOpen ? " open" : ""}${fPop ? " pop" : ""}" data-pres-acu-fpick="1" aria-expanded="${presAcuFPickOpen ? "true" : "false"}" title="Today's formula: tap to pick another"><span class="nm"><svg class="ph-cc-svgic" aria-hidden="true"><use href="#i-leaf"/></svg> ${esc(fChip)}</span> ▾</button>
           <button type="button" class="ph-acu-phasechip ph-acu-herbbtn" data-pres-acu-dispensenew="1" title="Open Dispense with ${esc(instructFormula)}">Dispense</button>
-          <button type="button" class="ph-acu-phasechip ph-acu-herbbtn${presAcuHerbInstruct ? " on" : ""}" data-pres-acu-herbinstruct="1" aria-pressed="${presAcuHerbInstruct ? "true" : "false"}" title="No new herbs today: they keep taking ${esc(instructFormula)}">${presAcuHerbInstruct ? "✓ Still taking" : "Still taking"}</button>
+          <button type="button" class="ph-acu-phasechip ph-acu-herbbtn${presAcuHbIn() ? " on" : ""}" data-pres-acu-herbinstruct="1" aria-pressed="${presAcuHbIn() ? "true" : "false"}" title="No new herbs today: they keep taking ${esc(instructFormula)}">${presAcuHbIn() ? "✓ Still taking" : "Still taking"}</button>
           ${presAcuFPickOpen ? phAcuFPickHtml(name, activePlan, treatedPhase) : ""}
         </span>
       </div>` : ""}
@@ -151042,7 +151127,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const actPop = !frozen && presAcuFActOpen
       ? `<div class="ph-tx-actpop">${actAll.concat(fActs.filter(a => !actAll.includes(a))).map(a => `<button type="button" class="${fActs.includes(a) ? "on" : ""}" data-pres-acu-fact-opt="${esc(a)}" aria-pressed="${fActs.includes(a) ? "true" : "false"}">${esc(a)}</button>`).join("")}</div>` : "";
     const hplan = pick(".ph-acu-hplan");
-    const green = `<div class="ph-tx-blk green"><div class="bh">Herbs<span class="sp"></span><span class="nt">${given ? "✓ given today" : presAcuHerbInstruct ? "✓ still taking" : "none today"}</span></div>${herbActs}${actChip || hplan ? `<div class="ph-tx-hplan">${actChip}${hplan}</div>` : ""}${actPop}</div>`;
+    const green = `<div class="ph-tx-blk green"><div class="bh">Herbs<span class="sp"></span><span class="nt">${given ? "✓ given today" : presAcuHbIn() ? "✓ still taking" : "none today"}</span></div>${herbActs}${actChip || hplan ? `<div class="ph-tx-hplan">${actChip}${hplan}</div>` : ""}${actPop}</div>`;
     const life = rowVal("Lifestyle");
     const watch = `<div class="ph-tx-l2 watch"><b>Watch</b><div>${td2div(P.watchText)}${life}</div></div>`;
     const planNote = (phase.comments || "").trim() ? `<div class="ph-tx-l2"><b>Plan note</b>${td2div(P.comments)}</div>` : "";
@@ -155155,7 +155240,9 @@ Difficult to sweat|no_sweat_tend:r`;
     const rated = Object.keys((acu && acu.subj) || {}).map(k => `${phSignLabel(k)} · ${acu.subj[k].gone ? "gone" : acu.subj[k].o}`);
     const ask = [acu && acu.askNote ? acu.askNote : "", ...(acu && acu.observedSigns ? acu.observedSigns : []), ...rated].filter(Boolean);
     const herbs = node.dispenses.map(d => d.formula || d.what).filter(Boolean);
-    const herbsText = herbs.length ? herbs.join(", ") : acu && acu.herbInstructed ? `continued${acu.herbInstructedFormula ? ` ${acu.herbInstructedFormula}` : ""}` : "";
+    const hsv = rec && rec.herbsSay && typeof rec.herbsSay === "object" ? rec.herbsSay[node.date] : "", hsw = PH_HBS_LBL[hsv] || "";   // her start-of-visit answer that day
+    const herbsBase = herbs.length ? herbs.join(", ") : acu && acu.herbInstructed ? `continued${acu.herbInstructedFormula ? ` ${acu.herbInstructedFormula}` : ""}` : "";
+    const herbsText = hsv === "cont" && !herbs.length ? `Continuing${acu && acu.herbInstructedFormula ? ` ${acu.herbInstructedFormula}` : ""}` : [hsw, herbsBase].filter(Boolean).join(" · ");
     const therapiesOn = (acu && Array.isArray(acu.treatmentTherapies) ? acu.treatmentTherapies : []).filter(t => t.on);
     const therapiesText = therapiesOn.length ? therapiesOn.map(t => t.label).join(", ") : "";
     const did = [];
@@ -167315,10 +167402,12 @@ Please let me know if you have any questions.`;
         }
       }
       const dispensedOnDay = phAcuHerbsOn(name, session.date);
-      if (!dispensedOnDay && presAcuHerbInstruct) {
+      if (!dispensedOnDay && presAcuHbIn()) {
         session.herbInstructed = true;
         if (herbFormulaName) session.herbInstructedFormula = herbFormulaName;
       }
+      // her start-of-visit herbs answer: a pre-pick she never changed is kept as said, on the day the visit is saved (her 2026-11-19 picks)
+      if (session.date === keyOf(TODAY)) { const hv = phHbsNow(name); if (hv && !(rec.herbsSay && rec.herbsSay[session.date])) { rec.herbsSay = rec.herbsSay && typeof rec.herbsSay === "object" ? rec.herbsSay : {}; rec.herbsSay[session.date] = hv; } }
       // her pick 2026-09-18 (synth22 item 2, "C · Both"): a blank
       // Planned Formula fills itself from today's herb instruction too
       // -- applies regardless of noTreatment, same as the instruction
