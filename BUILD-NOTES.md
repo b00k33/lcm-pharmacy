@@ -16502,3 +16502,24 @@ Her words: "mock this page to radicaly make it more simple with just essentials 
   sign's drawer under their rows; no sideways scroll at 360. tap-audit.js + style-audit.js on the card at 1240 and 360 against the build
   before: nothing new but the area dots' colours (area marks, the colour law's "every other colour a mark"); gone: the 9px SIGN tags. Left
   as before: the wide card's 56 x 32 answer dots, the phone's 12.5px switches, the Main name's tap height (now two lines on a phone).
+
+## 2026-11-19: Came in for: a first-visit step, Bing-only lists (SAVED, not live)
+- **Her words** (on a new patient's file, the Tongue page open): "where do i find her chief complaint and symptoms page", "this is critical
+  in the workflow"; then, on the box's list of Periods & cycle / Fertility / IVF / Menopause / Pain ...: "the came in for row only uses
+  treatment plan options. this should be only for bing".
+- **Measured:** her 2026-11-18 sidebar pick 3 hid "Better / worse" on a first visit, and that page is the only one that draws Came in for
+  (`phTodayVisitHtml`), so a first-visit file had no row leading to the chief complaint once she left it. The "What brought her in?" box
+  listed `PH_CC_FAMS` (Care Plan types); "+ Add" searched Bing AND Ren signs (the same words twice for a twin).
+- **Done:** `presFlowSteps` keeps the step on a first visit as **"Came in for"** ("complaint · symptoms", done = a chief complaint on file),
+  the rail draws it, and `presVisitNext` puts it first while a first visit has no chief complaint. `phCcSecSignOptions` = Bing signs only,
+  best-scoring matches, A–Z, 8 at most, no Pulse / Tongue / Tongue coat finding (my call: a finding is hers to see, not the patient's to
+  bring); `phCcMenuPaint` lists her words + those signs (no plan types; nothing while empty); `phCcAddSign` saves the sign's words as the
+  chief complaint, ticks it Yes (`phCcSignYes`, shared with "+ Add") and remembers it (`complaint.mainFbrKey`, cleared by new words,
+  read by `phFbrCcList` only while the words are still that sign's); the list rows show with capitals (`phSymLab`). `phCcAddFam` went.
+  The box is 32px with 6px corners and its rows 32px (tap-audit.js found 36px / 999 and 29.5px).
+- **Tested** (pretend patient "Test Newone", never her records) at 1440 and 360: first visit rail = Her file, 1 Came in for, 2 Exam ...;
+  Next up = Came in for, then Ren once a complaint is in; an empty box lists nothing; "irreg", "insomnia", "period pain", "anxiety", "hot
+  flush", "menopaus" list Bing signs only; a pick saved "Diagnosis: menopausal syndrome", Care Plan type Menopause read from it, its sign
+  Yes, the step ticked; "+ Add" → "sleep" listed Bing sleep signs, a pick saved and ticked; the three-part table drew both. tap-audit.js
+  + style-audit.js on the box with its list open: nothing left. Not exercised: the booking card's Came in for box (it lists nothing, saves
+  words through `phCcSetWords` as before).
