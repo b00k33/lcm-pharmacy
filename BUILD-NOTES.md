@@ -16703,3 +16703,5 @@ same list.
   Pain step still fits 915px (bottom 903); Palpate is `1fr 1fr` (was 1.2fr 1fr) so a long list wraps three chips a row; the MP tag
   `.mk2-ch .mps` 600 13px (was 700 11px); the phone's `.mk-btn` 32px with 6px corners. Left: at 1220 x 887 a pain with many
   muscles (the front of the shoulder: 20) plus that row runs ~40px past the screen on Palpate.
+- **One way forward a step** (MY call, after the save): the page's own foot button (`.ph-pres-stage-next`, "Tests & scans") showed
+  under every step beside "Next: <step>"; it now shows only on Re-test, where the steps' Next stops (CSS `:has(.ph-msk[data-mk-step])`).
