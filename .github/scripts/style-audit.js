@@ -22,7 +22,12 @@
      main action = the solid page colour (--ph-herb, the Case colour on a Case page). chipLooks lists a line over 1px, a solid fill in
      another teal, and chip words not 600; `looks` counts the distinct chip looks on the page (fewer is better). Rows, fold heads and
      the rail are not chips (the same KEEP idea as tap-audit.js).
-   A build is done when offSizes, offWeights, chipLooks and sideLines are empty (or each line left is on purpose, with her word). */
+   - ROWS LINE UP (her 2026-11-19 "the rows are disjointed" + "add to the code to ensure that for future builds"): in a table or a
+     grid of rows, every box sits under its column head and on the row's one line. rowAlign lists: "wraps" (a cell's boxes sit on two
+     lines, e.g. a chip dropped under a name), "spills" (a box sticks out past its cell), "off head" (a grid row's cell starts more than
+     4px from its head's cell) and "centre" (boxes in one row whose middles differ by more than 4px). A box that opens under its row on
+     purpose sits in its own row (a sub-row), never wrapped inside a cell.
+   A build is done when offSizes, offWeights, chipLooks, sideLines and rowAlign are empty (or each line left is on purpose, with her word). */
 (function (W) {
   const D = W.document;
   const SCALE_PC = [20, 18, 13, 11.5, 10.5], SCALE_PH = [16, 13, 11.5, 11];
@@ -80,7 +85,43 @@
       const thick = sides.filter(x => x.w >= 2 && x.st !== "none" && x.f && x.f !== "neutral");
       if (thick.length === 1 && sides.filter(x => x.w > 0 && x.st !== "none").length === 1 && (thick[0].s === "Left" || thick[0].s === "Right")) note(side, thick[0].s.toLowerCase() + " " + thick[0].f, el);
     });
+    // ROWS LINE UP: tables with a head row, and CSS-grid rows that share their column template with a head row before them
+    const rowA = new Map(), BOX = "button, select, input:not([type=hidden]):not([type=checkbox]):not([type=radio]), textarea, summary, [role=button]";
+    const shown = el => { const st = cs(el), r = el.getBoundingClientRect(); return st.display !== "none" && st.visibility !== "hidden" && r.width > 0 && r.height > 0; };
+    const boxesIn = cell => [...cell.querySelectorAll(BOX)].filter(b => shown(b) && !b.closest("[hidden], details:not([open]) > :not(summary)") && b.closest("td, th, [data-row-cell]") === cell.closest("td, th, [data-row-cell]"));
+    const cellCheck = (cell, rowEl) => {
+      const bs = boxesIn(cell); if (!bs.length) return [];
+      const cr = cell.getBoundingClientRect();
+      bs.forEach(b => { const r = b.getBoundingClientRect(); if (r.right > cr.right + 2 || r.left < cr.left - 2) note(rowA, "spills", b, label(rowEl)); });
+      const tops = bs.map(b => b.getBoundingClientRect()), mids = tops.map(r => r.top + r.height / 2);
+      if (bs.length > 1 && Math.max(...tops.map(r => r.top)) >= Math.min(...tops.map(r => r.bottom)) - 2) note(rowA, "wraps", cell, label(rowEl));
+      return mids;
+    };
+    root.querySelectorAll("table").forEach(t => {
+      if (!shown(t) || !t.querySelector("thead th, tr > th")) return;
+      t.querySelectorAll("tbody > tr").forEach(tr => {
+        if (!shown(tr) || tr.cells.length < 2) return;   // a sub-row (one cell across) opens under its row on purpose
+        const mids = [...tr.cells].flatMap(td => cellCheck(td, tr));
+        if (mids.length > 1 && tr.cells.length > 1 && Math.max(...mids) - Math.min(...mids) > 4 && ![...tr.cells].some(td => boxesIn(td).length > 1)) note(rowA, "centre", tr, label(t));
+      });
+    });
+    root.querySelectorAll("*").forEach(head => {
+      const st = cs(head); if (st.display !== "grid" || !shown(head) || head.children.length < 2) return;
+      const tpl = st.gridTemplateColumns, sib = head.parentElement; if (!sib) return;
+      const isHead = [...head.children].every(c => !c.matches(BOX) && !c.querySelector(BOX)) && /[A-Za-z]/.test(head.textContent || "");
+      if (!isHead) return;
+      let n = head.nextElementSibling, rows = 0;
+      while (n && rows < 60) {
+        const ns = cs(n);
+        if (ns.display === "grid" && ns.gridTemplateColumns === tpl && shown(n)) {
+          rows++;
+          const hc = [...head.children].filter(shown), rc = [...n.children].filter(shown);
+          rc.slice(0, hc.length).forEach((c, i) => { if (Math.abs(c.getBoundingClientRect().left - hc[i].getBoundingClientRect().left) > 4) note(rowA, "off head", c, label(n)); cellCheck(c, n); });
+        }
+        n = n.nextElementSibling;
+      }
+    });
     const out = m => [...m.values()].sort((a, b) => b.n - a.n);
-    return { mode: (phone ? "phone " : "desktop ") + W.innerWidth, scale, texts, sizes, offSizes: out(offS), offWeights: out(offW), chipLooks: out(chipL), looks: looks.size, offColours: out(offC), sideLines: out(side) };
+    return { mode: (phone ? "phone " : "desktop ") + W.innerWidth, scale, texts, sizes, offSizes: out(offS), offWeights: out(offW), chipLooks: out(chipL), looks: looks.size, offColours: out(offC), sideLines: out(side), rowAlign: out(rowA) };
   };
 })(window);
