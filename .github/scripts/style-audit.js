@@ -93,8 +93,10 @@
       const bs = boxesIn(cell); if (!bs.length) return [];
       const cr = cell.getBoundingClientRect();
       bs.forEach(b => { const r = b.getBoundingClientRect(); if (r.right > cr.right + 2 || r.left < cr.left - 2) note(rowA, "spills", b, label(rowEl)); });
-      const tops = bs.map(b => b.getBoundingClientRect()), mids = tops.map(r => r.top + r.height / 2);
-      if (bs.length > 1 && Math.max(...tops.map(r => r.top)) >= Math.min(...tops.map(r => r.bottom)) - 2) note(rowA, "wraps", cell, label(rowEl));
+      const outer = bs.filter(b => !bs.some(o => o !== b && o.contains(b))), tops = outer.map(b => b.getBoundingClientRect()), mids = tops.map(r => r.top + r.height / 2);
+      // a wrapped row = boxes on more than one line AND some line holding two or more (a list that stacks one box a line is fine)
+      const lines = []; tops.forEach(r => { const l = lines.find(x => Math.abs(x.mid - (r.top + r.height / 2)) < r.height / 2); if (l) l.n++; else lines.push({ mid: r.top + r.height / 2, n: 1 }); });
+      if (lines.length > 1 && lines.some(l => l.n > 1)) note(rowA, "wraps", cell, label(rowEl));
       return mids;
     };
     root.querySelectorAll("table").forEach(t => {
@@ -102,13 +104,16 @@
       t.querySelectorAll("tbody > tr").forEach(tr => {
         if (!shown(tr) || tr.cells.length < 2) return;   // a sub-row (one cell across) opens under its row on purpose
         const mids = [...tr.cells].flatMap(td => cellCheck(td, tr));
-        if (mids.length > 1 && tr.cells.length > 1 && Math.max(...mids) - Math.min(...mids) > 4 && ![...tr.cells].some(td => boxesIn(td).length > 1)) note(rowA, "centre", tr, label(t));
+        const ctops = [...tr.cells].filter(shown).map(td => td.getBoundingClientRect().top), sideBySide = ctops.length > 1 && Math.max(...ctops) - Math.min(...ctops) <= 4;   // a phone card (cells stacked) has no one line to share
+        if (sideBySide && mids.length > 1 && tr.cells.length > 1 && Math.max(...mids) - Math.min(...mids) > 4 && ![...tr.cells].some(td => boxesIn(td).length > 1)) note(rowA, "centre", tr, label(t));
       });
     });
     root.querySelectorAll("*").forEach(head => {
       const st = cs(head); if (st.display !== "grid" || !shown(head) || head.children.length < 2) return;
       const tpl = st.gridTemplateColumns, sib = head.parentElement; if (!sib) return;
-      const isHead = [...head.children].every(c => !c.matches(BOX) && !c.querySelector(BOX)) && /[A-Za-z]/.test(head.textContent || "");
+      // a column head: three or more short labels (2+ with words), no boxes; a lone label row (one text beside an empty cell) is not a head
+      const hk = [...head.children], said = hk.filter(c => /[A-Za-z]/.test(c.textContent || ""));
+      const isHead = hk.length >= 3 && said.length >= 2 && hk.every(c => !c.matches(BOX) && !c.querySelector(BOX) && (c.textContent || "").trim().length <= 30);
       if (!isHead) return;
       let n = head.nextElementSibling, rows = 0;
       while (n && rows < 60) {
