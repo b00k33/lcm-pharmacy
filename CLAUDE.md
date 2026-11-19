@@ -579,6 +579,8 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   dark heads, cards and bands; All templates' coloured groups; the Guide; the Dispense head, jar art and her herb-row green.
   The sweep that applied it and the hand block "COLOUR AUDIT 2026-11-02" (before `</style>`) are in BUILD-NOTES "Colour
   audit (2026-11-02)". A new rule follows the law by hand; outlined buttons' words are ink (teal stays on the line).
+  Kept by her word 2026-11-20: Inventory rows washed by their active supplier (Koda faded green, GMP lighter green, KPC faded
+  yellow, Evergreen faded orange, made in house white; `phInvSupRowCls`).
 - **Her Body pages are one app (her 2026-11-02 "make these pages have a consistency where they look like the come from the
   same app"; her 8 picks):** Cycle · Meals · Herbs · Fitness · Habits use the app's shapes in the page colour (`--ph-herb`, her
   record's Case colour), never a status green, C22's green or black: Buttons 6px with the colour's line (words ink), ONE solid per

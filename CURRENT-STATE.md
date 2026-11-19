@@ -602,8 +602,8 @@ label (calculates first when needed), 3 Log; Log is always its own tap, never au
 · cost · profit. Desktop (≥901px): the one-screen `.ph-dsp-fit` layout, supply-by-days chips (7/10/14/21/28), one Blood-moving
 caution line (`.ph-dsp-caution`), the "Plan formula" pour-in, and the script + label in full in the right column, every herb with
 no inner scroll, the label in full under it, the right column the one scroller (her pick) [Dispense: the script moved into the
-right column]. A single herb's name in the herb table carries a 32px book circle that opens How it's used beside the table
-(`phHuOpen`; a sheet on the phone; Esc closes the card only) [How a herb is used]. **The green head names the formula her herbs make** (her synth22 2026-11-17, `phRxFmlHeadHtml`): the classics (`PH_HU_SRC`) and her own formulas, up to one herb missing, a stand-in counting (`PH_RX_STANDIN`), two formulas joined named both, then what differs ("+ Fu Ling − Da Zao"); the name opens its Guide card; worked out when drawn, never stored [The formula her herbs make]. **The per-herb shelf → after bar is the herb table's In stock column** (checked 2026-11-02, at 1440 and 375; the OPEN line that called it not built was stale): "50 → 20 g" with a bar whose fill is the share of the shelf left after this bag (`presIngStockCellCore`; green; gold once it lands at or under the low line; red "short N g" when the bag takes more than the shelf holds, "out" at zero), eased in place on every grams / dose change (`presIngStockRefresh`). Grams follow the herb total, and a manual Grams figure survives
+right column]. No book circle on a herb row (her 2026-11-20 "i dont need this book icon in prescription page. only in the
+inventory"): How it's used lives in the herb's Inventory drawer and Guide › Herbs [How a herb is used]. **The green head names the formula her herbs make** (her synth22 2026-11-17, `phRxFmlHeadHtml`): the classics (`PH_HU_SRC`) and her own formulas, up to one herb missing, a stand-in counting (`PH_RX_STANDIN`), two formulas joined named both, then what differs ("+ Fu Ling − Da Zao"); the name opens its Guide card; worked out when drawn, never stored [The formula her herbs make]. **The per-herb shelf → after bar is the herb table's In stock column** (checked 2026-11-02, at 1440 and 375; the OPEN line that called it not built was stale): "50 → 20 g" with a bar whose fill is the share of the shelf left after this bag (`presIngStockCellCore`; green; gold once it lands at or under the low line; red "short N g" when the bag takes more than the shelf holds, "out" at zero), eased in place on every grams / dose change (`presIngStockRefresh`). Grams follow the herb total, and a manual Grams figure survives
 Log [Dispense: Log silently discarded a manual Grams figure]. A substitute picker includes stopped/phasing-out herbs when stock
 allows.
 
@@ -695,7 +695,9 @@ A row in Urgent stock opens the edit drawer; the name is plain text.
 
 **Twin jars and batch makers (her 2026-11-01 data-check picks; BUILD-NOTES "Data check"):** Inventory's ⋯ shows "Twin jars · n" while a supplier code sits on two jars (`phTwinPairs`); the sheet lists each pair with the keeper by rule (not stopped, then stock on it, then the latest dispense) and Merge moves the twin's grams, its history (`herbId` / `targetId` in the log, stocktakes, price reviews, an open count) and its name (`h.aka`, read by `findHerbByName`) onto the keeper, with Undo in the one toast and one `herb-merge` log line. Stock movements' Source column reads the maker of every batch (`phRefillMaker`: the entry's own source, else the jar's, else In house; the three make paths record it from now); the CSV carries it too.
 **Inventory (her pick "Lean table, the row opens the rest"; LIVE, 81514da3):** Name · Supplier · Bottle $ · Stock (g) ·
-Level · ⋮; the row opens the edit drawer, the name is plain text; the other columns wait in Columns (`PH_INV_LEAN_HIDDEN`; her
+Level · ⋮; **each row washed by its active supplier** (her 2026-11-20 words: Koda faded green, GMP lighter green, KPC faded yellow,
+Evergreen faded orange, made in house white; any other supplier or none keeps the old look; `phInvSupRowCls`, the edit boxes a
+lighter shade of the row; phone rows too); the row opens the edit drawer, the name is plain text; the other columns wait in Columns (`PH_INV_LEAN_HIDDEN`; her
 saved set was moved once by `phMigrateInvLean`). The ⋮ menu holds Add to order. A Bottle $ worked out from $/g is plain
 faint figures in its field. **The edit drawer** (`#phHerbForm`; her 2026-11-01 audit): Essentials (Formula source only for a
 formula), Suppliers & pricing and Notes folded, Clinical reference, How it's used (a single herb only: `phHerbUseFill`, the Guide's Herbs card), Stock history ("No movements" + Adjust stock); one label
@@ -1205,7 +1207,7 @@ pictures].
 `phGdHerbPick` updates in place). The card (`phHuCardHtml`, one card for all three places) is **In your prescriptions** (times used,
 usual grams, most-often partners and her recipes, worked out from `PRESC.items` when drawn, never stored: `phHuOwn`) over **In the
 classics** (Formula · Dose · With · Does; 52 formulas in `PH_HU_SRC`, marked Draft until she checks them; the book's "Shao Yao"
-counts for Bai Shao and Chi Shao); hers first since her 2026-11-02 "move the classics after my formulas". The same card is the herb drawer's "How it's used" and the Dispense herb table's book circle.
+counts for Bai Shao and Chi Shao); hers first since her 2026-11-02 "move the classics after my formulas". The same card is the herb drawer's "How it's used" (the Dispense herb table's book circle came out 2026-11-20, her word).
 On a phone the Does column folds under the formula's name [How a herb is used]. In Guide › Herbs only, a Hide bar above Your formula (her 2026-11-05 words): No longer stocked = Phase out or no jar in the inventory; Temporarily stopping = a stopped jar; each with its count, a mark on every affected row, off until she picks, kept on the device (`lcm-gd-herb-hide`); Dispense and the Inventory drawer list them all [Guide: hide formulas no longer stocked].
 
 ## Guide — Iron (a teaching page)
