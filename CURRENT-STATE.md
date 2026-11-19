@@ -685,6 +685,17 @@ sheet on the phone); Cancel a chip, Save the one solid; Edit the move, Open the 
 list ⋯ and row ⋮ circles; the row and dialog fields tint; the notices filters and How they did joined bars; Print / Export the
 Button.
 
+**Patient profile on a computer is one table (her 2026-11-19 "make this view more simple", pick "one table, i dont need fang bing ren
+cycle prescription columns"):** `plTableHtml` inside `renderPresList` (over 900px): `.ph-plt`, the white card; columns Patient (600) ·
+Age (`phAgeOf` + sex) · Last (`phRelShort`, a red dot when not seen 6+ months, the full date on hover) · Booked (today's times) · Grams;
+the four bands are its group rows (`tr.grp`, a 32px fold circle, `data-ph-pl-collapse`; "Show n more", `data-ph-pl-more`); a found
+finding is a row under its patient (`tr.sx`). A row carries `data-pres-row-open` AND `data-pres-open`, so a tap or Enter opens the
+patient through the one `presOpen` path (a drag or a text selection still does not). Select ticks rows as before (the tick in the
+Patient cell). The filters are ONE joined bar (`.ph-pl-fbar.ph-tng2-seg`, `data-pres-filter`; All · Today · Drafts · Not seen 6+ mo ·
+No history, the count in each) moved after the search; no tiles; Schedule is a 32px calendar circle ("Schedule a dispense" on hover);
+the search gives way to 220px and the row keeps 76px for Select, so the tool row is one line at 1220 with the sidebar open. The bar:
++ New patient alone, the other four actions in its ⋯ (`PH_TOPBAR_ACTIONS` `more: true`). The phone (640px and under) and 641–900px are
+unchanged. The paragraph below is the list before it.
 **Patient profile list on a computer (her audit: "make it more space saving make it cleaner") [Patient profile list audit]:** the
 five tiles are the filters (tap again = all; "No history" only while anyone has none), no Filters button or chip row; "Schedule"
 sits in the toolbar while nothing is scheduled (the quiet line hides); no list head line unless searching ("N match ..."); bands
