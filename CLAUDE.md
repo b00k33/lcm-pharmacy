@@ -318,6 +318,18 @@ colour, the others faint; a tap on the body adds a pain there); a typed complain
 info · How long · ★ Main · Remove. Nothing open = just the list. The slider sits beside the name (the name column 320px at most) and
 Progress is a column a visit (names 200px, 72px a visit, capitals), never the card's full width. Never move the body drawing back
 behind a menu, or spread these over the card's width, without her word.
+**Came in for on a computer is ONE table, Galcott's page her model (her 2026-11-19 "i like the galcot functionality where i can see
+where i need to input data nad the essentials are show and the table format is very easy to see", pick A of
+`mocks/better-worse-table-mock-2026-11-19.html`; then "audit so theres not too many different fonts - keep it simple" and "audit the
+chips as well to keep it consistent with the app code"; memory project_lcm_better_worse_galcott_2026_11_19):** one header band (the
+column names in capitals on the pale tint): Complaint · How long · First · Last · Today · Change · More info (a first visit: Complaint ·
+How long · Today · More info). Main complaint / Also came in for / Signs to check are bands; Energy is a row (am · pm · ev, three boxes).
+Where she types is a white 32px box on a shaded row (an empty score box has the colour's line): Today's score (Enter = the next box),
+More info; Change is worked out from Last (a dot and Better / Same / Worse with the move, never typed); a sign is the app's joined bar
+Gone · Better · Same · Worse. The ▾ by a name opens its details under the row. Two text sizes only (13, the capitals 10.5), weights
+400 / 600 / 700; every box, chip and circle the app's own (32px, 6px corners, `.ph-tng2-seg` for the bar). No slider, no Progress
+table, no ⋯ on a row in it; the chart opens from ⋯ › Chart only. A phone keeps its own list. Never bring the sliders or a second
+type size back into it without her word.
 **Today's visit is a steps table where the Ren card was open (her 2026-11-19 "this looks poorly designed. soo wide, no visual
 workflow / i prefer table formats", pick B of `mocks/first-visit-table-mock-2026-11-19.html`; then "move the energy to the ren section
 and merge it with the fang bing ren energy filtering diagnostics"; memory project_lcm_first_visit_tables_2026_11_19; BUILD-NOTES
