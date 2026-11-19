@@ -789,6 +789,19 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
 - **Grid + Progress:** `.ph-cx.b .ph-cx-rows` = `minmax(180px, 320px) 224px minmax(0, 1fr)`; `.ph-cx-pgt` table `width: auto`,
   `col.c0` 200px, a visit 72px, row names `phSymCase`. Phone: the card is the narrow one (no ▾); its Add / + Pick areas are 28px.
 
+## Today's visit steps table (2026-11-19, her pick B)
+- `phTvRenHtml(name, cxHtml)`: open + called from `phTodayVisitHtml` (cxHtml = the empty Came in for card, or null) = `phTvStepsHtml`
+  (`.ph-tvs`, still `data-tvren-host`); folded = the one Ren line. `phTvStepsOn(name)` = the Ren card open (first visit or her tap).
+- Steps: `cc` (Came in for: the empty card inside, `data-tvs-up` when it has complaints = scroll to the table above), one per Ren row
+  (`rq:<subject>`, Energy first: `PH_RQ_LOOK` now starts with Energy; its pane = `.ph-tvs-en` am/pm/ev grid with `data-en` taps, then
+  `phRqOneHtml`), `wt` (the `data-tvren-wt` box). View state `phTvStep` (pk -> "cc" | "rq" | "wt"); untouched = the first not done.
+- Taps: `[data-tvs-go]` / `[data-tvs-next]` in the tvren click listener; Ren's Next on its last row goes to Weight. `phTvRenRefresh`
+  recomputes the Came in for card; a first complaint redraws the page (`renderPresPanel`) so the table moves above. `phEnRefresh`
+  repaints the steps table; the Energy click handler reads the name from `[data-en-name]` too.
+- While the steps show: no Energy line in the empty Came in for card, no Energy row in the Came in for table (`phTvStepsOn`).
+- `PH_RQ_SHORT`: vitality_intact_tend Good, fatigue_tend Low, listless_tend Listless, weak_after_illness_tend Weak after illness,
+  fatigue_pulse_sunken_lax Low, sunken pulse.
+
 ## Musculoskeletal page
 **The panel beside the area cards (2026-11-18, synth22 mock E):** three white cards, Diagnosis (a chip per area, its diagnosis or
 name; the picked one is the area + Point adds to, `phMskLit`), Signs (Area / Finding / Side from today's palpation, movements, tests

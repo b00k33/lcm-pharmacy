@@ -318,6 +318,17 @@ colour, the others faint; a tap on the body adds a pain there); a typed complain
 info · How long · ★ Main · Remove. Nothing open = just the list. The slider sits beside the name (the name column 320px at most) and
 Progress is a column a visit (names 200px, 72px a visit, capitals), never the card's full width. Never move the body drawing back
 behind a menu, or spread these over the card's width, without her word.
+**Today's visit is a steps table where the Ren card was open (her 2026-11-19 "this looks poorly designed. soo wide, no visual
+workflow / i prefer table formats", pick B of `mocks/first-visit-table-mock-2026-11-19.html`; then "move the energy to the ren section
+and merge it with the fang bing ren energy filtering diagnostics"; memory project_lcm_first_visit_tables_2026_11_19; BUILD-NOTES
+"Today's visit steps table"):** one 760px card: the steps down the left as a table (number or ✓, name, answer), the step she is on
+beside it (its title 18px), None / Next · (next step) moving down; the steps are 1 Came in for (an empty Came in for box sits inside
+the step; once it has a complaint the Came in for table sits above the card and the step scrolls to it), then REN: Energy (the day's
+am · pm · ev 1-10 numbers over Fang Bing Ren's Energy signs, Good · Low · Listless · Weak after illness · Low, sunken pulse; the numbers
+tick Low at 5 or under, Good at 8 or over, as before), Build, Face, Skin, Lips, Eyes, Muscles, then Weight. Energy is Ren's first row
+everywhere (the Ren page's tabs too); while the steps table shows, the Came in for table has no Energy row of its own. A phone shows
+the step first, the list under it. Folded (a return visit, or her tap) it is the one Ren line as before. Never bring back the
+full-width Energy line or the tabs-only Ren card without her word.
 **Her three patients: Herbs · Acu · musculoskeletal · Acu · internal disease (her 2026-11-18 three workflows, "sometimes i will suggest
 herbs"; her 8 picks, all the recommended one; memory project_lcm_three_patient_types_2026_11_18; BUILD-NOTES "Her three patients"):**
 the kind is READ, never stored (`phVisitKind`): a herbs-only booking (`phApptHerbsOnly`) = Herbs; any other booking, or none =
