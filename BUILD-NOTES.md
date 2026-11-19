@@ -16479,3 +16479,26 @@ Her words: "mock this page to radicaly make it more simple with just essentials 
 **Her ask:** a screenshot of Today's visit (a Perimenopause plan, an MSK booking) with "see the visual issues?".
 **Found and fixed:** (1) the rail's rows ran about 35px past its edge, under the page (Book appt., the kind chip, the lit row, the Care Plan row cut mid-word): the long Care Plan phase name (nowrap) widened `.ph-rail-in`'s one auto grid track, so every row grew; the track is now `minmax(0, 1fr)`, rows `min-width: 0`, the phase name ends in … with its full name in the hover. Measured: the track was 208.7px in the plain sandbox (already 12px past its 196px room) and 415px with a long phase name; now 196px both ways. (2) The Compass's sign rows and complaints were lower case ("Periods: irregular", "period pain"): shown with capitals through `phSymCase` (saved as written; the row's tap opens its history, it never edits the words). (3) The % box beside a score drew as a pill (the app-wide box rule's `--field-radius`) at 22px: 6px corners, 32px, 13px. (4) Two identical ⋯ at the end of Came in for (Options and the pain tools): the pain tools button reads "Pain ▾" (her 2026-10-27 pick 7 put them behind a ⋯; the menu and its parts are unchanged).
 **Tested (sandbox):** a long phase name keeps the rail at 196px with nothing cut; the sign rows read "Periods: Painful", "Energy: Weak After Illness or Overwork"; the % box 6px / 32px; "Pain ▾" opens the same menu. tap-audit + style-audit on Today's visit at 1440: none; at 360: nothing from this change (the page's own: the band name and back, the profile search pill, the Compass's Add and + Pick areas, the Sign tag 9px). **Not tested:** her real record.
+
+## 2026-11-19: Came in for in three parts: Main complaint · Also came in for · Signs to check (SAVED, not live)
+- **Her words:** a screenshot of the wide Came in for card, "this looks disorganised. i cant see clearly whats main complaint and whats
+  additional symptoms. mock improvement".
+- **Measured** (a pretend patient shaped like her screenshot): the Main was a small MAIN tag inside its area group; her complaints
+  (sliders) and the Fang Bing Ren / cycle / notes signs (Gone · Better · Same · Worse) sat mixed inside each area; one "Complaint | Gone
+  Better Same Worse" heading stood over both kinds.
+- **Her 8 picks** (three mocks A / B / C, then popups; all the recommended one): 1 three parts (A) · 2 the Main large on a soft tint ·
+  3 every starred Main in the Main part, stacked · 4 Gone · Better · Same · Worse over the signs only · 5 signs by area under small grey
+  area names · 6 how many signs show: as before · 7 a sign's subject small and grey, the rest with capitals · 8 the same parts on a phone.
+- **Done:** `phCxModel` builds M.parts { main, also, sx: [{ g, rows }], nSx } after the area groups (g.rows stays for the chart and
+  Same as last time) and the asked order (M.rows) follows the parts; `phCxPartHdHtml` + `phCxPartsHtml` draw the parts for both cards
+  (the wide card's "Complaint" heading row went; the 641-900 card keeps its column heading row; a row's drawer under its row; the pain
+  map's Add pain after the complaints; "+ n more signs" after the signs); `phCxRowHtml(.., pt)` draws a Main (`.pm`: 18px / 16px phone,
+  bold, the area's colour at 9% behind it, the area and how long under the name) and an Also row (`.pa`: an area dot); a sign's subject
+  is `i.sj` (11.5px grey, no colon); the SIGN tag is hidden on the sign rows; the area names over the signs are grey; an area's "Same as
+  last time" takes its signs only (`phCxRestSame` reads "<area>|sx"). "Complaints · n" when no complaint is starred.
+- **Tested** (pretend patient "Test Peri", never her records) at 1440, 1240, 1040 (the 641-900 card) and 360: the parts and their counts;
+  two Mains stacked; no Main; a slider on the Main saved and the asked row moved on to Period Pain (the first Also row); a sign's Better
+  saved; Same as last time on Mind & sleep set its signs to Same and left its complaints alone; "+ 3 more signs"; a complaint's and a
+  sign's drawer under their rows; no sideways scroll at 360. tap-audit.js + style-audit.js on the card at 1240 and 360 against the build
+  before: nothing new but the area dots' colours (area marks, the colour law's "every other colour a mark"); gone: the 9px SIGN tags. Left
+  as before: the wide card's 56 x 32 answer dots, the phone's 12.5px switches, the Main name's tap height (now two lines on a phone).

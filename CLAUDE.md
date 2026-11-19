@@ -270,6 +270,15 @@ Supplements (confirm) and Blood tests (if new). Then: the complaint compass →
 Cycle (if on) → Tongue · Pulse · Abdomen → Fang Bing Ren as **one line: what
 shifted** → (Timeline, on a fertility plan) →
 Treatment Care Plan as **one line: phase, session** → Treatment → Dispense.
+**Came in for in three parts (her 2026-11-19 "i cant see clearly whats main complaint and whats additional symptoms"; her 8 picks, all
+the recommended one; memory project_lcm_came_in_for_three_parts_2026_11_19; BUILD-NOTES "Came in for in three parts"):** the table is
+MAIN COMPLAINT (every starred complaint, her order, large on a soft tint of its area's colour, the area and how long under it, no Main
+tag) · ALSO CAME IN FOR · n (her other complaints, her order, an area dot before each; "Complaints · n" when none is starred) · SIGNS TO
+CHECK · n (by area under small grey area names, the areas in her complaints' order; a sign on the bar first; no SIGN tag; the subject small
+and grey, the words with capitals; "+ n more signs" at its end, the caps as before). Gone · Better · Same · Worse is named over the signs
+only (a wide card, from the next visit on). The asked order and the panel's Next follow the parts (`phCxModel` M.parts, `phCxPartsHtml`).
+An area's "Same as last time" takes that area's signs only (`data-cx-rest="<area>|sx"`). The same three parts on a phone. Never mix her
+complaints and the signs in one list again without her word.
 **Her three patients: Herbs · Acu · musculoskeletal · Acu · internal disease (her 2026-11-18 three workflows, "sometimes i will suggest
 herbs"; her 8 picks, all the recommended one; memory project_lcm_three_patient_types_2026_11_18; BUILD-NOTES "Her three patients"):**
 the kind is READ, never stored (`phVisitKind`): a herbs-only booking (`phApptHerbsOnly`) = Herbs; any other booking, or none =
