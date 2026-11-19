@@ -789,7 +789,13 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
 - **Grid + Progress:** `.ph-cx.b .ph-cx-rows` = `minmax(180px, 320px) 224px minmax(0, 1fr)`; `.ph-cx-pgt` table `width: auto`,
   `col.c0` 200px, a visit 72px, row names `phSymCase`. Phone: the card is the narrow one (no ▾); its Add / + Pick areas are 28px.
 
-## Today's visit steps table (2026-11-19, her pick B)
+## Today's visit steps table (2026-11-19, her pick B; two columns since her same-day "Yes, build it")
+- **Now:** the card is the page's full width and first on Today's visit; the list 240px, the step beside it. `phTvRenHtml(name, cx)`
+  always gets the Came in for card (empty or full) and `cc`'s pane is that card + Next; nothing above the card. `phCxRefresh` inside the
+  card repaints the card at its own width and calls `phTvStepsSync(name)` (the list + the head's words only); `phCcRefresh` and
+  `phCcSavedFlash` call it too, so step 1's ✓ shows the moment a complaint saves. The step is kept in `phTvStep` as drawn. A step tap
+  blurs a box in the card first (the repaint skips a focused box). The lines below about `data-tvs-up` and the table above the card are
+  history.
 - `phTvRenHtml(name, cxHtml)`: open + called from `phTodayVisitHtml` (cxHtml = the empty Came in for card, or null) = `phTvStepsHtml`
   (`.ph-tvs`, still `data-tvren-host`); folded = the one Ren line. `phTvStepsOn(name)` = the Ren card open (first visit or her tap).
 - Steps: `cc` (Came in for: the empty card inside, `data-tvs-up` when it has complaints = scroll to the table above), one per Ren row

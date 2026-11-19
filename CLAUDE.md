@@ -321,9 +321,11 @@ behind a menu, or spread these over the card's width, without her word.
 **Today's visit is a steps table where the Ren card was open (her 2026-11-19 "this looks poorly designed. soo wide, no visual
 workflow / i prefer table formats", pick B of `mocks/first-visit-table-mock-2026-11-19.html`; then "move the energy to the ren section
 and merge it with the fang bing ren energy filtering diagnostics"; memory project_lcm_first_visit_tables_2026_11_19; BUILD-NOTES
-"Today's visit steps table"):** one 760px card: the steps down the left as a table (number or ✓, name, answer), the step she is on
-beside it (its title 18px), None / Next · (next step) moving down; the steps are 1 Came in for (an empty Came in for box sits inside
-the step; once it has a complaint the Came in for table sits above the card and the step scrolls to it), then REN: Energy (the day's
+"Today's visit steps table"):** **two columns, the page's full width (her 2026-11-19 "mock 2 column layout, audit the style color size to make it simple and has
+good workflow", "Yes, build it"):** the steps down the left as one 240px list (number or ✓, name, answer), the step she is on beside it
+(its title 18px), None / Next · (next step) moving down, no progress dashes (the list's ✓ is the progress); the steps are 1 Came in for
+(Came in for's own box or table IS this step's page, flat, its own label hidden, empty or full; never above the card, never on another
+step; its ✓ and answer show the moment a complaint saves), then REN: Energy (the day's
 am · pm · ev 1-10 numbers over Fang Bing Ren's Energy signs, Good · Low · Listless · Weak after illness · Low, sunken pulse; the numbers
 tick Low at 5 or under, Good at 8 or over, as before), Build, Face, Skin, Lips, Eyes, Muscles, then Weight. Energy is Ren's first row
 everywhere (the Ren page's tabs too); while the steps table shows, the Came in for table has no Energy row of its own. A phone shows
