@@ -917,6 +917,11 @@ draw and never stored (the alert stays in the sidebar only). Patient details has
 Specialist, GP, Midwife). A transfer's ✎ fields end with the Embryo transfer note (Time, Doctor, Grade, Lining, Peak E2, OHSS; Pre-ET /
 Post-ET points and Advice given), stored on the transfer. BUILD-NOTES "Visit summary card, care team, Embryo transfer note".
 
+## Medicines with doses (2026-11-20)
+The Supplements page (rail: "Medicines & supplements") opens with a Medicines table (`rec.meds`: name, dose, since, taking / stopped), the
+supplements table's look. A medicine matching `PH_MED_CAUTION` (DRAFT) shows "Herb caution · kind" in its row and as a chip on the visit
+summary, whose Medicines line reads this list. BUILD-NOTES "Medicines with doses".
+
 ## Musculoskeletal page
 **One step at a time (2026-11-19, her 8 picks; BUILD-NOTES "Musculoskeletal one step at a time"):** the 5-step bar is the page's tabs
 (`phMskStep`, `data-mk-step` on the host; opens on the first step not done; Next at a step's foot). Pain = the body as tall as the

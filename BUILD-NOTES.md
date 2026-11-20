@@ -16945,3 +16945,25 @@ transcribing to note take. but i need that information organised into lcm so i c
 - **Tested** (pretend patient, drawn data): 1220 x 887: Abdomen Today row "+ full / distended − flat" on one line under the row; Pulse
   "+ L Heart wiry − L Diaphragm deep" under the boxes (the page ~130px shorter); Tongue unchanged; 360 x 740 Abdomen one 258px line, page
   360 wide. tap-audit + style-audit on the three tables: only what was there before (Tongue's photo cell, the Pulse mini chart's 8px R / L).
+
+
+## 2026-11-20: Medicines with doses (her "build the medicine list with doses next")
+**Why:** the clinic notes she reviewed hold medicines as one free-text line ("Tacrolimus 2.5 mg AM / 3 mg PM, Prednisone 5 mg ...");
+LCM held them the same way, in the Taking prescribed medication row's note. Item 4 of the suggestions she was given.
+- **Built:** `rec.meds = [{ id, name, dose, since, on, stoppedAt, src, at }]` (`phMeds`, `phMedsTaking`), a Medicines table at the top of
+  the Supplements page (`phMedsHtml`), the supplements table's own look and controls (✓ taking / "stopped <date>" tick, ✕ with one
+  Undo, a Dose box, Since, "+ Medicine · Add", Enter adds and puts the cursor in its Dose). The rail item is now "Medicines &
+  supplements" and its count adds the medicines being taken. One write door: the `[data-med-add|tick|rm]` click and the
+  `[data-med-dose]` change. Adding one sets Medical history's Taking prescribed medication Yes (and Blood-thinning medication for a
+  blood thinner) only while unasked.
+- **Herb caution** (`PH_MED_CAUTION`, `phMedCaution`, DRAFT, hers to correct): immunosuppressants, blood thinners and narrow-margin
+  medicines matched by name (generic and common brand); read on draw, never stored: an amber "Herb caution · kind" tag in the row's
+  Herbs column and an amber "Herb caution · kinds" chip on the visit summary (opens this page). Amber = the Medical alert's own
+  colours (a mark, not a fifth UI colour).
+- **Visit summary:** the Medicines line reads the list (name + dose, A to Z) and opens this page; the Medical history notes only while
+  the list is empty. A patient merge keeps both lists (`PH_MERGE_OWN_RULE` + the suppOwn-style union).
+- **Tested** (sandbox, Test Patient, 1280 and 360): add by Enter (cursor lands in Dose), dose saved on change, stop / start, ✕ then
+  Undo, Medical history rows set, the caution tags, the rail count, the summary chip and line. tap-audit / style-audit: nothing new
+  except the ✕ (28px) and the "stopped" tick, the supplements table's own controls reused as they are there. Phone: the table scrolls
+  sideways at 580px like the supplements table. Not tried: her real records (the imported patients' medicines move into the list as
+  a data step after this is live).
