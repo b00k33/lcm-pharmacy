@@ -38,6 +38,7 @@
     ".field-bare", ".ph-qty-lock",                  // a bare box inside its own bordered box (the box is the measured one); a value she taps to edit (empty shows "—")
     ".ph-hx-qrow", ".ph-cx-row", ".ph-fbr-row", ".ph-diet-cell", ".ph-rx-card", ".ph-fu-summary", ".ph-tp-fm", ".ph-dose-step-main",   // question rows, tiles and cards that tap
     ".ph-cx.b .pills.w .ph-cx-pill",                 // Today's visit: a sign's four answer cells, a 56x32 target with its dot drawn inside (her 2026-11-18 "i like b")
+    ".ph-vsum-ln",                                  // the visit summary card's fact lines: a row that opens its page (her 2026-11-20 "build all three")
     "[data-keep-size]"                              // a control she agreed to keep at its own size: say which in the build note
   ].join(", ");
   const TAP = "button, select, a[href], input:not([type=hidden]), textarea, [role=button], [role=tab], [role=option]";

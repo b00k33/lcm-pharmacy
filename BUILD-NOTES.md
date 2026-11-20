@@ -16856,3 +16856,34 @@ underline, stack when narrow.
   popup on an untouched side fills it too; her own words on a line save (`desc`); Table view draws; `phFbrKeyCheck()` []. tap-audit and
   style-audit empty at 1220 and 360. Built shot `shots/pulse-page-built-2026-11-20.jpg`. Rebuilt on 0589f6d0 (another session's
   intake work) before committing. Not tried: her real patients, an earlier-day chart moving aside on the first tap.
+
+
+## 2026-11-20: Visit summary card, care team, Embryo transfer note (her "build all three")
+**Her words:** after reading a clinic's shared notes system (every note copies a Protocol / Day of cycle / Meds / PMH / WM Dx block
+forward by hand; a structured Embryo Transfer form; the IVF clinic, GP and midwife typed into every note), she saw a mock of three
+builds (`mocks/` not kept: an inline mock in the chat) and said "ok", then "build all three".
+- **1 · Visit summary card** (`phVsumHtml`, refreshed by `phVsumRefresh` from `phTodayCycRefresh`): the top of the Better / worse
+  (Came in for) step, `phTodayVisitHtml`. Head chips: the live phase (`phTpLivePhase`, opens the Care Plan), Pregnant · weeks
+  (`phPregAnchor` + `phPregWk`) or CD n (`phCycleComp`), the next Stims / Egg collection / Transfer on an IVF plan (`phIvfDatesRead`,
+  else an upcoming transfer on her IVF history), Next visit (`phTodayNextVisitKey`). Lines (`.ph-vsum-ln`, a row that opens its
+  page; only when there is a fact): Medicines (the Taking prescribed / Blood-thinning medication rows' notes), Allergies, History
+  (her Yes conditions A to Z, not family, medication or pregnancy rows), Last scan (the latest `row.scans` entry up to today, lining
+  and `PH_IVF_SCAN_BLOODS`), Care team, Last visit (`phSeenDays`). Nothing stored; every part read where it lives. The medical alert
+  is NOT repeated in it: it already shows in the sidebar on every page (the mock had it as a chip).
+- **3 · Care team** (`PH_CARE_FIELDS`, `phCareTeamWords`): a third card on Patient details (IVF clinic · Specialist · GP ·
+  Midwife), the Contact card's own field look; `rec.care = { clinic, doctor, gp, midwife }`, one write door (the `[data-pres-care]`
+  change handler, saved on change, never re-rendered). The partner keeps its own existing "+ Partner" link (not a care-team field).
+  Built as labelled fields, not the mock's chips, so the card matches Contact and Body beside it.
+- **2 · Embryo transfer note** (`phIvfEtNoteHtml`): under a transfer's ✎ fields, labelled 32px boxes Time · Doctor · Grade ·
+  Lining mm · Peak E2 · OHSS, then the app's joined bar (`.ph-tng2-seg` + `.ph-ltr-qual`) Pre-ET points · Post-ET points · Advice
+  given (phone: Pre-ET · Post-ET · Advice). Stored on the transfer (`etTime`, `etDoctor`, `grade`, `lining`, `peakE2`, `ohss`,
+  `etPre`, `etPost`, `etAdvice`) through the existing `[data-ivf-tfield]` handler's whitelist and a new `[data-ivf-tflag]` click.
+  Doctor shows the care team's specialist as its placeholder; Lining the last scan's. The transfer's read line
+  (`phIvfTransferViewHtml` facts) shows them (her lining wins over the scan's).
+- **Audits:** `.ph-vsum-ln` joins tap-audit's KEEP and style-audit's NOT_CHIP (fact rows, like `.ph-cx-row`).
+- **Tested** (sandbox, Test Patient with a made-up IVF round, scan, transfer, alert, medicines, care team; 1280 and 360): the card
+  draws on the visit with every line; each line opens its page (Care team → Patient details checked by a click); care fields save and
+  clear on change and the card follows; transfer fields and marks save, survive a reload and show on the transfer; the Doctor and
+  Lining placeholders read the care team and the scan. tap-audit + style-audit: nothing from these parts at 1280 or 360 (the IVF page's
+  older egg-stage buttons are as before). Pages checked for the facts: Today's visit, Patient details, IVF history. Not tried: her
+  real records, a pregnant patient's weeks chip on the live data, the Timeline page.

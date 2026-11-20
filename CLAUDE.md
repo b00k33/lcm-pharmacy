@@ -232,6 +232,9 @@ dropdowns: A–Z. A new list is A–Z from its first build.
   as chips, the case's shared lines tinted); Ren's look rows and today's weight sit on Today's visit under the complaint, open on a
   first visit, one line after (the same answers as the Ren page, which stays for the full board). Never bring back a plans row,
   an exam tab row or the Pulse page's notes without her word.
+- **The visit summary card tops every visit (her 2026-11-20 "build all three", after a clinic's copy-forward notes):** `phVsumHtml` on the
+  Better / worse step, read on draw from where each fact lives (phase, weeks or CD, next IVF date, next visit; Medicines, Allergies,
+  History, Last scan, Care team, Last visit). It is her word for a summary card on the visit; the one-line Journey band stays retired.
 - **Musculoskeletal is one step at a time (her 2026-11-19 "i dont like the long scroll on this page. help redesign it", after "this is
   too small for me to click - make it larger in the context of the whole page"; 8 picks, all the recommended one):** the 5-step bar
   (Pain · Palpate · Diagnosis · Points · Re-test) is the page's tabs, one screen a step (`phMskStep`, the host's `data-mk-step`; a
