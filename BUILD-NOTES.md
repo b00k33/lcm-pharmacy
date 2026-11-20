@@ -16967,3 +16967,15 @@ LCM held them the same way, in the Taking prescribed medication row's note. Item
   except the ✕ (28px) and the "stopped" tick, the supplements table's own controls reused as they are there. Phone: the table scrolls
   sideways at 580px like the supplements table. Not tried: her real records (the imported patients' medicines move into the list as
   a data step after this is live).
+
+## 2026-11-20: Abdomen visits table under today's photo (SAVED, not live)
+- **Why:** after the match above I asked about the Abdomen table (in the narrow right panel its Findings column ran one word a line,
+  as it already did before today); her "Yes, fix it", then widget `lcm_abdomen_visits_table_fix_options` (Now / A Under the photo /
+  B Stay right, two lines): her picks A and "Under the photo".
+- **Done:** `phAbdHtml` hands the table to `phVisitAbdHtml` as `past` (drawn after `pn.photo` in `.ph-abd3-left`); the right panel's
+  tail keeps the Guide lines only. It is drawn on every paint (a keep-repaint too), and its refresher (`[data-exam-past]`) is unchanged.
+  The changes line sits under the words (the `:not(.pls)` 2 / -1 rule went). A phone (the halves stack): `.ph-abd3-left` is
+  `display: contents` while it holds the table, so the table takes `order: 2` after the sign tabs, where it was.
+- **Tested** (pretend patient): 1220 x 887: the table under the photo, each visit one line, Today "+ full / distended − flat" under its
+  words; tapping "flat" repaints the Today row in place (− flat goes), one table on the page. 360 x 740: tabs · drawings · Whole abdomen ·
+  photo · the sign panel · the table, page 360 wide. tap-audit + style-audit on the card: none.
