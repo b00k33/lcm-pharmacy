@@ -46568,7 +46568,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     let fbr = "";
     try { const id = ticked ? phFbrTop(rec, a.patient, phTriFam(a.patient)) : null, F = id ? PH_FORMULAS[id] : null; if (F) fbr = `<i class="dot" style="background:${(PH_FBR_HERB_COLOUR[id] || {}).bg || "var(--ph-herb)"}" aria-hidden="true"></i>${esc(F.name)}`; } catch (e) { /* a row never breaks on it */ }
     let cyc = "";
-    try { const x = phApptListCdOf(a); if (x) cyc = `${x.approx ? "~" : ""}Day ${x.comp.day} · ${esc(x.comp.phaseLabel)}`; } catch (e) { /* a row never breaks on it */ }
+    try { const x = phApptListCdOf(a), pg = x ? null : phApptPregOn(a); if (x) cyc = `${x.approx ? "~" : ""}Day ${x.comp.day} · ${esc(x.comp.phaseLabel)}`; else if (pg) cyc = `Pregnant${pg.wk ? ` · ${esc(pg.wk)}` : ""}`; } catch (e) { /* a row never breaks on it */ }
     const st = phApptLsStatus(a), warn = st.k === "short" || st.k === "zero";
     const g = t && t.totalGrams ? phFmtG(t.totalGrams) : "";
     // her 2026-11-19 picks: Summary (the booking's own words, else her last, else the record) + Goal (the plan's), the popup's own words
@@ -46651,7 +46651,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     return P && (P.comp || P.ivf || (P.plan && PH_TP_CYCLE_TEMPLATES.includes(P.plan.templateName))) ? phApptCdInfo(a) : null;
   }
   function phApptListCdHtml(a) {
-    const x = phApptListCdOf(a);
+    const x = phApptListCdOf(a), pg = x ? null : phApptPregOn(a);
+    if (pg) return `<span class="cdc" title="Pregnant${pg.wk ? ` · ${esc(pg.wk)}` : ""}">${pg.wk ? `<b>${esc(pg.wk)}</b>` : ""}<em>Pregnant</em></span>`;
     if (!x) return `<span class="cdc none" aria-label="No cycle day">—</span>`;
     const comp = x.comp;
     return `<span class="cdc" title="Cycle day ${comp.day} · ${esc(comp.phaseLabel)}${x.approx ? " (projected)" : ""}">${phApptCdGlyph(comp.day, x.len, 14)}<b>${x.approx ? "~" : ""}${comp.day}</b><em>${esc(comp.phaseLabel)}</em></span>`;
@@ -46814,7 +46815,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // the card for the selected booking: everything the old row cut off, in full
   function phApptLsCardHtml(a) {
     const k = phPatientKey(a.patient), rec = PHARMACY.patients && PHARMACY.patients[k];
-    const x = phApptLsPlanOf(a), brief = phApptBrief(a), cd = phApptListCdOf(a);
+    const x = phApptLsPlanOf(a), brief = phApptBrief(a), cd = phApptListCdOf(a), pg = cd ? null : phApptPregOn(a);
     const tracked = rec && phCycleOn(rec), fuDue = phApptFuDue(k, a.date);
     const dayTxt = a.date === keyOf(TODAY) ? "Today" : phDashShortDate(parseKey(a.date));
     const phone = rec && rec.phone ? String(rec.phone).replace(/[^\d+]/g, "") : "";
@@ -46845,6 +46846,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         <div class="stcell">${phApptStatusChipHtml(a, { long: true })}</div>
       </div>
       <div class="sec"><h6>${list.length ? "Treatment Care Plan" : "Came in for"}</h6>${planSec}${(() => { try { return phApptDueTagsHtml(phApptPlanDue(a), "ph-lsc-due"); } catch (e) { return ""; } })()}</div>
+      ${pg ? `<div class="sec"><h6>Pregnancy</h6><div class="cdbig">${pg.wk ? `<b>${esc(pg.wk)}</b>` : ""}<span>Pregnant</span></div></div>` : ""}
       ${cd ? `<div class="sec"><h6>Cycle day</h6><div class="cdbig">${phApptCdGlyph(cd.comp.day, cd.len, 34)}<b>${cd.approx ? "~" : ""}${cd.comp.day}</b><span>${esc(cd.comp.phaseLabel)}${cd.approx ? " · projected" : ""}</span></div></div>` : ""}
       ${textSec("Presenting focus", brief.focus, brief.focusSrc, "focus")}
       ${textSec("Treatment goal", brief.goal, brief.goalSrc, "goal")}
@@ -47134,7 +47136,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // cycle plan too (2026-10-02, her "animated icon of cd / ivf plan"): she
     // reads the cycle day AND the IVF phase, so both icons show.
     const ivf = !!(plan && plan.templateName === "IVF Protocol");
-    const comp = rec && phCycleOn(rec) && plan && PH_TP_CYCLE_TEMPLATES.includes(plan.templateName)
+    const comp = rec && phCycleOn(rec) && plan && PH_TP_CYCLE_TEMPLATES.includes(plan.templateName) && !phApptPregOn(a)
       ? (a.date === todayKey ? phCycleComp(rec) : a.date > todayKey ? phCycleCompAsOf(rec, parseKey(a.date)) : null) : null;
     return { k, rec, plans, plan, ph, idx: ph ? phs.indexOf(ph) : -1, n: phs.length, comp, ivf };
   }
@@ -140796,8 +140798,22 @@ Difficult to sweat|no_sweat_tend:r`;
   // on that date -- a past visit reads its real cycle day, not today's LMP
   // rolled back -- and only a date past the last logged cycle is projected
   // (approx). null: cycle off, no period logged, or before the first one.
+  // her 2026-11-20 word on the List ("nyssa is pregnant, not possible she is day 28"): the 2026-10-13 rule (phCycleTracked: a
+  // pregnant patient has no cycle to track) now reaches the bookings. A booking on or after the pregnancy's start
+  // (phPregStartOf: her plan's date, a positive test or a positive transfer) has no cycle day anywhere a booking shows one
+  // (List, popup, calendar block, Up next, a plan's visits table); the List and the popup say "Pregnant" with her weeks on
+  // that date (phPregWk, the file's own "Pregnant · 9w 2d"). A visit before the pregnancy keeps its cycle day.
+  function phApptPregOn(a) {
+    if (!a || a.service === "Break" || !a.patient || !a.date) return null;
+    const rec = phPatientPeek(a.patient);
+    if (!rec || !phCyclePregnantPositive(rec)) return null;
+    const s = phPregStartOf(rec);
+    if (s ? a.date < s : a.date < keyOf(TODAY)) return null;
+    return { wk: s ? phPregWk(phTpDayAdd(s, 28), a.date) : "" };
+  }
   function phApptCdInfo(a) {
     if (!a || a.service === "Break" || !a.patient || !a.date) return null;
+    if (phApptPregOn(a)) return null;
     const rec = phPatientPeek(a.patient);
     if (!rec || !phCycleOn(rec)) return null;
     const cyc = phCycleFor(rec);

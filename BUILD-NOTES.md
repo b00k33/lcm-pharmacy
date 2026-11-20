@@ -16783,3 +16783,18 @@ taking, Stopping = no Herbs today and no run-out reminders, anyone dispensed her
 - **Tested** (pretend herbs "Test Koda Herb" etc. and a pretend patient "Test Herb"; never her records) at 1220 x 887 and 360 x
   740: the herb rows keep 46px with no circle, no errors; every supplier's row its colour on the table and the phone list;
   tap-audit.js + style-audit.js: none left (the colour audit names the supplier washes, marks by her word).
+
+## 2026-11-20: A pregnant patient's booking has no cycle day (SAVED, not live)
+- **Her words**, on the Appointments List (Nyssa Jualim, ~9 weeks pregnant after IVF, read "~Day 28 · Ovulation"): "nyssa is pregnant,
+  not possible she is day 28".
+- **Cause:** the bookings' cycle day (`phApptCdInfo`, `phUnPhaseFor`'s `comp`) never read the 2026-10-13 rule (`phCycleTracked`: a
+  pregnant patient has no cycle to track), so a fertility plan kept projecting days from her last period.
+- **Done:** `phApptPregOn(a)`: pregnant on that booking's date = `phCyclePregnantPositive` and the date on or after `phPregStartOf`
+  (her plan's date, a positive test or a positive transfer; today on with no start date). Then no cycle day anywhere a booking shows one
+  (List, the row card's popup, the calendar block's meta line, Up next, a plan's visits table); the List's cycle cell and the popup read
+  "Pregnant · 9w 2d" (`phPregWk`, the file's own words); the block shows the plan's phase instead. A visit before the pregnancy keeps
+  its cycle day.
+- **Checked** (test copy, made-up "Mia Example" pregnant by a positive test, "Zoe Example" not; never her records): Mia's List cell
+  "Pregnant · 7w 5d", popup "Pregnancy 7w 5d", block "Stimulation", her 1 Sep visit still has its cycle day; Zoe unchanged
+  ("~Day 20 · Follicular"); no errors. **Needs her data:** Nyssa's row changes only if her file has the pregnancy (the "Pregnant?"
+  button in her file, or a positive transfer in IVF history).
