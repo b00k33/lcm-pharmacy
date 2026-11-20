@@ -17033,3 +17033,29 @@ cancelled (3 follicles)"); IVF history only holds egg collections and transfers,
 - **Tested** (sandbox, Test Patient, 1280 and 360): both adds, every box, Round change drops Result, ✕ then Undo, the fold count, the
   summary line. tap-audit / style-audit: none. Phone: scrolls sideways at 900px, Round words whole. Not tried: her real records (the
   imported patients' IUIs and cancelled rounds move in as a data step after this is live).
+
+## 2026-11-20: IVF history, this round first (her pick A)
+**Why:** her screenshot of a patient's IVF history and "improve the organisation, it was hard for me to see where i can record her egg
+collection results and estimate her transfer date". The counts sat inside a round's card under the egg picture and the frozen bank;
+a transfer's date took a month and year only, and an estimated day lived only on an IVF plan. Mock widget
+`lcm_ivf_history_reorganise_options` (A: this round first, folded rows; B: four tabs); her "Build A" (the four buttons out with it).
+- **Built:** the rail (`phIvfRailHtml(rec, name)`) is now a card holding the two boxes (`phIvfNowHtml`): Egg collection (Date, Eggs,
+  Mature, Fertilised, Blasts, PGT ok, Frozen; an egg freeze: Eggs, Mature, Frozen) and Transfer (Fresh | Frozen joined bar, Date with
+  a "~ estimate" tick on `t.dateEst`, Embryo day, Embryos, Outcome through the transfer's own `data-ivf-tfield` door). Each rail step
+  is a button that rings its box and puts the cursor in its first empty box. With no round yet the card reads "New round" and the
+  first value makes the round (and the transfer). The transfer the boxes write to: the one awaiting a result, else the dated / plan
+  one, else the last (`phIvfNowTransfer`). A fresh transfer with no day, or only an estimate, gets collection + 5 days, ticked; a day
+  she types stays and clears the tick. One write door `phIvfNowSet`; a plan-linked round's dates go through `phIvfDatesSet` so the
+  plan keeps up. Each change saves and repaints the card and the folded rows in place, the cursor kept (`phIvfNowRepaint`).
+- **Folded rows** (`phIvfSecsHtml`, `phIvfSecHtml`, open state a screen Set `phIvfSecOpen`, toggled in place): All rounds (the journey
+  + its add buttons) · Frozen bank (when any) · Partner · semen analysis · IUI & cancelled rounds · One egg through the lab, each
+  with its one-line summary. The Partner row, the two tables and the quick-log bar left the top of the page; the quick-log bar stays on
+  the Cycle funnel where it also lived.
+- **Phone rules** for today's three tables and the two boxes moved into the one PHONE REDESIGN block (they had been small 640px
+  blocks of their own); IVF history's add buttons, Use a frozen embryo and the room button reach 28px / 13px there.
+- **Tested** (sandbox, a made-up patient, 1280 and 360): Fresh with no day → collection + 5 ticked; a new collection day moves an
+  estimate, never a typed day; typed day clears the tick; tick on / off; Embryo day, Embryos; focus stays on the box she moved to;
+  a rail step rings its box; folded rows open and shut in place; a patient with no round gets "New round" and the first number makes
+  it; a repaint for another patient never touches the open page. tap-audit / style-audit: none at 1280; at 360 the rail's wrapped
+  steps (rowAlign "off head", the rail's own two-row phone layout, not a table) left as they are. Not tried: a plan-linked IVF round on
+  her real records (the path is the plan's own `phIvfDatesSet`).
