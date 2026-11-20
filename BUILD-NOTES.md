@@ -16979,3 +16979,12 @@ LCM held them the same way, in the Taking prescribed medication row's note. Item
 - **Tested** (pretend patient): 1220 x 887: the table under the photo, each visit one line, Today "+ full / distended − flat" under its
   words; tapping "flat" repaints the Today row in place (− flat goes), one table on the page. 360 x 740: tabs · drawings · Whole abdomen ·
   photo · the sign panel · the table, page 360 wide. tap-audit + style-audit on the card: none.
+
+## Saturdays are Lotus Healing Arts (2026-11-20)
+Her words, on a screenshot of Sat 21 Nov with Cliniko bookings tagged "CBD": "sat is for lotus healing arts". Cause: a booking's tag
+was the login's clinic (`phLocShort(PHARMACY.locName)`, or the practitioner "LINH" on the Acupreg login). Built the day's clinic
+(`phDayClin`, default Saturday → Lotus Healing Arts, editable "Saturdays at" in Hub › Money's rates, kept in the shared Me row) and
+used it for the block / list / popup tags of both logins, the Hub's clinic day (hours, key, income tile at her visit prices, not the CBD
+65% or admin week) and a trip's Where. Checked on a test copy (made-up bookings): Sat blocks of both logins read LOTUS, Fri still
+Acupreg, Mon none; Work tiles "all clinics · CBD · Acupreg · Lotus"; the setting emptied turns it off. Not changed: which login holds
+a Lotus booking (Cliniko's Saturday bookings stay in CBD's list, Halaxy's in whichever login added them); visit prices are one list.
