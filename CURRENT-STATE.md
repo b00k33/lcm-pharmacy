@@ -931,6 +931,12 @@ The Supplements page (rail: "Medicines & supplements") opens with a Medicines ta
 supplements table's look. A medicine matching `PH_MED_CAUTION` (DRAFT) shows "Herb caution · kind" in its row and as a chip on the visit
 summary, whose Medicines line reads this list. BUILD-NOTES "Medicines with doses".
 
+## Semen analysis (2026-11-20)
+IVF history has a table under the Partner row (`rec.semen`: date, vol, conc, total, prog, motile, morph, DFI, WBC, note), on the man's
+own file when he is a linked patient, otherwise on hers; both pages show both. Values outside the WHO 2021 range are amber (read on
+draw). Read by the Timeline's Partner semen analysis row, his Men's fertility tests and the visit summary's "Partner SA" line.
+BUILD-NOTES "Semen analysis".
+
 ## Musculoskeletal page
 **One step at a time (2026-11-19, her 8 picks; BUILD-NOTES "Musculoskeletal one step at a time"):** the 5-step bar is the page's tabs
 (`phMskStep`, `data-mk-step` on the host; opens on the first step not done; Next at a step's foot). Pain = the body as tall as the
