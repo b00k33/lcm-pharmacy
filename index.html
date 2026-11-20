@@ -107412,7 +107412,8 @@ Difficult to sweat|no_sweat_tend:r`;
   }
   function phPdAgeTagHtml(rec) {
     const age = phAgeOf(rec.dob);
-    return `<span class="ph-pd-tag" data-pd-age${age == null ? " hidden" : ""}>${age == null ? "" : age + " yrs"}</span>`;
+    const cn = rec.consent;   // her 2026-11-20 consent: on file from the intake form
+    return `<span class="ph-pd-tag" data-pd-age${age == null ? " hidden" : ""}>${age == null ? "" : age + " yrs"}</span>${cn ? `<span class="ph-pd-tag" title="${esc(phConsentLine(cn))}">Consent ${esc(phShortDate(cn.on))}</span>` : ""}`;
   }
   // her 2026-10-30 pick (mock details-extras-mock-2026-10-30.html, option A "where they are read"): the partner, the
   // addresses and the health fund are entered on the page that reads them -- IVF history's head, a booking's Delivery
@@ -164927,6 +164928,13 @@ Please let me know if you have any questions.`;
   // brand-new patient, in which case everything is simply "new") -- same
   // philosophy as phPatientMerge above: the record on file never silently
   // loses a value, a real conflict always gets an explicit per-field choice.
+  // one consent as words: "Acupuncture, Chinese herbal medicine · declined Cupping · signed Jane Citizen (guardian) · 20 Nov 2026"
+  function phConsentLine(c) {
+    if (!c) return "";
+    const N = { acu: "Acupuncture", herb: "Chinese herbal medicine", cup: "Cupping" };
+    const yes = ["acu", "herb", "cup"].filter(k => c[k] === "yes").map(k => N[k]), no = ["acu", "herb", "cup"].filter(k => c[k] === "no").map(k => N[k]);
+    return [yes.length ? yes.join(", ") : "No treatment", no.length ? `declined ${no.join(", ")}` : "", `signed ${c.name}${c.guardian ? " (parent / guardian)" : ""}`, phShortDate(c.on)].filter(Boolean).join(" · ");
+  }
   function phIntakeComputeDiff(row) {
     const rec = phPatientPeek(row.patient_name);
     const demo = row.demographics || {}, hist = phHxSplitHist(row.history), cyc = row.cycle || {};
@@ -165032,6 +165040,18 @@ Please let me know if you have any questions.`;
       });
     }
 
+    // Consent to treatment from the form (her 2026-11-20 "include a consent to Acupuncture/Chinese Herbal Prescription/Cupping Treatment
+    // section"): only a complete one counts (read ticked, a name, a Yes / No for each therapy)
+    const consentNew = [];
+    let consentData = null;
+    const cf = hist.consent;
+    if (cf && typeof cf === "object" && cf.read === true && String(cf.name || "").trim() && ["acu", "herb", "cup"].every(k => cf[k] === "yes" || cf[k] === "no")) {
+      consentData = { v: 1, on: /^\d{4}-\d\d-\d\d$/.test(cf.on || "") ? cf.on : keyOf(TODAY), name: String(cf.name).trim().slice(0, 120), guardian: !!cf.guardian, acu: cf.acu, herb: cf.herb, cup: cf.cup, src: "intake" };
+      const cur = rec && rec.consent;
+      if (!cur || cur.on !== consentData.on || cur.name !== consentData.name || ["acu", "herb", "cup"].some(k => cur[k] !== consentData[k])) {
+        consentNew.push({ key: "consent", label: "Consent", display: phConsentLine(consentData) });
+      }
+    }
     const cycleNew = [], cycleConflicts = [];
     const curCyc = rec ? (rec.cycle || {}) : {};
     const CF = { lmp: "Last period", cycleLen: "Cycle length (days)", flowDays: "Flow days", flowIntensity: "Flow", pain: "Period pain", regular: "Regular cycle", menarcheAge: "Menarche age", contraception: "Contraception", ttcMonths: "Trying to conceive (months)" };
@@ -165083,7 +165103,7 @@ Please let me know if you have any questions.`;
         diffs.forEach(([f, lbl]) => ivfConflicts.push({ key: `ivf${i}:${f}`, matchId: match.id, field: f, label: `Round of ${mLabel} · ${lbl}`, current: f === "when" ? phIvfDateLabel(match[f]) : String(match[f]), value: f === "when" ? phIvfDateLabel(c[f]) : String(c[f]) }));
       });
     }
-    return { rec, demoNew, demoConflicts, historyNew, historyConflicts, cycleNew, cycleConflicts, ivfNew, ivfConflicts, fbrNew, fbrData, suppNew, hasCycle: !!Object.keys(cyc).length };
+    return { rec, demoNew, demoConflicts, historyNew, historyConflicts, cycleNew, cycleConflicts, ivfNew, ivfConflicts, fbrNew, fbrData, suppNew, consentNew, consentData, hasCycle: !!Object.keys(cyc).length };
   }
   let phIntakeReviewRow = null, phIntakeReviewDiffData = null, phIntakeReviewChoices = {}, phIntakeReviewBusy = false;
   function phIntakeReviewOpen(id) {
@@ -165125,11 +165145,12 @@ Please let me know if you have any questions.`;
     const row = phIntakeReviewRow, d = phIntakeReviewDiffData;
     const isNewPatient = !d.rec;
     const totalConflicts = d.demoConflicts.length + d.historyConflicts.length + d.cycleConflicts.length + (d.ivfConflicts || []).filter(c => !c.rowChoice).length;
-    const totalNew = d.demoNew.length + d.historyNew.length + d.cycleNew.length + (d.ivfNew || []).length + (d.fbrNew || []).length + (d.suppNew || []).length;
+    const totalNew = d.demoNew.length + d.historyNew.length + d.cycleNew.length + (d.ivfNew || []).length + (d.fbrNew || []).length + (d.suppNew || []).length + (d.consentNew || []).length;
     const body = `
       <p class="ph-merge-lead">${isNewPatient ? `No existing record for <b>${esc(phTitle(row.patient_name))}</b> — applying creates one.` : `Comparing against <b>${esc(phTitle(row.patient_name))}</b>'s existing record.`}</p>
       ${row.applied_at ? `<p class="ph-merge-note">Updated answers: the patient opened the link again and sent it again. Only what changed is shown.</p>` : ""}
       ${totalConflicts ? `<p class="ph-merge-note"><svg class=icn aria-hidden=true><use href=#i-warn></use></svg> ${totalConflicts} field${totalConflicts === 1 ? "" : "s"} already ${totalConflicts === 1 ? "has" : "have"} a different answer on record — pick which to keep for each.</p>` : ""}
+      ${(d.consentNew || []).length ? phIntakeDiffSectionHtml("Consent to treatment", d.consentNew, []) : ""}
       ${phIntakeDiffSectionHtml("Your details", d.demoNew, d.demoConflicts)}
       ${phIntakeDiffSectionHtml("Medical history", d.historyNew, d.historyConflicts)}
       ${(d.suppNew || []).length ? phIntakeDiffSectionHtml("Supplements — onto the Supplements page", d.suppNew, []) : ""}
@@ -165245,6 +165266,10 @@ Please let me know if you have any questions.`;
       }
       // her ask 2026-10-13: the patient's Fang Bing Ren Yes answers go straight onto her signs (no per-answer choice): rec.fbrForm, dated the day
       // she sent the form (the Bing list is "the last few weeks"), read by phTriEffective as a pre-tick her own tap overrides. A newer form replaces it.
+      if ((d.consentNew || []).length && d.consentData) {
+        if (rec.consent) rec.consentHistory = (rec.consentHistory || []).concat([rec.consent]).slice(-10);
+        rec.consent = Object.assign({}, d.consentData, { appliedAt: Date.now() });
+      }
       if ((d.fbrNew || []).length) {
         rec.fbrForm = { v: 1, at: sentKey, p: {}, d: {} };
         d.fbrData.p.forEach(k => { rec.fbrForm.p[k] = true; });
