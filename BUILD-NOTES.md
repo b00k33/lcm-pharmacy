@@ -16914,3 +16914,23 @@ builds (`mocks/` not kept: an inline mock in the chat) and said "ok", then "buil
   photo picker (image/*); the healthy tongue opens in the row and closes; Sublingual (no photo) shows the 3 : 4 Add today's box; no photo
   at all = the chart at 200 and the small box. tap-audit.js + style-audit.js at 1220 and 360: only the table's photo cell (a picture,
   there before this build) is listed.
+
+## Cliniko → LCM: the bookmark, the paste, Cliniko visits (2026-11-20, her pick B + Heidi)
+Her words: "based on my patients this past week at sydney acupuncutre, go through patient detials and add to lcm ... i want all the
+information in one place", then (two ways offered: a Cliniko API key or a bookmark) "ok, b", then "for context, i use heidi
+transcribing to note take. but i need that information organised into lcm so i can see things visually".
+- **Built:** `cliniko-copy.html` (the bookmark, its three pictured steps; the script is the page's own text, made into the
+  `javascript:` link on load); in index.html `PH_CLK_*`, `phClkDay`, `phClkItems`, `phClkRow`, `phClkParse`, `phClkDiff` (the intake
+  diff + Surgeries + Cliniko visits), `phClkReviewOpen`, `phClkApplyExtra`, `phClkPasteTap`, a paste listener, `phClkVisitsHtml` and the
+  `clkvisits` section (RANK 32.5, Records). Hooks: renderPhIntakePage's head (Paste from Cliniko · Cliniko bookmark), renderIntakeReviewScreen
+  (two sections, the Cliniko head, no Dismiss), phIntakeReviewApply (row.src "cliniko": no intake_forms update, the Cliniko tag on Added rows,
+  `phClkApplyExtra`), phIntakeReviewDismiss, phHxOtherFromForm(src), phHxOtherRowHtml (title "From Cliniko").
+- **Storage, measured on her Chrome 2026-11-20:** the whole origin's localStorage was 815 KB of about 5 MB (daybook-pharmacy 439 KB, Acupreg,
+  131 patients). A patient's Cliniko visits are at most about 6 KB (8 full, 12 one line), so no full note text is kept.
+- **Checked** (test copy, made-up patient "Zz Clk Test"): a made-up payload through a paste event opens the review (details, 6 history
+  rows with their words, an Added row, a Hay fever note, 2 surgeries, 2 visits); Apply writes them (phone marked export, Added row src
+  cliniko, `rec.cliniko`); a second paste with a different mobile and "None" allergies shows three Keep / Use new choices, hers kept by
+  default; Records › Cliniko visits draws the table at 1220 and 360 (page never wider than the screen). The bookmark read a real Cliniko
+  patient read-only (field and section names only printed): 10 intake answers, 15 notes over 3 pages, Heidi's signs / tongue / pulse /
+  abdomen / plan in all 5 recent notes. tap-audit + style-audit: nothing on the new page, the review or the head chips at 1220; at 360
+  only the patient head's own three (there before). Not tried: her real LCM (it was open on Acupreg), a Cliniko patient with no notes.

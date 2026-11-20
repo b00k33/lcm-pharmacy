@@ -535,6 +535,14 @@ default, not an afterthought pass at the end.
 **No how-to text on screen:** the one wording is "Terse" under TAPPABLE
 THINGS at the top.
 
+**Cliniko → LCM, one place (her 2026-11-20 pick B, "ok, b", then "i use heidi transcribing to note take. but i need that
+information organised into lcm so i can see things visually"):** `cliniko-copy.html` holds the "LCM · Copy from Cliniko" bookmark; on a
+Cliniko patient it reads the details, the Cliniq intake answers and every treatment note (Heidi's notes are Cliniko notes) and copies one
+JSON. Intake review › Paste from Cliniko (or Ctrl+V outside a box) opens her usual intake review: blanks fill, a different answer on
+file is her pick, nothing of hers is overwritten. The patient's Records › **Cliniko visits** page = ONE table, a column a visit (latest 8),
+rows Came in for · each sign Heidi wrote (A–Z) · Tongue · Pulse · Abdomen · Looks · Diagnosis · Points · Herbs · Plan; older visits one line
+each (20 kept). Never store the full note text (the origin's about 5 MB is shared). No patient data ever in the bookmark page or the code.
+
 **Phone type scale:** STYLE-LCM.md (≤480px). If a request conflicts with a
 rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 

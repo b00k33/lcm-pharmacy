@@ -749,6 +749,26 @@ carry sprite icons; a row says each fact once ("never" / the amber date carry no
 hover), short condition names (2 then +N), one 18px pill look, 44px rows. Her 9/4 bones stay: fold bands, timeline rows, the two
 round buttons. The phone keeps its chips and Scheduled line.
 
+## Cliniko → LCM (2026-11-20, her pick B + the Heidi ask)
+- **The bookmark** (`cliniko-copy.html`, drag "LCM · Copy from Cliniko" to the bookmarks bar): on any Cliniko page of a patient it reads
+  `/patients/<id>` (h2 label + its p; the address's spans joined; the mobile line of the phone list), the "Extra information" (Cliniq
+  intake: question lines, answers on the lines under), and every treatment note page in a hidden iframe (5 a page, "of N"). Each note:
+  date, time, type, practitioner, Chief Complaint / Diagnosis / Herbs / Bilateral points, Medical History / Medications / Supplements /
+  Allergies, and Heidi's sections: Signs and Symptoms + Lifestyle lines as [label, words], Tongue / Pulse / Abdomen (+ its temperatures) /
+  Visual observations, Treatment Plan. A box top right shows progress, then "Copy for LCM" (`{"lcm":"cliniko-v1", ...}`).
+- **The paste** (`phClkParse` → `phClkRow` → `phClkReviewOpen`): Intake review's head "Paste from Cliniko" (clipboard read) or a paste event
+  outside a box. `phClkRow` maps it onto the intake row shape: sex from Cliniko's Sex, else its title (Mr / Ms / Mrs / Miss), else the old
+  Gender field, never a name; DOB "13 Feb 1965" → ISO; a 9-digit 4xx mobile gets its 0; allergies split drug / food / herb by word lists
+  (`PH_CLK_DRUG`, `PH_CLK_FOOD`), the rest a Medication & allergies note; medicines → Taking prescribed medication (+ Blood-thinning by
+  `PH_CLK_THIN`), "ceased / stopped" left out; injuries and Medical History items → a history row by `PH_CLK_HX` (female rows not for a
+  male) or an Added row tagged Cliniko; supplements → the Supplements page; surgeries (year read) → `rec.surgeries`. The review head reads
+  "From Cliniko into <location>"; no Dismiss (Cancel). Apply (`phClkApplyExtra`): surgeries not already there, `rec.clinikoVisits` merged by
+  date + time (newest first, 20 kept, only the latest 8 keep s / ex / pl), `rec.cliniko = { host, pid }`, a Cliniko mobile marked as the
+  export's (phoneSrc "export").
+- **Records › Cliniko visits** (`clkvisits`, `phClkVisitsHtml`, only when the patient has some): "Full notes in Cliniko" opens the notes;
+  `.ph-clkg` = a column a visit (date + type in the head), the label column stays put while the table scrolls sideways (phone: 92px
+  labels); a row only when a visit holds it; cells clamp to 4 lines (the full words on hover). Older visits as `.ph-clkv` one-line rows.
+
 ## Patient details & the patient file
 **A restore is her newest word (her pick 2026-11-08):** a restore stamps the patient records it changes with the time of the restore, and the template, Fang Bing Ren and Guide note edits it changes the same way (`window.__lcmSections.stamp`, called by the file restore and the cloud-history restore), so the merges that go by stamp no longer give the damaged copy back, here or on her other device; the cloud-history restore moves its merge base only once the cloud write succeeded.
 **Contact and preferences has a door (her pick 2026-11-08):** the Messages page ends with a Contact and preferences button (`data-ph-journey-open`, the Messages page's own button shape); it opens the page with Don't contact, Lives out of town, Channel, Tone, Known since, Tracks BBT and package counting. `phJourneyOpen` closes the patient page properly (`presPageClose`), so one Back returns.
