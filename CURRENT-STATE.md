@@ -885,6 +885,13 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
 - `PH_RQ_SHORT`: vitality_intact_tend Good, fatigue_tend Low, listless_tend Listless, weak_after_illness_tend Weak after illness,
   fatigue_pulse_sunken_lax Low, sunken pulse.
 
+## Visit summary card, care team, Embryo transfer note (2026-11-20, her "build all three")
+The Better / worse (Came in for) step opens with the visit summary card (`phVsumHtml`): phase · pregnant weeks or CD · next IVF date ·
+next visit chips, then Medicines · Allergies · History · Last scan · Care team · Last visit lines, each a door to its page, all read on
+draw and never stored (the alert stays in the sidebar only). Patient details has a third card, Care team (`rec.care`: IVF clinic,
+Specialist, GP, Midwife). A transfer's ✎ fields end with the Embryo transfer note (Time, Doctor, Grade, Lining, Peak E2, OHSS; Pre-ET /
+Post-ET points and Advice given), stored on the transfer. BUILD-NOTES "Visit summary card, care team, Embryo transfer note".
+
 ## Musculoskeletal page
 **One step at a time (2026-11-19, her 8 picks; BUILD-NOTES "Musculoskeletal one step at a time"):** the 5-step bar is the page's tabs
 (`phMskStep`, `data-mk-step` on the host; opens on the first step not done; Next at a step's foot). Pain = the body as tall as the
