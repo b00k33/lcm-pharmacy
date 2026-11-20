@@ -543,6 +543,11 @@ file is her pick, nothing of hers is overwritten. The patient's Records › **Cl
 rows Came in for · each sign Heidi wrote (A–Z) · Tongue · Pulse · Abdomen · Looks · Diagnosis · Points · Herbs · Plan; older visits one line
 each (20 kept). Never store the full note text (the origin's about 5 MB is shared). No patient data ever in the bookmark page or the code.
 
+**Saturdays are Lotus Healing Arts (her word 2026-11-20, "sat is for lotus healing arts", on a Saturday of CBD blocks tagged
+"CBD"):** the clinic a weekday is at overrides the login's: `phDayClin(dateKey)` (shared Me row `hubset.dayClin`, default
+`{6: "Lotus Healing Arts"}`, set at Hub › Money's rates "Saturdays at"). That day's bookings, from either login, carry its tag ("Lotus");
+the Hub counts that day as its own clinic (hours, its own income tile at the visit prices, never the CBD split or a CBD admin week).
+
 **Phone type scale:** STYLE-LCM.md (≤480px). If a request conflicts with a
 rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 

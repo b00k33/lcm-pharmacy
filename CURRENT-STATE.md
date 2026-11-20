@@ -749,6 +749,13 @@ carry sprite icons; a row says each fact once ("never" / the amber date carry no
 hover), short condition names (2 then +N), one 18px pill look, 44px rows. Her 9/4 bones stay: fold bands, timeline rows, the two
 round buttons. The phone keeps its chips and Scheduled line.
 
+## The day's clinic (2026-11-20: Saturdays = Lotus Healing Arts)
+- `PH_DAY_CLIN0` / `phDayClinMap` / `phDayClin` / `phDayClinShort` / `phDayClinTagHtml` (by `phApptPracTagHtml`); the setting is the
+  shared Me row's `hubset.dayClin = {id, v: {weekday: clinic name}, up}`, an input "Saturdays at" beside the Hub rates (empty = off).
+- Tags: `phApptPracTagHtml` (own bookings, grid / lists / popups) and `phOthTagHtml(a)` (the other login's) give the day's clinic first.
+- Hub: `phHubClin` makes that day ONE clinic (`c.dc`, both logins' bookings, colour `--hub-lot`); Work's tiles add its hours, the key
+  its name; `phHubInc` adds `lot` (visits × her prices) + `ln`, Money shows its tile; herbs never on it; a trip's Where reads it.
+
 ## Cliniko → LCM (2026-11-20, her pick B + the Heidi ask)
 - **The bookmark** (`cliniko-copy.html`, drag "LCM · Copy from Cliniko" to the bookmarks bar): on any Cliniko page of a patient it reads
   `/patients/<id>` (h2 label + its p; the address's spans joined; the mobile line of the phone list), the "Extra information" (Cliniq
