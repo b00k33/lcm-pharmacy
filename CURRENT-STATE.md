@@ -855,7 +855,9 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
   the shot, then the camera = Add another and the healthy tongue as icons); ‹ › on the compared photo step through `pick.rest`
   (`data-tcmp-sel`). Under the row, full width: the tabs, the picks, Reads as (the Spleen yang picture a 32px chip at its end, Clear), then
   the visits table (`phFvHtml`): no trend line and no "Since" line (on Abdomen and Pulse too since her 2026-11-20 "Yes, match them"); the
-  Today row carries + / − against the last visit (`phFvTableHtml`'s `chg`: in the words on Tongue, a line under the row on Abdomen and Pulse). No Past photos strip. A phone: the same row sliding sideways, a cell 44% wide.
+  Today row carries + / − against the last visit (`phFvTableHtml`'s `chg`: in the words on Tongue, a line under the row on Abdomen and Pulse). The Abdomen page's
+  table sits in the LEFT half under today's photo (her 2026-11-20 pick A; `phVisitAbdHtml`'s `pn.past`), not in the right panel's tail;
+  a phone keeps it after the sign tabs (`.ph-abd3-left` is `display: contents` there, the table `order: 2`). No Past photos strip. A phone: the same row sliding sideways, a cell 44% wide.
 - **Pulse:** the chart, then the description box (`phPulseDescBoxHtml`): Right and Left, Cun · Guan · Chi each a box filled from
   the chart's words (`phPulsePosWords`), hers saved as `constitPulse.desc` (cleared when the chart moves aside for a new day), then
   Rate & rhythm (its chip opens the Hammer form under it). The visits table has a column per position (`.ph-fvt.pls`).
