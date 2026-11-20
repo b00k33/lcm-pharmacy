@@ -16988,3 +16988,26 @@ used it for the block / list / popup tags of both logins, the Hub's clinic day (
 65% or admin week) and a trip's Where. Checked on a test copy (made-up bookings): Sat blocks of both logins read LOTUS, Fri still
 Acupreg, Mon none; Work tiles "all clinics · CBD · Acupreg · Lotus"; the setting emptied turns it off. Not changed: which login holds
 a Lotus booking (Cliniko's Saturday bookings stay in CBD's list, Halaxy's in whichever login added them); visit prices are one list.
+
+## 2026-11-20: Semen analysis (her "build the partner semen analysis next")
+**Why:** the Acupreg notes hold a partner's result as a line of text ("Partner SA: conc 174.1 M/mL, prog motility 43%, morph 10%");
+LCM had only the Timeline's "Partner semen analysis" row with a free-text result, filled from his file's Men's fertility timeline.
+Item 1 of the gaps she was given.
+- **Built:** `rec.semen = [{ id, date, vol, conc, total, prog, mot, morph, dfi, wbc, note, src, at }]`. A table on IVF history under the
+  Partner row (`phSaHtml`, the supplements table's look): Date (✕ with one Undo) · Vol mL · Conc M/mL · Total M · Prog % · Motile % ·
+  Morph % · DFI % · WBC M/mL · Note, newest first; "+ Semen analysis" (the page's own add button) adds a row and puts the cursor in
+  its Date. Each box saves on change and is marked in place (no redraw).
+- **Whose file:** a new row goes on the man's own file when he is a linked patient (`phSaHome`), otherwise on hers; both files' rows
+  show on both pages (`phSaHolders`, `phSaRows`). A man's page: label "Semen analysis"; a man with no IVF rounds gets the tab as
+  "Semen analysis" (Partner row + his table, no IVF fold).
+- **Range marks** (`PH_SA_COLS`, read on draw, never stored): WHO 2021 lower reference limits (vol 1.4, conc 16, total 39, prog 30,
+  motile 42, morph 4) and an upper line for DFI (30) and white cells (1); a box outside is the amber mark (the Medical alert's
+  colours); the heading's hover gives the line.
+- **Read by:** the Timeline's "Partner semen analysis" row (latest dated row first, then his Men's fertility timeline as before); his
+  Men's fertility "Semen analysis" / "Repeat semen analysis" (first and second dated rows); the visit summary's "Partner SA" line
+  (date · Conc · Prog · Morph, any other value only when marked, then the note; opens IVF history). A patient merge keeps both lists.
+- **Tested** (sandbox, Test Patient, 1280 and 360): add, every box, marks (prog / motile low, DFI / WBC high), ✕ then Undo, the summary
+  line, the Timeline read, a pretend linked man (new row goes to his file, his page shows both rows, label "Semen analysis", no IVF
+  fold). tap-audit / style-audit on the table: none new; "+ Semen analysis" shares the page's own add button (24px on phone, like
+  "+ Egg collection"). Phone: the table scrolls sideways at 980px, no value cut. Not tried: her real records (the imported partners'
+  results move in as a data step after this is live).
