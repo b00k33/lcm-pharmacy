@@ -854,8 +854,8 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
   the row stays one line; `.has-ph` off = no photo yet: the chart 200 wide and the small Add today's box); every label line 32px (Today =
   the shot, then the camera = Add another and the healthy tongue as icons); ‹ › on the compared photo step through `pick.rest`
   (`data-tcmp-sel`). Under the row, full width: the tabs, the picks, Reads as (the Spleen yang picture a 32px chip at its end, Clear), then
-  the visits table (`phFvHtml`): on the Tongue page no trend line and no "Since" line; the Today row carries + / − against the last visit
-  (`phFvTableHtml`'s `chg`). No Past photos strip. A phone: the same row sliding sideways, a cell 44% wide.
+  the visits table (`phFvHtml`): no trend line and no "Since" line (on Abdomen and Pulse too since her 2026-11-20 "Yes, match them"); the
+  Today row carries + / − against the last visit (`phFvTableHtml`'s `chg`: in the words on Tongue, a line under the row on Abdomen and Pulse). No Past photos strip. A phone: the same row sliding sideways, a cell 44% wide.
 - **Pulse:** the chart, then the description box (`phPulseDescBoxHtml`): Right and Left, Cun · Guan · Chi each a box filled from
   the chart's words (`phPulsePosWords`), hers saved as `constitPulse.desc` (cleared when the chart moves aside for a new day), then
   Rate & rhythm (its chip opens the Hammer form under it). The visits table has a column per position (`.ph-fvt.pls`).
@@ -2231,7 +2231,7 @@ first write of the new day moves it aside (tongue → a dated review flagged `pa
 a photo review, the stale live chart; `phFndLast` = last visit); every page that shows a finding reads it. Under each exam page's
 chart sits the same block (`phFvHtml`): the strip of the last 6 days with a finding (small drawing + date + tag, Today at the end,
 "+ n more"), the tapped day's cell (drawing · date · ago · words · "Same as <date>", which copies it into today through the
-part's own door, and ⤢, which opens that day big beside Today in the one sheet shell: `phFvBigOpen`, her synth22 2026-11-12) and a "Since <date>" line (+ new, − gone, "unchanged"). Today's visit tiles show last visit's date and words
+part's own door, and ⤢, which opens that day big beside Today in the one sheet shell: `phFvBigOpen`, her synth22 2026-11-12) and (since 2026-11-20, her picks) the + new / − gone against the last visit in the table's Today row; no trend line, no "Since" line. Today's visit tiles show last visit's date and words
 faint under today's. A **Findings trend** sheet (Grid | Trail) shows the same days for tongue and abdomen.
 **Tongue:** `visitFnd[id].tng = {colour, colourMore[], colourAt, shape, moist, coatThick, coatColour,
 coatArea[] (root / mid = centre), coatAt{} (coat colour per zone), coatQual{}, marks{}, under, thickAt{}, deviation, v2}`. The
