@@ -16887,3 +16887,30 @@ builds (`mocks/` not kept: an inline mock in the chat) and said "ok", then "buil
   Lining placeholders read the care team and the scan. tap-audit + style-audit: nothing from these parts at 1280 or 360 (the IVF page's
   older egg-stage buttons are as before). Pages checked for the facts: Today's visit, Patient details, IVF history. Not tried: her
   real records, a pregnant patient's weeks chip on the live data, the Timeline page.
+
+## 2026-11-20: Tongue page, photos up top (SAVED, not live)
+- **Her words:** "improve view" (a first-visit Tongue page: chart, tabs on Marks, Reads as, the Spleen yang picture, Today + Flash photos,
+  the table). Measured on a pretend patient at 1440 x 915: 1,752px (1.9 screens); the chart alone on the left with 1,137px empty under
+  it; the photos started below the picks; the healthy-tongue icon fell onto its own line; Past photos repeated the table's photos; the
+  trend line repeated the Findings trend button.
+- **Asked (ask28):** widget `lcm_tongue_page_view_options` (Now / A Photos beside the chart / B Photos left, picks right / C Photos under
+  the chart) + 10 popup questions. Her picks: A; photos 400px, then (the two clashed at 1440) "Up to 400, one row"; Flash in the same
+  row; Past photos removed with ‹ › on Last; trend line removed; the yang picture at the end of Reads as; the changes into the Today row;
+  Add another + the healthy tongue as icons on Today's label line; "Yes, build it".
+- **Done:** `phTngCmpHtml` draws `.ph-tgz-top` (the chart cell + the tiles; `.ph-tc-photos` and the flash pair are `display: contents`
+  there) and then the tabs, panel, Reads as and `phFvHtml` straight in `.ph-tgz` (the old `.ph-tgz-grid.ab` halves are gone from the
+  markup; their CSS is left, unused). The chart box is the photos' size (an inset line, no padding, so it shrinks with them). Today's
+  label = the shot only (it is today), its icons in `.ph-tc-hics` (not `.ic`: a global `#pharmacyPage .ic` makes a 22px circle). The
+  compared photo wears ‹ › (`.ph-tc-arr`, 32px circles, the existing `data-tcmp-sel` tap), the strip and its "See all" are gone (Photo
+  table at the top lists them all). Flash's own last tile reads "Flash · Last". `phFvHtml` skips the trend and the Since line for the
+  tongue and hands `chg` to `phFvTableHtml`, which writes "+ swollen" / "− greasy" after the Today row's words (nothing when unchanged).
+  The yang picture is a 32px chip (`.ph-tgz-sumrow button.ph-pp-yth`). The panel fits its tab (min-height 0, was 112).
+- **MY calls, told her:** a phone keeps the one row sliding sideways (a cell 44% wide), since wrapping put 716px of photos before the
+  picks on a 360px phone; Today's label drops the date (it is today); Abdomen and Pulse keep their trend and Since lines (her picks were
+  for the Tongue page).
+- **Tested** (pretend patient "Test Tongue", drawn photos; never her records): 1440 x 915 first visit (chart + Today + Flash at 300 x 400,
+  the table's Today row on the first screen) and return visit (five cells 222 x 296); 1220 x 887 (five cells 179 x 239, page 1,060px, was
+  2,128); 360 x 740 (row 214px, slides, tabs at 364, page 360 wide). ‹ steps 6 Nov → 23 Oct → 9 Oct (› back); the camera opens the
+  photo picker (image/*); the healthy tongue opens in the row and closes; Sublingual (no photo) shows the 3 : 4 Add today's box; no photo
+  at all = the chart at 200 and the small box. tap-audit.js + style-audit.js at 1220 and 360: only the table's photo cell (a picture,
+  there before this build) is listed.

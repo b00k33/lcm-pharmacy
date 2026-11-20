@@ -829,8 +829,13 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
 - **‹ Back:** a tap inside a patient page that opens another part of the app arms a trip (`phTripArm`); `renderPharmacy` turns it into
   a floating "‹ name" chip (`#phTripBack`, bottom centre) that returns to the same patient, page (`presStage`, `presTpMainTab`,
   `presAssessTab`) and scroll; Esc does the same; opening a patient clears it.
-- **Tongue:** `phTngCmpHtml` = two halves (`.ph-tgz-grid.ab`, a wrapping flex): the chart alone on the left, the parts, picks, Reads
-  as, the photos, the visits table and past photos on the right; one column on a phone.
+- **Tongue (since 2026-11-20, her 9 picks; BUILD-NOTES "Tongue page, photos up top"):** `phTngCmpHtml` = ONE top row (`.ph-tgz-top`):
+  the chart · Today · Last (or Healthy) · Flash · Flash last, every cell `flex: 0 1 300px` at 3 : 4 (up to 300 x 400, shrinking together so
+  the row stays one line; `.has-ph` off = no photo yet: the chart 200 wide and the small Add today's box); every label line 32px (Today =
+  the shot, then the camera = Add another and the healthy tongue as icons); ‹ › on the compared photo step through `pick.rest`
+  (`data-tcmp-sel`). Under the row, full width: the tabs, the picks, Reads as (the Spleen yang picture a 32px chip at its end, Clear), then
+  the visits table (`phFvHtml`): on the Tongue page no trend line and no "Since" line; the Today row carries + / − against the last visit
+  (`phFvTableHtml`'s `chg`). No Past photos strip. A phone: the same row sliding sideways, a cell 44% wide.
 - **Pulse:** the chart, then the description box (`phPulseDescBoxHtml`): Right and Left, Cun · Guan · Chi each a box filled from
   the chart's words (`phPulsePosWords`), hers saved as `constitPulse.desc` (cleared when the chart moves aside for a new day), then
   Rate & rhythm (its chip opens the Hammer form under it). The visits table has a column per position (`.ph-fvt.pls`).
