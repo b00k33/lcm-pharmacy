@@ -16798,3 +16798,33 @@ taking, Stopping = no Herbs today and no run-out reminders, anyone dispensed her
   "Pregnant · 7w 5d", popup "Pregnancy 7w 5d", block "Stimulation", her 1 Sep visit still has its cycle day; Zoe unchanged
   ("~Day 20 · Follicular"); no errors. **Needs her data:** Nyssa's row changes only if her file has the pregnancy (the "Pregnant?"
   button in her file, or a positive transfer in IVF history).
+
+## synth22 2026-11-20: complaints, Diagnosis groups, Energy, Acupreg green
+Her six asks (synth22), four built here, the Pulse page (asks 5 + 6) next as a mock. Her picks: "Add common complaints by area",
+"Body area + TCM patterns", "Everywhere but calendar blocks".
+- **Ask 1, "make the complaints database more diverse"** (her Came in for screenshot: labour induction under Fertility / IVF, the name
+  cut off, "~13 Nov" over the star): 49 Bing signs, keys ending `_cc` (pregnancy: morning sickness, preparing for labour, overdue /
+  induction, pelvic or back pain, bleeding, postnatal; blocked ducts; trying to conceive, IVF support, poor sperm (men only, in
+  `PH_SIGN_ONLY_M`), PCOS, hot flushes; ears, sinus, post-nasal drip, hoarse voice; TMJ, tension and period headaches; dry / wet /
+  lingering cough; urine burning, recurrent infections, urgency, weak stream; daytime sleepiness, snoring, grief, burnout; psoriasis,
+  rosacea, shingles, warts; neck, shoulder, upper back, hip, sciatica, wrist / hand, foot / heel; food intolerances, alternating bowels;
+  post-viral fatigue, after surgery, cancer support; weight gain). Each in its `PH_BING_GROUPS` group and with search words
+  (`Object.assign(PH_BING_ALIAS, …)`). DRAFT wording, hers to correct; no formula weighs them, so they score nothing until weighted.
+  `phFbrKeyCheck()` → []. Came in for: her own words are a one-line textarea that wraps (Enter = done, a pasted newline = a space); the
+  Main line wraps its Type pill under the name when short of room; Since 150 → 176px, its date drops under the chip on a
+  desktop when still short (a phone's table scrolls, so its date stays beside the chip).
+- **Ask 2, the Diagnosis list:** `PH_DXM_AREAS` (Head & jaw, Neck, Shoulder, Elbow wrist & hand, Upper back & chest, Low back, Hip &
+  pelvis, Lower leg ankle & foot, Knee & thigh; first match wins, so Lower leg is read before Knee), the rest "Whole body"; cc adds "TCM
+  patterns". `phDxmGroups` (memo), `phDxmPaint` (fixed, under the box or above when no room, 360px, scrolls inside), `phDxmPick`
+  (writes value + input + change, quiet so it never reopens), `phDxmWatch` (a page that redraws the box under her: the list follows the
+  box with the cursor or closes). `data-dxm` replaced `list="phCcDxList"` (2) and `list="phPmDxList"` (5).
+- **Ask 3, Energy:** `fatigue_pulse_sunken_lax` out of the Level row AND in `PH_NQ_NEVER` (out of the row alone, it fell into an
+  unlabelled row of its own). The pulse still implies it.
+- **Ask 4, Acupreg green:** `--ph-herb` #4E7A63 (and `--ph-green` on the shell); the rail's band steps mixed from it (95/96/97% white),
+  its ticks and "n left" 20% tints; `PH_ACUPREG_COLOUR` #8AAB99 unchanged on calendar blocks.
+- **Checked** (test copy, a made-up first-visit patient): Blood stasis from "stasis" + Enter saved to `complaint.dx`; Patellar
+  tendinopathy by tap saved to the knee's `dx`, the list closed; "pat" shows Knee & thigh only; no formula in either list; the search
+  finds induction, IVF, morning sickness, sciatica, TMJ, long COVID, and not sperm for a woman; every word on the Acupreg rail 4.5:1 or
+  more. tap-audit and style-audit empty for the table and the open list at 1220 and 360 (Acupreg shows "fill other" on the timeline's
+  Today and the step circles: the audit knows only the teal palette). Shots `shots/diagnosis-groups-built-2026-11-20.jpg`,
+  `shots/came-in-for-acupreg-green-built-2026-11-20.jpg`. Not tried: her real patients, the Treatment focus box by hand.

@@ -486,6 +486,17 @@ Phases 0-6 were built on 2026-10-10 and confirmed on `origin/main` 2026-10-18 (t
   by day, one door `phHbsWrite`), pre-picked from the last dispense's run-out day. Finished = Herbs stays the visit's step; Continuing
   = Herbs ticked as still taking (Treatment's Still taking is this same answer); Stopping = no Herbs today and no run-out reminder for
   those herbs. No reason asked. Never a second store for it.
+- **The Diagnosis list is in groups** (her 2026-11-20 "formulas dont need to be in the diagnosis dropdown. give the dropdown organised
+  categories", pick "Body area + TCM patterns"): every Diagnosis box (`data-dxm="cc"` Came in for + the Treatment focus, `"pm"` a pain's)
+  opens ONE list, `phDxmPaint` (`.ph-dxm`, its own class: never `.ph-ni-menu`, whose capture handlers would eat it): the musculoskeletal
+  terms by body area (`PH_DXM_AREAS`, read from the words), then for cc the TCM patterns (`PH_PAT_DEFS`). **No formula in it.** Letters at
+  the start of a word win; Enter / a tap writes through the box's own change handler. A new term joins its area by itself; one no area
+  claims lands in "Whole body".
+- **Low with a sunken pulse is never a chip or a question** (her 2026-11-20 "this doesnt need sunken pulse sign"): `PH_NQ_NEVER`; Low +
+  a sunken or weak pulse still ticks it for Fang Bing Ren.
+- **Acupreg's colour is a deeper sage, #4E7A63** (her 2026-11-20 "the green and the white doesnt work well", pick "Everywhere but
+  calendar blocks"): white on it 4.9:1; the sidebar's quiet words are 95-97% white mixes of it (4.5:1 or more). Her #8AAB99 stays only on
+  Acupreg's calendar blocks (`PH_ACUPREG_COLOUR`).
 - **Findings:** `phExamMirrorToday`'s known edge: a part cleared after it was mirrored stays in that day's dated copy.
 - **Left on purpose:** the stored default plan title "New treatment plan" (code compares to it); letters, printed
   plan records and message templates keep "treatment plan".

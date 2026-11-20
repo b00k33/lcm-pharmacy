@@ -2156,7 +2156,11 @@ said since those herbs went out = Stopping, the run-out day passed = Finished, d
 is `rec.herbsSay[today]` (`phHbsWrite`), and saving the visit keeps a pre-pick as said. Continuing or Stopping tick the Herbs step
 ("still taking" / "stopping", so Next passes it); Continuing is Treatment's Still taking (`presAcuHbIn`; a tap on Still taking writes
 Continuing, off writes Finished); Stopping leaves Due's check-in and review for those herbs and the booking's "Herbs ran out" tag
-(`phHbsStoppedSince`). The visits table's Herbs cell starts with the word (Finished · formula, Continuing formula, Stopping). Worth a look's two checks are one "Still the
+(`phHbsStoppedSince`). The visits table's Herbs cell starts with the word (Finished · formula, Continuing formula, Stopping). **synth22 of 2026-11-20**
+(BUILD-NOTES "synth22 2026-11-20"): the Diagnosis boxes open one list in groups (`phDxm*`, `.ph-dxm`; body areas then TCM patterns, no
+formula; the old datalists `phCcDxList` / `phPmDxList` are no longer pointed at); 49 new complaints (`*_cc` keys, DRAFT wording, no
+formula weighs them yet); Came in for's long name wraps (a textarea, Enter is done) and Since is 176px with its date under the chip when
+short of room (desktop only); Energy has no "Low, sunken pulse" (`PH_NQ_NEVER`); Acupreg's `--ph-herb` is #4E7A63. Worth a look's two checks are one "Still the
 same?" line when both are due (Nothing new stamps both · Changed opens the two). A missing sex, birth date or phone is a line there too (`phTodayAskHtml`, the Patient details fields and handlers; her 2026-11-01 data-check pick), and Today's visit opens on that line for a patient without sex and birth date. Today's visit's Treat card ends with the visit's one
 **Note** (`data-visit-note` = `presAcuComment`, the same words as Treatment's Note cell) and **Done · Copy for Cliniko**
 (`phVisitDone`): saves today's visit when nothing is saved for the plan today, copies, marks `session.copiedAt` only after a real
