@@ -699,6 +699,18 @@
   #pharmacyPage .ph-sa-tbl input.ph-sa-dt { width: 116px; min-width: 0; }
   #pharmacyPage#pharmacyPage .ph-sa-tbl input.ph-sa-n { width: 100%; min-width: 0; text-align: right; padding-left: 4px; padding-right: 4px; }
   #pharmacyPage#pharmacyPage .ph-sa-tbl input.ph-sa-n:is(.lo, .hi) { background: #FDF3DC; color: #8A5A00; font-weight: 600; }
+  /* IUI and cancelled rounds (her 2026-11-20 "build the IUI and cancelled rounds next"): the semen analysis table's look */
+  #pharmacyPage .ph-or-hd .ph-ivf-addbtn + .ph-ivf-addbtn { margin-left: 0; }
+  #pharmacyPage .ph-supp-tbl.ph-or-tbl { min-width: 0; table-layout: fixed; }
+  @media (max-width: 640px) { #pharmacyPage .ph-supp-tbl.ph-or-tbl { min-width: 900px; } }
+  #pharmacyPage#pharmacyPage#pharmacyPage .ph-or-tbl :is(th, td) { vertical-align: middle; }
+  #pharmacyPage#pharmacyPage#pharmacyPage .ph-or-tbl tbody td { padding-left: 4px; padding-right: 4px; }
+  #pharmacyPage .ph-or-tbl col.c-dt { width: 18%; } #pharmacyPage .ph-or-tbl col.c-k { width: 17%; } #pharmacyPage .ph-or-tbl col.c-m { width: 22%; }
+  #pharmacyPage .ph-or-tbl col.c-r { width: 15%; } #pharmacyPage .ph-or-tbl col.c-nt { width: 28%; }
+  #pharmacyPage .ph-or-tbl tbody th { white-space: nowrap; }
+  #pharmacyPage .ph-or-tbl input.ph-sa-dt { width: 116px; min-width: 0; }
+  #pharmacyPage .ph-or-tbl select { width: 100%; min-width: 0; }
+  #pharmacyPage .ph-or-tbl .ph-or-x { font: 600 var(--fs-11-5)/1.2 var(--font-body); color: var(--ph-faint); }
   #pharmacyPage .ph-supp-tick { height: 32px; min-width: 32px; padding: 0 8px; border: 1px solid var(--ph-line); border-radius: 999px; background: var(--ph-white); color: var(--ph-faint); font: 600 var(--fs-13) var(--font-body); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
   #pharmacyPage .ph-supp-tick.on { background: var(--ph-good-tint); border-color: var(--ph-good); color: var(--ph-ink); font-weight: 700; }
   #pharmacyPage .ph-supp-tick.stop { border-radius: 6px; background: var(--ph-low-tint); border-color: var(--ph-low-tint); color: var(--ph-ink); font-size: var(--fs-11-5); }
@@ -128535,6 +128547,8 @@ Difficult to sweat|no_sweat_tend:r`;
     }
     const sa = phSaRows(name)[0];
     if (sa && (sa.date || phSaWords(sa))) line("flow-prof", "ivf", rec.sex === "M" ? "Semen analysis" : "Partner SA", [sa.date ? phCycShortLbl(sa.date) : "", phSaWords(sa)].filter(Boolean).join(" · "));
+    const iuiW = phOrIuiWords(rec);
+    if (iuiW) line("flow-prof", "ivf", "IUI", iuiW);
     const care = phCareTeamWords(rec);
     if (care) line("flow-prof", "patient", "Care team", care);
     const seen = phSeenDays(name, today), last = seen[seen.length - 1];
@@ -144424,6 +144438,81 @@ Difficult to sweat|no_sweat_tend:r`;
     }
     try { phTlRefreshAll(); } catch (e2) { /* only when a timeline is on screen */ }
   });
+  // IUI and cancelled rounds (her 2026-11-20 "build the IUI and cancelled rounds next", after the Acupreg note review: IUIs and a
+  // round stopped before egg collection lived in a Reproductive note; IVF history only holds egg collections and transfers).
+  // rec.otherRounds = [{ id, date, kind: "iui" | "ivfx" | "fetx", meds, result, note, src, at }], newest first, on IVF history
+  // under the semen analysis. A cancelled round's reason goes in its Note; only an IUI has a Result.
+  const PH_OR_KINDS = [["iui", "IUI"], ["ivfx", "Cancelled IVF"], ["fetx", "Cancelled transfer"]];
+  const PH_OR_RESULTS = [["", "–"], ["negative", "Negative"], ["positive", "Positive"], ["biochemical", "Biochemical"], ["miscarriage", "Miscarriage"]];
+  function phOrRows(rec) {
+    return (rec && Array.isArray(rec.otherRounds) ? rec.otherRounds : []).filter(r => r && r.id)
+      .slice().sort((a, b) => (!a.date - !b.date) || String(b.date || "").localeCompare(String(a.date || "")));
+  }
+  function phOrHtml(name) {
+    const rec = name && phPatientPeek(name);
+    if (!rec || phFastIsMe(name) || rec.sex === "M") return "";
+    const rows = phOrRows(rec);
+    const head = `<div class="ph-sa-hd ph-or-hd"><span class="lb">IUI &amp; cancelled rounds</span>${rows.length ? `<span class="cnt">· ${rows.length}</span>` : ""}<button type="button" class="ph-ivf-addbtn" data-or-add="iui">+ IUI</button><button type="button" class="ph-ivf-addbtn" data-or-add="ivfx">+ Cancelled round</button></div>`;
+    if (!rows.length) return `<div class="ph-sa ph-or" data-or-host="${esc(name)}">${head}</div>`;
+    const sel = (id, k, opts, v, lab) => `<select class="field-bare ph-supp-fld" data-or-f="${id}|${k}" aria-label="${lab}">${opts.map(([o, l]) => `<option value="${o}"${o === (v || "") ? " selected" : ""}>${l}</option>`).join("")}</select>`;
+    const body = rows.map(r => {
+      const id = esc(r.id);
+      const res = r.kind === "iui" ? sel(id, "result", PH_OR_RESULTS, r.result, "Result") : `<span class="ph-or-x">Cancelled</span>`;
+      return `<tr><th scope="row"><input type="date" class="field-bare ph-supp-fld ph-sa-dt" data-or-f="${id}|date" value="${esc(r.date || "")}" aria-label="Date"><button type="button" class="ph-supp-own-rm" data-or-rm="${id}" aria-label="Remove" title="Remove">✕</button></th><td>${sel(id, "kind", PH_OR_KINDS, r.kind, "Kind")}</td><td><textarea class="ph-cyc-in field-bare dose ph-supp-fld" data-or-f="${id}|meds" rows="1" placeholder="Medication" aria-label="Medication" maxlength="120">${esc(r.meds || "")}</textarea></td><td>${res}</td><td><textarea class="ph-cyc-in field-bare dose ph-supp-fld" data-or-f="${id}|note" rows="1" placeholder="Note" aria-label="Note" maxlength="200">${esc(r.note || "")}</textarea></td></tr>`;
+    }).join("");
+    return `<div class="ph-sa ph-or" data-or-host="${esc(name)}">${head}<div class="ph-vc-wrap ph-supp-wrap"><table class="ph-vc-tbl ph-supp-tbl ph-or-tbl"><colgroup><col class="c-dt"><col class="c-k"><col class="c-m"><col class="c-r"><col class="c-nt"></colgroup><thead><tr><th>Date</th><th>Round</th><th>Medication</th><th>Result</th><th>Note</th></tr></thead><tbody>${body}</tbody></table></div></div>`;
+  }
+  // the visit summary's line: how many IUIs and the last one
+  function phOrIuiWords(rec) {
+    const iui = phOrRows(rec).filter(r => r.kind === "iui");
+    if (!iui.length) return "";
+    const last = iui[0], res = (PH_OR_RESULTS.find(x => x[0] === last.result) || [])[1];
+    return [`${iui.length} IUI${iui.length === 1 ? "" : "s"}`, last.date ? `last ${phCycShortLbl(last.date)}` : "", last.result ? res.toLowerCase() : ""].filter(Boolean).join(" · ");
+  }
+  function phOrRepaint() {
+    document.querySelectorAll("#pharmacyPage [data-or-host]").forEach(el => { el.outerHTML = phOrHtml(el.dataset.orHost) || ""; });
+  }
+  // the one write door: + IUI / + Cancelled round, ✕ (one Undo), each box on change (Round redraws: only an IUI has a Result)
+  document.addEventListener("click", e => {
+    const t = e.target.closest && e.target.closest("[data-or-add], [data-or-rm]");
+    const host = t && t.closest("#pharmacyPage [data-or-host]");
+    if (!host) return;
+    const rec = phPatientRec(host.dataset.orHost), fail = () => phFlashShow("That could not be saved — check the warning at the top and try again.");
+    const before = Array.isArray(rec.otherRounds) ? rec.otherRounds.slice() : [];
+    if (t.matches("[data-or-add]")) {
+      const row = { id: uid(), date: "", kind: t.dataset.orAdd, src: "own", at: Date.now() };
+      rec.otherRounds = before.concat([row]);
+      if (savePharmacy() === false) { rec.otherRounds = before; fail(); return; }
+      phOrRepaint();
+      setTimeout(() => { const d = document.querySelector(`#pharmacyPage [data-or-f="${CSS.escape(row.id)}|date"]`); if (d) d.focus(); }, 0);
+      return;
+    }
+    const gone = before.find(x => x && x.id === t.dataset.orRm);
+    if (!gone) return;
+    rec.otherRounds = before.filter(x => x !== gone);
+    if (!rec.otherRounds.length) delete rec.otherRounds;
+    if (savePharmacy() === false) { rec.otherRounds = before; fail(); return; }
+    phOrRepaint();
+    presSavedToast(`Removed · ${(PH_OR_KINDS.find(x => x[0] === gone.kind) || ["", "round"])[1]}${gone.date ? " " + phShortDate(gone.date) : ""}`, { undo: () => { rec.otherRounds = before; savePharmacy(); phOrRepaint(); } });
+  });
+  document.addEventListener("change", e => {
+    const t = e.target.closest && e.target.closest("[data-or-f]");
+    const host = t && t.closest("#pharmacyPage [data-or-host]");
+    if (!host) return;
+    const rec = phPatientRec(host.dataset.orHost), f = t.dataset.orF, i = f.lastIndexOf("|"), k = f.slice(i + 1);
+    const r = (Array.isArray(rec.otherRounds) ? rec.otherRounds : []).find(x => x && x.id === f.slice(0, i));
+    if (!r) return;
+    let v = String(t.value || "").trim();
+    if (k === "date") v = /^\d{4}-\d{2}-\d{2}$/.test(v) ? v : "";
+    else if (k === "kind") v = PH_OR_KINDS.some(x => x[0] === v) ? v : "iui";
+    else if (k === "result") v = PH_OR_RESULTS.some(x => x[0] === v) ? v : "";
+    else v = v.slice(0, k === "note" ? 200 : 120);
+    if (v) r[k] = v; else delete r[k];
+    if (k === "kind" && v !== "iui") delete r.result;
+    r.at = Date.now();
+    if (savePharmacy() === false) { phFlashShow("That could not be saved — check the warning at the top and try again."); return; }
+    if (k === "kind") phOrRepaint();
+  });
   // the Men's fertility timeline's two tests read his table: the first dated one, then the next
   function phSaTlFor(name, id) {
     const dated = phSaRows(name).filter(r => phTlOkDate(r.date)).reverse(), r = dated[id === "sa1" ? 0 : 1];
@@ -153029,7 +153118,8 @@ Difficult to sweat|no_sweat_tend:r`;
     // file and no IVF plan -- she is not fertility-plan-gated any more, just sex-gated.
     if (!rows.length && !hasPlan && !phIsFemale(rec)) return rec && rec.sex === "M" ? `<div class="ph-ivf-fold">${phPtnRowHtml(name)}${phSaHtml(name)}</div>` : "";
     const nTr = rows.reduce((n, r) => n + (r.transfers || []).length, 0);
-    const cnt = rows.length ? `· ${rows.length} egg collection${rows.length === 1 ? "" : "s"} · ${nTr} transfer${nTr === 1 ? "" : "s"}` : "· nothing yet";
+    const nIui = phOrRows(rec).filter(r => r.kind === "iui").length;
+    const cnt = rows.length || nIui ? [rows.length ? `${rows.length} egg collection${rows.length === 1 ? "" : "s"} · ${nTr} transfer${nTr === 1 ? "" : "s"}` : "", nIui ? `${nIui} IUI${nIui === 1 ? "" : "s"}` : ""].filter(Boolean).map(x => "· " + x).join(" ") : "· nothing yet";
     const open = phIvfFoldOpen(rec);
     // her IVF redesign 2026-10-16, item 1 ("quick-log by moment"): shown
     // whenever there's at least one round to attach a quick log to, OR a
@@ -153044,6 +153134,7 @@ Difficult to sweat|no_sweat_tend:r`;
       ${quickBar}
       ${phPtnRowHtml(name)}
       ${phSaHtml(name)}
+      ${phOrHtml(name)}
       <button type="button" class="ph-ivf-foldhd" data-ivf-fold-toggle="1" aria-expanded="${open ? "true" : "false"}">
         <svg class="icn ic" aria-hidden="true"><use href="#i-egg"/></svg><b>IVF history</b><span class="cnt">${cnt}</span>
         <span class="chev">${open ? "▾" : "▸"}</span>
@@ -164803,7 +164894,7 @@ Please let me know if you have any questions.`;
     return pairs;
   }
   // the stores phPatientMerge handles by name, each with its own rule; everything else on a record goes through phMergeFillGaps
-  const PH_MERGE_OWN_RULE = new Set(["medicalHistory", "historyNotes", "historyOther", "history", "medicalHistoryNotes", "addresses", "treatmentPlans", "ivfCycles", "suppOwn", "meds", "semen", "supplements", "historyGroupNotes", "historyNoteFrom", "historyUpdatedAt", "skin", "voiceManner", "updatedAt"]);
+  const PH_MERGE_OWN_RULE = new Set(["medicalHistory", "historyNotes", "historyOther", "history", "medicalHistoryNotes", "addresses", "treatmentPlans", "ivfCycles", "suppOwn", "meds", "semen", "otherRounds", "supplements", "historyGroupNotes", "historyNoteFrom", "historyUpdatedAt", "skin", "voiceManner", "updatedAt"]);
   // a blank on the kept record takes the other's; two lists combine (one row once, by id when it has one); two objects go field by field; nothing on the kept record is overwritten
   function phMergeFillGaps(into, from, skip) {
     Object.keys(from).forEach(k => {
@@ -164897,6 +164988,7 @@ Please let me know if you have any questions.`;
       }
       // her 2026-10-26 stores from the medical history link (the patient's own supplements, group boxes, a note's form date)
       phSuppOwn(from).forEach(o => { into.suppOwn = phSuppOwn(into); if (!into.suppOwn.some(x => x.name.trim().toLowerCase() === o.name.trim().toLowerCase())) into.suppOwn.push(o); });
+      (Array.isArray(from.otherRounds) ? from.otherRounds : []).forEach(o => { if (!o || !o.id) return; into.otherRounds = Array.isArray(into.otherRounds) ? into.otherRounds : []; if (!into.otherRounds.some(x => x.id === o.id)) into.otherRounds.push(o); });
       (Array.isArray(from.semen) ? from.semen : []).forEach(o => { if (!o || !o.id) return; into.semen = Array.isArray(into.semen) ? into.semen : []; if (!into.semen.some(x => x.id === o.id)) into.semen.push(o); });
       phMeds(from).forEach(o => { into.meds = phMeds(into); if (!into.meds.some(x => x.name.trim().toLowerCase() === o.name.trim().toLowerCase())) into.meds.push(o); });
       if (from.supplements) { into.supplements = into.supplements || {}; Object.keys(from.supplements).forEach(k => { if (!into.supplements[k]) into.supplements[k] = from.supplements[k]; }); }
