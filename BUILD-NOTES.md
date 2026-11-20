@@ -16888,7 +16888,7 @@ builds (`mocks/` not kept: an inline mock in the chat) and said "ok", then "buil
   older egg-stage buttons are as before). Pages checked for the facts: Today's visit, Patient details, IVF history. Not tried: her
   real records, a pregnant patient's weeks chip on the live data, the Timeline page.
 
-## 2026-11-20: Tongue page, photos up top (SAVED, not live)
+## 2026-11-20: Tongue page, photos up top (LIVE 20261120-151600, out with another session's publish)
 - **Her words:** "improve view" (a first-visit Tongue page: chart, tabs on Marks, Reads as, the Spleen yang picture, Today + Flash photos,
   the table). Measured on a pretend patient at 1440 x 915: 1,752px (1.9 screens); the chart alone on the left with 1,137px empty under
   it; the photos started below the picks; the healthy-tongue icon fell onto its own line; Past photos repeated the table's photos; the
@@ -16934,3 +16934,14 @@ transcribing to note take. but i need that information organised into lcm so i c
   patient read-only (field and section names only printed): 10 intake answers, 15 notes over 3 pages, Heidi's signs / tongue / pulse /
   abdomen / plan in all 5 recent notes. tap-audit + style-audit: nothing on the new page, the review or the head chips at 1220; at 360
   only the patient head's own three (there before). Not tried: her real LCM (it was open on Acupreg), a Cliniko patient with no notes.
+
+## 2026-11-20: Abdomen and Pulse match the Tongue page's visits table (SAVED, not live)
+- **Her word:** "Yes, match them" (asked after the Tongue page build: no trend line, and the changes since the last visit in the Today row
+  instead of a separate line, on Abdomen and Pulse too).
+- **Done:** `phFvHtml` draws only the table now (`phFvTrendHtml` removed; nothing else called it; the Findings trend sheet at the top is
+  its own); the "Since" line is gone; `chg` goes to `phFvTableHtml` for every part. Tongue keeps it inside the Today row's words; Abdomen
+  and Pulse get `.ph-fv-chg.ln`, a line under the Today row (Abdomen's table sits in the narrow right panel, where inside the words it ran
+  one word a line; Pulse has six boxes, no words cell). Columns: Pulse from the first box, Abdomen from the chart; a phone the whole row.
+- **Tested** (pretend patient, drawn data): 1220 x 887: Abdomen Today row "+ full / distended − flat" on one line under the row; Pulse
+  "+ L Heart wiry − L Diaphragm deep" under the boxes (the page ~130px shorter); Tongue unchanged; 360 x 740 Abdomen one 258px line, page
+  360 wide. tap-audit + style-audit on the three tables: only what was there before (Tongue's photo cell, the Pulse mini chart's 8px R / L).

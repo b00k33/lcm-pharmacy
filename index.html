@@ -35499,6 +35499,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
 #pharmacyPage .ph-tgz-sumrow button.ph-pp-yth span { font-size: var(--fs-13); font-weight: 600; -webkit-line-clamp: 1; white-space: nowrap; padding: 0; }
 #pharmacyPage .ph-fvt-r .wd .ph-fv-chg { margin-left: 10px; }
 #pharmacyPage .ph-fv-chg :is(.plus, .minus) { font-weight: 600; color: var(--ph-ink); margin-right: 10px; }
+#pharmacyPage .ph-fvt-r > .ph-fv-chg.ln { grid-column: 3 / -1; font-size: var(--fs-13); }
+#pharmacyPage .ph-fvt:not(.pls) .ph-fvt-r > .ph-fv-chg.ln { grid-column: 2 / -1; }
+@media (max-width: 640px) { #pharmacyPage#pharmacyPage .ph-fvt-r > .ph-fv-chg.ln { grid-column: 1 / -1; } }
 /* a phone (Key2 360 x 469): the same one row, sliding sideways, a cell 44% wide; Reads as on its own line, the picture and Clear under it */
 @media (max-width: 640px) {
   #pharmacyPage .ph-tgz-top { overflow-x: auto; overscroll-behavior-x: contain; scroll-snap-type: x mandatory; scrollbar-width: none; gap: 8px; }
@@ -127378,7 +127381,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const blank = `<span class="ph-fv-blank">—</span>`;
     const tile = (d, isToday) => `<button type="button" class="ph-fv-pt${isToday ? " now" : ""}${!isToday && sel && d.date === sel.date ? " sel" : ""}" data-fv-day="${isToday ? "" : esc(d.date)}" title="${esc(isToday ? "Today" : `${phCycShortLbl(d.date)} · ${phTngCmpAgo(d.date)}`)}"${isToday ? " disabled" : ""}><span class="im">${isToday && !todayD ? blank : (phFndDrawHtml(d, part) || blank)}</span><b>${isToday ? "Today" : esc(phCycShortLbl(d.date))}</b>${!isToday && tagOf(d) ? `<span class="tag">${tagOf(d)}</span>` : ""}</button>`;
     const strip = `<div class="ph-fv-strip">${hidden > 0 ? `<button type="button" class="ph-fv-more" data-fv-more="1">+ ${hidden} more</button>` : ""}${shown.slice().reverse().map(d => tile(d, false)).join("")}${tile(todayD || { date: keyOf(TODAY) }, true)}</div>`;
-    let cell = "", since = "", chg = null;
+    let cell = "", chg = null;
     if (sel) {
       const kSel = phFndKeys(sel, part), kNow = phFndKeys(todayD, part);
       const same = !!todayD && kSel.size === kNow.size && [...kSel.keys()].every(k => kNow.has(k));
@@ -127387,22 +127390,13 @@ Difficult to sweat|no_sweat_tend:r`;
       if (todayD) {
         const plus = [...new Set([...kNow.keys()].filter(k => !kSel.has(k)).map(k => kNow.get(k)))], minus = [...new Set([...kSel.keys()].filter(k => !kNow.has(k)).map(k => kSel.get(k)))];
         chg = { plus, minus };
-        since = `<div class="ph-fv-since"><b>Since ${esc(lbl)}</b>${plus.length ? `<span class="plus">+ ${esc(plus.join(" · "))}</span>` : ""}${minus.length ? `<span class="minus">− ${esc(minus.join(" · "))}</span>` : ""}${!plus.length && !minus.length ? `<span class="same">unchanged</span>` : ""}</div>`;
       }
     } else cell = `<div class="ph-fv-none">Nothing earlier yet.</div>`;
-    return `<div class="ph-fv" data-fv="${part}" data-fv-name="${esc(name)}">${part === "tongue" ? "" : phFvTrendHtml(rec, part, days, todayD) + since}${phFvTableHtml(rec, part, name, shown, hidden, todayD, part === "tongue" ? chg : null)}</div>`;
+    return `<div class="ph-fv" data-fv="${part}" data-fv-name="${esc(name)}">${phFvTableHtml(rec, part, name, shown, hidden, todayD, chg)}</div>`;
   }
   // the trend over the visits: how many signs were noted at each (the part's own keys, phFndKeys), oldest to today; shown from two points up
-  function phFvTrendHtml(rec, part, days, todayD) {
-    const pts = days.slice(0, 7).reverse().map(d => ({ lbl: phCycShortLbl(d.date), n: phFndKeys(d, part).size }));
-    if (todayD) pts.push({ lbl: "Today", n: phFndKeys(todayD, part).size });
-    if (pts.length < 2) return "";
-    const mx = Math.max(1, ...pts.map(p => p.n)), W = 640, x0 = 40, x1 = W - 40, y = n => 8 + (1 - n / mx) * 34;
-    const xs = pts.map((p, i) => x0 + (x1 - x0) * i / (pts.length - 1)), line = pts.map((p, i) => `${xs[i].toFixed(0)},${y(p.n).toFixed(0)}`).join(" ");
-    return `<div class="ph-fvt-trend"><div class="cap">Trend · signs noted at each visit</div><svg viewBox="0 0 ${W} 66" role="img" aria-label="${esc(`Signs noted at each visit: ${pts.map(p => p.lbl + " " + p.n).join(", ")}`)}"><line x1="${x0}" x2="${x1}" y1="46" y2="46" class="ax"/><polyline points="${line}" class="ln"/>${pts.map((p, i) => `<circle cx="${xs[i].toFixed(0)}" cy="${y(p.n).toFixed(0)}" r="${i === pts.length - 1 ? 5 : 4}" class="pt"/><text x="${xs[i].toFixed(0)}" y="62" class="lb" text-anchor="middle">${esc(p.lbl)}</text>`).join("")}</svg></div>`;
-  }
-  // the past visits as a table, today first then newest to oldest: date, (Tongue) the photo of that day, the part's own drawing, its words, expand + Same
-  // chg (the Tongue page, her 2026-11-20 pick): what changed since the last visit, shown in the Today row (+ / −), nothing when unchanged
+  // chg: what changed since the last visit, in the Today row (+ / −), nothing when unchanged; no trend line, no "Since" line above the
+  // table (her 2026-11-20 Tongue page picks, then "Yes, match them" for Abdomen and Pulse). Abdomen (a narrow panel) and Pulse (no words cell) get it as a line under the row.
   function phFvTableHtml(rec, part, name, shown, hidden, todayD, chg) {
     const chgHtml = chg ? [chg.plus.length ? `<span class="plus">+ ${esc(chg.plus.join(" · "))}</span>` : "", chg.minus.length ? `<span class="minus">− ${esc(chg.minus.join(" · "))}</span>` : ""].join("") : "";
     const pk = phPatientKey(name), tng = part === "tongue", pls = part === "pulse";
@@ -127420,7 +127414,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const row = (d, isToday) => {
       const lbl = isToday ? "Today" : phCycShortLbl(d.date);
       const acts = isToday ? "" : `<button type="button" class="ph-pp-xp ph-fv-xp" data-fv-big="${esc(d.date)}" title="Open big, beside today" aria-label="${esc(`Open ${lbl} big, beside today`)}"><svg class="ph-cc-svgic" aria-hidden="true"><use href="#i-expand"/></svg></button><button type="button" class="ph-rtng-act" data-fv-same="${esc(d.date)}" title="${esc(`Copies the finding of ${lbl} into today`)}">Same</button>`;
-      return `<div class="ph-fvt-r${isToday ? " now" : ""}"><span class="dt"><b>${esc(lbl)}</b>${isToday ? "" : `<small>${esc(phTngCmpAgo(d.date))}</small>`}</span>${tng ? photo(isToday ? keyOf(TODAY) : d.date) : ""}<span class="im">${phFndDrawHtml(d, part) || "<i>—</i>"}</span>${pls ? posCells(d, isToday) : `<span class="wd">${esc(phFndText(d, part))}${isToday && chgHtml ? `<span class="ph-fv-chg">${chgHtml}</span>` : ""}</span>`}<span class="ac">${acts}</span></div>`;
+      return `<div class="ph-fvt-r${isToday ? " now" : ""}"><span class="dt"><b>${esc(lbl)}</b>${isToday ? "" : `<small>${esc(phTngCmpAgo(d.date))}</small>`}</span>${tng ? photo(isToday ? keyOf(TODAY) : d.date) : ""}<span class="im">${phFndDrawHtml(d, part) || "<i>—</i>"}</span>${pls ? posCells(d, isToday) : `<span class="wd">${esc(phFndText(d, part))}${isToday && chgHtml && tng ? `<span class="ph-fv-chg">${chgHtml}</span>` : ""}</span>`}<span class="ac">${acts}</span>${!tng && isToday && chgHtml ? `<span class="ph-fv-chg ln">${chgHtml}</span>` : ""}</div>`;
     };
     if (!shown.length && !todayD) return `<div class="ph-fv-none">Nothing earlier yet.</div>`;
     return `<div class="ph-fvt${tng ? " tng" : ""}${pls ? " pls" : ""}"><div class="ph-fvt-h"><span>Visit</span>${tng ? "<span>Photo</span>" : ""}<span>Chart</span>${pls ? "<span>R cun</span><span>R guan</span><span>R chi</span><span>L cun</span><span>L guan</span><span>L chi</span>" : "<span>Findings</span>"}<span></span></div>${todayD ? row(todayD, true) : ""}${shown.map(d => row(d, false)).join("")}${hidden > 0 ? `<button type="button" class="ph-fv-more" data-fv-more="1">+ ${hidden} more</button>` : ""}</div>`;
