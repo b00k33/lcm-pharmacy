@@ -834,6 +834,11 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
 - **Pulse:** the chart, then the description box (`phPulseDescBoxHtml`): Right and Left, Cun · Guan · Chi each a box filled from
   the chart's words (`phPulsePosWords`), hers saved as `constitPulse.desc` (cleared when the chart moves aside for a new day), then
   Rate & rhythm (its chip opens the Hammer form under it). The visits table has a column per position (`.ph-fvt.pls`).
+  **Since 2026-11-20 (her 8 picks, BUILD-NOTES "Pulse page: one tap"):** the four quality rows sit over the chart at once (Concavity ·
+  Radius · Intensity · Texture, each its usual picks + More ▾, `.ph-pls-qrow`), no tabs; one lit a row, one tap on a box stamps them all
+  (`phPulseStampCell`); a side's first tap writes its three normal pulses (`phPulseFillNormal`), "All as normal" · ✕ Erase · ▶ Play sit
+  on the key's line; the chart is still until ▶ Play; the words are depth first against each position's normal depth, in boxes that
+  wrap (textarea); Right | Left stack when narrow.
 - **Abdomen side view:** a real back (`PH_ABD_SIDE_BACK`), the chest forward of the belly, the lines fading out at the top and foot.
 - **Similar cases:** the cases the complaint search finds, ordered by shared signs (`phSimPatSigns` = today's Yes on Bing and Ren;
   `phSimCaseSigns` = the case's notes as read by `phTcNoteShown`; a `_now` / `_tend` pair counts as one), each row "n shared", the
@@ -2273,7 +2278,7 @@ until tapped off (or Esc); with none picked, tapping a box opens that box's own 
 chart one tab shows: Summary · Rate & rhythm (the Shen-Hammer exam, open) · Note · Fang Bing Ren (the qualities that tick a sign,
 signs on hover, `phPulseChipLinks`; no sign list on this page). The Summary's rate line is the fact alone since 2026-10-29
 ("Resting rate 78/min · within | above the range for her age", `phPulseRateLineHtml`; nothing until a rate is typed; the Bilton /
-Dr Shen reference sentence is its hover). **Pulse in action** = "▶ In action" on the legend line: the beat
+Dr Shen reference sentence is its hover). **Pulse in action** = "▶ Play" on the legend line (off every time the page opens since 2026-11-20, her pick): the beat
 is drawn over the chart's own cells (`phPaOverHtml`, the concept pictures' runner as `PH_PP.SC.pulse`), measured off the chart's
 own column and row labels (`phPaLay`, again on a width change); today's arches in the chart's blue lift by amplitude at her Hammer
 at-rest rate (72 when none, a Slowed chip), following the Hammer rhythm; the chart's own today drawing steps aside while it runs;

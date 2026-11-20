@@ -497,6 +497,15 @@ Phases 0-6 were built on 2026-10-10 and confirmed on `origin/main` 2026-10-18 (t
 - **Acupreg's colour is a deeper sage, #4E7A63** (her 2026-11-20 "the green and the white doesnt work well", pick "Everywhere but
   calendar blocks"): white on it 4.9:1; the sidebar's quiet words are 95-97% white mixes of it (4.5:1 or more). Her #8AAB99 stays only on
   Acupreg's calendar blocks (`PH_ACUPREG_COLOUR`).
+- **The Pulse page charts in one tap** (her 2026-11-20 "difficulty charting quickly ... i have to touch 2 tabs"; 8 picks of
+  `mocks/pulse-page-mock-2026-11-20.html`, all the recommended one): the four quality rows show at once, no tabs (each its usual picks,
+  the rest under its More ▾); one lit quality a row (`presPulseLit`) and one tap on a box stamps every lit one, a second tap takes them
+  off (`phPulseStampCell`); each position starts at its normal pulse, drawn faint, and her first tap on a side writes that side's three
+  as charted (`phPulseFillNormal`; "All as normal" fills every position with nothing charted). A position's own normal pulse at its
+  normal depth is no Fang Bing Ren sign (`phPulseTplAt` in `phFbrPulseWords`: Left Guan's wiry at Blood never ticks wiry). The chart
+  opens still every time (▶ Play moves it). Each position's words say depth against its own normal depth, normal depth first: "Qi
+  normal depth · Normal, soft · Skin 3 above normal · Pounding" (`phPulsePosWords`). No FBR underline on a chip. Right and Left stack
+  when narrow, never a sideways scrollbar. Never bring the quality tabs or the moving default back without her word.
 - **Findings:** `phExamMirrorToday`'s known edge: a part cleared after it was mirrored stays in that day's dated copy.
 - **Left on purpose:** the stored default plan title "New treatment plan" (code compares to it); letters, printed
   plan records and message templates keep "treatment plan".
