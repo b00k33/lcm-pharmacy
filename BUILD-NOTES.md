@@ -17019,3 +17019,17 @@ mark that is its position's own normal box with only the normal quality (`phPuls
 else in the box (flat, weak, blocked...) keeps it drawn. Saved data and the words under the chart unchanged. Checked on a test copy (made-up
 patient, All as normal + Flat at Right Chi): on 6 marks + 6 guide lines, off 1 mark (Right Chi) and none; the chip's hover reads "Hide the
 normal pulses" / "Show the normal pulses".
+
+## 2026-11-20: IUI and cancelled rounds (her "build the IUI and cancelled rounds next")
+**Why:** the Acupreg notes list IUIs ("Apr 2026 (letrozole 5mg) failed hCG 4") and rounds stopped before egg collection ("Apr 2026
+cancelled (3 follicles)"); IVF history only holds egg collections and transfers, so they rode in a Reproductive note. Gap 2.
+- **Built:** `rec.otherRounds = [{ id, date, kind: "iui" | "ivfx" | "fetx", meds, result, note, src, at }]`, a table on IVF history
+  under the semen analysis (`phOrHtml`, the same look): Date (✕ with one Undo) · Round (IUI / Cancelled IVF / Cancelled transfer) ·
+  Medication · Result (IUI only: – / Negative / Positive / Biochemical / Miscarriage; a cancelled round reads "Cancelled") · Note
+  (the reason), newest first. "+ IUI" and "+ Cancelled round" add a row and put the cursor in its Date. Boxes save on change;
+  changing Round redraws the table (a cancelled round drops its Result). Women only.
+- **Read by:** the IVF history fold's count ("· 2 IUIs") and the visit summary's "IUI" line ("3 IUIs · last 22 Sep · negative",
+  opens IVF history). A patient merge keeps both lists.
+- **Tested** (sandbox, Test Patient, 1280 and 360): both adds, every box, Round change drops Result, ✕ then Undo, the fold count, the
+  summary line. tap-audit / style-audit: none. Phone: scrolls sideways at 900px, Round words whole. Not tried: her real records (the
+  imported patients' IUIs and cancelled rounds move in as a data step after this is live).

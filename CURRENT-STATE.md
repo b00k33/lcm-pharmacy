@@ -937,6 +937,10 @@ own file when he is a linked patient, otherwise on hers; both pages show both. V
 draw). Read by the Timeline's Partner semen analysis row, his Men's fertility tests and the visit summary's "Partner SA" line.
 BUILD-NOTES "Semen analysis".
 
+## IUI and cancelled rounds (2026-11-20)
+IVF history has a second table under the semen analysis (`rec.otherRounds`: date, round IUI / Cancelled IVF / Cancelled transfer,
+medication, result for an IUI, note). The fold's count and the visit summary's "IUI" line read it. BUILD-NOTES "IUI and cancelled rounds".
+
 ## Musculoskeletal page
 **One step at a time (2026-11-19, her 8 picks; BUILD-NOTES "Musculoskeletal one step at a time"):** the 5-step bar is the page's tabs
 (`phMskStep`, `data-mk-step` on the host; opens on the first step not done; Next at a step's foot). Pain = the body as tall as the
