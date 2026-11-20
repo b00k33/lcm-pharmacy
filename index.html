@@ -670,6 +670,15 @@
   #pharmacyPage .ph-supp-tbl tbody tr.off th[scope="row"] { font-weight: 600; }
   #pharmacyPage .ph-supp-tbl tbody tr.add th { background: var(--ph-gold-tint); }
   #pharmacyPage .ph-supp-tbl td.dt { white-space: nowrap; }
+  /* Medicines (her 2026-11-20 "build the medicine list with doses"): the supplements table's look, its own columns */
+  #pharmacyPage .ph-med-wrap { margin: 0 0 14px; }
+  #pharmacyPage .ph-supp-tbl.ph-med-tbl { min-width: 0; }
+  @media (max-width: 640px) { #pharmacyPage .ph-supp-tbl.ph-med-tbl { min-width: 580px; } }
+  #pharmacyPage#pharmacyPage#pharmacyPage .ph-med-tbl tbody :is(th, td) { vertical-align: middle; }
+  #pharmacyPage .ph-med-tbl col.c-tk { width: 13%; } #pharmacyPage .ph-med-tbl col.c-nm { width: 24%; } #pharmacyPage .ph-med-tbl col.c-ds { width: 29%; }
+  #pharmacyPage .ph-med-tbl col.c-dt { width: 14%; } #pharmacyPage .ph-med-tbl col.c-cn { width: 20%; }
+  #pharmacyPage .ph-med-cn { display: inline-block; min-height: 24px; padding: 2px 8px; border-radius: 6px; background: #FDF3DC; color: #8A5A00; font: 600 var(--fs-11-5)/1.2 var(--font-body); }
+  #pharmacyPage .ph-vsum-c.wn { background: #FDF3DC; border-color: #E9B949; color: #8A5A00; }
   #pharmacyPage .ph-supp-tick { height: 32px; min-width: 32px; padding: 0 8px; border: 1px solid var(--ph-line); border-radius: 999px; background: var(--ph-white); color: var(--ph-faint); font: 600 var(--fs-13) var(--font-body); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; white-space: nowrap; }
   #pharmacyPage .ph-supp-tick.on { background: var(--ph-good-tint); border-color: var(--ph-good); color: var(--ph-ink); font-weight: 700; }
   #pharmacyPage .ph-supp-tick.stop { border-radius: 6px; background: var(--ph-low-tint); border-color: var(--ph-low-tint); color: var(--ph-ink); font-size: var(--fs-11-5); }
@@ -107059,7 +107068,7 @@ Difficult to sweat|no_sweat_tend:r`;
       // the Cliniko look (her synth22 pick 6, 2026-11-01): a page that holds things says how many, in a badge at the row's
       // end; a number that changed since the last paint rolls in once (motion only on a change)
       const rcRec = (u.id === "supplements" || u.id === "bloods" || u.id === "apptshist") && f.name ? phPatientPeek(f.name) : null;
-      const rcN = u.id === "similar" ? u.cnt || 0 : !rcRec ? 0 : u.id === "supplements" ? phSuppTaking(rcRec).length : u.id === "bloods" ? phBldList(rcRec).filter(b => !b.ivf).length + phScnList(rcRec).length
+      const rcN = u.id === "similar" ? u.cnt || 0 : !rcRec ? 0 : u.id === "supplements" ? phSuppTaking(rcRec).length + phMedsTaking(rcRec).length : u.id === "bloods" ? phBldList(rcRec).filter(b => !b.ivf).length + phScnList(rcRec).length
         : (k => phApptList().filter(a => a.service !== "Break" && phPatientKey(a.patient) === k).length)(phPatientKey(f.name));
       if (rcN) presFlowLast.cnt[u.id] = rcN;
       const rcRoll = rcN && prevCnt && prevCnt[u.id] !== rcN && !phTpReduceMotion() ? " roll" : "";
@@ -108550,13 +108559,95 @@ Difficult to sweat|no_sweat_tend:r`;
     phRenEnsurePhotos(phPatientKey(name));
     return `<div id="presMedHxHost">${phHxScreenInnerHtml(name, { inline: true, noConstit: true, figureInSide: phPfwSideVisible(name, "medhx") })}</div>`;
   }
+  // Medicines with doses (her 2026-11-20 "build the medicine list with doses next", after the Acupreg note review: a medicine was a
+  // line of free text in Medical history). rec.meds = [{ id, name, dose, since, on, stoppedAt, src, at }], kept beside the
+  // supplements on the same page and table look. A medicine that needs care with herbs is read on draw from PH_MED_CAUTION (DRAFT,
+  // hers to correct), never stored: a tag on its row and a "Herb caution" chip on the visit summary.
+  function phMeds(rec) { return (rec && Array.isArray(rec.meds) ? rec.meds : []).filter(m => m && m.name); }
+  const phMedsTaking = rec => phMeds(rec).filter(m => m.on !== false);
+  const PH_MED_CAUTION = [   // DRAFT: kinds of medicine where herbs need care (interactions, a narrow margin); hers to correct
+    [/\b(tacrolimus|prograf|advagraf|cyclosporin[e]?|ciclosporin|neoral|azathioprine|imuran|mycophenol\w*|cellcept|myfortic|sirolimus|rapamune|everolimus)\b/i, "immunosuppressant"],
+    [/\b(warfarin|coumadin|marevan|apixaban|eliquis|rivaroxaban|xarelto|dabigatran|pradaxa|clopidogrel|plavix|ticagrelor|brilinta|prasugrel|heparin|enoxaparin|clexane|aspirin|cartia|astrix)\b/i, "blood thinner"],
+    [/\b(lithium|digoxin|lanoxin|phenytoin|dilantin|carbamazepine|tegretol|valproate|epilim|lamotrigine|methotrexate|amiodarone|theophylline)\b/i, "narrow margin"],
+  ];
+  function phMedCaution(name) { const hit = PH_MED_CAUTION.find(([re]) => re.test(String(name || ""))); return hit ? hit[1] : ""; }
+  function phMedsHtml(rec, name) {
+    const none = `<span class="ph-vc-none">—</span>`;
+    const fld = (attr, v, ph) => `<textarea class="ph-cyc-in field-bare dose ph-supp-fld" ${attr} rows="1" placeholder="${ph}" aria-label="${ph}">${esc(v || "")}</textarea>`;
+    const list = phMeds(rec).slice().sort((a, b) => ((a.on === false) - (b.on === false)) || phAz(a.name, b.name));
+    const rows = list.map(m => {
+      const on = m.on !== false, id = esc(m.id), cn = phMedCaution(m.name);
+      const tick = on ? `<button type="button" class="ph-supp-tick on" data-med-tick="${id}" title="Taking · tap when stopped" aria-pressed="true">✓</button>`
+        : `<button type="button" class="ph-supp-tick stop" data-med-tick="${id}" title="Stopped · tap to start again" aria-pressed="false">stopped${m.stoppedAt ? ` ${esc(phShortDate(m.stoppedAt).replace(/ \d{4}$/, ""))}` : ""}</button>`;
+      return `<tr class="${on ? "on" : "stop"}"><td class="tk">${tick}</td><th scope="row">${esc(m.name)}<button type="button" class="ph-supp-own-rm" data-med-rm="${id}" aria-label="Remove ${esc(m.name)}" title="Remove">✕</button></th><td>${fld(`data-med-dose="${id}"`, m.dose, "Dose")}</td><td class="dt">${m.since ? esc(phShortDate(m.since)) : none}</td><td>${cn ? `<span class="ph-med-cn">Herb caution · ${esc(cn)}</span>` : none}</td></tr>`;
+    }).join("");
+    const add = `<tr class="add"><td class="tk"><span class="ph-supp-plus">+</span></td><th scope="row" colspan="4"><div class="ph-supp-other"><input type="text" class="field-bare ph-supp-fld" data-med-name="1" placeholder="Medicine" aria-label="Medicine" maxlength="80" autocomplete="off"><button type="button" class="ph-supp-addbtn" data-med-add="1">Add</button></div></th></tr>`;
+    return `<div class="ph-vc-wrap ph-supp-wrap ph-med-wrap"><table class="ph-vc-tbl ph-supp-tbl ph-med-tbl"><colgroup><col class="c-tk"><col class="c-nm"><col class="c-ds"><col class="c-dt"><col class="c-cn"></colgroup><thead><tr><th>Taking</th><th>Medicine</th><th>Dose</th><th>Since</th><th>Herbs</th></tr></thead><tbody>${rows}${add}</tbody></table></div>`;
+  }
+  // the one write door: add, tick (stop / start again), ✕ (one Undo), the dose box
+  function phMedsRepaint() { if (!presAssessTabRefresh()) renderPresPanel(); presFlowRailRefresh(); }
+  document.addEventListener("click", e => {
+    const t = e.target.closest && e.target.closest("[data-med-add], [data-med-tick], [data-med-rm]");
+    if (!t || !t.closest("#pharmacyPage")) return;
+    const rec = phCycleTargetRec();
+    if (!rec) return;
+    const today = keyOf(TODAY), fail = () => phFlashShow("That could not be saved — check the warning at the top and try again.");
+    if (t.matches("[data-med-add]")) {
+      const inp = t.parentElement.querySelector("[data-med-name]"), nm = inp ? inp.value.trim().slice(0, 80) : "";
+      if (!nm) { if (inp) inp.focus(); return; }
+      rec.meds = phMeds(rec);
+      const have = rec.meds.find(m => m.name.trim().toLowerCase() === nm.toLowerCase());
+      if (have) { have.on = true; delete have.stoppedAt; }
+      else rec.meds.push({ id: uid(), name: nm, dose: "", since: today, on: true, src: "own", at: Date.now() });
+      // Medical history follows: the medication rows say Yes once a medicine is on the list (her own answer stays if she gave one)
+      if (phHxVal(rec, "taking_prescribed_medication") === "unasked") phHxSet(rec, "taking_prescribed_medication", "yes");
+      if (phMedCaution(nm) === "blood thinner" && phHxVal(rec, "blood_thinning_medication") === "unasked") phHxSet(rec, "blood_thinning_medication", "yes");
+      rec.medsAt = Date.now();
+      if (savePharmacy() === false) { fail(); return; }
+      phMedsRepaint();
+      setTimeout(() => { const d = document.querySelector(`#pharmacyPage [data-med-dose="${CSS.escape((have || rec.meds[rec.meds.length - 1]).id)}"]`); if (d) d.focus(); }, 0);
+      return;
+    }
+    const id = t.dataset.medTick || t.dataset.medRm, m = phMeds(rec).find(x => x.id === id);
+    if (!m) return;
+    if (t.matches("[data-med-tick]")) {
+      if (m.on !== false) { m.on = false; m.stoppedAt = today; } else { m.on = true; delete m.stoppedAt; }
+      rec.medsAt = Date.now();
+      if (savePharmacy() === false) { fail(); return; }
+      phMedsRepaint();
+      return;
+    }
+    const before = rec.meds.slice();
+    rec.meds = phMeds(rec).filter(x => x.id !== id);
+    if (!rec.meds.length) delete rec.meds;
+    rec.medsAt = Date.now();
+    if (savePharmacy() === false) { rec.meds = before; fail(); return; }
+    phMedsRepaint();
+    presSavedToast(`Removed · ${m.name}`, { undo: () => { rec.meds = before; rec.medsAt = Date.now(); savePharmacy(); phMedsRepaint(); } });
+  });
+  document.addEventListener("change", e => {
+    const t = e.target.closest && e.target.closest("[data-med-dose]");
+    if (!t) return;
+    const rec = phCycleTargetRec(), m = rec && phMeds(rec).find(x => x.id === t.dataset.medDose);
+    if (!m) return;
+    m.dose = t.value.trim().slice(0, 120);
+    rec.medsAt = Date.now();
+    savePharmacy(); presBandsSyncSoon();
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Enter" || !(e.target instanceof Element) || !e.target.matches("[data-med-name]")) return;
+    e.preventDefault();
+    const b = e.target.parentElement.querySelector("[data-med-add]");
+    if (b) b.click();
+  });
   function presSupplementsTabBodyHtml(t) {
+
     const name = presPatientFor(t) || t.name || "";
     const rec = phPatientPeek(name) || {};
     // the band carries Taking · Last changed · vital.ly (the copy button
     // moved into its third gauge, so it isn't said twice)
     return `<div class="ph-tmpl-sec ph-fx-sec">${presBandHtml("supp", name, "", false, true)}</div>
-    <div class="ph-supp-open">${phSupp3Html(rec, name)}${phSuppEditorHtml(rec, name)}</div>`;
+    ${phMedsHtml(rec, name)}<div class="ph-supp-open">${phSupp3Html(rec, name)}${phSuppEditorHtml(rec, name)}</div>`;
   }
   /* her ask 2026-09-13 ("instead of dropdowns, can i have tabs? that way i
      can see all the options photos bells palsy cycle etc"): the five
@@ -108645,7 +108736,7 @@ Difficult to sweat|no_sweat_tend:r`;
       // Fang Bing Ren -- "putting it together is part of the plan tab, as
       // wel with todays visit"); see presTpMainSections.
     }
-    sections.push({ id: "supplements", label: "Supplements", body: () => presSupplementsTabBodyHtml(t) });
+    sections.push({ id: "supplements", label: "Medicines & supplements", body: () => presSupplementsTabBodyHtml(t) });
     if (hxName) {
       const key = phPatientKey(hxName);
       const sortN = phRenPhotosFor(key) ? phRenSortFlowAllNeeds(key).length : 0;
@@ -128382,9 +128473,12 @@ Difficult to sweat|no_sweat_tend:r`;
     if (!hd.some(x => x.includes('data-flow-go="timeline"'))) { const up = phIvfCycles(rec).flatMap(r => r.transfers || []).map(x => phIvfFullDate(x.date)).filter(d => d && d >= today).sort()[0]; if (up) hd.push(chip("flow-prof", "ivf", `Transfer ${presBandDay(up)}`)); }
     const nv = phTodayNextVisitKey(name);
     if (nv) hd.push(chip("flow-prof", "apptshist", `Next visit ${phCycShortLbl(nv)}`));
+    const cns = Array.from(new Set(phMedsTaking(rec).map(m => phMedCaution(m.name)).filter(Boolean)));
+    if (cns.length) hd.push(chip("flow-prof", "supplements", `Herb caution · ${cns.join(", ")}`, "wn"));
     // medicines: the Medication rows' own notes (Taking prescribed medication, Blood-thinning medication)
-    const med = ["taking_prescribed_medication", "blood_thinning_medication"].filter(k => phHxVal(rec, k) === "yes").map(k => phHxNote(rec, k) || PH_HX_LABEL[k]);
-    if (med.length) line("flow-prof", "medhx", "Medicines", med.join(" · "));
+    const ml = phMedsTaking(rec);
+    const med = ml.length ? ml.slice().sort((a, b) => phAz(a.name, b.name)).map(m => [m.name, m.dose].filter(Boolean).join(" ")) : ["taking_prescribed_medication", "blood_thinning_medication"].filter(k => phHxVal(rec, k) === "yes").map(k => phHxNote(rec, k) || PH_HX_LABEL[k]);
+    if (med.length) line("flow-prof", ml.length ? "supplements" : "medhx", "Medicines", med.join(" · "));
     const alg = ["known_drug_allergy", "known_food_allergy", "allergic_to_herbs"].filter(k => phHxVal(rec, k) === "yes").map(k => phHxNote(rec, k) || PH_HX_LABEL[k]);
     if (alg.length) line("flow-prof", "medhx", "Allergies", alg.join(" · "));
     // her own conditions (Yes rows and her typed ones), not family, medication or pregnancy rows, A to Z
@@ -164537,7 +164631,7 @@ Please let me know if you have any questions.`;
     return pairs;
   }
   // the stores phPatientMerge handles by name, each with its own rule; everything else on a record goes through phMergeFillGaps
-  const PH_MERGE_OWN_RULE = new Set(["medicalHistory", "historyNotes", "historyOther", "history", "medicalHistoryNotes", "addresses", "treatmentPlans", "ivfCycles", "suppOwn", "supplements", "historyGroupNotes", "historyNoteFrom", "historyUpdatedAt", "skin", "voiceManner", "updatedAt"]);
+  const PH_MERGE_OWN_RULE = new Set(["medicalHistory", "historyNotes", "historyOther", "history", "medicalHistoryNotes", "addresses", "treatmentPlans", "ivfCycles", "suppOwn", "meds", "supplements", "historyGroupNotes", "historyNoteFrom", "historyUpdatedAt", "skin", "voiceManner", "updatedAt"]);
   // a blank on the kept record takes the other's; two lists combine (one row once, by id when it has one); two objects go field by field; nothing on the kept record is overwritten
   function phMergeFillGaps(into, from, skip) {
     Object.keys(from).forEach(k => {
@@ -164631,6 +164725,7 @@ Please let me know if you have any questions.`;
       }
       // her 2026-10-26 stores from the medical history link (the patient's own supplements, group boxes, a note's form date)
       phSuppOwn(from).forEach(o => { into.suppOwn = phSuppOwn(into); if (!into.suppOwn.some(x => x.name.trim().toLowerCase() === o.name.trim().toLowerCase())) into.suppOwn.push(o); });
+      phMeds(from).forEach(o => { into.meds = phMeds(into); if (!into.meds.some(x => x.name.trim().toLowerCase() === o.name.trim().toLowerCase())) into.meds.push(o); });
       if (from.supplements) { into.supplements = into.supplements || {}; Object.keys(from.supplements).forEach(k => { if (!into.supplements[k]) into.supplements[k] = from.supplements[k]; }); }
       Object.keys(from.historyGroupNotes || {}).forEach(g => phHxGroupNotes(from, g).forEach(n => phHxGroupNoteAdd(into, g, n.text, n.at)));
       if (from.historyNoteFrom) into.historyNoteFrom = Object.assign({}, from.historyNoteFrom, into.historyNoteFrom || {});

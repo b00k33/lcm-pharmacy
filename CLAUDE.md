@@ -183,7 +183,7 @@ dropdowns: A–Z. A new list is A–Z from its first build.
 ## 1 · Three groups, in this order
 | Group | Pages, in order | How often |
 |---|---|---|
-| **1 Her file** | Patient details → Medical history → Ren → Supplements → Blood tests (her reorder, 2026-10-18, swapping Medical history and Ren; Stress & sleep left this list 2026-10-13, see §3) | Set once, kept current |
+| **1 Her file** | Patient details → Medical history → Ren → Supplements (rail: Medicines & supplements since 2026-11-20) → Blood tests (her reorder, 2026-10-18, swapping Medical history and Ren; Stress & sleep left this list 2026-10-13, see §3) | Set once, kept current |
 | **2 Today's visit** | Today's visit (checklist home) → Cycle (if on) → Tongue → Pulse → Abdomen | Every visit |
 | **3 Put together & do** | Fang Bing Ren → Timeline (fertility plans) → Treatment Care Plan → Treatment → Dispense | Decide, then treat |
 
