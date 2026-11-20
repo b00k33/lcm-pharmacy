@@ -80,6 +80,14 @@
   .hx-btn, .fbr-btn { padding: 7px 14px; border-radius: 999px; border: 1px solid var(--ph-line); background: var(--ph-white); font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ph-soft); cursor: pointer; }
   .hx-btn.on, .fbr-btn.on { background: var(--ph-green-tint); border-color: var(--ph-green); color: var(--ph-green-deep); }
   .checkrow { display: flex; align-items: center; gap: 8px; font-size: 13.5px; padding: 4px 0; }
+  /* Consent to treatment (her 2026-11-20 ask): the information, a Yes / No per therapy, the read tick, the name as signature */
+  .cn-info h3 { font-size: 13.5px; font-weight: 700; color: var(--ph-green-deep); margin: 14px 0 4px; }
+  .cn-info h3:first-child { margin-top: 0; }
+  .cn-info p { font-size: 13px; line-height: 1.55; color: var(--ph-ink); margin: 0 0 6px; }
+  .cn-info ul { margin: 0 0 6px; padding-left: 18px; font-size: 13px; line-height: 1.55; }
+  .cn-read { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.5; padding: 10px 2px; border-top: 1px solid var(--ph-line); margin-top: 10px; }
+  .cn-read input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; }
+
   .checkrow input { width: auto; }
   .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
   .chip { padding: 7px 13px; border-radius: 999px; border: 1px solid var(--ph-line); background: var(--ph-white); font: inherit; font-size: 12.5px; color: var(--ph-soft); cursor: pointer; }
@@ -302,7 +310,52 @@
   }
 
   // again = { at } when the patient reopens a form she already sent (her 2026-10-26 pick "Same link reopens"): her own answers are back on it
+  // Consent to treatment (her 2026-11-20 ask: "include a consent to Acupuncture/Chinese Herbal Prescription/Cupping Treatment section -
+  // something ahpra appropriate"). Written to the Chinese Medicine Board of Australia's Code of conduct on informed consent: what each
+  // therapy involves, its common and rare risks, no promised outcome, alongside (not instead of) the doctor, questions welcome, any part
+  // can be declined or stopped at any time; a parent or guardian signs for anyone under 18. Sent as history.consent (no SQL change).
+  var CONSENT_V = 1;
+  var CONSENT_TX = [["acu", "Acupuncture"], ["herb", "Chinese herbal medicine"], ["cup", "Cupping"]];
+  function consentHtml() {
+    return '<div class="section-h">Consent to treatment</div>' +
+      '<div class="card" id="consentCard">' +
+        '<div class="cn-info">' +
+          '<p>Your practitioner is registered with the Chinese Medicine Board of Australia (Ahpra). Please read this before your first treatment. Your practitioner will also talk you through your treatment at your visit, and you can ask questions at any time.</p>' +
+          '<h3>Acupuncture</h3>' +
+          '<p>Fine, sterile, single-use needles are placed at points on the body and left in for a short time. You may feel a dull ache, tingling or heaviness.</p>' +
+          '<ul><li>Common and short-lived: a small bruise or a drop of blood where a needle was, tiredness, or feeling light-headed.</li>' +
+          '<li>Uncommon or rare: fainting, infection, nerve irritation, a needle breaking, or (very rarely) a needle over the chest causing a collapsed lung.</li></ul>' +
+          '<h3>Chinese herbal medicine</h3>' +
+          '<p>Herbs are prescribed for you alone, usually as granules, powder or tablets.</p>' +
+          '<ul><li>Some people notice an upset stomach, loose bowels, a rash or, rarely, an allergic reaction. Stop the herbs and contact us if this happens.</li>' +
+          '<li>Herbs can interact with medicines. Tell us about every medicine and supplement you take, and about any change.</li>' +
+          '<li>Take them only as directed, and keep them away from children.</li></ul>' +
+          '<h3>Cupping</h3>' +
+          '<p>Cups placed on the skin create gentle suction.</p>' +
+          '<ul><li>Round red or purple marks are common and fade over a few days to two weeks.</li>' +
+          '<li>Less often: tenderness, skin irritation, blistering or, with fire cupping, a burn.</li></ul>' +
+          '<h3>Please tell us</h3>' +
+          '<p>If you are pregnant or could be, trying to conceive or breastfeeding; have a pacemaker, a bleeding disorder or take blood thinners; have diabetes, epilepsy or a skin condition; or feel unwell or faint during a treatment.</p>' +
+          '<h3>Your rights</h3>' +
+          '<p>Treatment is planned around your health and goals. Everyone responds differently and no result can be guaranteed. Chinese medicine works alongside your doctorâs care, not instead of it: keep seeing your doctor and take your medicines as prescribed. You can ask questions, say no to any part of a treatment, or stop at any time. Your information is kept private in your clinical record.</p>' +
+        '</div>' +
+        '<div class="hx-group"><div class="hx-group-h">I consent to</div>' +
+        CONSENT_TX.map(function (t) {
+          return '<div class="hx-row" data-cn-item="' + t[0] + '"><span class="hx-label">' + esc(t[1]) + '</span>' +
+            '<div class="hx-toggle"><button type="button" class="hx-btn" data-cn-val="yes">Yes</button><button type="button" class="hx-btn" data-cn-val="no">No</button></div></div>';
+        }).join("") + '</div>' +
+        '<label class="cn-read"><input type="checkbox" id="fConsentRead"> I have read and understood this information, I have been able to ask questions, and I know I can change my mind at any time.</label>' +
+        '<div class="field" style="margin:6px 0 0"><label class="q" for="fConsentName">Your full name <span style="font-weight:400;color:var(--ph-soft)">(a parent or guardian signs for anyone under 18)</span></label><input type="text" id="fConsentName" autocomplete="name" maxlength="120"></div>' +
+        '<div class="field" style="margin:10px 0 0"><label class="checkrow"><input type="checkbox" id="fConsentGuardian"> I am signing as the parent or guardian</label></div>' +
+      '</div>';
+  }
+  function consentCollect() {
+    var c = { v: CONSENT_V, read: !!document.getElementById("fConsentRead").checked, name: document.getElementById("fConsentName").value.trim().slice(0, 120), guardian: !!document.getElementById("fConsentGuardian").checked, on: localToday() };
+    CONSENT_TX.forEach(function (t) { var on = document.querySelector('[data-cn-item="' + t[0] + '"] .hx-btn.on'); c[t[0]] = on ? on.dataset.cnVal : ""; });
+    return c;
+  }
   function renderForm(name, prefill, again, createdAt) {
+
     var groupsAll = questionsFrom(prefill);
     var alwaysGroups = groupsAll.filter(function (gr) { return !gr.fem; });
     var femaleGroups = groupsAll.filter(function (gr) { return gr.fem; });
@@ -356,6 +409,7 @@
         '<div class="card">' + fbrRowsHtml("p") + '</div>' +
         '<div class="section-h">The last few weeks</div>' +
         '<div class="card">' + fbrRowsHtml("d") + '</div>' +
+        consentHtml() +
         '<p class="note" id="missNote" aria-live="polite"></p>' +
         '<p class="err" id="formErr" hidden></p>' +
         '<div class="submitbar"><button type="submit" class="submitbtn" id="submitBtn">' + (again ? "Send again" : "Submit") + '</button></div>' +
@@ -372,7 +426,15 @@
         if (note && !note.hidden && !wasOn) note.focus();
       });
     });
+    document.querySelectorAll("[data-cn-item] .hx-btn").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var row = btn.closest("[data-cn-item]"), wasOn = btn.classList.contains("on");
+        row.querySelectorAll(".hx-btn").forEach(function (b) { b.classList.remove("on"); });
+        if (!wasOn) btn.classList.add("on");
+      });
+    });
     var suppAddBtn = document.getElementById("suppAdd");
+
     if (suppAddBtn) suppAddBtn.addEventListener("click", function () { suppAddRow(); var rows = document.querySelectorAll("#suppRows [data-supp-f=name]"); if (rows.length) rows[rows.length - 1].focus(); });
     document.querySelectorAll("[data-ox-add]").forEach(function (b) {
       b.addEventListener("click", function () { var w = b.dataset.oxAdd; otherAddRow(w); var ins = document.querySelectorAll("#oxRows-" + w + " [data-ox-f=n]"); if (ins.length) ins[ins.length - 1].focus(); });
@@ -590,7 +652,14 @@
       if (blank("fMenarche")) miss.push({ label: "Age at first period", el: document.getElementById("fMenarche") });
       if (!document.querySelector("#ivfSeg .sexbtn.on")) miss.push({ label: "IVF question", el: document.getElementById("ivfSeg") });
     }
+    CONSENT_TX.forEach(function (t) {
+      var row = document.querySelector('[data-cn-item="' + t[0] + '"]');
+      if (row && !row.querySelector(".hx-btn.on")) miss.push({ label: "Consent: " + t[1], el: row });
+    });
+    if (!document.getElementById("fConsentRead").checked) miss.push({ label: "Consent: I have read this", el: document.querySelector(".cn-read") });
+    if (blank("fConsentName")) miss.push({ label: "Consent: your full name", el: document.getElementById("fConsentName") });
     // medical history rows in a hidden group (e.g. female-only for a man) don't count
+
     document.querySelectorAll("[data-hx-item]").forEach(function (row) {
       if (row.closest("[hidden]") || row.querySelector(".hx-btn.on")) return;
       miss.push({ label: "Medical history", el: row, hx: true });
@@ -665,6 +734,7 @@
       (row.dataset.fbrKind === "p" ? fbr.p : fbr.d).push(row.dataset.fbrItem);
     });
     if (fbr.p.length || fbr.d.length) history.fbr = fbr;
+    history.consent = consentCollect();
     var cycle = null;
     if (sex === "F") {
       var lmp = document.getElementById("fLmp").value || null;
