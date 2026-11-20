@@ -16828,3 +16828,31 @@ Her six asks (synth22), four built here, the Pulse page (asks 5 + 6) next as a m
   more. tap-audit and style-audit empty for the table and the open list at 1220 and 360 (Acupreg shows "fill other" on the timeline's
   Today and the step circles: the audit knows only the teal palette). Shots `shots/diagnosis-groups-built-2026-11-20.jpg`,
   `shots/came-in-for-acupreg-green-built-2026-11-20.jpg`. Not tried: her real patients, the Treatment focus box by hand.
+
+## Pulse page: one tap (synth22 2026-11-20, asks 5 + 6)
+Her words: "based on previous redesigns of pages, apply similar principles here. give option to view chart without animation. the text
+for cun guan chi should also include depth e.g. cun pulse normal depth is thin, bone depth is pounding etc." and "im having difficulty
+charting quickly. e.g. if pulse has normal concavity but slightly weak, i have to touch 2 tabs to find the pulse. how to make it
+faster?", then "remember there is a baseline of normal depth associated with cun guan chi". Mock `mocks/pulse-page-mock-2026-11-20.html`
+(shot `shots/pulse-page-mock-2026-11-20.png`); her 8 picks, all the recommended one: A+B (all four rows + starts at normal), one tap
+stamps both, the normal start counts once she touches a side, still with ▶ Play, words depth first, usual picks + More ▾, no
+underline, stack when narrow.
+- **Code:** `presPulseLit` (group label -> id, view state; cleared on a patient's open and by Esc); the stamp handler lights one a row
+  (Erase alone); a box tap with any lit = `phPulseStampCell` (before the fill it asks whether every lit one is already there: yes takes
+  them off, no adds the missing ones), else as before (Erase, or the box's own popup, which also goes through `phPulseStampCell`);
+  `phPulseFillNormal(marks, side, gaps)` writes PH_PULSE_TPL's three boxes for a side with nothing charted ("All as normal",
+  `data-pls-allnorm`, fills each position with nothing under it); `phPulseTplAt(k)`; `phFbrPulseWords` skips a quality equal to its
+  box's normal (Left Guan's wiry at Blood, Normal anywhere normal); `PH_PLS_USUAL` + `qrow` draw the rows (a row's More ▾ is a
+  `select.ph-pls-more`, its change lights the pick); `PH_PA.play` true only after ▶ Play (reset by `presOpenScript` and every rail
+  step); `phPulsePosWords` = "<Depth> normal depth | n above / below normal · Quality, quality", normal depth first; the description
+  boxes are one-line textareas that wrap (Enter = done, a pasted newline = a space). CSS after `.ph-pls-legend .ph-pulse-priorkey`.
+  `.ph-pulse-halves` no longer reserves a scrollbar (`overflow: visible`); the description box is two columns from 641px.
+- **Behaviour change she should know:** a Left Guan wiry drawn at Blood (its normal) no longer ticks Fang Bing Ren's wiry sign. Wiry
+  anywhere else still does.
+- **Checked** (test copy, made-up first-visit patient): Soft lit, one tap on Right Cun · Qi = "Qi normal depth · Normal, soft", Guan
+  and Chi filled normal; Pounding on Chi · Skin = "Organ normal depth · Normal · Skin 3 above normal · Pounding"; Normal + Soft lit and
+  the same box again = both off; All as normal fills the left (Left Guan "Blood normal depth · Wiry"); Fang Bing Ren words
+  ["pounding", "floating"], no wiry; a More ▾ pick (Slippery) lights; ▶ Play starts and stops the beat, the page opens still; the box
+  popup on an untouched side fills it too; her own words on a line save (`desc`); Table view draws; `phFbrKeyCheck()` []. tap-audit and
+  style-audit empty at 1220 and 360. Built shot `shots/pulse-page-built-2026-11-20.jpg`. Rebuilt on 0589f6d0 (another session's
+  intake work) before committing. Not tried: her real patients, an earlier-day chart moving aside on the first tap.
