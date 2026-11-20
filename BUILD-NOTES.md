@@ -16784,7 +16784,7 @@ taking, Stopping = no Herbs today and no run-out reminders, anyone dispensed her
   740: the herb rows keep 46px with no circle, no errors; every supplier's row its colour on the table and the phone list;
   tap-audit.js + style-audit.js: none left (the colour audit names the supplier washes, marks by her word).
 
-## 2026-11-20: A pregnant patient's booking has no cycle day (SAVED, not live)
+## 2026-11-20: A pregnant patient's booking has no cycle day (LIVE in build 20261120-123100, publish f1d89fa1)
 - **Her words**, on the Appointments List (Nyssa Jualim, ~9 weeks pregnant after IVF, read "~Day 28 · Ovulation"): "nyssa is pregnant,
   not possible she is day 28".
 - **Cause:** the bookings' cycle day (`phApptCdInfo`, `phUnPhaseFor`'s `comp`) never read the 2026-10-13 rule (`phCycleTracked`: a
