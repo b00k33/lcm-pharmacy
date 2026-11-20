@@ -2323,7 +2323,10 @@ columns (its `vw` argument). One cell shows three inks over each other (her pick
 grey (middle, `.ph-pulse-prevl`, shown even when today is ticked), today blue (thinnest, blue-tint cell), with a legend Normal ·
 Today · <date> over the chart. Normal and the last visit's date in the key are chips that hide / show that line on every chart,
 remembered on this device (`lcm-pulse-layers`, `phPulseLayer`; her pick); today's blue always shows; the date chip only when a
-last chart exists.
+last chart exists. Normal off ALSO hides the plain normal pulses (her 2026-11-20 "i need to toggle the normal pulses on and off. i dont
+always need to see them"): a position's own normal box holding only its normal quality (`phPulseIsPlainNormal`, e.g. what All as
+normal writes) draws nothing, today's and last visit's, and ▶ Play skips it; the mark stays saved and its words stay in the boxes under
+the chart. Pulse page only (`hideNorm`, the 9th argument of `phVisitPulseHalfHtml`).
 **The Pulse page** (her pick) [Pulse page: tabs, the chart moves itself]: the four quality groups are one tab bar (Concavity ·
 Radius · Intensity · Texture + Erase) that stays in view, only the open group's chips under it; a picked quality stays picked
 until tapped off (or Esc); with none picked, tapping a box opens that box's own qualities beside it (`phPulsePopHtml`). Under the
