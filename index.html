@@ -94696,7 +94696,7 @@ or changing anything in Cliniko.
     // her 2026-10-26 pick A (pulse-layers-toggle-mock-2026-10-26.html): the key is the switch: Normal and the last visit's date are
     // chips, a tap hides / shows that line on every chart, remembered on this device (phPulseLayer); today's blue always shows
     const showN = phPulseLayer("n"), showP = !!prior && phPulseLayer("p");
-    const layBtn = (k, lbl, on) => `<button type="button" class="ph-pulse-lay${on ? " on" : ""}" data-pulse-lay="${k}" aria-pressed="${on}" title="${on ? "Hide" : "Show"} ${esc(lbl)}">${keySw(k)}<span class="lbl">${esc(lbl)}</span></button>`;
+    const layBtn = (k, lbl, on) => `<button type="button" class="ph-pulse-lay${on ? " on" : ""}" data-pulse-lay="${k}" aria-pressed="${on}" title="${on ? "Hide" : "Show"} ${k === "n" ? "the normal pulses" : esc(lbl)}">${keySw(k)}<span class="lbl">${esc(lbl)}</span></button>`;
     const priorKey = `<div class="ph-pulse-priorkey">${layBtn("n", "Normal", showN)}<span>${keySw("t")}Today</span>${prior ? layBtn("p", phCycShortLbl(prior.date), showP) : ""}</div>`;
     // her 2026-10-22 ("sync chart to chips to auto select"): Deep and Floating light up by themselves from where she draws (phPulseAutoDepth)
     const autoD = phPulseAutoDepth(marks), autoOn = { Deep: autoD.deep.length, Floating: autoD.floating.length };
@@ -94732,7 +94732,7 @@ or changing anything in Cliniko.
     const rhy = [rh.includes("Interrupted") ? "int" : "", rh.includes("Intermittent") ? "itm" : "", rh.includes("Rate change @ rest") ? "chg" : ""].filter(Boolean).join(" ");
     const spd = (v, label) => `<button type="button" class="ph-ltr-qual${PH_PA.slow === !v ? " on" : ""}" data-pa-speed="${v}" aria-pressed="${PH_PA.slow === !v}">${label}</button>`;
     const motion = anyArch ? `<div class="ph-tng2-seg"><span class="ph-tng2-wr"><button type="button" class="ph-ltr-qual${play ? " on" : ""}" data-pa-play="1" aria-pressed="${play ? "true" : "false"}">▶ Play</button>${play ? spd(1, rate + " / min") + spd(0, "Slowed") : ""}</span></div>` : "";
-    const over = s => play ? phPaOverHtml(s, marks, rate, rhy) : "";
+    const over = s => play ? phPaOverHtml(s, showN ? marks : phPulseNoPlain(marks), rate, rhy) : "";
     const acts = `<span class="ph-pls-acts"><div class="ph-tng2-seg"><span class="ph-tng2-wr"><button type="button" class="ph-ltr-qual" data-pls-allnorm="1" title="Every position with nothing charted takes its normal pulse">All as normal</button></span></div><div class="ph-tng2-seg"><span class="ph-tng2-wr"><button type="button" class="ph-ltr-qual${brush === "erase" ? " on" : ""}" data-constit-pulse-stamp="erase" aria-pressed="${brush === "erase" ? "true" : "false"}">✕ Erase</button></span></div>${motion}</span>`;
     // under the chart: one tab at a time
     const fb = phPulseFbrTicked(name), hmN = phVisitHammerCount(p.hammer);
@@ -94754,8 +94754,8 @@ or changing anything in Cliniko.
         ${tbl ? `${tblTool}${phPulseTableHtml(rec, name, marks, p.hammer, grp)}` : `${tool}
         <div class="ph-pls-legend">${priorKey}${acts}</div>
         <div class="ph-pulse-halves${play ? " pa-on" : ""}">
-          ${phVisitPulseHalfHtml("R", marks, showP ? prior.marks : null, refs, "data-constit-pulse-cell", "data-constit-pulse-ref", tplOn, over("R"))}
-          ${phVisitPulseHalfHtml("L", marks, showP ? prior.marks : null, refs, "data-constit-pulse-cell", "data-constit-pulse-ref", tplOn, over("L"))}
+          ${phVisitPulseHalfHtml("R", marks, showP ? prior.marks : null, refs, "data-constit-pulse-cell", "data-constit-pulse-ref", tplOn, over("R"), !showN)}
+          ${phVisitPulseHalfHtml("L", marks, showP ? prior.marks : null, refs, "data-constit-pulse-cell", "data-constit-pulse-ref", tplOn, over("L"), !showN)}
         </div>
 `}
         ${phPulseDescBoxHtml(rec, name, marks, r0, rh, below)}
@@ -161300,6 +161300,14 @@ Difficult to sweat|no_sweat_tend:r`;
     const [side, col, lv] = String(k).split(":"), pos = (PH_PULSE_POS_COL[side] || {})[col], t = pos && PH_PULSE_TPL[side + ":" + pos];
     return t && t.level === lv ? t.quality : null;
   }
+  // a plain normal pulse (her 2026-11-20 "i need to toggle the normal pulses on and off. i dont always need to see them"): the
+  // position's own normal box holding its normal quality and nothing else; the key's Normal chip hides these with the guide line
+  function phPulseIsPlainNormal(k, m) {
+    const t = phPulseTplAt(k); if (!t || !m) return false;
+    const q = phPulseQuals(m);
+    return q.length === 1 && [q[0].shape, q[0].quality].some(x => String(x || "").toLowerCase() === t);
+  }
+  const phPulseNoPlain = marks => { const o = {}; Object.keys(marks || {}).forEach(k => { if (!phPulseIsPlainNormal(k, marks[k])) o[k] = marks[k]; }); return o; };
   // gaps: "All as normal", every position with nothing charted under it; else only a side with nothing charted at all
   function phPulseFillNormal(marks, side, gaps) {
     const own = Object.keys(marks).filter(k => k.indexOf(side + ":") === 0);
@@ -161496,10 +161504,11 @@ Difficult to sweat|no_sweat_tend:r`;
   // constitution screen's patient-level pulse read (her ask 2026-09-16)
   // passes data-constit-pulse-*; every existing visit caller leaves them
   // unset and gets the data-visit-pulse-* it always had.
-  function phVisitPulseCellHtml(side, col, level, marks, prevMarks, cellAttr, tplOn) {
+  function phVisitPulseCellHtml(side, col, level, marks, prevMarks, cellAttr, tplOn, hideNorm) {
     const key = `${side}:${col.id}:${level.id}`, vw = col.w === 2 ? 44 : 0;   // a wide column draws a longer pulse (her 2026-10-21)
     // three layers drawn over each other (her pick 2026-10-21): the normal pulse green, last visit grey, today blue on top
-    const m = marks[key], pm = prevMarks && prevMarks[key];
+    const m0 = marks[key], pm0 = prevMarks && prevMarks[key];
+    const m = hideNorm && phPulseIsPlainNormal(key, m0) ? null : m0, pm = hideNorm && phPulseIsPlainNormal(key, pm0) ? null : pm0;
     const prevInner = pm ? phPulseCellInnerHtml(pm, false, vw) : "";
     let title = `${col.label} · ${side} ${col.pos} · ${level.label}${m ? ` — today: ${phPulseQualText(m)}` : ""}${pm ? ` — last visit: ${phPulseQualText(pm)}` : ""}`;
     const tplInfo = tplOn ? phPulseTplInfo(side, col, level, m) : null;
@@ -161513,7 +161522,7 @@ Difficult to sweat|no_sweat_tend:r`;
     return s === c.label ? `<div class="ph-pulse-collbl"><span class="l">${esc(s)}</span></div>`
       : `<div class="ph-pulse-collbl has-full" tabindex="0" aria-label="${esc(c.label)}"><span class="l">${esc(s)}</span><span class="full" aria-hidden="true">${esc(c.label)}</span></div>`;
   }
-  function phVisitPulseHalfHtml(side, marks, prevMarks, refs, cellAttr, refAttr, tplOn, overHtml) {
+  function phVisitPulseHalfHtml(side, marks, prevMarks, refs, cellAttr, refAttr, tplOn, overHtml, hideNorm) {
     const cols = PH_PULSE_CHART[side];
     const gridCols = ["44px", ...cols.map(c => c.w === 2 ? "2fr" : "1fr")].join(" ");
     // her pick B 2026-10-21 (pulse-cun-row-mock-2026-10-21.html): the organ names on top, Cun / Guan / Chi right above the cells;
@@ -161533,7 +161542,7 @@ Difficult to sweat|no_sweat_tend:r`;
         <div class="ph-pulse-collbl ph-pulse-sidein">${side === "R" ? "RIGHT" : "LEFT"}</div>
         ${cols.map(phPulseColLblHtml).join("")}
         <div class="ph-pulse-poslbl none"></div>${posRow}
-        ${PH_PULSE_LEVELS.map(level => `<div class="ph-pulse-rowlbl" title="${esc(level.meaning || "")}">${esc(level.label)}</div>${cols.map(c => phVisitPulseCellHtml(side, c, level, marks, prevMarks, cellAttr, tplOn)).join("")}`).join("")}
+        ${PH_PULSE_LEVELS.map(level => `<div class="ph-pulse-rowlbl" title="${esc(level.meaning || "")}">${esc(level.label)}</div>${cols.map(c => phVisitPulseCellHtml(side, c, level, marks, prevMarks, cellAttr, tplOn, hideNorm)).join("")}`).join("")}
         ${frame}
         ${overHtml || ""}
       </div>

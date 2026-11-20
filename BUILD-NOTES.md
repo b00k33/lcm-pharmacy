@@ -17011,3 +17011,11 @@ Item 1 of the gaps she was given.
   fold). tap-audit / style-audit on the table: none new; "+ Semen analysis" shares the page's own add button (24px on phone, like
   "+ Egg collection"). Phone: the table scrolls sideways at 980px, no value cut. Not tried: her real records (the imported partners'
   results move in as a data step after this is live).
+
+## Pulse: the Normal chip hides the normal pulses too (2026-11-20)
+Her words, on a chart with Normal already off: "i need to toggle the normal pulses on and off. i dont always need to see them".
+The chip hid only the guide line; the arches she still saw were today's plain normal marks (All as normal). Now Normal off also hides a
+mark that is its position's own normal box with only the normal quality (`phPulseIsPlainNormal`, `phPulseNoPlain` for ▶ Play); anything
+else in the box (flat, weak, blocked...) keeps it drawn. Saved data and the words under the chart unchanged. Checked on a test copy (made-up
+patient, All as normal + Flat at Right Chi): on 6 marks + 6 guide lines, off 1 mark (Right Chi) and none; the chip's hover reads "Hide the
+normal pulses" / "Show the normal pulses".
