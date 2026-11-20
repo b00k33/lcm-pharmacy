@@ -224,8 +224,9 @@ dropdowns: A–Z. A new list is A–Z from its first build.
 - **The exam pages since 2026-11-18 (her synth22, 9 asks + 12 picks, mock `mocks/synth22-exam-pages-2026-11-18.html`; BUILD-NOTES
   "synth22 exam pages"):** the Plans row shows on the Care Plan page only (`presTpPlanTabsHtml`); no tab row above the exam pages (the
   rail is the way between them); a door on a patient page that leaves the patient leaves a "‹ name" chip that brings her back to the
-  same page and scroll (`phTripSync` / `phTripGo`, Esc too); Tongue is two halves like Abdomen (the chart alone left, everything else
-  right); Pulse = the chart, ONE description box (each position's words from the chart, hers win, `p.desc`) with Rate & rhythm as its
+  same page and scroll (`phTripSync` / `phTripGo`, Esc too); Tongue is ONE top row since 2026-11-20 (her "improve view", 9
+  picks: the chart · Today · Last · Flash · Flash last, one size, up to 300 x 400 and shrinking together to stay one row; the tabs and picks
+  full width under it; no Past photos strip or trend line; never back to two halves without her word); Pulse = the chart, ONE description box (each position's words from the chart, hers win, `p.desc`) with Rate & rhythm as its
   last line, and the visits table one column a position (no SHPD notes, From your guide, picture or Summary / Rate / Note tabs);
   Musculoskeletal's panel = Diagnosis · Signs · Plan (the method bar Acupuncture · Motor · Electro · Cupping · Gua sha · Moxa, a
   point's method on the point, `pts[i].m`); Similar cases ranks by the signs she shares with the case ("n shared", the shared signs
