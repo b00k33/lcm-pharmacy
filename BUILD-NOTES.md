@@ -17059,3 +17059,12 @@ a transfer's date took a month and year only, and an estimated day lived only on
   it; a repaint for another patient never touches the open page. tap-audit / style-audit: none at 1280; at 360 the rail's wrapped
   steps (rowAlign "off head", the rail's own two-row phone layout, not a table) left as they are. Not tried: a plan-linked IVF round on
   her real records (the path is the plan's own `phIvfDatesSet`).
+
+## 2026-11-21: A Saturday booking never wears Acupreg's sage
+**Why:** her screenshot of Sat 21 Nov on the Acupreg login, a patient's 12:30 block tagged LOTUS but drawn in Acupreg's sage, and
+"nikki is a potts point patient on saturday". Saturdays are Lotus Healing Arts (Potts Point), so the location colour said the wrong clinic.
+- **Built:** `phDayClinElse(k)` (the day's clinic is set and is not Acupreg); `phCkStyle(service, day)` and `phOthCk` skip the Acupreg
+  sage on such a day, so the booking takes its type colour (a blank type: her usual type's colour). Every block, list colour and popup
+  square passes the booking's date (`phCkStyle(a.service, a.date)`, 9 places). Weekdays are unchanged.
+- **Tested** (sandbox, the Acupreg login faked): a blank-type booking on Fri 20 Nov = sage, on Sat 21 Nov = her usual lilac; an Initial
+  Acupuncture on the Saturday = its Cliniko navy.
