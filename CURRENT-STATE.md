@@ -43,6 +43,13 @@ prices) wait for "lcm-sync-caught-up". The "is sync on?" test now runs after DOM
 timeout had fired before the sync's own `<script>` was parsed, so the housekeeping wrote 3 s into every boot, before any pull.
 
 ## Appointments & calendar
+**Her own blocks: pictures only (2026-11-21, her picks A):** `phC22PicOf(x)` reads `PH_C22_PICS` (title words, first match wins:
+plane, car, bus, train, pk-bowl, pk-rehab, dumbbell, pk-shower, pk-hair, pk-receipt, pk-code; the pk-* symbols sit after `i-train`
+in the sprite); `phC22Ic` uses it before the group glyph, so the card title, the stacks' marks and the fold chips get the same
+picture. `phC22LifeHtml` draws `.ph-c22-life.pic` with `.r1` = the picture (or the title's leading emoji) + `x.mr`, no title span,
+no time, no meal line; `.pic .r1` is absolute, inset 0, centred (a run's middle / last cell and a once-only meal keep `.r1` hidden).
+tap-audit.js KEEPs `.ph-c22-life` beside `.ph-appt-block`.
+
 The app opens here. It mirrors Cliniko's day view: solid blocks coloured from `PH_CLINIKO_TYPE_COLOURS` (her Settings →
 Appointment types, 21 types read live; words white or dark, whichever measures higher, `phCkInkByContrast`, her yes), a time
 gutter; the page scrolls, no inner scroller (except "Whole day" below). **Cliniko look (her picks 2026-11-01):** the colours

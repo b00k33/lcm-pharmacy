@@ -29,7 +29,7 @@
     "input[type=checkbox]", "input[type=radio]", "input[type=range]", "input[type=color]", "input[type=file]",
     "img", "video", "canvas", "svg", "label",
     ".ph-cal-day", ".ph-cp-day", ".ph-pulse-cell", ".ph-tp-sq", ".ph-cp .ffgrid .c",   // calendar days, pulse chart cells, session grid squares (the Cycle page's month: 44px days, her 2026-11-21 pick)
-    ".ph-appt-block", ".ph-apptcal-daylabel", ".ph-atb-today",     // Appointments' calendar: a booking's block (its height is its time), a day's head, Today's date in a circle (2026-11-17)
+    ".ph-appt-block", ".ph-apptcal-daylabel", ".ph-atb-today", ".ph-c22-life",     // Appointments' calendar: a booking's block (its height is its time), her own block (pictures only since her 2026-11-21 pick A), a day's head, Today's date in a circle (2026-11-17)
     ".ph-tb-i",                                     // the Appointments toolbar's tiles: an icon over its word (her 2026-11-05 toolbar)
     "td", ".ph-cmp-ovl .bar button",                // a table cell that taps (its row is the target); Compare's overlap bar (a chart)
     ".ph-tl-row", "tr", ".ph-th-sort", ".ph-ost-hb", ".ph-inv-compact-tap",   // list and table rows, a column's sort head, a herb block's head row (rows, not chips; 2026-11-18)
