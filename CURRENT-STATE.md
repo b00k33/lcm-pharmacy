@@ -1984,6 +1984,7 @@ Fitness + Exercises), the rest in Life.
   for that day (her main complaint's, 140 characters, `phCxTypeSave`); an older Week note (`d.jn`) still reads where the record
   has none.
 - **Priorities** (top of the page; her 2026-11-21 picks "Top of Week" and "Personal · Social · Work"): three tiles, Personal · Social · Work, each a tick (a 32px circle) and a one-line field (80 characters). One set a week, kept under the week's Monday (earlier weeks keep theirs). **On this device only** (her "keep private data local"): `localStorage` key `daybook-ph-pri` = `{ "<Monday>": { P | S | W: { t, d } } }`, never in the Me row, never synced, never in the cloud. Code: "PRIORITIES, top of Week" (`phPri*`, `.ph-hub-pri`).
+- **People** (her 2026-11-21 pick: the Birthdays page renamed; the rail, the page title and the Me drawer's heading say People; the page id stays `bdays`): one table like Routines (`.ph-me-ppl`), A–Z, a row a birthday. Name (a tap opens the birthday in Edit; its Note shows after it when the row carries one) · Rhythm (a dropdown: – · Weekly · Fortnightly · Monthly · Quarterly = 7 / 14 / 30 / 91 days) · Last (a date field; the **Caught up** chip sets today) · Next (last + the rhythm by the calendar; a red dot once it is past; blank until both are set) · Birthday (day, month, the age it turns). All · Due is the joined bar (Due = next is today or past). **On this device only** (her "keep private data local"): `localStorage` key `daybook-ph-ppl` = `{ "<birthday id>": { r, l } }`, never in the Me row, never synced. A row with no id (C22's, before Bring in) has no controls; a person with no birthday cannot be added yet (+ Birthday opens the form). Code: "PEOPLE" (`phPpl*`, `phMeBdaysPageHtml`).
 - **Work**: the month: hours per clinic, the Acupreg invoice table, work + travel. Hours come from BOOKINGS, never stored: first
   patient's start → last patient's end per clinic per day (this login's that are hers + the other clinic's). Each calendar day
   heading has a hover title ("CBD 8 h · 3 patients").
@@ -2152,7 +2153,7 @@ Fitness + Exercises), the rest in Life.
   group — Life: Code (until a plan), Money (until a price or a bill), a trip (until it runs or is within 30 days); File: Supplements ·
   Blood tests; Clinic: Photos · Messages · Appointments; the page she is on never folds; one More row open at a time
   (`presFlowMoreOpen` = its key; "1" is a patient's Patterns · Timeline row). The phone's sideways row is unchanged (every page a tab).
-  Phone's sideways row: Body · Life · File · Clinic captions. **Birthdays** (by month, + Birthday) and **Routines** (ROUTINES
+  Phone's sideways row: Body · Life · File · Clinic captions. **People** (the Birthdays page renamed: a table, A–Z; see People under Mine hub) and **Routines** (ROUTINES
   TABLE, her 2026-11-03 picks: one table, a row a routine with the same name joined, this week's days across with each run's
   start and end, today gold, the rows under Work · Health · Self-care · Travel · Home · People · Other by her colour Mode; a time
   opens that routine; the phone keeps the names while the days scroll; + Routine) are pages (`phMeBdaysPageHtml`,
