@@ -521,6 +521,8 @@ gold MSK visit-count (active MSK plans), purple "Today's visit is pending on X".
 
 **Pain map**: front/back figure with zone highlights (never pins), side view, close-ups gated to recorded regions; derived from
 the complaint text until she edits it (`plan.painMap`). An absent `painMap` is not "no pain": recompute from the text first.
+Fingers: each finger is its own area (Thumb, Index, Middle, Ring, Little; "All fingers" kept), on the figure, Areas, the hand close-up
+and Add pain's words ("right hand middle finger" = Right middle finger). (synth22 2026-11-21)
 
 **Dot points**: Aim/Watch split into bullets for display only (`phTpDotParts`); the stored string is rejoined with `"; "` only
 when she changed something.
@@ -812,8 +814,8 @@ Supplements (taking), Blood tests and Appointments carry a cream count badge tha
 (`presFlowRailHtml`) is a 212px band in the panel's colour (teal; crimson on a Gynae Case, navy on MSK: her 2026-11-02 "make the band follow the
 case colour", LIVE build 20261102-132900; on a Case band the pale words, dates and "n left" are mixed from the band colour to keep 4.5:1) running the panel's full
 height: on a computer who this is and Book appt. · search · photo on top (since 2026-11-17, see "No top row"), "‹" at its foot (`data-flow-mini`: folds it to a 56px strip of icons and circles, each name in its hover;
-`lcm-rail-mini`), the six numbered steps on one line each (a
-24px circle, done = the brass ✓) and the page rows: each its icon (`PRES_RAIL_ICN`, the same icon the page has on Today's visit),
+`lcm-rail-mini`), the numbered steps on one line each, each on its own band a shade deeper than the rail
+(a white number circle, a done step's ✓ in it; its pages indented 20px under it; synth22 2026-11-21) and the page rows: each its icon (`PRES_RAIL_ICN`, the same icon the page has on Today's visit),
 its name, its count / date / "n left" at the end. The open row is the light tint, no bar (her 2026-11-03 word: no side lines); while a page row is open
 its step stays plain (`par`). Every captioned group (Body, Life, File, Fertility & cycle, Log / Clinic) folds on its ▾ head (`data-flow-fold`, `lcm-rail-fold`); the page she is on never hides. Both folds are this
 device's. **On a phone** (≤640px; her picks 2026-11-02, phone-rail mock A; BUILD-NOTES "Phone rail") the same rail is a drawer
@@ -859,11 +861,14 @@ a Yes row's note is a Field that wraps and grows (`textarea.ph-hx-note`, Enter e
 strip and no ✓ Save** (her 2026-10-29 audit picks): a Yes shows as its own row and as a chip under the body figure (the side
 column, `phHxFigureHtml`); every tap and note saves itself. BUILD-NOTES "Medical history audit".
 **Supplements** (her pick C on `supplements-table-mock-2026-10-29.html`, 2026-10-29; BUILD-NOTES "Supplements: the checklist
-table"): a checklist table (`phSuppEditorHtml`, `.ph-supp-tbl`): Taking · Supplement · Product · Dose · Since · From · Note, one
-row per supplement of the list (`PH_SUPP_KINDS`, 24, as she keeps it in Settings › Patients › Supplements: hide one, add one) plus
-the patient's own rows (`rec.suppOwn`: the form's, or typed in the last row "+ Other"); taking rows first, then stopped ones faded
-with their date, then her vital.ly products' kinds, then the rest A–Z. The tick starts a supplement today (her product's usual
-dose and her one product of that kind pre-fill) or stops it today; Product = her vital.ly product (`PHARMACY.suppProducts`, a
+table"; since 2026-11-21 her synth22 pick "Only what she takes"): the Medicines table, then Taking any? Yes · No, then ONE Add
+row (chips: stopped ones first, then her vital.ly products' kinds, then the seed kinds, 8 at most A–Z; More ▾; + Add) and a table of
+only what she takes (`phSuppEditorHtml`, `.ph-supp-tbl`, `phSuppRows(rec).filter(r => r.on)`): Taking · Supplement · Product · Dose ·
+Since · From · Note, the Other supplement box its last row (one cell across the table, no lone "+"; Medicines' add row the same).
+The kinds come from `PH_SUPP_KINDS` (as she keeps it in Settings › Patients › Supplements) plus the patient's own rows
+(`rec.suppOwn`). A chip, a More ▾ pick or the tick starts a supplement today (her Settings dose or her product's dose pre-fills; a
+seed only when it holds a number, `phSuppKindDose`) or stops it today (it leaves the table and leads the Add chips); Dose and every
+box are plain 6px fields that grow; Product = her vital.ly product (`PHARMACY.suppProducts`, a
 chip, ↗ opens the link) or the patient's own brand (a field); Dose = her words; From = vital.ly · own · form. The one read of
 what the patient takes is `phSuppTaking(rec)` (the band's Taking n, Today's visit's "still the same?", the form's rows, Copy
 notes, the medication note, Copy for vital.ly). vital.ly has no way in (2026-09-11): "Copy for vital.ly" copies product — dose
@@ -890,10 +895,12 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
   the chart's words (`phPulsePosWords`), hers saved as `constitPulse.desc` (cleared when the chart moves aside for a new day), then
   Rate & rhythm (its chip opens the Hammer form under it). The visits table has a column per position (`.ph-fvt.pls`).
   **Since 2026-11-20 (her 8 picks, BUILD-NOTES "Pulse page: one tap"):** the four quality rows sit over the chart at once (Concavity ·
-  Radius · Intensity · Texture, each its usual picks + More ▾, `.ph-pls-qrow`), no tabs; one lit a row, one tap on a box stamps them all
-  (`phPulseStampCell`); a side's first tap writes its three normal pulses (`phPulseFillNormal`), "All as normal" · ✕ Erase · ▶ Play sit
+  Radius · Intensity · Texture, each its usual picks + More ▾, `.ph-pls-qrow`), no tabs; "All as normal" · ✕ Erase · ▶ Play sit
   on the key's line; the chart is still until ▶ Play; the words are depth first against each position's normal depth, in boxes that
   wrap (textarea); Right | Left stack when narrow.
+  **Since 2026-11-21:** Pulse page: pick a box (row = depth; outlined, "R Cun · Qi" over the rows), then its qualities; the chips show that box only and
+  each new box starts from its own contents. No Normal is ever written by itself (only her tap or All as normal); the key's Normal chip
+  shows / hides only the dashed guide (synth22 2026-11-21).
 - **Abdomen side view:** a real back (`PH_ABD_SIDE_BACK`), the chest forward of the belly, the lines fading out at the top and foot.
 - **Similar cases:** the cases the complaint search finds, ordered by shared signs (`phSimPatSigns` = today's Yes on Bing and Ren;
   `phSimCaseSigns` = the case's notes as read by `phTcNoteShown`; a `_now` / `_tend` pair counts as one), each row "n shared", the
@@ -929,6 +936,10 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
   a result = `phCxGaAdd` (ticks Now Yes unless already Yes, writes sxGrp + sxPin). Moves = `phCxGrpSet` from `data-cx-grp="sign|cc"`
   ("Goes with" `phCxGrpLineHtml` under a tapped sign on the table and in a phone row's drawer; the ▾ menu's Under … items).
 - Words: `phCxGrpWith(name, plan)` -> { ccKey: "with ..." } read by `phCnCameIn` and `phVsFilled`.
+- Came in for (2026-11-21 synth22): complaint rows 36px, symptom rows 33px; each symptom under a complaint has How long ("+ how long" until
+  set; the sign's since date); every row may carry a Goal (word · % range · time) drawn as one pale "◎" line under it, with the date due,
+  time left and, on a scored complaint, how far it has come; a small FBR / Ren mark on each ticked row opens that sign's place; Ren pages
+  fill from the complaints' and symptoms' Bing twins (derived); Copy for Cliniko adds "Goals: …"; `phCcGoalLines(rec)` for Summary for her.
 
 ## Today's visit steps table (2026-11-19, her pick B; two columns since her same-day "Yes, build it")
 - **Now:** the card is the page's full width and first on Today's visit; the list 240px, the step beside it. `phTvRenHtml(name, cx)`
@@ -955,6 +966,11 @@ next visit chips, then Medicines · Allergies · History · Last scan · Care te
 draw and never stored (the alert stays in the sidebar only). Patient details has a third card, Care team (`rec.care`: IVF clinic,
 Specialist, GP, Midwife). A transfer's ✎ fields end with the Embryo transfer note (Time, Doctor, Grade, Lining, Peak E2, OHSS; Pre-ET /
 Post-ET points and Advice given), stored on the transfer. BUILD-NOTES "Visit summary card, care team, Embryo transfer note".
+
+## Summary for her: a letter (2026-11-21, synth22)
+- **Summary for her** (Fang Bing Ren's third page, `phVsPageHtml`): a letter, each part's lines as bullets, a tap opens that part as a
+  box that grows; complaints with capitals and how long; the pulse in plain words, only what is not normal; goals under The plan. Print,
+  Email and Copy read the same lines (2026-11-21).
 
 ## Medicines with doses (2026-11-20)
 The Supplements page (rail: "Medicines & supplements") opens with a Medicines table (`rec.meds`: name, dose, since, taking / stopped), the

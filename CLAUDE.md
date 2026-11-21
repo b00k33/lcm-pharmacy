@@ -29,7 +29,7 @@ in `shots/`, price lists and recordings in `refs/`. All four folders are local o
 | **Chip box** | ONE look for every chip, button, dropdown, box you type into and search box: **32px** tall (phone 28–32), **6px** corners, **white**, a **1px `--ph-line`**, **13px ink words at 600** (her pick "Semi-bold"; a typed value 400, 16px on a phone). Picked or the page's main action = **solid `--ph-herb`** (the Case colour on a Case page), white words, one main action a page. An icon alone = a 32px circle. One category = one joined bar (6px, segments edge to edge, a line between). | TAPPABLE THINGS; CSS "ONE CHIP LOOK" |
 | **Colours** | Four: **ink, white, teal, red** (red = empty, short, overdue only). Any other colour is a data mark: a dot, a chart stroke, cycle flow and LH, formula / pattern family colours, the Case colour on a Case page, calendar blocks, All templates' groups, the Guide | "Shaded blocks, four colours" |
 | **Surfaces** | The page standard (58px bar, one left edge, white card with a soft shadow, card titles on a pale band in teal capitals, search first on the tool row, filters a joined bar); a group of rows = one pale block; no box in a box; **no side line** (a dot or a tint) | "One page standard", "No line on the side" |
-| **Terse** | Patient pages show the data and the controls only: no empty-state line ("Nothing ticked yet"), no how-to line ("Tap where it hurts"), no legend, caption, "why" note, source tag ("FBR", "Feeds Damp") or info dot; an empty section is its head and its Add; a Next button says only where it goes ("Tongue →"); a % stands alone (no "likely"). Her 2026-11-18 "i want it to only have essential elements and no annotations or instructions. more terse design". A new note or hint needs her word | CSS "TERSE PATIENT PAGES" |
+| **Terse** | Patient pages show the data and the controls only: no empty-state line ("Nothing ticked yet"), no how-to line ("Tap where it hurts"), no legend, caption, "why" note, source tag ("FBR", "Feeds Damp"; the one kept: Came in for's tappable FBR / Ren mark, her 2026-11-21 pick) or info dot; an empty section is its head and its Add; a Next button says only where it goes ("Tongue →"); a % stands alone (no "likely"). Her 2026-11-18 "i want it to only have essential elements and no annotations or instructions. more terse design". A new note or hint needs her word | CSS "TERSE PATIENT PAGES" |
 | **Rows line up** | In a table or a grid of rows every box sits under its column head and on the row's one line: a cell's boxes never wrap to a second line, never stick out past the cell, and the boxes of one row share one middle. A box that opens under its row goes in its own sub-row (one cell across), never wrapped inside a cell. Fixed column widths (a `colgroup` or one grid template shared with the head row) for a table of controls. Her 2026-11-19 "the rows are disjointed" (Came in for) + "add to the code to ensure that for future builds" | style-audit.js `rowAlign` |
 | **Not chips** | Rows, tiles, table cells, fold heads, stat tiles, calendar days and blocks keep their own size (tap-audit.js `KEEP` names each) | tap-audit.js |
 
@@ -325,14 +325,34 @@ An area's "Same as last time" takes that area's signs only (`data-cx-rest="<area
 complaints and the signs in one list again without her word.
 **A complaint's symptoms sit under it (her 2026-11-21 "group some symptoms together e.g. bloating is the main complaint but secondary
 incldues gas constipation"; her 8 picks; memory project_lcm_complaint_symptom_groups_2026_11_21; BUILD-NOTES "Symptom groups"):** each
-complaint (Main and Also came in for alike) has its own symptoms as rows under it, a small grey elbow before each, the name and, from the
-next visit on, Gone · Better · Same · Worse (no How long, no More info, no note); "+ symptom" under the group searches Fang Bing Ren
+complaint (Main and Also came in for alike) has its own symptoms as rows under it, a small grey elbow before each, the name, its How long (her synth22
+2026-11-21) and, from the next visit on, Gone · Better · Same · Worse (no More info, no note); "+ symptom" under the group searches Fang Bing Ren
 signs (one tap ticks the sign Yes and puts it there). A sign belongs to one complaint: the one she chose (`rec.ccTrack.sxGrp[signKey]` =
 the complaint's row key, "-" = back to Signs to check), else the one it was added under or whose words it shares, else the FIRST
 complaint of its body area (pre-filled, her pick 4; never a sign on the bar). Signs to check keeps the rest. To move one: a computer taps
 the sign's name ("Goes with" chips under it); a phone taps its name (the drawer's "Goes with") or its ▾ (Under … / Back to Signs to
 check). Grouped symptoms are never behind "+ n more". Copy for Cliniko and the visit summary add ", with Bowels (Constipation, Excessive
 Flatulence) and Appetite (Poor)" to the complaint (one heading once). Never one score for a group (her pick 1: each tracks its own).
+**How long, goals, Ren and the Fang Bing Ren mark on Came in for (her synth22 batch 2026-11-21, picks 4-7 of mock B, all the
+recommended one; memory project_lcm_synth22_batch_2026_11_21; BUILD-NOTES "Came in for: how long, goals, Ren"):** a symptom under a
+complaint has its own How long: the sign's own since date (`rec.tri.since`, the one the Acupuncture page and Fang Bing Ren read), shown
+once she typed one (here: `rec.ccTrack.sxSinceSet[signKey]`; there: a date before the first visit); empty = a dashed "+ how long" chip in
+the How long column that opens the symptom's details at How long (`phCxSxSince`, `phCxSxSinceWrite`). **Every row can carry a Goal**
+(main, other complaints, pains, symptoms): a word, a % better range, a time in weeks or months, set on the row's details line (Goal ·
+% better · In, before ★ Main / Goes with) and shown as ONE pale line under the row ("◎ Happiness · 30–50% better · in 1 month"); later
+visits read "by 21 Dec · 2 wk left" (or "due today" / "was due …") and, on a scored complaint, "now 38% better ✓" (✓ when inside the
+range). Stored `complaint.mainGoalTo` / `secondary[].goalTo` / a pain's `goalTo` / `ccTrack.sxGoal[signKey]` = { w, lo, hi, n, u, at }
+(`at` = the day set; a new time restarts it); one write door `phCxGoalToWrite`. The older text Goal (`mainGoal`, `goal`, the Care
+Plan's) is untouched. `phCcGoalLines(rec)` gives each goal as one line ("Happiness: 30–50% better by 21 Dec") for Copy for Cliniko
+("Goals: …") and Summary for her. **Ren reads Came in for:** a Ren page sign (Energy, Build, Face, Skin, Lips, Eyes, Muscles) whose Bing
+twin is a complaint's sign or a symptom she put under a complaint reads Yes on its Ren page, derived on read in `phTriEffectiveRaw`
+(`phCxRenFromCc`), never stored, never over her own Ren answer (hover "From Came in for"). A Ren page pick shows under the complaint of
+its subject by the existing grouping, marked "Ren". **The mark (her pick "See the ticks"; it overrides THE LOOK's "no source tag 'FBR'"
+for this one place, her newer word):** a row ticked on Fang Bing Ren carries a small "FBR" (a Bing sign) or "Ren" (a Ren page sign)
+tag, the app's Sign tag look, inside the name (`phCxFbmHtml`); a tap goes there (`phCxFbrJump`): a Ren page's step on a first visit,
+else Fang Bing Ren Looking at the row's complaint, the sign's chip lit where it shows. **Shorter rows (her pick "Shorter rows" only):**
+the Came in for table's complaint rows 36px, symptom rows 33px, "+ symptom" 36px (were 44 / 44 / 41); a long name still wraps whole,
+never cut. Never bring the 44px rows back, cut a symptom's name to "…", or make a goal a separate proposal row, without her word.
 **A complaint's details open under its row, a pain's with its body drawing (her 2026-11-19 "how do i add details to the chief complaint
 or any complaints? ... where you add the visual pain diagram" + "keep it simple and simplified"; her pick B of three mocks
 `shots/came-in-for-mock-*-2026-11-19.png`; memory project_lcm_came_in_for_details_body_2026_11_19; BUILD-NOTES "Came in for: details
@@ -383,6 +403,16 @@ Ren lists Similar cases · Diagnosis · **Summary for her** (`phVsPageHtml`). Ac
 has none (Fang Bing Ren → Herbs; the visits table is "Visits" in Records). An acupuncture patient's Herbs is a dashed **"+ Herbs"** row
 (Next stops after Acupuncture) until a formula is started (`phVkHasFormula`), then step Herbs on every later visit. Never make a page
 the same for all three kinds without her word; never count a sometimes page.
+**Summary for her is a letter, not a form (her synth22 batch 2026-11-21, pick 10, mock F):** each part (What you came in for · What I
+found · What it means · The plan) reads as its capitals label and bulleted lines in plain words, no grey box; a tap on a part opens it as
+ONE box in place that grows with its lines (never scrolls inside) and closes back to the lines when she leaves it (her words saved for
+that day, `rec.visitSum`, ↺ Fill again as before); an empty part is its label + "＋ Add". Complaints read with capitals (`phSymCase`) and
+how long in words ("Periods: Irregular, Perimenopausal · 3 years", their symptoms' ", with ..."). The pulse is in the patient's words, only
+the positions that are not plain normal ("Pulse: blocked at the right bladder / kidney position; weak at the left adrenal / reproductive
+position", then "Other pulse positions normal"; `phVsPulseWords`, its own reader: a box of Normal, or a position's own normal quality at
+its normal box, neither floating nor deep, is plain normal). The plan adds each Came in for goal (`phCcGoalLines`). The printed page,
+Copy and Email read the same lines as bullets. Never bring the four grey boxes or the chart words ("R Upper Respiratory Tract, LI (Qi):
+Normal") back to the patient's letter without her word.
 **A Care Plan is an OPTION, never a step (her 2026-11-18 "i need to remove the requirement for a patient to have a treatment plan",
 "it needs to be an option", "the highest priority is the fang bing ren tongue pulse abdomen etc"; her 8 picks, all the recommended
 one; memory project_lcm_care_plan_optional_2026_11_18):** the visit is Exam · Fang Bing Ren (Similar cases, Diagnosis: Diagnosis shows
@@ -511,15 +541,21 @@ Phases 0-6 were built on 2026-10-10 and confirmed on `origin/main` 2026-10-18 (t
 - **Acupreg's colour is a deeper sage, #4E7A63** (her 2026-11-20 "the green and the white doesnt work well", pick "Everywhere but
   calendar blocks"): white on it 4.9:1; the sidebar's quiet words are 95-97% white mixes of it (4.5:1 or more). Her #8AAB99 stays only on
   Acupreg's calendar blocks (`PH_ACUPREG_COLOUR`).
-- **The Pulse page charts in one tap** (her 2026-11-20 "difficulty charting quickly ... i have to touch 2 tabs"; 8 picks of
-  `mocks/pulse-page-mock-2026-11-20.html`, all the recommended one): the four quality rows show at once, no tabs (each its usual picks,
-  the rest under its More ▾); one lit quality a row (`presPulseLit`) and one tap on a box stamps every lit one, a second tap takes them
-  off (`phPulseStampCell`); each position starts at its normal pulse, drawn faint, and her first tap on a side writes that side's three
-  as charted (`phPulseFillNormal`; "All as normal" fills every position with nothing charted). A position's own normal pulse at its
-  normal depth is no Fang Bing Ren sign (`phPulseTplAt` in `phFbrPulseWords`: Left Guan's wiry at Blood never ticks wiry). The chart
-  opens still every time (▶ Play moves it). Each position's words say depth against its own normal depth, normal depth first: "Qi
-  normal depth · Normal, soft · Skin 3 above normal · Pounding" (`phPulsePosWords`). No FBR underline on a chip. Right and Left stack
-  when narrow, never a sideways scrollbar. Never bring the quality tabs or the moving default back without her word.
+- **The Pulse page: the box first, then its qualities** (her 2026-11-21 synth22: "i select normal and soft, tagged the right cun,
+  then untapped the soft, and tagged the guan but the drawing is not what i want. and why are the pulses missing sometimes when i
+  tap", "i often think in the order of: pulse depth, and width/tecture first ... i forget the settings of the first column", "the
+  normal pulses are not supposed to appear - its supposed to only be toggled on and off"; her pick "box first, and each column
+  charting gets a reset/refresh" + "Only the guide line"; memory project_lcm_synth22_batch_2026_11_21): a tap PICKS a box (its row is
+  the depth; outlined + tinted, its name over the rows, "R Cun · Qi", `phPulseSelName`), and the four quality rows (each its usual
+  picks, the rest under its More ▾, no tabs) show and change THAT box only: a chip is lit when the box holds it, a tap adds or takes
+  off that one quality (`phPulseCellToggle`: one strength, one width a box). The next box starts from its own contents. A tap on the
+  picked box, or Esc, lets it go; picking writes nothing; a quality tap with no box picked does nothing. ✕ Erase clears a tapped box.
+  **Nothing writes a Normal but her own tap or "All as normal"** (the 11/20 first-tap fill and the stamp-all-lit tap are gone), and the
+  key's **Normal chip hides only the faint dashed guide**; her charted marks, Normal too, always draw (the chart and ▶ Play). A
+  position's own normal pulse at its normal depth is no Fang Bing Ren sign (`phPulseTplAt` in `phFbrPulseWords`). The chart opens
+  still every time (▶ Play moves it). Each position's words say depth against its own normal depth (`phPulsePosWords`). No FBR
+  underline on a chip. Right and Left stack when narrow, never a sideways scrollbar. Never bring back the box popup, the lit-brush
+  painting, a Normal written by itself or the quality tabs without her word.
 - **Findings:** `phExamMirrorToday`'s known edge: a part cleared after it was mirrored stays in that day's dated copy.
 - **Left on purpose:** the stored default plan title "New treatment plan" (code compares to it); letters, printed
   plan records and message templates keep "treatment plan".
@@ -567,6 +603,30 @@ orders (they arrive at CBD), low lists, the Dashboard and Stocktake read. A disp
 takes from Potts Point for a herb kept there (Take from CBD · Potts Point on the step, this open only), and its undo puts the grams back on
 the same shelf (`deducted[].shelf`, `phShelfAdd`). Low is per shelf: Potts Point under 50 g is its own red dot (`PH_PP_LOW`). Never one
 count for both shelves, never a second login for Potts Point.
+
+**Each finger is its own pain area (her synth22 2026-11-21 "patient described right hand middle finger pain but i cant input it"; pick
+"each finger", no joints):** `finger_index` · `finger_middle` · `finger_ring` · `finger_little` beside `thumb` in PH_PAIN_REGIONS (front
++ back spots on the figure's hand), the Areas list (Shoulder & arm: Wrist · Hand · Thumb · Index · Middle · Ring · Little finger · All
+fingers), the hand close-up (`PH_PM_HAND_AT`, each on handDigits' own axis; palm and back mirror as before), the side view and the
+Musculoskeletal region (wrist). Add pain reads "middle finger", "ring finger", "index / pointer finger", "forefinger", "little finger",
+"pinky / pinkie" (plurals too), and a named finger wins over "hand" / "fingers" in the same words ("right hand middle finger" = Right
+middle finger only). The old `fingers` area (all fingers) stays for saved pains and a whole-hand complaint. Never joints without her word.
+
+**Supplements lists only what she takes (her synth22 2026-11-21 pick, mock C):** the Supplements table is the supplements she takes now
+(✓ rows only); everything else is ONE "Add" row of chips above it (stopped ones first, then the kinds with her products, then the
+four seed kinds; eight at most, A–Z), the rest in More ▾, then + Add (any name, the table's "Other supplement" box). A chip or a
+More ▾ pick starts it today through the tick door (`data-supp-tick`); ✓ in the table stops it (it leaves the table and leads the
+Add chips, "Stopped <date>" on hover). No solid chip repeats a ✓ row. Every box in the table is a plain 6px field that grows with its
+words (never a pill); a taken name is 600 ink. The add row of Medicines and Supplements spans the table (no lone "+" in Taking).
+A patient's Dose pre-fills a DOSE, never advice: her Settings usual dose or her product's dose, else a seed only when it holds a number
+(`phSuppKindDose`; Iron's seed words "Per the ferritin result ..." are advice, so Iron starts empty). Never bring back the full
+checklist of every kind or the solid taken chips without her word.
+
+**The rail's steps are bands (her synth22 2026-11-21 pick D-A, "make the numbered steps more obvious"):** each numbered step
+(.ph-flow-step) sits on its own band a shade deeper than the rail (`color-mix(in srgb, var(--ph-herb) 62%, #000)`, so a Case or
+Acupreg rail keeps its hue), its number (or a done step's ✓) in a WHITE circle with the rail's colour; the open step keeps the pale
+selected look with a solid circle; its pages are indented 20px under it; quiet pages stay faint (her 11/18 rule). The mini rail
+(56px) and the phone drawer keep their own look (no band in mini). Never go back to plain step rows or gold done circles without her word.
 
 **Phone type scale:** STYLE-LCM.md (≤480px). If a request conflicts with a
 rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
