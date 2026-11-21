@@ -17136,7 +17136,7 @@ ticked signs of the complaint's body area · rated like signs · every complaint
   tap-audit + style-audit at 1220 and 360 (menu open, search open): nothing new; the older finds stay (table name spans, the pills
   spilling a few px into the empty last column at 1220, the drawer's Track with pills).
 
-## 2026-11-21: A Lotus Saturday booking never opens in Acupreg (SAVED, not live)
+## 2026-11-21: A Lotus Saturday booking never opens in Acupreg (LIVE in build 20261121-123200, her "push live")
 **Why:** her screenshot of the Appointments card "Nikki Potent · LOTUS · Sat 21 Nov · 12:30 – 1:15 pm · [Open in Acupreg]" and "dont
 open nikki in acupreg". The card offered to switch the whole app to the Acupreg login for a booking on her Lotus day.
 - **Built:** `phOthStays(a)` = the other clinic is Acupreg and the booking's day is at another clinic (`phDayClinElse`: Saturdays,
