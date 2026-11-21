@@ -17100,3 +17100,13 @@ Point 1; on Saturday a 60 g dispense took Potts Point 100 → 40 (deducted shelf
 picked took CBD; the shortfall check read Potts Point for a prescription (200 g short) and CBD for a batch; In stock read 100 → 40 g, then
 250 → 190 g on CBD. tap-audit + style-audit: the place bar, the Potts column and Take from clean at 1220, Take from clean at 360; the Move
 box's input and buttons are the shared ask box's own 40px / 10px look (every phAsk), left as it is.
+
+## 2026-11-21: Surgeries can be changed where they sit
+**Why:** her screenshot of a patient's Surgeries list and "how to edit the surgeries?": a surgery could only be removed (the × on
+hover) and added again.
+- **Built:** on Medical history the whole surgery row is a door (`data-sg-edit`, Enter / Space too); on both hosts a ✎ sits beside
+  the × (`.ph-sg-pen`, 18px glyph, right of the row). It opens the same form filled with that surgery (`phSgDraft` carries its `id`),
+  the row tinted, the What box selected; the button reads Save, and `phSgAdd` writes over that surgery (same id, so the Pain map's S
+  number and mark stay). A second tap shuts it; Cancel too. tap-audit KEEP + style-audit NOT_CHIP name `.ph-sg-row` (a row).
+- **Tested** (sandbox, made-up patient, 1024 wide): tap a row → filled form, Save → the same surgery changed (What and When), the
+  list order kept; ✎ beside × (no overlap). tap-audit / style-audit on the section: none.
