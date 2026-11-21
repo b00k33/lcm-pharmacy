@@ -160,8 +160,7 @@ stops drawing here). The grid shows **Events** by default; Off · Events · All 
 chip (Grid, List and every other page's top bar, phone included) opens the Me drawer (non-modal, right side under the title bar; a
 bottom sheet on a phone): her card first ("One Me" below), the level bar, Today's meals + Shopping ("Meals + the Diet log" below),
 Herbs (a tick per dose today, "Herbs (her own doses)" below), her Cycle / Fasting / This week rows, Bring in, to-dos (type +
-Enter, tick = done with Undo), the next 14 days of birthdays (a birthday can carry one Note: relationship, language, channel, how she addresses them; kept in 
-ote, 500 characters, shown in soft small words after the name on the Birthdays page and in its form), her **Routines** (today's first, then by time; 5 then "All N ▾"; a
+Enter, tick = done with Undo), the next 14 days of birthdays (the Life Birthdays page is ONE table: When / Name / Relationship / Method / Lang / Message / Status in date order, with search and Next 30 days | All; a row opens the birthday form; the phone scrolls it sideways; `phMeBdaysPageHtml`. A birthday keeps `rel`, `via`, `lang`, `msg`, a free `note` and `dn` + `dk` (the year it was Sent or Handled, so Status resets itself each birthday)), her **Routines** (today's first, then by time; 5 then "All N ▾"; a
 row opens the whole routine in Edit, `rt:<id>`, with no This day | Every day). Her item's card = Done · Edit. **+ then Patient |
 Me:** the Appointments dialog's title bar switches to the Me pane (Event · To-do · Birthday, This day | Every day on a repeating
 thing, colours = her C22 Modes then C22's groups, "Coming up" beside it); every save and delete has Undo in the one toast. Code:
