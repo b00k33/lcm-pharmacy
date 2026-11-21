@@ -17447,7 +17447,7 @@ phone and the Day view.
   read as an icon button, so `.ph-c22-life` joins `.ph-appt-block` on the KEEP list; then nothing new. style-audit: the 26 "words
   400" lines on her blocks are gone; nothing new.
 
-### Simpler navigation, stage 1: a patient's pages (2026-11-21, her "the system looks so complicated ..."; SAVED, not live until her "push live")
+### Simpler navigation, stage 1: a patient's pages (2026-11-21, her "the system looks so complicated ..."; SAVED fa0a28f1; LIVE in build 20261121-203000, her "push live")
 - **Her picks** (mock `lcm_simpler_navigation_direction_mock`, all the recommended one): a patient = 4 steps + File ›, a joined bar of parts on steps 2-4 and
   File, a step opens on its first part not done, a jump search + the Next button stay. Stages 2 main menu · 3 her own record · 4 Settings come after her review.
 - **Built:** `presNavBuild` / `presNavLit` / `presNavGo` / `presPartBarHostHtml` / `presPartBarSync` / `presJs*` / `presNavPsPages` / `presNavPsBadges` before
