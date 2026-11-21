@@ -71838,7 +71838,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         if (!rec) return;
         const k = hxSetBtn.dataset.hxSet;
         const cur = phHxVal(rec, k);
-        const val = cur === "yes" ? "unasked" : "yes";
+        const val = cur === "yes" ? (phHxFromCc(rec, k) ? "no" : "unasked") : "yes";   // a Yes read off Came in for is taken off with a No that stays
         const goingYes = val === "yes";
         // ghost-fly needs the row's own screen position BEFORE the render
         // replaces it -- skipped when she's clearing a Yes back to unasked
@@ -88955,10 +88955,20 @@ or changing anything in Cliniko.
   // storage: only a question that's actually been answered takes any space
   // at all -- "unasked" is never written, it's simply the key's absence.
   // Never call this directly to read; phHxVal below is the one true reader.
-  const phHxVal = (rec, k) => (rec && rec.history && rec.history[k]) || "unasked";
+  // her 2026-11-21 "connect what patient came in for with medical history which links to fang bing ren": a complaint on Came in for (its words or its
+  // More info, the chief or another) that names one of her own Medical history conditions reads as that row's Yes, found by the same words the
+  // paste box uses (PH_HX_PASTE_RULES; never a family row). Derived on read, never stored; an answer she gave wins (a No stays No). Every reader
+  // goes through phHxVal, so Fang Bing Ren's history pre-fills (PH_TRI_PREFILL_HX, the clues) follow. Reads the complaint's own saved words only,
+  // never phCcRibItems / phCxItems (the freeze on load).
+  function phHxFromCc(rec, k) {
+    const c = rec && rec.complaint, re = c && !/^fh_/.test(k) ? PH_HX_PASTE_RULES[k] : null;
+    if (!re) return false;
+    return [c.mainText, c.note].concat((Array.isArray(c.secondary) ? c.secondary : []).flatMap(x => x ? [x.text, x.note] : [])).some(t => t && re.test(String(t)));
+  }
+  const phHxVal = (rec, k) => (rec && rec.history && rec.history[k]) || (phHxFromCc(rec, k) ? "yes" : "unasked");
   const phHxNote = (rec, k) => (rec && rec.historyNotes && rec.historyNotes[k]) || "";
   function phHxSet(rec, k, val) {
-    if (phHxVal(rec, k) === val) return false;          // already that value -> no-op, no timestamp churn
+    if (((rec && rec.history && rec.history[k]) || "unasked") === val) return false;          // already that value -> no-op, no timestamp churn (her stored answer, not a Yes read off Came in for)
     if (!rec.history) rec.history = {};
     if (val === "unasked") delete rec.history[k]; else rec.history[k] = val;
     // her spec 2026-08-22: a note's INPUT only shows next to a "yes" row,
@@ -89441,7 +89451,7 @@ or changing anything in Cliniko.
           // sweep (her answer #6, "leave them not asked" -- a tap never
           // auto-converts to No on its own).
           return `<div class="ph-hx-rowwrap" data-hx-row="${k}">
-            <button type="button" class="ph-hx-qrow ${val}${animCls}" data-hx-set="${k}" aria-pressed="${val === "yes" ? "true" : "false"}"${delayAttr}>
+            <button type="button" class="ph-hx-qrow ${val}${animCls}" data-hx-set="${k}"${val === "yes" && !(rec.history && rec.history[k]) ? ` title="From Came in for"` : ""} aria-pressed="${val === "yes" ? "true" : "false"}"${delayAttr}>
               <span class="ph-hx-dot ${val}" aria-hidden="true"></span>
               <span class="ph-hx-qlabel">${esc(label)}</span>
               ${val === "unsure" ? `<span class="ph-hx-unsure" title="The patient answered Don't know">? Don’t know</span>` : ""}
@@ -134048,6 +134058,10 @@ Difficult to sweat|no_sweat_tend:r`;
     // integrate33 batch 11 (Shen Qi Wan): Amenorrhoea, Irregular menstruation and History of miscarriage are the same facts as these three signs
     amenorrhea_tend: ["amenorrhoea"], menstrual_irreg_tend: ["irregular_menstruation"], miscarriage_tend: ["history_of_miscarriage"],
     dx_diabetes: ["diabetes"], dx_diabetes_fh: ["fh_diabetes"], dx_infertility: ["infertility_unexplained"], dx_tinea: ["tinea_fungal_skin"],
+    // her 2026-11-21 "connect ... medical history which links to fang bing ren": the rows that name a Fang Bing Ren diagnosis and did not reach it yet
+    dx_autoimmune: ["autoimmune_condition"], pms_now: ["pms", "pmdd"],
+    hyperthyroid: rec => phHxVal(rec, "thyroid_condition") === "yes" && ["Hyperthyroid", "Graves'"].some(p => phHxNoteHasPreset(phHxNote(rec, "thyroid_condition"), p)),
+    dx_hashimoto: rec => phHxVal(rec, "thyroid_condition") === "yes" && phHxNoteHasPreset(phHxNote(rec, "thyroid_condition"), "Hashimoto's"),
     dx_hypothyroid: rec => phHxVal(rec, "thyroid_condition") === "yes" && ["Hypothyroid", "Hashimoto's"].some(p => phHxNoteHasPreset(phHxNote(rec, "thyroid_condition"), p)),
     // her Da Chai Hu Tang conditions (2026-10-24): "Digestive condition" Yes with the condition named in its note. Diarrhea after gallbladder
     // removal needs both the removal and the diarrhea in the note (a removal alone is not the condition). Metabolic syndrome has no history row.
