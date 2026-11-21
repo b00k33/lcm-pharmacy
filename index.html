@@ -73755,6 +73755,21 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         phPfwBasicsArm();
         return;
       }
+      // her 2026-11-21 IVF | Off switch (phIvfOn): her tap is kept on the patient (rec.ivfOn) and always wins; Off only hides
+      const presIvf = e.target.closest("[data-pres-ivf]");
+      if (presIvf) {
+        const t = (PRESC.items || []).find(x => x.id === presOpenId);
+        const nm = t ? presPatientFor(t) || t.name : "";
+        const rec = nm ? phPatientRec(nm) : null;
+        if (!rec) return;
+        const on = presIvf.dataset.presIvf === "1", before = phIvfOn(rec, nm), was = rec.ivfOn;
+        if (was === on) return;
+        rec.ivfOn = on;
+        if (savePharmacy() === false) { if (was === undefined) delete rec.ivfOn; else rec.ivfOn = was; presSavedToast("That could not be saved — check the warning at the top and try again."); return; }
+        if (before !== on) presSavedToast(on ? "IVF on · IVF history is back" : "IVF off · IVF history hidden, nothing deleted");
+        renderPresPanel();
+        return;
+      }
       const acuOutBtn = e.target.closest("[data-pres-acu-outcome]");
       if (acuOutBtn) {
         // no re-render here (same idiom as data-tp-field debouncing above) --
@@ -107953,11 +107968,14 @@ Difficult to sweat|no_sweat_tend:r`;
     const src = rec.phone && rec.phoneFrom ? `Cliniko · ${phFuDateLabel(rec.phoneFrom)}` : rec.phone && rec.phoneSrc === "intake" ? "intake form" : rec.phone && rec.phoneSrc === "paste" ? "pasted card" : "";
     const cpasteShowing = !!(phContactPasteCtx && phContactPasteCtx.site === "opening");
     const sexSeg = [["F", "F"], ["M", "M"], ["", "–"]].map(([v, l]) => `<button type="button" class="${(rec.sex || "") === v ? "on" : ""}" data-pres-sex="${v}" aria-pressed="${(rec.sex || "") === v ? "true" : "false"}">${l}</button>`).join("");
+    // her 2026-11-21 pick A: the IVF | Off switch beside F / M (phIvfOn); no sex yet = no IVF page, so no switch
+    const ivfOnNow = phIvfOn(rec, hxName);
+    const ivfSeg = rec.sex === "F" || rec.sex === "M" ? `<span class="ph-pd-seg ph-pd-ivf" role="radiogroup" aria-label="IVF questions">${[["1", "IVF"], ["0", "Off"]].map(([v, l]) => `<button type="button" class="${ivfOnNow === (v === "1") ? "on" : ""}" data-pres-ivf="${v}" aria-pressed="${ivfOnNow === (v === "1") ? "true" : "false"}">${l}</button>`).join("")}</span>` : "";
     const hero = `<div class="ph-pd-hero">
         ${phPfAvatarHtml(hxName)}
         <div class="ph-pd-id">
           <div class="ph-pd-name"><input type="text" id="presEditName" class="field-bare" list="presEditNameList" value="${esc(t.name)}" autocomplete="off" placeholder="Name" aria-label="Name"${presNameOpen || !t.name ? "" : " hidden"}><datalist id="presEditNameList">${phIntakeNameOptionsHtml()}</datalist></div>
-          <div class="ph-pd-sub">${phPdAgeTagHtml(rec)}<span class="ph-pd-seg${sexChanged ? " changed" : ""}" role="radiogroup" aria-label="Patient sex">${sexSeg}</span>${phBandAlertHtml(hxName)}${cpasteShowing ? "" : `<button type="button" class="ph-pd-chip" data-cpaste-open="opening"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-clipboard"/></svg>Paste contact</button>`}${presPfSendBtnHtml(hxName)}</div>
+          <div class="ph-pd-sub">${phPdAgeTagHtml(rec)}<span class="ph-pd-seg${sexChanged ? " changed" : ""}" role="radiogroup" aria-label="Patient sex">${sexSeg}</span>${ivfSeg}${phBandAlertHtml(hxName)}${cpasteShowing ? "" : `<button type="button" class="ph-pd-chip" data-cpaste-open="opening"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-clipboard"/></svg>Paste contact</button>`}${presPfSendBtnHtml(hxName)}</div>
         </div>
         <div class="ph-pd-acts">${phPdCopyChipHtml("phone", "Call", rec.phone)}${phPdCopyChipHtml("email", "Email", rec.email)}</div>
         ${phPdRingHtml(hxName)}
@@ -107974,7 +107992,7 @@ Difficult to sweat|no_sweat_tend:r`;
         <div class="ph-body-read">${phBodyReadHtml(hxName)}</div>${phBpcHtml(hxName)}
       </section>`;
     const care = rec.care || {};
-    const careCard = `<section class="ph-pd-card"><h4>Care team</h4>${PH_CARE_FIELDS.map(([k, lab]) => f(lab, `presCare_${k}`, `<input type="text" id="presCare_${k}" class="field-bare" data-pres-care="${k}" value="${esc(care[k] || "")}" placeholder="Add" autocomplete="off" maxlength="80">`)).join("")}</section>`;
+    const careCard = `<section class="ph-pd-card"><h4>Care team</h4>${PH_CARE_FIELDS.filter(([k]) => k !== "clinic" || ivfOnNow).map(([k, lab]) => f(lab, `presCare_${k}`, `<input type="text" id="presCare_${k}" class="field-bare" data-pres-care="${k}" value="${esc(care[k] || "")}" placeholder="Add" autocomplete="off" maxlength="80">`)).join("")}</section>`;
     // Cover left this page 2026-10-30 (her pick): the fund and rebate are set in Compose's rebate list, the note rides on the fund cell's hover
     const foot = presPfHeaderGridHtml(t);
     const side = phPdApptsHtml(hxName);
@@ -109066,7 +109084,8 @@ Difficult to sweat|no_sweat_tend:r`;
     // her ask 2026-10-16 ("i want ivf protocol to be visible for all female patients regardless
     // of what plan theyre on"): the tab itself is no longer gated to an IVF plan or existing
     // rounds -- any woman has the tab available to start logging in, same rule as phIvfHistoryFoldHtml.
-    if (name && (phIvfCyclesSorted(peek).length || phTpPlans(name).some(p => p.templateName === "IVF Protocol") || phIsFemale(peek) || (peek && peek.sex === "M"))) sections.push({ id: "ivf", label: peek && peek.sex === "M" && !phIvfCyclesSorted(peek).length ? "Semen analysis" : "IVF history", body: () => presBandHtml("ivf", name) + phIvfHistoryFoldHtml(name) });
+    // her 2026-11-21 IVF | Off switch: Off (phIvfOn) takes the page out of Her file; its rounds stay saved
+    if (name && (phIvfCyclesSorted(peek).length || phTpPlans(name).some(p => p.templateName === "IVF Protocol") || phIsFemale(peek) || (peek && peek.sex === "M")) && phIvfOn(peek, name)) sections.push({ id: "ivf", label: peek && peek.sex === "M" && !phIvfCyclesSorted(peek).length ? "Semen analysis" : "IVF history", body: () => presBandHtml("ivf", name) + phIvfHistoryFoldHtml(name) });
     if (name) sections.push({ id: "apptshist", label: "Appointments", body: () => presApptHistoryTabHtml(name) });
     if (name && peek && Array.isArray(peek.clinikoVisits) && peek.clinikoVisits.length) sections.push({ id: "clkvisits", label: "Cliniko visits", body: () => phClkVisitsHtml(name) });
     // her ask 2026-10-01 ("move this to a new tab ... in the patient profile",
@@ -112988,7 +113007,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const out = [];
     Object.keys(PHARMACY.patients || {}).forEach(key => {
       const rec = PHARMACY.patients[key];
-      if (!rec || !Array.isArray(rec.ivfCycles) || !rec.ivfCycles.length) return;
+      if (!rec || rec.ivfOn === false || !Array.isArray(rec.ivfCycles) || !rec.ivfCycles.length) return;   // her IVF | Off
       const due = phIvfQuickDue(rec);
       if (!due.kind) return;
       const m = PH_IVF_QUICK_MOMENTS.find(x => x[0] === due.kind) || ["", "", due.kind, ""];
@@ -115314,6 +115333,22 @@ Difficult to sweat|no_sweat_tend:r`;
     return age == null || age < PH_CYCLE_CUT_AGE;
   }
   const PH_CYCLE_CUT_AGE = 48;
+  // her 2026-11-21 "i need a toggle off for ivf related questions in profiles when its not relevant" (her picks, widget
+  // lcm_ivf_toggle_placement_options): rec.ivfOn true / false = her tap on the IVF | Off switch (Patient details head, beside F / M).
+  // Unset = worked out: on with an IVF round, an IVF plan or a Fertility complaint (a man: also a partner link or a semen analysis);
+  // a woman 55 and over is off, a man is off. Off hides the IVF history page, the IVF clinic row, the visit summary's IVF lines and
+  // the intake form's IVF / trying-to-conceive questions; nothing saved is touched, On brings it all back.
+  const PH_IVF_CUT_AGE = 55;
+  function phIvfOn(rec, name) {
+    if (!rec) return false;
+    if (rec.ivfOn === true || rec.ivfOn === false) return rec.ivfOn;
+    if (phIvfCycles(rec).length) return true;
+    if (name && phTpPlans(name).some(p => p.templateName === "IVF Protocol")) return true;
+    if (phCcMainId(phCcNormalize(rec.complaint)) === "fertility") return true;
+    if (rec.sex === "M") return !!(name && (phPartnerOf(name) || phSaRows(name).length));
+    const age = phAgeOf(rec.dob);
+    return age == null || age < PH_IVF_CUT_AGE;
+  }
   // her report 2026-10-07 (a patient): a pregnant patient was shown "late".
   // A positive pregnancy test (Pregnant? button, or an IVF transfer result)
   // means no period is expected, so the cycle is never "overdue" for her.
@@ -129281,6 +129316,7 @@ Difficult to sweat|no_sweat_tend:r`;
   function phVsumHtml(name, rec, plan) {
     if (!name || !rec || phFastIsMe(name)) return "";
     const today = keyOf(TODAY), hd = [], ln = [];
+    const ivfOn = phIvfOn(rec, name);   // her 2026-11-21 IVF | Off: Off drops the lines that open IVF history
     const chip = (attr, id, txt, cls) => `<button type="button" class="ph-vsum-c${cls ? " " + cls : ""}" data-${attr}="${id}">${esc(txt)}</button>`;
     const line = (attr, id, lb, v) => ln.push(`<button type="button" class="ph-vsum-ln" data-${attr}="${id}" title="${esc(v)}"><span class="lb">${esc(lb)}</span><span class="v">${esc(v)}</span></button>`);
     const phase = plan ? phTpLivePhase(rec, plan) : null;
@@ -129297,7 +129333,7 @@ Difficult to sweat|no_sweat_tend:r`;
       if (nx) hd.push(chip("flow-go", "timeline", `${nx[0]} ${nx[1].est ? "~" : ""}${presBandDay(nx[1].key)}`));
     }
     // no IVF plan open: an upcoming transfer on her IVF history still shows
-    if (!hd.some(x => x.includes('data-flow-go="timeline"'))) { const up = phIvfCycles(rec).flatMap(r => r.transfers || []).map(x => phIvfFullDate(x.date)).filter(d => d && d >= today).sort()[0]; if (up) hd.push(chip("flow-prof", "ivf", `Transfer ${presBandDay(up)}`)); }
+    if (ivfOn && !hd.some(x => x.includes('data-flow-go="timeline"'))) { const up = phIvfCycles(rec).flatMap(r => r.transfers || []).map(x => phIvfFullDate(x.date)).filter(d => d && d >= today).sort()[0]; if (up) hd.push(chip("flow-prof", "ivf", `Transfer ${presBandDay(up)}`)); }
     const nv = phTodayNextVisitKey(name);
     if (nv) hd.push(chip("flow-prof", "apptshist", `Next visit ${phCycShortLbl(nv)}`));
     // her synth22 2026-11-21 pick 8: the Care Plan's review, once its day has come and until she taps Reviewed
@@ -129315,15 +129351,15 @@ Difficult to sweat|no_sweat_tend:r`;
     if (hx.length) line("flow-prof", "medhx", "History", hx.sort(phAz).join(" · "));
     // the last scan on any IVF round, up to today
     const sc = phIvfScanSort(phIvfCycles(rec).flatMap(r => r.scans || []).filter(x => x && /^\d{4}-\d{2}-\d{2}$/.test(x.date || "") && x.date <= today)).slice(-1)[0];
-    if (sc) {
+    if (sc && ivfOn) {
       const v = [phCycShortLbl(sc.date), sc.lining != null ? `lining ${sc.lining}` : "", ...PH_IVF_SCAN_BLOODS.filter(([k]) => sc[k] != null && sc[k] !== "").map(([k, l]) => `${l} ${sc[k]}`)].filter(Boolean);
       line("flow-prof", "ivf", "Last scan", v.join(" · "));
     }
     const sa = phSaRows(name)[0];
-    if (sa && (sa.date || phSaWords(sa))) line("flow-prof", "ivf", rec.sex === "M" ? "Semen analysis" : "Partner SA", [sa.date ? phCycShortLbl(sa.date) : "", phSaWords(sa)].filter(Boolean).join(" · "));
+    if (ivfOn && sa && (sa.date || phSaWords(sa))) line("flow-prof", "ivf", rec.sex === "M" ? "Semen analysis" : "Partner SA", [sa.date ? phCycShortLbl(sa.date) : "", phSaWords(sa)].filter(Boolean).join(" · "));
     const iuiW = phOrIuiWords(rec);
-    if (iuiW) line("flow-prof", "ivf", "IUI", iuiW);
-    const care = phCareTeamWords(rec);
+    if (iuiW && ivfOn) line("flow-prof", "ivf", "IUI", iuiW);
+    const care = phCareTeamWords(rec, name);
     if (care) line("flow-prof", "patient", "Care team", care);
     const seen = phSeenDays(name, today), last = seen[seen.length - 1];
     if (last) line("flow-go", "treatment", "Last visit", phCycShortLbl(last));
@@ -129338,9 +129374,9 @@ Difficult to sweat|no_sweat_tend:r`;
   // the care team (her 2026-11-20 mock 3: "typed once, on Patient details"): rec.care = { clinic, doctor, gp, midwife }, one write door
   // ([data-pres-care]); the visit summary and a transfer's Doctor box read it
   const PH_CARE_FIELDS = [["clinic", "IVF clinic"], ["doctor", "Specialist"], ["gp", "GP"], ["midwife", "Midwife"]];
-  function phCareTeamWords(rec) {
+  function phCareTeamWords(rec, name) {
     const c = (rec && rec.care) || {};
-    return [[c.clinic, c.doctor].filter(Boolean).join(" · "), c.gp ? `GP ${c.gp}` : "", c.midwife ? `Midwife ${c.midwife}` : ""].filter(Boolean).join(" · ");
+    return [[phIvfOn(rec, name) ? c.clinic : "", c.doctor].filter(Boolean).join(" · "), c.gp ? `GP ${c.gp}` : "", c.midwife ? `Midwife ${c.midwife}` : ""].filter(Boolean).join(" · ");
   }
   function phTodayVisitHtml(t, plan) {
 
@@ -166566,6 +166602,9 @@ Please let me know if you have any questions.`;
       // travels with the link. Needs the one-time prefill column (supabase/intake_prefill_setup.sql); without it the
       // link is made without the prefill and the dialog says so, never a failed link.
       const prefill = Object.assign(phIntakePrefillFor(name) || {}, { qs: phIntakeQs() });
+      // her 2026-11-21 IVF | Off: a patient whose IVF is off gets no IVF / trying-to-conceive questions (intake.html reads noIvf)
+      const ivfPk = phPatientPeek(name);
+      if (ivfPk && !phIvfOn(ivfPk, name)) { prefill.noIvf = true; delete prefill.ivf; }
       const row = { owner: uid, patient_name: name, prefill };
       let ins = await sb.from("intake_forms").insert(row).select("id").single();
       if (ins.error && /prefill/i.test(ins.error.message || "")) {

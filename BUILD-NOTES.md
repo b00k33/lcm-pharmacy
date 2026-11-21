@@ -17405,3 +17405,25 @@ grid's phases (the grid is LOCKED), so the four parts' length / rate are the pla
 blank when the phase's rhythm is not one of the four (e.g. a range); Diet and Supplements are never pre-ticked (nothing in the visit says
 them); the review line on Today's visit is a chip on the visit summary card; a goal is edited on Came in for (the tap goes there).
 Checked: Care Plan page (four parts, fold), Came in for (details open from the tap), Appointments grid, the visit summary card.
+
+## 2026-11-21: IVF | Off switch (SAVED, not live)
+**Why:** her "i need a toggle off for ivf related questions in profiles when its not relevant" with a screenshot of Nikki's Patient
+details (54F, Acu · internal disease; IVF history in Her file, IVF clinic in Care team). Since her 2026-10-16 ask, IVF history showed
+for every woman and Semen analysis for every man. Widget `lcm_ivf_toggle_placement_options` (three places, live toggles) and two
+popups; her picks: A (IVF | Off beside F / M) · Off hides IVF history, the IVF clinic row and the intake's IVF questions (not the
+Reproductive group) · starts Off from 55 (her own typed answer; the recommended 48 not taken) · saved rounds hidden, never lost ·
+two halves IVF | Off · men the same switch · Cycle stays apart · the phone the same.
+- **Built:** `phIvfOn` + `PH_IVF_CUT_AGE` (55); the `ivf` section gate; the switch in the Patient details head; the
+  `[data-pres-ivf]` handler (her tap stored as `rec.ivfOn`, a toast only when what shows changes: "IVF off · IVF history hidden,
+  nothing deleted" / "IVF on · IVF history is back"); the Care team row; `phCareTeamWords(rec, name)`; `phVsumHtml` IVF lines; Today's
+  IVF work; `phIntakeGenerate` sets `prefill.noIvf` (and drops `prefill.ivf`) for a known patient whose IVF is off. intake.html:
+  `#ttcQ` / `#ivfQ` hidden on `noIvf`, the IVF answer not required, `ivfCycles` not sent; a reopened link keeps `noIvf`.
+- **My calls (told her):** her tap always wins, even over a round on file; a man starts On only with a partner link or a semen
+  analysis (or a round / IVF plan / Fertility complaint); the switch shows once sex is F or M; on the phone the switch takes its own
+  line in the head (the 200px column cannot hold it beside Medical alert).
+- **Tested** (pretend patients): 54F (Nikki's age) starts On; Off hides IVF history + IVF clinic, toast, On brings both back; 55F on
+  her birthday and 60F start Off; 60F with a round or a Fertility complaint On; a man Off, with a semen analysis On; no sex = no
+  switch; a round's visit summary "Last scan" line hides when Off; a new intake link for a 60F carries `noIvf`, a 36F and a new name
+  do not; intake.html with `noIvf`: both questions hidden, the missing list has no IVF question, the sent cycle has no `ivfCycles`;
+  a reopened link stays hidden; without `noIvf` the form is as before. tap-audit + style-audit at 1220 and 360 on Patient details:
+  nothing new (same lists as the build before).

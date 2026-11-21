@@ -548,6 +548,14 @@ grid, the `data-tp-mgr-view` switch) is gone; its shared pieces (`phTpMgrSetFiel
 rhythm, Sessions, Recipe and Therapies fields, `phTpMgrRailHtml`) are the full-page editor's own.
 
 ## Cycle & IVF
+**IVF | Off switch (2026-11-21, her picks):** `phIvfOn(rec, name)` (after `PH_CYCLE_CUT_AGE`): `rec.ivfOn` true / false = her tap
+(`[data-pres-ivf]`, the `.ph-pd-seg.ph-pd-ivf` beside F / M on Patient details, only once sex is F or M); unset = on with an IVF
+round, an IVF plan or a Fertility complaint, a man also with `phPartnerOf` or `phSaRows`; a woman `PH_IVF_CUT_AGE` (55) and over off;
+a man off. Off hides: the `ivf` section (so Her file's IVF history / Semen analysis row and the Fertility & cycle group), the Care
+team's IVF clinic row (and `phCareTeamWords(rec, name)`'s clinic), `phVsumHtml`'s transfer chip, Last scan, SA and IUI lines, Today's
+IVF work (`rec.ivfOn === false` only) and, on a new intake link, `prefill.noIvf` (intake.html hides `#ttcQ` and `#ivfQ`, does not
+ask for the IVF answer and sends no `ivfCycles`). Nothing saved is touched.
+
 **Cycle page space saving (2026-11-21, her 8 picks, option C):** on the Calendar tab `phCycPageHtml` passes
 `{ flat, noD1, cpPage: true, head: phCpHeadHtml(rec, name, true) }` to `phCycleSignPopHtml`: `head` (the dates as `.cp-hdb`, no big
 CD) rides on the card's head line (`phCycDayHeadHtml`'s 6th argument); `cpPage` folds Period (`perFold`: phase not Period and nothing
