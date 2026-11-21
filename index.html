@@ -15068,6 +15068,25 @@
   }
   #pharmacyPage .ph-dsp-band .add:hover { background: rgba(127, 184, 203,.14); }
   #pharmacyPage .ph-dsp-band .ph-pres-menuwrap { margin-left: 0; }
+  /* her 2026-11-21 synth22 "how do schedule dispense?" -> "yes add schedule button": Schedule on the open prescription's band, before the + */
+  #pharmacyPage .ph-dsp-band .sch { display: inline-flex; align-items: center; gap: 6px; height: 32px; min-height: 32px; flex: none; padding: 0 10px; margin: 0;
+    border: 1px solid rgba(255,255,255,.25); border-radius: 6px; background: transparent; color: #fff; font: 600 var(--fs-13) var(--font-body); cursor: pointer; white-space: nowrap; }
+  #pharmacyPage .ph-dsp-band .sch:hover, #pharmacyPage .ph-dsp-band .sch:focus-visible { background: rgba(255,255,255,.14); border-color: #fff; }
+  #pharmacyPage .ph-dsp-band .sch .icn { width: 15px; height: 15px; }
+  #pharmacyPage .ph-pres-menu .ph-pres-menu-sch { display: none; }
+  @media (max-width: 640px) {
+    #pharmacyPage .ph-dsp-band .sch { display: none; }
+    #pharmacyPage .ph-pres-menu .ph-pres-menu-sch { display: block; }
+  }
+  #pharmacyPage .ph-sch-card .ph-sch-flash { margin: 0 0 10px; font-size: var(--fs-13); color: var(--ph-ink); }
+  #pharmacyPage .ph-sch-card .ph-sch-flash::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ph-zero); margin-right: 6px; vertical-align: 2px; }
+  #pharmacyPage .ph-sch-card .ph-sch-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+  /* the schedule form and its queue rows to THE LOOK (32px, 6px corners, 13px), in the sheet and on the Patient profile page alike */
+  #pharmacyPage :is(#phSchedSheet, #schedForm) :is(input:not([type=hidden]):not([type=checkbox]):not([type=radio]), select) { height: 32px; min-height: 32px; border-radius: 6px !important; border-width: 1px; font-size: var(--fs-13); box-sizing: border-box; }
+  #pharmacyPage :is(#phSchedSheet, #schedForm) .ph-addr-savechip { font-size: var(--fs-13); }
+  #pharmacyPage :is(#phSchedSheet, #schedForm) :is(.btn-save, .btn-cancel) { font-size: var(--fs-13); }
+  #pharmacyPage :is(#phSchedSheet, #schedRows) .ph-stage-btn { min-height: 32px; height: 32px; font-size: var(--fs-13); }
+  #pharmacyPage :is(#phSchedSheet, #schedRows) .ph-pres-actions button.ic { width: 32px; height: 32px; }
   #pharmacyPage .ph-dsp-band .ph-pres-menubtn { width: 32px; height: 32px; border-color: rgba(255,255,255,.25); background: transparent; color: #fff; }
   #pharmacyPage .ph-dsp-band .ph-pres-menubtn:hover, #pharmacyPage .ph-dsp-band .ph-pres-menubtn.on { background: rgba(255,255,255,.14); border-color: #fff; color: #fff; }
   #pharmacyPage .ph-dsp-band .ph-pres-menu { top: 38px; color: var(--ph-ink); }
@@ -21623,6 +21642,9 @@
   #pharmacyPage .ph-tv-tile.ph-tv-wait .ph-today-sum { color: var(--ph-ink); font-weight: 600; }
   #pharmacyPage .ph-tv-tile.ph-tv-flash { box-shadow: 0 0 0 3px rgba(127, 184, 203, .45); border-color: var(--ph-gold); }
   #pharmacyPage .ph-acu-fndrow .tab-link { margin-left: 6px; }
+  /* her synth22 2026-11-21 batch 2: the Findings line is the one findings read, short ("Tongue pale · Pulse R Chi blocked"), labels at 600 */
+  #pharmacyPage .ph-acu-fndrow .fx b { font-weight: 600; }
+  #pharmacyPage .ph-pres-panel .ph-acu-fndrow button.tab-link[type][data-flow-go] { display: inline-flex; align-items: center; height: 32px; min-height: 32px; padding: 0 12px; margin-left: 6px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); color: var(--ph-ink); font-size: var(--fs-13); font-weight: 600; vertical-align: middle; }
   /* ==== TODAY'S SESSION, SLEEK (her locked mock treatment-tab-sleek-mock.html, 2026-10-10) ====
      ONE chip for every clickable pill/link on the redesigned Treatment tab:
      plain = a pick that is off, .on = picked (teal fill), .action = goes or opens
@@ -67567,6 +67589,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const { herbs, formulas, log, suppliers } = PHARMACY;
     phAbbrMap = null; phHerbById = null; phInHouseSet = null; phBlendNames = null; phRecipeCache = null; phIsFormulaCache = null;   // abbrs / jar links / herbs may have changed — rebuild lazily
     phTripSync();   // ‹ Back to the patient after a door on a patient page (2026-11-18)
+    schedSheetPaint();   // Schedule from the open prescription (her 2026-11-21): the form's sheet over it
     phApptPopClose();   // the appointment popup never outlives the page it was anchored to (a tab hop from "Script ↗" lands here too)
     phLcmDigestSoon();   // a booking may have changed on any page: C22's copy follows (lcm-appt-digest, same-content guarded)
     // her ask 2026-09-10 ("give the sage colour to acupreg"): one class flips
@@ -74980,7 +75003,11 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         return;
       }
       // Scheduled dispense & posting -- queue on the Prescriptions page.
+      const presSchedBtn = e.target.closest("[data-pres-sched], [data-pres-sched-new]");
+      if (presSchedBtn) { const d = presSchedBtn.dataset; presMoreOpen = false; presSchedStart(d.presSched || d.presSchedNew, !!d.presSchedNew); return; }
+      if (e.target.closest("[data-sched-sheet-close]")) { schedSheetClose(); return; }
       const schedNew = e.target.closest("[data-sched-new]");
+      if (schedNew && schedNew.closest("#presPanel") && schedNew.dataset.schedNew && schedNew.dataset.schedNew !== "1") { presMoreOpen = false; presSchedStart(schedNew.dataset.schedNew, true); return; }
       if (schedNew) {
         const val = schedNew.dataset.schedNew;
         schedOpenForm(val && val !== "1" ? val : null);
@@ -109684,30 +109711,157 @@ Difficult to sweat|no_sweat_tend:r`;
   // fills it again. Print and Email as the Care Plan's page for the patient (phPrintDoc; Email keeps a copy in Messages); giving it marks
   // rec.visitSumAt (the row's ✓ today; a first visit's Next-up stops asking for it).
   const PH_VS_PARTS = [["cc", "What you came in for"], ["found", "What I found"], ["means", "What it means"], ["plan", "The plan"]];
+  // ---- ONE "WHAT I FOUND" READ (her synth22 2026-11-21 batch 2, picks 1-2: "need findings of tongue abdomen and all diagnostics used";
+  // Summary for her, Acupuncture's Findings line and the Care Plan read the same lines). Each exam done TODAY, ONLY what is not normal,
+  // from that exam's own read (phTng2Summary, phVsPulseWords, phAbd2Summary, phCycleComp, the pain store's today scores + positive
+  // tests, phBldList / phBldMeta / phBldFlag on results under 12 months). mode "plain" = her patient's words, "short" = a clinical line.
+  // Returns [{ k, lb, w, line }] in exam order (line = the letter's own line, the pulse's two); opt.parts = the ids to read.
+  const PH_FND_PARTS = ["tongue", "pulse", "abdomen", "cycle", "msk", "blood"];
+  // today's pulse in short clinical words, by position: "R Chi blocked · L Chi weak, deep"; a plain normal box (Normal, or the
+  // position's own normal quality, at its own depth) is left out
+  function phFindPulseShort(rec) {
+    const marks = (rec && rec.constitPulse && rec.constitPulse.pulse) || {}, by = new Map();
+    Object.keys(marks).forEach(k => {
+      const [side, col, lv] = k.split(":"), m = marks[k]; if (!m || !m.quality) return;
+      const c = (PH_PULSE_CHART[side] || []).find(x => x.id === col), pos = c ? PH_PA_NEAR[c.pos] : "";
+      if (!pos) return;
+      const g = (PH_PULSE_POS_COL[side] || {})[col], tp = g ? PH_PULSE_TPL[side + ":" + g] : PH_PULSE_TPL[side + ":" + pos];
+      const own = tp && tp.level === lv ? tp.quality : "normal";
+      const ws = [m.quality].concat((Array.isArray(m.more) ? m.more : []).map(x => x && x.quality)).filter(Boolean).map(q => String(q).toLowerCase()).filter(q => q !== "normal" && q !== own);
+      const deep = lv === "skin" ? "floating" : lv === "organ" && !(tp && tp.level === "organ") ? "deep" : "";
+      if (deep) ws.push(deep);
+      if (!ws.length) return;
+      const pk = side + " " + pos, cur = by.get(pk) || [];
+      ws.forEach(w => { if (!cur.includes(w)) cur.push(w); });
+      by.set(pk, cur);
+    });
+    const ord = ["R Cun", "R Guan", "R Chi", "L Cun", "L Guan", "L Chi"];
+    return [...by.keys()].sort((a, b) => ord.indexOf(a) - ord.indexOf(b)).map(k => `${k} ${by.get(k).join(", ")}`).join("; ");
+  }
+  function phFindingsRead(rec, name, mode, opt) {
+    rec = rec || (name ? phPatientPeek(name) : null) || {};
+    const plain = mode !== "short", want = (opt && opt.parts) || PH_FND_PARTS, out = [];
+    // one exam's own parts read with commas; " · " is kept for the split between exams on the short line
+    const add = (k, lb, w, line) => { w = String(w || "").trim(); if (k !== "cycle") w = w.replace(/ · /g, ", "); if (w) out.push({ k, lb, w, line: line || `${lb}: ${w}` }); };
+    want.forEach(k => { try {
+      if (k === "tongue") {
+        if (!phTodayDonePart(rec, "tongue")) return;
+        const w = phTng2Summary(phTngToday(rec)); if (w && !/^normal$/i.test(w)) add(k, "Tongue", w);
+      } else if (k === "pulse") {
+        if (!phTodayDonePart(rec, "pulse")) return;
+        if (plain) { const w = phVsPulseWords(rec); if (w && !/^Pulse: normal at every position$/.test(w)) add(k, "Pulse", w.split("\n")[0].replace(/^Pulse: /, ""), w); }
+        else add(k, "Pulse", phFindPulseShort(rec));
+      } else if (k === "abdomen") {
+        if (!phTodayDonePart(rec, "abdomen")) return;
+        const a = phAbdToday(rec); if (a.normal) return;
+        const w = String(phAbd2Summary(a.chart, (rec.abdomen || {}).zones) || "").split(" · ").filter(s => s && !/^no /i.test(s) && !/^normal$/i.test(s) && s !== (PH_ABD_TENSION.find(x => x[0] === "medium") || [])[1]).join(" · ");
+        add(k, "Abdomen", plain ? w.replace(/tight hypochondrium( right| left)?/g, (m, s) => `tight below the${s || ""} ribs`) : w);
+      } else if (k === "cycle") {
+        if (!phCycleTracked(rec)) return;
+        const c = phCycleComp(rec); if (!c || !c.day) return;
+        const pw = { period: "your period", foll: "before ovulation", ov: "around ovulation", luteal: c.overdue ? "period due" : "after ovulation" }[c.phaseKey] || String(c.phaseLabel || "").toLowerCase();
+        add(k, "Cycle", plain ? `day ${c.day}, ${pw}` : `CD ${c.day} · ${c.phaseLabel}`);
+      } else if (k === "msk") {
+        if (!phMskDoneToday(rec)) return;
+        const v = phMskToday(rec) || {}, R = PH_PAIN_REGIONS.REGIONS, bits = [];
+        Object.keys(v.pains || {}).forEach(pk => {
+          const [r, s] = pk.split("|"), P = v.pains[pk], reg = R[r]; if (!reg || !P || P.now == null || P.now === "") return;
+          const nm = phPmSideName(reg, s || "C");
+          bits.push(`${plain ? nm.charAt(0).toLowerCase() + nm.slice(1) : nm} ${P.now}/10`);
+        });
+        Object.keys(v.tests || {}).forEach(tk => {
+          if (v.tests[tk] !== "pos") return;
+          const [rk, i] = tk.split(":"), tt = (PH_MSK_TESTS[rk] || [])[+i];
+          if (tt && tt.name) bits.push(plain ? `positive ${tt.name}` : `${tt.name} +ve`);
+        });
+        if (bits.length) add(k, "Pain", bits.join(", "));
+      } else if (k === "blood") {
+        const seen = new Set(), bits = [], sex = rec.sex;
+        phBldList(rec).filter(b => !phBldIsOld(b.date)).forEach(b => Object.keys(b.vals || {}).forEach(key => {
+          if (seen.has(key)) return; seen.add(key);   // the newest result for each marker
+          const e = b.vals[key], v = phBldNum(e && e.v); if (v == null) return;
+          const meta = phBldMeta(key, e, sex), f = phBldFlag(meta, v); if (!f) return;
+          bits.push(plain ? `${meta.n} ${f} (${e.v}${meta.u ? " " + meta.u : ""})` : `${meta.n} ${e.v} ${f === "low" ? "↓" : "↑"}`);
+        }));
+        if (bits.length) add(k, "Blood tests", bits.join(", "));
+      }
+    } catch (e) { /* that exam's read failed: the others still show */ } });
+    return out;
+  }
+  // Came in for, short (her pick 4): a complaint's grouped symptoms in plain words, the first three, "+n" for the rest:
+  // complaint row key -> "with weight gain, headache and poor sleep +4"
+  function phVsWithShort(name, plan) {
+    const out = {}; let M = null; const keep = phCxAt; phCxAt = null;
+    try { M = phCxModel(name, plan || null); } catch (e) { M = null; } finally { phCxAt = keep; }
+    const G = (M && M.parts && M.parts.grp) || {};
+    const low = d => String(d || "").replace(/\s*\([^)]*\)/g, "").split(/\s+/).map(w => /^[A-Z0-9]{2,}$/.test(w) ? w : w.toLowerCase()).join(" ").trim();
+    Object.keys(G).forEach(k => {
+      const ws = [];
+      G[k].forEach(r => { const x = r.x || {}, d = low(x.desc || x.subj); if (d && !ws.includes(d)) ws.push(d); });
+      if (!ws.length) return;
+      const top = ws.slice(0, 3), more = ws.length - top.length;
+      out[k] = "with " + (top.length > 1 ? top.slice(0, -1).join(", ") + " and " + top[top.length - 1] : top[0]) + (more ? ` +${more}` : "");
+    });
+    if (M && M.pain && M.pain.mainIdx >= 0) { const pk = "p:" + M.pain.list[M.pain.mainIdx].r + "|" + M.pain.list[M.pain.mainIdx].s; if (out[pk] && !out.main) out.main = out[pk]; }
+    return out;
+  }
+  // The plan, from the Care Plan's four parts (her pick 1, "summary for her is the same as treatment plan"): phTpKeyFour(name, plan)
+  // -> { goals, mods, len, rate, visits, end, review }. Lines: "Acupuncture and herbs, weekly for 3 months", "Review on 19 December".
+  // Read defensively: a part may be words or a small object; a part it does not give is left out.
+  function phVsKeyFourLines(K) {
+    const txt = v => v == null ? "" : typeof v === "string" || typeof v === "number" ? String(v).trim() : String(v.text || v.label || v.t || "").trim();
+    const mods = (Array.isArray(K.mods) ? K.mods : []).map(txt).filter(Boolean).map((m, i) => i ? m.charAt(0).toLowerCase() + m.slice(1) : m);
+    const and = a => a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a[0] || "";
+    let rate = txt(K.rate), len = txt(K.len);
+    const RATE = { "1× a week": "weekly", "1x a week": "weekly", "once a week": "weekly", "2× a week": "twice a week", "2x a week": "twice a week", "fortnightly": "fortnightly", "monthly": "monthly", "weekly": "weekly" };
+    if (rate) rate = RATE[rate.toLowerCase()] || rate.charAt(0).toLowerCase() + rate.slice(1);
+    const lm = /^(\d+)\s*(d|day|days|w|wk|wks|week|weeks|m|mo|mos|month|months|y|yr|yrs|year|years)$/i.exec(len);
+    if (lm) { const u = { d: "day", w: "week", m: "month", y: "year" }[lm[2].charAt(0).toLowerCase()]; len = `${lm[1]} ${u}${+lm[1] === 1 ? "" : "s"}`; }
+    const lines = [];
+    const what = and(mods), how = [rate, len ? "for " + len : ""].filter(Boolean).join(" ");
+    if (what || how) lines.push(what ? what + (how ? ", " + how : "") : how.charAt(0).toUpperCase() + how.slice(1));
+    const rv = txt(K.review);
+    if (/^\d{4}-\d{2}-\d{2}$/.test(rv)) lines.push(`Review on ${parseKey(rv).toLocaleDateString("en-AU", { day: "numeric", month: "long" })}`);
+    const goals = (Array.isArray(K.goals) ? K.goals : []).map(g => {
+      if (g && typeof g === "object" && g.w) { const pc = g.lo != null ? `${g.lo}${g.hi != null ? "–" + g.hi : ""}% better` : ""; const tm = g.n ? `in ${g.n} ${g.u === "w" ? "week" : "month"}${+g.n === 1 ? "" : "s"}` : ""; return [g.w, [pc, tm].filter(Boolean).join(" ")].filter(Boolean).join(", "); }
+      return txt(g);
+    }).filter(Boolean);
+    return { lines, goals };
+  }
   function phVsFilled(name, plan) {
     const rec = phPatientPeek(name) || {}, it = phCcRibItems(name), vk = phVisitKind(name).k;
     // her 2026-11-21 pick 8: a complaint's symptoms ride on its line ("Bloating, with Gas (Foul-smelling) and Constipation")
-    const W = it ? phCxGrpWith(name, plan) : {};
+    // her synth22 2026-11-21 batch 2 pick 4: short, the first three symptoms in plain words, "+n" for the rest
+    const W = it ? phVsWithShort(name, plan) : {};
     let cc = [];
-    try { cc = it ? phCxItems(name).filter(x => !x.track && String(x.text || "").trim()).map(x => phSymCase(x.text) + (W[x.key] ? ", " + W[x.key] : "") + phVsLong(x.since)) : []; }
+    try { cc = it ? phCxItems(name).filter(x => !x.track && String(x.text || "").trim()).map(x => phSymCase(x.text) + phVsLong(x.since) + (W[x.key] ? ", " + W[x.key] : "")) : []; }
     catch (e) { cc = it ? [it.main].concat(it.others || []).filter(x => x && x.text).map(x => phSymCase(x.text) + phVsLong(x.since)) : []; }
-    const found = [];
-    [["msk", "Musculoskeletal"], ["tongue", "Tongue"], ["pulse", "Pulse"], ["abdomen", "Abdomen"]].forEach(([id, lb]) => {
-      if (!phTodayDonePart(rec, id)) return;
-      if (id === "pulse") { const pw = phVsPulseWords(rec); if (pw) found.push(pw); return; }   // her 2026-11-21 synth22: plain words, only what is not normal
-      const w = phTodaySumPart(rec, id); if (w && w !== PH_FINDING_EMPTY) found.push(`${lb}: ${w}`);
-    });
+    // her synth22 2026-11-21 batch 2 pick 2: every exam done today, only what is not normal, in plain words (the one findings read)
+    const found = phFindingsRead(rec, name, "plain").map(x => x.line);
+    if (!found.length && phTodayDonePart(rec, "pulse") && phVsPulseWords(rec)) found.push(phVsPulseWords(rec));   // a pulse normal at every position still says so
     phScnList(rec).filter(s => (s.kind || s.res) && phBldAgeDays(s.date) <= 365).slice(0, 3).forEach(s => found.push(`${s.kind || "Scan"}, ${presBandDay(s.date)}${s.res ? `: ${s.res}` : ""}`));
-    let means = []; try { const defs = phPatDefs(); means = phPatAgreedIds(rec).map(id => (defs.find(d => d.id === id) || {}).name).filter(Boolean); } catch (e) { means = []; }
-    const pl = [];
-    if (plan) { try { const C = phTpCplModel(name, plan); C.phs.forEach(p => pl.push(p.txt)); if (C.herbs) pl.push(`Herbs: ${C.herbs}`); } catch (e) { /* the plan's own page says it */ } }
+    // the plan this summary speaks for: the open Care Plan, else the one today's visit is for
+    let P = plan; if (!P) { try { P = phTpPlanForToday(name); } catch (e) { P = null; } }
+    // her pick 3: What it means fills from the Diagnosis (her own Diagnosis words, else its patterns, the main one first)
+    let means = [];
+    try { const hers = phTpDxHersText(P); means = hers ? hers.split(/\n+/).map(s => s.trim()).filter(Boolean) : (D => { const top = D.filter(p => p.agreed || p.level === "likely"); return (top.length ? top : D).map(p => p.def && p.def.name).filter(Boolean); })(phTpAutoDx(name, P || null).pats); } catch (e) { means = []; }
+    if (!means.length) { try { const defs = phPatDefs(); means = phPatAgreedIds(rec).map(id => (defs.find(d => d.id === id) || {}).name).filter(Boolean); } catch (e) { means = []; } }
+    const pl = [], goals = [], gk = g => String(g).replace(/^goal:\s*/i, "").split(/[:,]/)[0].toLowerCase().replace(/\s+/g, " ").trim();   // one goal a word: "Happiness: …" and "Happiness, …" are the same goal
+    const addGoal = g => { g = String(g || "").replace(/^goal:\s*/i, "").trim(); if (g && !goals.some(x => gk(x) === gk(g))) goals.push(g); };
+    // her pick 1: The plan = the Care Plan's four parts (treatments, how long and how often, review date, goals)
+    if (P && typeof phTpKeyFour === "function") {
+      try { const K = phTpKeyFour(name, P); if (K) { const L = phVsKeyFourLines(K); L.lines.forEach(l => pl.push(l)); L.goals.forEach(addGoal); } } catch (e) { /* the plan's own page says it */ }
+    }
+    if (plan && !pl.length) { try { const C = phTpCplModel(name, plan); C.phs.forEach(p => pl.push(p.txt)); if (C.herbs) pl.push(`Herbs: ${C.herbs}`); } catch (e) { /* the plan's own page says it */ } }
     if (!pl.length) {
       if (phVkIsAcu(vk)) pl.push("Acupuncture");
       const t = (PRESC.items || []).find(x => !presIsFormula(x) && phPatientKey(presPatientFor(x)) === phPatientKey(name)), fm = t ? presActualFormula(t) : "";
       if (fm) pl.push(`Herbs: ${[fm, schedPrepDosageText(t)].filter(Boolean).join(" · ")}`);
     }
-    // her 2026-11-21 synth22 pick 5: each Came in for goal prints under The plan (phCcGoalLines: plain lines, from the goals build)
-    try { (typeof phCcGoalLines === "function" ? phCcGoalLines(rec) || [] : []).forEach(g => { g = String(g || "").trim(); if (g && !pl.includes(g)) pl.push(g); }); } catch (e) { /* no goals yet */ }
+    // her 2026-11-21 synth22 pick 5: each Came in for goal prints under The plan (phCcGoalLines: plain lines, from the goals build); a goal
+    // the Care Plan already gave is never printed twice
+    try { (typeof phCcGoalLines === "function" ? phCcGoalLines(rec) || [] : []).forEach(addGoal); } catch (e) { /* no goals yet */ }
+    goals.forEach(g => pl.push(`Goal: ${g.replace(/:\s*/, ", ")}`));
     return { cc: cc.join("\n"), found: found.join("\n"), means: means.join("\n"), plan: pl.join("\n") };
   }
   // ---- the letter's words (her 2026-11-21 synth22 pick 10, "a letter, not a form") ----
@@ -128218,10 +128372,15 @@ Difficult to sweat|no_sweat_tend:r`;
     document.querySelectorAll("#pharmacyPage [data-exam-past]").forEach(el => { el.innerHTML = phExamPastInner(rec, el.dataset.examPast, el.dataset.examName || name); });
   }
   // the Treatment tab's findings (read-only; the pages above are where they are entered)
+  // her synth22 2026-11-21 batch 2 (on a Findings line listing every Normal box): the one findings read, short, only what is not
+  // normal ("Tongue pale, teeth marks · Pulse R Chi blocked · L Chi weak · Abdomen ..."); an exam done with nothing off reads "normal"
   function phVisitFndLineHtml(rec) {
-    const bits = ["tongue", "pulse", "abdomen"].filter(id => phTodayDonePart(rec, id)).map(id => `${id.charAt(0).toUpperCase() + id.slice(1)} ${esc(phTodaySumPart(rec, id))}`);
+    const L = phFindingsRead(rec, null, "short", { parts: ["tongue", "pulse", "abdomen", "msk", "blood"] });
+    const done = ["tongue", "pulse", "abdomen"].filter(id => phTodayDonePart(rec, id)), off = new Set(L.map(x => x.k));
+    const ok = done.filter(id => !off.has(id)).map(id => id.charAt(0).toUpperCase() + id.slice(1));
+    const bits = L.map(x => `<b>${esc(x.lb)}</b> ${esc(x.w)}`).concat(ok.length ? [`${ok.join(", ")} normal`] : []);
     return bits.length
-      ? `${bits.join(" · ")} <button type="button" class="tab-link" data-flow-go="today">Change</button>`
+      ? `<span class="fx">${bits.join(" · ")}</span> <button type="button" class="tab-link" data-flow-go="today">Change</button>`
       : `<span class="faint">Not examined yet</span> <button type="button" class="tab-link" data-flow-go="today">Open</button>`;
   }
   /* ---- ASK HER (her 2026-10-13, mock ask-her-mock-2026-10-13.html; her picks: a page of its own, the TOP 3 Fang Bing Ren
@@ -167576,6 +167735,7 @@ Please let me know if you have any questions.`;
       <div class="where">${where}</div>
       <div class="rxs">
         <div class="cards">${oldestFirst.map((s, i) => presScriptPillHtml(s, t.id, i + 1, !!seen && !seen.has(s.id))).join("")}</div>
+        ${presSchedBtnHtml(t)}
         <button type="button" class="add" data-pres-tab-new="${esc(t.name)}" title="New prescription" aria-label="New prescription">+</button>
         <span class="ph-pres-menuwrap">
           <button type="button" class="ph-pres-menubtn${phTpMenuOpen ? " on" : ""}" data-pres-menu-toggle="1" aria-haspopup="menu" aria-expanded="${phTpMenuOpen ? "true" : "false"}" title="Case, phase and plan actions" aria-label="Case, phase and plan actions">⋯</button>
@@ -167656,6 +167816,7 @@ Please let me know if you have any questions.`;
     const openPlan = presTpInlineEditorOpen(name) ? phTpFindPlan(name, presTpInlinePlanId) : null;
     return `<div class="ph-pres-menu" role="menu">
       ${openPlan ? "" : `<button type="button" class="ph-pres-menu-item" data-pres-menu-item="1" data-cn-copy="menu">${phCnMenuLabel}</button>`}
+      <button type="button" class="ph-pres-menu-item ph-pres-menu-sch" data-pres-menu-item="1" data-pres-sched="${t.id}">${esc(presSchedBtnWord(t))}</button>
       <div class="ph-pres-menu-sec">This prescription</div>
       ${t.caseFromCc ? `<div class="ph-pres-menu-field ph-cc-casebar" data-cc-casebar="1"><span>Case</span><b>${esc((PH_CASE_TYPES.find(c => c[0] === caseVal) || [])[1] || caseVal)}</b><i>from the complaint</i><button type="button" class="ph-pfw-link" data-cc-case-change="1">Change</button></div>` : ""}
       <label class="ph-pres-menu-field"${t.caseFromCc ? ` data-cc-caselabel="1" style="display:none"` : ""}><span>Case</span>
@@ -171394,6 +171555,66 @@ Dosage: {dosage}
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
   function schedCloseForm() { schedFormOpen = false; schedFormPresetId = null; renderPharmacy(); }
+  // ---- Schedule from the open prescription (her 2026-11-21 synth22 "how do schedule dispense?" -> "yes add schedule button";
+  // mock D). The form lives on the Patient profile page (#schedWidget), under the open prescription, so from the prescription it
+  // opens in the app's one sheet (.ph-lk-sheet) over it, the prescription preset (schedFormPresetId), and the prescription stays
+  // where it was. A prescription with a dispense scheduled and not yet dispensed shows that date on the button; a tap opens its
+  // entry (the queue's own row) with "+ Schedule another". schedSheet: null | { rx, view: "form" | "list" }.
+  let schedSheet = null, schedSheetFlash = "";
+  const presSchedOpen = id => PRESC.scheduled.filter(s => s.prescriptionId === id && !s.dispensedAt && schedStatus(s) !== "completed")
+    .sort((a, b) => (schedDueDate(a) || "").localeCompare(schedDueDate(b) || ""));
+  function presSchedBtnWord(t) {
+    const L = presSchedOpen(t.id), d = L.length && schedDueDate(L[0]);
+    return d ? `${schedDateStr(d)}${L.length > 1 ? ` +${L.length - 1}` : ""}` : "Schedule";
+  }
+  function presSchedBtnHtml(t) {
+    const L = presSchedOpen(t.id), s = L[0], d = s && schedDueDate(s);
+    const tip = d ? `Scheduled: ${s.method === "pickup" ? "pickup" : "post"} · ${schedDateStr(d)}` : "Schedule a dispense of this prescription";
+    return `<button type="button" class="sch" data-pres-sched="${t.id}" title="${esc(tip)}"><svg class=icn aria-hidden=true><use href=#i-cal></use></svg>${esc(presSchedBtnWord(t))}</button>`;
+  }
+  function presSchedStart(rxId, forceForm) {
+    schedSheetFlash = "";
+    if (!forceForm && presSchedOpen(rxId).length) { schedSheet = { rx: rxId, view: "list" }; schedFormOpen = false; schedFormPresetId = null; renderPharmacy(); return; }
+    schedSheet = { rx: rxId, view: "form" };
+    schedFormOpen = true; schedFormPresetId = rxId; schedFormMethod = "postage"; schedFormDraft = {}; schedOpenAction = null; schedAddrEditId = null;
+    renderPharmacy();
+  }
+  function schedSheetClose() {
+    const wasForm = schedSheet && schedSheet.view === "form";
+    schedSheet = null; schedSheetFlash = "";
+    if (wasForm && schedFormOpen) { schedCloseForm(); return; }
+    renderPharmacy();
+  }
+  // painted on every renderPharmacy (the form's own taps all re-render through it), before the page draws, so a phFlash the form
+  // raises lands in the sheet, never behind the prescription
+  function schedSheetPaint() {
+    let host = document.getElementById("phSchedSheet");
+    if (schedSheet && schedSheet.view === "form" && !schedFormOpen) {
+      // the form closed: saved (its "Scheduled for ..." words) or Cancel
+      const msg = phFlash && /^Scheduled /.test(phFlash) ? phFlash.replace(/<[^>]+>/g, "") : "";
+      if (msg) { phFlash = null; presSavedToast(`✓ ${msg}`); }
+      schedSheet = null;
+    }
+    if (schedSheet && schedSheet.view === "list" && !presSchedOpen(schedSheet.rx).length) schedSheet = null;
+    if (!schedSheet) { if (host) { host.hidden = true; host.innerHTML = ""; } schedSheetFlash = ""; return; }
+    const rx = PRESC.items.find(x => x.id === schedSheet.rx);
+    if (!rx) { schedSheet = null; if (host) { host.hidden = true; host.innerHTML = ""; } return; }
+    if (phFlash && schedSheet.view === "form") { schedSheetFlash = String(phFlash).replace(/<[^>]+>/g, ""); phFlash = null; }
+    if (!host) { host = document.createElement("div"); host.id = "phSchedSheet"; host.className = "ph-lk-sheet"; (document.getElementById("pharmacyPage") || document.body).appendChild(host); }
+    const who = phTitle(presPatientFor(rx) || rx.name || "");
+    const body = schedSheet.view === "form"
+      ? `${schedSheetFlash ? `<div class="ph-sch-flash" role="alert">${esc(schedSheetFlash)}</div>` : ""}${schedFormHtml()}`
+      : `<div class="rtn-table-wrap"><table class="rtn-table ph-table">
+          <thead><tr><th>Target</th><th>Patient</th><th>Method</th><th>Status</th><th>Details</th><th>Checkpoints</th><th></th></tr></thead>
+          <tbody>${presSchedOpen(rx.id).map(schedRowHtml).join("")}</tbody></table></div>
+        <div class="ph-sch-foot"><button type="button" class="btn-save" data-pres-sched-new="${rx.id}">+ Schedule another</button></div>`;
+    host.innerHTML = `<div class="ph-lk-backdrop" data-sched-sheet-close="1"></div><div class="ph-lk-card ph-sch-card" role="dialog" aria-label="Schedule a dispense">
+      <div class="ph-lk-card-hd"><h3>${schedSheet.view === "form" ? "Schedule a dispense" : "Scheduled"} · ${esc(who)}</h3><button type="button" data-sched-sheet-close="1" aria-label="Close">✕</button></div>
+      ${body}
+    </div>`;
+    host.hidden = false;
+  }
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && schedSheet) { e.stopPropagation(); schedSheetClose(); } }, true);
   // captures whatever's currently typed before flipping Pickup <-> Postage --
   // her spec: switching shouldn't wipe values in case she toggles by mistake.
   // Reads only the fields that exist for the CURRENT method (the other
@@ -172354,8 +172575,8 @@ Dosage: {dosage}
     const compHost = document.getElementById("schedCompletedZone");
     const btnHost = document.getElementById("schedActionBtn");
     if (!host) return;
-    formHost.innerHTML = schedFormHtml();
-    const all = schedSorted();
+    formHost.innerHTML = schedSheet ? "" : schedFormHtml();
+    const all = schedSorted().filter(s => !(schedSheet && schedSheet.view === "list" && s.prescriptionId === schedSheet.rx));
     const active = all.filter(s => schedStatus(s) !== "completed");
     const completed = all.filter(s => schedStatus(s) === "completed");
     const overdue = schedOverdueCount();

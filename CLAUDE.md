@@ -43,7 +43,7 @@ in `shots/`, price lists and recordings in `refs/`. All four folders are local o
 # ★★★ ONE APP, WELL INTEGRATED — standing rule (her 2026-10-10 "all builds and developments are integrative. the same information needs to present in all places that reference it ... i want this app to be integratively heavy"; restated in her 2026-10-21 audit ask)
 > Every page reads the same facts from the same place. Applies to every build, every page.
 
-1. **Find where the fact lives and what already draws it, and call that.** Never a second renderer, mini-chart, summary or wording of the same record. The one read for each: tongue `phTongueChartSvg` (best photo by `PH_TONGUE_SHOT_RANK`), abdomen `phAbdChartSvg`, pulse `phVisitPulseSummaryText` / `phVisitPulseDotsHtml`, dated findings `phVisitFndRead`, pain map `phPainMapHtml` / `phPmList`, current phase `phTpLivePhase`, today's plan `phTpPlanForToday`, Fang Bing Ren lead `phFbrRank` / `phFbrLeadOf`, ticked signs `phTriEffective`, complaints `phCcRibItems`, blood results `phBldList`, Watch / Aim `phTpFieldView`, Diagnosis / Goal `phTpAutoDx` / `phTpAutoGoal`, a pattern's concept picture `phPpHtml` / `phPpSvg` (`PH_PP`, one per pattern), a sign's picture `phKsSvgHtml` / `phKsThumbHtml` (one per sign), a patient record for drawing `phPatientPeek` (never the mutating `phPatientRec`).
+1. **Find where the fact lives and what already draws it, and call that.** Never a second renderer, mini-chart, summary or wording of the same record. The one read for each: tongue `phTongueChartSvg` (best photo by `PH_TONGUE_SHOT_RANK`), abdomen `phAbdChartSvg`, pulse `phVisitPulseSummaryText` / `phVisitPulseDotsHtml`, today's findings in one line each, only what is not normal (Summary for her, Acupuncture's Findings, the Care Plan) `phFindingsRead(rec, name, "plain" | "short")`, dated findings `phVisitFndRead`, pain map `phPainMapHtml` / `phPmList`, current phase `phTpLivePhase`, today's plan `phTpPlanForToday`, Fang Bing Ren lead `phFbrRank` / `phFbrLeadOf`, ticked signs `phTriEffective`, complaints `phCcRibItems`, blood results `phBldList`, Watch / Aim `phTpFieldView`, Diagnosis / Goal `phTpAutoDx` / `phTpAutoGoal`, a pattern's concept picture `phPpHtml` / `phPpSvg` (`PH_PP`, one per pattern), a sign's picture `phKsSvgHtml` / `phKsThumbHtml` (one per sign), a patient record for drawing `phPatientPeek` (never the mutating `phPatientRec`).
 2. **One write door per fact:** `phTriWrite` + `phTriSetYes` / `phTriSetNo` / `phTriClearYes` (signs and links), `phPmWrite` (pains), `phCcWrite` (Came in for), `phMskWrite`, `phTlWrite`, `phEnWrite`, `phCxWrite`, `phTngWrite`, `phHxConstitPulse` (pulse chart), `phRenPhotoPut` (photos), `phTpFieldCommit` + `phTpFieldPick` (Watch / Aim), `phTpFgWritePlan` (Diagnosis / Goal: the Care Plan’s editor and the Treatment strip’s fields). A new field on one of these records goes into its door's whitelist (`phPmWrite` silently drops unknown keys).
 3. **Derived on read, never copied.** A value worked out from other data (auto Diagnosis / Goal / Watch / Aim; Fang Bing Ren pre-fills from charts, history, bloods, the intake form, pain words, food reactions, cycle, age and sex; Came in for from the pain map; a Medical history row named by Came in for (`phHxFromCc`, read inside `phHxVal`, so Fang Bing Ren follows; her untick saves a No); IVF scan bloods in Blood tests; timeline items from IVF history) is computed when drawn and never stored. Only her own taps and typing are saved, and **her own value always wins** over the derived one, with a way back to the auto wording (the quiet "Template’s words" / "Patterns’ words" chip by the field, her 2026-10-31 "edit where you read").
 4. **Wire a new thing everywhere in one pass.** A new Fang Bing Ren formula, sign or clue = her code word **integrate33** (memory `feedback_integrate33_protocol`): add it, then wire it into the tongue / pulse / abdomen charts, Ask her, Medical history, bloods, cycle answers, Patterns, links and twins, the body chart and search aliases, with a matrix HTML of what was and was not wired. Checklists: a new sign uses a subject in `PH_FBR_SUBJ_AREA` (and `PH_FBB_SUBJ`), a women-only one goes in `PH_SIGN_ONLY_F`, its twin in `PH_FBR_TWINS_DRAFT`; a new formula joins `PH_REN_FAM_GROUPS` (its colour shades itself); a new plan category follows the checklist in BUILD-NOTES "Dermatology plan category".
@@ -454,6 +454,21 @@ left empty; the pill never says plan ("Pain ▾", "Type ▾" when empty).
 them. (The Oct 10 tab order put it before, so it opened empty on a first
 visit. That is fixed by this law.)
 
+**One "what I found" read, and Summary for her follows the Care Plan (her synth22 batch 2, 2026-11-21: "need findings of tongue
+abdomen and all diagnostics used", "summary for her is the same as treatment plan"; her picks 1–4, all the recommended one; memory
+project_lcm_synth22_careplan_2026_11_21):** `phFindingsRead(rec, name, mode, { parts })` is the ONE read of today's findings: Tongue,
+Pulse, Abdomen, Cycle (a cycle-tracked patient: the day and phase), Pain (the pain store's today scores + positive tests) and Blood tests
+(the newest value of each marker on a result under 12 months, out of its range), each from its exam's own read and ONLY what is not
+normal (a plain normal pulse box, a medium abdomen, "no …" marks are left out). "plain" = her patient's words (the pulse is
+`phVsPulseWords`, "tight below the right ribs"); "short" = one clinical line ("Pulse R Chi blocked; L Chi weak", Cun / Guan / Chi
+positions, never the organ-zone dump). Acupuncture's Findings line is the short read (`phVisitFndLineHtml`; an exam done with nothing off
+reads "Tongue normal"; Change is a 32px chip). Summary for her: What you came in for is SHORT ("complaint · how long, with a, b and c +n",
+`phVsWithShort`: the first three grouped symptoms in plain lower-case words); What I found = the plain read, a line an exam, scans after
+it; What it means = the Diagnosis (her own Diagnosis words, else its agreed / Likely patterns, the main one first; Possible only when
+nothing is Likely); The plan = the Care Plan's four parts (`phTpKeyFour`: "Acupuncture and herbs, weekly for 3 months", "Review on 19
+December", "Goal: …"), then the Came in for goals (`phCcGoalLines`), one line a goal word (never twice). With no Care Plan it says what
+it said before. Never a second findings reader on a page; a new page that lists findings calls this one.
+
 ## 3 · How often each page repeats
 | Page | Rule |
 |---|---|
@@ -603,6 +618,15 @@ orders (they arrive at CBD), low lists, the Dashboard and Stocktake read. A disp
 takes from Potts Point for a herb kept there (Take from CBD · Potts Point on the step, this open only), and its undo puts the grams back on
 the same shelf (`deducted[].shelf`, `phShelfAdd`). Low is per shelf: Potts Point under 50 g is its own red dot (`PH_PP_LOW`). Never one
 count for both shelves, never a second login for Potts Point.
+
+**Schedule from the open prescription (her 2026-11-21 synth22 "how do schedule dispense?" → "yes add schedule button"; mock D of
+`lcm_synth22_careplan_summary_findings_schedule_mocks`):** the open prescription's dark band carries **Schedule** (the calendar icon +
+the word, the band's own 32px look) before the dashed +; a phone has it as the band ⋯'s first item (one-row header law). A tap opens
+the schedule-a-dispense form in the app's one sheet (`.ph-lk-sheet`, `#phSchedSheet`) OVER the prescription, this prescription preset
+(`schedFormPresetId`), so she never leaves it; the dose card's ⋯ More › Schedule goes to the same sheet. Once the prescription has a
+dispense scheduled and not yet dispensed the button reads its date ("5 Dec", "+1" for more) and opens that entry (the queue's own
+row, `schedRowHtml`) with "+ Schedule another". One form store and one queue (`PRESC.scheduled`): the Patient profile page's
+Scheduled dispenses is the same list. Never a second schedule form or a second store.
 
 **Each finger is its own pain area (her synth22 2026-11-21 "patient described right hand middle finger pain but i cant input it"; pick
 "each finger", no joints):** `finger_index` · `finger_middle` · `finger_ring` · `finger_little` beside `thumb` in PH_PAIN_REGIONS (front
