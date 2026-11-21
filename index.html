@@ -45275,7 +45275,18 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   // inline custom properties for a block / the popup's colour square; the
   // CSS reads --ck / --ck-ink and falls back to the kind tints without them
-  const phCkStyle = (service, day) => {
+  // where a booking is: its own place (Bring in Acupreg stamps "Acupreg"), a day at another clinic (Saturday = Lotus), Friday = Acupreg once
+  // Acupreg is brought in, else the login's clinic
+  const phAcOn = () => !!PHARMACY.acMovedIn;
+  function phApptPlaceOf(a) {
+    if (a && a.place) return a.place;
+    const lo = a && a.date && phDayClin(a.date);
+    if (lo) return /lotus/i.test(lo) ? "Lotus" : lo;
+    if (phIsAcupregLoc()) return "Acupreg";
+    if (phAcOn() && a && /^\d{4}-\d{2}-\d{2}$/.test(a.date || "") && parseKey(a.date).getDay() === 5) return "Acupreg";
+    return "CBD";
+  }
+  const phCkStyle = (service, day, a) => {
     // Acupreg is a LOCATION colour, not a type colour -- it paints every
     // appointment at that login, including ones with no service at all (7 of
     // the 11 in her 4 Sep Acupreg backup were blank, added through quick-add,
@@ -45289,7 +45300,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // flip if she would rather Acupreg won outright.
     const dcc = phDayClinColour(day);
     if (dcc && !phCkIsAway(service)) return `--ck:${dcc};--ck-ink:${phCkInkByContrast(dcc)};`;
-    if (phIsAcupregLoc() && !phCkIsAway(service) && !phDayClinElse(day)) {
+    if ((phIsAcupregLoc() || (phAcOn() && phApptPlaceOf(a || { date: day }) === "Acupreg")) && !phCkIsAway(service) && !phDayClinElse(day)) {
       return `--ck:${PH_ACUPREG_COLOUR};--ck-ink:${phCkInkByContrast(PH_ACUPREG_COLOUR)};`;
     }
     // her 2026-11-03 "all blocks must be whole block color": a booking with no type (a calendar click books the name only) or a
@@ -46829,7 +46840,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // to a Cliniko appointment type paints the block that exact colour --
     // .ck + --ck/--ck-ink inline (see phCkTypeColour); the kind class stays
     // for everything else that reads it, and is the tint fallback.
-    const ck = phCkStyle(a.service, a.date);
+    const ck = phCkStyle(a.service, a.date, a);
     // her 2026-09-07 pm answer (Q1, superseding the morning's straight-to-
     // profile): tapping the block opens the appointment POPUP beside it
     // (data-ph-appt-pop -> phApptPopOpen); "Open profile →" inside the popup
@@ -47036,7 +47047,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         <button type="button" class="ph-apptpop-ic" data-ph-apptpop-mode="cancel" title="Cancel appointment" aria-label="Cancel appointment">${phApptPopTrashSvg}</button>
         <button type="button" class="ph-apptpop-ic x" data-ph-apptpop-close="1" title="Close" aria-label="Close"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button>
       </div>
-      <div class="ph-apptpop-title"><span class="ph-apptpop-sq"${phCkStyle(a.service, a.date) ? ` style="${phCkStyle(a.service, a.date)}"` : ""}></span><h3>Break</h3></div>
+      <div class="ph-apptpop-title"><span class="ph-apptpop-sq"${phCkStyle(a.service, a.date, a) ? ` style="${phCkStyle(a.service, a.date, a)}"` : ""}></span><h3>Break</h3></div>
       <div class="ph-apptpop-when">${esc(phApptLongDate(a.date))} · ${esc(phApptTimeRangeLabel(a))}${a.durationMin ? ` <span class="faint">· ${a.durationMin} min</span>` : ""}</div>
       ${cancelStripB}`;
     }
@@ -47108,7 +47119,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // constitutional pattern, not a flare to chase" -- it's one tap away on
     // the plan itself). Nothing is stored here; every row reads what the
     // app already keeps.
-    const ck = phCkStyle(a.service, a.date), kindCls = kind ? " " + kind : "";
+    const ck = phCkStyle(a.service, a.date, a), kindCls = kind ? " " + kind : "";
     const aStamp = a.date + (a.time || "");
     const prevAppts = phApptList().filter(x => x.id !== a.id && x.service !== "Break" && phPatientKey(x.patient) === k && (x.date + (x.time || "")) < aStamp);
     const prevSess = ((rec && rec.acuSessions) || []).filter(s => s.date && s.date < a.date);
@@ -47202,7 +47213,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   function phApptPopEditHtml(a) {
     const kind = phApptKind(a.service) || "";
     return `<div class="ph-apptpop-tools"><button type="button" class="ph-apptpop-ic x" data-ph-apptpop-close="1" title="Close" aria-label="Close"><svg class="icn" aria-hidden="true"><use href="#i-x"/></svg></button></div>
-      <div class="ph-apptpop-title"><span class="ph-apptpop-sq${kind ? " " + kind : ""}"${phCkStyle(a.service, a.date) ? ` style="${phCkStyle(a.service, a.date)}"` : ""}></span><h3>Edit appointment</h3></div>
+      <div class="ph-apptpop-title"><span class="ph-apptpop-sq${kind ? " " + kind : ""}"${phCkStyle(a.service, a.date, a) ? ` style="${phCkStyle(a.service, a.date, a)}"` : ""}></span><h3>Edit appointment</h3></div>
       <div class="ph-apptpop-form">
         <div class="field"><label>Date</label><input type="date" id="phApptCalEditDate" value="${esc(a.date)}" data-ph-apptpop-autofocus="1"></div>
         <div class="field"><label>Time</label><input type="time" id="phApptCalEditTime" value="${esc(a.time)}"></div>
@@ -47405,7 +47416,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // between two rows that have a real gap (45 min or more, the Grid's rule)
   const phApptListMin = t => { const m = /^(\d{1,2}):(\d{2})/.exec(t || ""); return m ? +m[1] * 60 + +m[2] : 0; };
   const phApptListClock = m => phCkTime12(`${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`);
-  const phApptListColHtml = a => `<span class="col" style="${phCkStyle(a.service, a.date)}" aria-hidden="true"></span>`;
+  const phApptListColHtml = a => `<span class="col" style="${phCkStyle(a.service, a.date, a)}" aria-hidden="true"></span>`;
   function phApptListSpanHtml(a) {
     const d = phApptMins(a), s = phApptListMin(a.time);
     return `<small>– ${esc(phApptListClock(s + d))} · ${d} min</small><u style="width:${Math.max(10, Math.min(64, Math.round(d * 0.8)))}px"></u>`;
@@ -47435,7 +47446,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const dim = q && !String(a.patient || "").toLowerCase().includes(q) ? " dim" : "";
     const pop = phApptCalOpenId === a.id ? " sel" : "";
     const mins = phApptListMin(a.time);
-    const tm = `<td class="tm"><i class="ck" style="${phCkStyle(a.service, a.date)}" aria-hidden="true"></i>${esc(phCkTime12(a.time))}</td>`;
+    const tm = `<td class="tm"><i class="ck" style="${phCkStyle(a.service, a.date, a)}" aria-hidden="true"></i>${esc(phCkTime12(a.time))}</td>`;
     if (a.service === "Break" || !a.patient) return `<tr class="r brk${pop}${dim}" role="button" tabindex="0" data-ph-appt-pop="${esc(a.id)}" data-ph-ls-min="${mins}">${tm}<td colspan="9" class="no">${esc(a.patient ? phTitle(a.patient) : "Break")} · ${phApptMins(a)} min</td></tr>`;
     const k = phPatientKey(a.patient), nm = phTitle(a.patient);
     const rec = phPatientPeek(a.patient), age = rec ? phAgeOf(rec.dob) : null;
@@ -56844,7 +56855,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         const plan = phApptPlanFor(a, phTpPlans(a.patient)) || phTpShownPlan(a.patient);
         const k = plan ? (plan.title || plan.templateName || "") : String(a.service || "").replace(/^\d+\.\s*/, "");
         if (k) r.k = k;
-        const ck = /--ck:\s*(#[0-9a-f]{3,8})/i.exec(phCkStyle(a.service, a.date) || "");
+        const ck = /--ck:\s*(#[0-9a-f]{3,8})/i.exec(phCkStyle(a.service, a.date, a) || "");
         if (ck) r.c = ck[1];
         if (a.date >= today && a.date <= briefTo) {
           const bk = [phPatientKey(a.patient), a.focus || "", a.goal || "", a.planId || ""].join("|");
@@ -57138,8 +57149,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (!email || !P || typeof P !== "object" || !me || email === me || localStorage.getItem("lcm-data-owner") !== me) return;
     const acupreg = /acu\s*preg|acupuncture\s+pregnancy/i.test(String(P.locName || ""));
     const lo = keyOf(new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - 180)), hi = keyOf(new Date(TODAY.getFullYear() + 1, TODAY.getMonth(), TODAY.getDate()));
+    const ownId = new Set((PHARMACY.appointments || []).map(a => a && String(a.id))), ownK3 = new Set((PHARMACY.appointments || []).map(a => a && a.date ? phOthK3(a) : ""));   // brought in by Bring in Acupreg: never drawn twice
     const list = (Array.isArray(P.appointments) ? P.appointments : [])
-      .filter(a => a && a.id && /^\d{4}-\d{2}-\d{2}$/.test(a.date || "") && a.date >= lo && a.date <= hi && a.time && a.patient && a.service !== "Break" && phOthHers(P, acupreg, a))
+      .filter(a => a && a.id && /^\d{4}-\d{2}-\d{2}$/.test(a.date || "") && a.date >= lo && a.date <= hi && a.time && a.patient && a.service !== "Break" && phOthHers(P, acupreg, a) && !ownId.has(String(a.id)) && !ownK3.has(phOthK3(a)))
       .map(a => { const o = { id: String(a.id), date: a.date, time: a.time, patient: a.patient, service: a.service || "", oth: true }; if (a.durationMin) o.durationMin = a.durationMin; return o; });
     phOthData = { email, name: String(P.locName || email), acupreg, at: Date.now(), list };
     try { localStorage.setItem(PH_OTH_CACHE_KEY, JSON.stringify({ owner: me, data: phOthData })); } catch (e) {}
@@ -73391,6 +73403,14 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         phDirRefresh();
         return;
       }
+      const dirPlace = e.target.closest("[data-dir-place]");
+      if (dirPlace) {
+        phDirPlace = dirPlace.dataset.dirPlace;
+        const seg = dirPlace.closest(".ph-recphotos-seg");
+        if (seg) seg.querySelectorAll("[data-dir-place]").forEach(b => { const on = b.dataset.dirPlace === phDirPlace; b.classList.toggle("on", on); b.setAttribute("aria-selected", on); });
+        phDirRefresh();
+        return;
+      }
       if (e.target.closest("[data-recphotos-dup-toggle]")) {
         phRecPhotosDupOpen = !phRecPhotosDupOpen;
         phRecPhotosDupRefresh();
@@ -81516,6 +81536,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // ============================================================
   let phDirFilter = "missing";   // "missing" = no script yet (the actual gap this page exists to close) | "all"
   let phDirSearch = "";
+  let phDirPlace = "all";   // the Place bar: "all" or a place a patient is seen at (CBD · Acupreg · Lotus)
   function phDirBuild() {
     const rows = new Map();
     const touch = (nameRaw, field) => {
@@ -81532,8 +81553,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     PHARMACY.log.forEach(e => { if (e.patient) touch(e.patient, "log"); });
     Object.keys(PHARMACY.patients || {}).forEach(k => touch(k, "patientRec"));
     (phIntakeQueueRows || []).forEach(r => touch(r.patient_name, "intake"));
-    phApptList().forEach(a => { if (a.service !== "Break") touch(a.patient || a.name, "appt"); });
-    return Array.from(rows.values()).map(r => {
+    phApptList().forEach(a => { if (a.service !== "Break") { touch(a.patient || a.name, "appt"); const r = rows.get(phPatientKey(a.patient || a.name)); if (r) (r.places || (r.places = new Set())).add(phApptPlaceOf(a)); } });
+    Object.keys(PHARMACY.patients || {}).forEach(k => { const rec = PHARMACY.patients[k], r = rows.get(k); if (r && rec && Array.isArray(rec.places)) rec.places.forEach(p => (r.places || (r.places = new Set())).add(p)); });
+    const list = Array.from(rows.values()).map(r => {
       r.displayName = phTitle(r.name || r.key);
       r.why = r.script ? "Has a prescription on file"
         : r.intake ? "Intake form submitted — no prescription yet"
@@ -81543,11 +81565,17 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         : "On file";
       return r;
     }).sort((a, b) => a.displayName.localeCompare(b.displayName));
+    list.forEach(r => { r.placeList = r.places && r.places.size ? [...r.places].sort(phAz) : [phIsAcupregLoc() ? "Acupreg" : "CBD"]; });
+    const many = new Set(list.flatMap(r => r.placeList)).size > 1;
+    list.forEach(r => { r.showPlace = many; });
+    return list;
   }
+  const phDirPlaces = () => [...new Set(phDirBuild().flatMap(r => r.placeList))].sort(phAz);
   function phDirFiltered() {
     const q = phDirSearch.trim().toLowerCase();
     return phDirBuild().filter(r => {
       if (phDirFilter === "missing" && r.script) return false;
+      if (phDirPlace !== "all" && !r.placeList.includes(phDirPlace)) return false;
       if (q && !r.displayName.toLowerCase().includes(q)) return false;
       return true;
     });
@@ -81566,7 +81594,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     return `<div class="ph-listing ph-intake-qrow">
       <div class="ph-intake-qrow-main">
         <span class="ph-intake-qrow-name">${esc(r.displayName)}</span>
-        <span class="ph-intake-qrow-meta">${esc((t => t ? t[0].toUpperCase() + t.slice(1) : r.why)(phDirTagsHtml(r)))}</span>
+        <span class="ph-intake-qrow-meta">${esc(r.showPlace ? r.placeList.join(" + ") + " · " : "")}${esc((t => t ? t[0].toUpperCase() + t.slice(1) : r.why)(phDirTagsHtml(r)))}</span>
       </div>
       <button type="button" class="ph-load-btn${r.script ? " on" : ""}" data-ph-dash-patient-open="${esc(r.name || r.displayName)}">${r.script ? "Open" : "Start a prescription"}</button>
     </div>`;
@@ -81589,6 +81617,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         <button type="button" class="ph-recphotos-segbtn${phDirFilter === "missing" ? " on" : ""}" role="tab" aria-selected="${phDirFilter === "missing"}" data-dir-filter="missing">Missing a prescription</button>
         <button type="button" class="ph-recphotos-segbtn${phDirFilter === "all" ? " on" : ""}" role="tab" aria-selected="${phDirFilter === "all"}" data-dir-filter="all">Everyone</button>
       </div>
+      ${(pl => pl.length > 1 ? `<div class="ph-recphotos-seg" role="tablist" aria-label="Place">${["all", ...pl].map(p => `<button type="button" class="ph-recphotos-segbtn${phDirPlace === p ? " on" : ""}" role="tab" aria-selected="${phDirPlace === p}" data-dir-place="${esc(p)}">${p === "all" ? "All places" : esc(p)}</button>`).join("")}</div>` : "")(phDirPlaces())}
       <input type="search" id="phDirSearch" placeholder="Filter by name…" value="${esc(phDirSearch)}" autocomplete="off" aria-label="Filter patients by name">
     </div>`;
   }
