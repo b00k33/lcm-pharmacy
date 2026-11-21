@@ -17406,7 +17406,7 @@ blank when the phase's rhythm is not one of the four (e.g. a range); Diet and Su
 them); the review line on Today's visit is a chip on the visit summary card; a goal is edited on Came in for (the tap goes there).
 Checked: Care Plan page (four parts, fold), Came in for (details open from the tap), Appointments grid, the visit summary card.
 
-## 2026-11-21: IVF | Off switch (SAVED, not live)
+## 2026-11-21: IVF | Off switch (LIVE in build 20261121-191600, her "push live"; the first Pages run failed on a GitHub artifact fetch, re-run)
 **Why:** her "i need a toggle off for ivf related questions in profiles when its not relevant" with a screenshot of Nikki's Patient
 details (54F, Acu · internal disease; IVF history in Her file, IVF clinic in Care team). Since her 2026-10-16 ask, IVF history showed
 for every woman and Semen analysis for every man. Widget `lcm_ivf_toggle_placement_options` (three places, live toggles) and two
