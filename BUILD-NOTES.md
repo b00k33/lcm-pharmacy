@@ -17372,7 +17372,7 @@ four parts; What I found = Tongue, Pulse, Abdomen + Cycle + Pain/MSK + Blood tes
   cycle out (the page shows the phase); patient words keep the marker's own name ("Ferritin low (12 µg/L)").
 - Pictures (local): `shots/s23-fs-sum-1220.jpg`, `shots/s23-fs-acu-1220.jpg`, `shots/s23-fs-sum-360.jpg`.
 
-## Care Plan: the four parts (synth22 2026-11-21, SAVED, not live until her "push live")
+## Care Plan: the four parts (synth22 2026-11-21, SAVED 46b3ec8b; LIVE in build 20261121-185600, her "push live")
 
 Her words: "care plan needs to use the profiles collected info to prefill and alow me to more easily design the plan", "care plans most
 important aspects: show patient complaint and goals / show treatment selections / treatment duration nad frequency", "and review date".
