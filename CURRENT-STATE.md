@@ -542,6 +542,14 @@ grid, the `data-tp-mgr-view` switch) is gone; its shared pieces (`phTpMgrSetFiel
 rhythm, Sessions, Recipe and Therapies fields, `phTpMgrRailHtml`) are the full-page editor's own.
 
 ## Cycle & IVF
+**Cycle page space saving (2026-11-21, her 8 picks, option C):** on the Calendar tab `phCycPageHtml` passes
+`{ flat, noD1, cpPage: true, head: phCpHeadHtml(rec, name, true) }` to `phCycleSignPopHtml`: `head` (the dates as `.cp-hdb`, no big
+CD) rides on the card's head line (`phCycDayHeadHtml`'s 6th argument); `cpPage` folds Period (`perFold`: phase not Period and nothing
+of the group logged; `phCycPerOpen` = the "name|day"s she opened, `phCycPerJust` = the one just opened, rows rise once; the title is
+`button.ph-cs-gfold[data-cyc-perfold]`), draws PMS & mood as ONE `.ph-ck-chips.seg.ph-cs-pmsf` (phCsFit folds it into even rows and
+keeps its pictures: steps [2,3,4,6] rows, never bare) and hands back the Note + Fang Bing Ren strip as `opts.foot` (`.cp-dayft`, drawn
+under the month). Days 44px. Other callers (Today's visit) pass no `cpPage` and keep the old card.
+
 **The Cycle page** = three tabs, a "Today is day [ ]" finder, a Day 1 chip, PMS on every day, a **Menopause**
 chip (sets `rec.cycleOn = false`; the Change of life card has "Tracking a cycle again?") [Cycle PAGE redesign]. Its calendar is
 the Fertility-Friend-style calendar + BBT chart (`phCycFFHtml`), the one cycle view everywhere. **Two halves** (her 2026-11-03

@@ -692,6 +692,12 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   - measure before / after (the page's height in px, or rows on a 900px screen) and write the numbers in the build note.
   Her own dated picks stay as they are unless she says otherwise (the phone's patient herb line wraps to two lines, her
   2026-09-07; the locked session grid). The 2026-11-13 audit and its numbers: BUILD-NOTES.md "Vertical space audit".
+- **The Cycle page's Calendar tab (her 2026-11-21 "improve this view, make it more space saving"; her 8 picks, option C; memory
+  project_lcm_cycle_space_saving_2026_11_21; BUILD-NOTES "Cycle page space saving"):** ONE head line (‹ Today › CD n · phase, then
+  Ovulated · Period; the cycle day said once); the Period group folds to its title on a day with no bleeding and nothing of it
+  logged (one tap opens it, for spotting; a period day or a logged day is always open); PMS & mood is ONE joined field (no Mood / Gut /
+  Body words; its pictures kept, more rows instead); the Note and the Fang Bing Ren strip sit under the month; the month's days are
+  44px. Day card 783 -> 461px at 1440 (619 with Period open). Never back to two head lines or three PMS bars without her word.
 - Respect safe areas (`env(safe-area-inset-top/bottom)`). Nothing cut off
   under the status bar or at the phone's bottom edge.
 - Every dropdown/menu/popover/filter panel MUST open fully on-screen; if it

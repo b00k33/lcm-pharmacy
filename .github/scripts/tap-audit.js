@@ -22,13 +22,13 @@
     ".gf-row", ".sg", ".gf-pr",                     // list rows, sign rows, search results (a row may wrap to two lines)
     ".tcd-pg",                                      // a case row (Guide > Cases list, Timetable): its picture beside the name and formula, two lines (her 2026-11-13 vertical space audit)
     ".zl.ln",                                       // a case's sign line: a row that opens its sign choices (her 2026-11-16 mock "tap any line to change its sign")
-    ".gf-fam-fold", ".gf-picfold-head", ".ph-ftg-foldbar",   // fold heads: a section's capitals label that folds it (a heading)
+    ".gf-fam-fold", ".gf-picfold-head", ".ph-ftg-foldbar", ".ph-cs-gfold",   // fold heads: a section's capitals label that folds it (a heading); the Cycle page's Period fold (her 2026-11-21)
     ".gf-ks-t", ".fs-scrub", ".gf-ani-th",                        // key-sign picture tiles; the film's scrubber (a slider); the Animation pane's picture buttons (2026-11-10)
     ".ph-tbm-ic",                                   // the top bar's circles (audited 2026-10-24; the phone's bar stays 31px)
     ".ph-flow-rail button.nm",                      // the patient's name heading the rail: a title, 18px (her 5-size type scale, 2026-11-18)
     "input[type=checkbox]", "input[type=radio]", "input[type=range]", "input[type=color]", "input[type=file]",
     "img", "video", "canvas", "svg", "label",
-    ".ph-cal-day", ".ph-cp-day", ".ph-pulse-cell", ".ph-tp-sq",   // calendar days, pulse chart cells, session grid squares
+    ".ph-cal-day", ".ph-cp-day", ".ph-pulse-cell", ".ph-tp-sq", ".ph-cp .ffgrid .c",   // calendar days, pulse chart cells, session grid squares (the Cycle page's month: 44px days, her 2026-11-21 pick)
     ".ph-appt-block", ".ph-apptcal-daylabel", ".ph-atb-today",     // Appointments' calendar: a booking's block (its height is its time), a day's head, Today's date in a circle (2026-11-17)
     ".ph-tb-i",                                     // the Appointments toolbar's tiles: an icon over its word (her 2026-11-05 toolbar)
     "td", ".ph-cmp-ovl .bar button",                // a table cell that taps (its row is the target); Compare's overlap bar (a chart)
