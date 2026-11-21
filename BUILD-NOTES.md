@@ -17542,3 +17542,18 @@ ote (500 characters, like an event's note). It follows the event form's own Note
 - The field sets `--field-radius: 6px` like the other components do (the shared token is a pill on a computer). The To-dos' own tick beside it is still the old 22px square (tap-audit lists it; untouched).
 - Checked in a scratch sandbox copy of the committed page with a made-up record (a made-up owner, profile "Zz Test Me") and the sign-in card hidden in that tab only: the Week page draws the tiles under the right Monday (2026-11-16); typing saves the trimmed words; the tick saves and repaints (done + aria-pressed, the words kept); untick clears; nothing written to `lcm-me`; no save banner. tap-audit and style-audit on `.ph-hub-pri` at 1240px and 360px: `off`, `offSizes`, `offWeights`, `offColours`, `sideLines`, `chipLooks`, `rowAlign` all empty; no page scroll sideways at 360. NOT exercised: the signed-in app, a second device or tab, a full-storage failure, Earlier weeks (‹) in the real page. Not pushed live: waits for her "push live".
 - Sandbox notes for the next build: `git archive` writes CRLF here (autocrlf=true) while the blobs are LF, so strip with `tr -d '\r'` before diffing; build the patch against the commit the sandbox came from and apply it to a fresh `git show session-a:index.html` with `patch`, then `hash-object` + `update-index` + `commit` with no paths. A preview server can be started with `.claude/static-server.ps1` (`PORT=n`, run detached); the page's sign-in card is `#lcmOverlay`.
+
+## 2026-11-21: Pages deploy in two jobs (SAVED, takes effect when it reaches main; not yet seen running)
+**Why:** her "why do i keep getting emails from github saying run failed". 4 of the last 100 publishes (2026-11-19 once, 2026-11-21 three
+times: builds 20261120-002700, 20261121-123200, -191600, -204800) failed on their first attempt in the one step "Deploy to GitHub
+Pages" with "Found 0 artifact(s)" / "No artifacts named github-pages": `deploy-pages` asked for the artifact before GitHub listed it
+(build, upload and deploy were one job). Every one was fixed by `gh run rerun`; nothing was ever half-published, and no other
+repo of hers (book33-app, chapter22, C7) had a failure. Each failed attempt emailed her.
+- **Built:** `.github/workflows/pages.yml` is two jobs, `build` (checkout, stage, strip comments, configure-pages, upload) and
+  `deploy` (`needs: build`, the github-pages environment, `actions/deploy-pages@v4`), the layout GitHub's own starter uses. Same
+  triggers, permissions and concurrency; only the job split changed. Her answer to "make that change": yes.
+- **My call (told her):** it should make the failures rare, not remove them: a fresh runner starts after the upload finishes, which
+  is the gap the race needs. If one still fails: `gh run rerun <id> -R b00k33/lcm-pharmacy` (`publish-live.sh` verifies the deploy).
+- **NOT tested:** the workflow ran nowhere before saving (no YAML linter here, and a trial run would need a push to main = live,
+  or a branch run that might reach the github-pages environment). Edited from the saved copy, indentation checked by eye against
+  GitHub's starter. The FIRST publish after it reaches main is its test: check the run shows two green jobs.
