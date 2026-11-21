@@ -323,6 +323,16 @@ and grey, the words with capitals; "+ n more signs" at its end, the caps as befo
 only (a wide card, from the next visit on). The asked order and the panel's Next follow the parts (`phCxModel` M.parts, `phCxPartsHtml`).
 An area's "Same as last time" takes that area's signs only (`data-cx-rest="<area>|sx"`). The same three parts on a phone. Never mix her
 complaints and the signs in one list again without her word.
+**A complaint's symptoms sit under it (her 2026-11-21 "group some symptoms together e.g. bloating is the main complaint but secondary
+incldues gas constipation"; her 8 picks; memory project_lcm_complaint_symptom_groups_2026_11_21; BUILD-NOTES "Symptom groups"):** each
+complaint (Main and Also came in for alike) has its own symptoms as rows under it, a small grey elbow before each, the name and, from the
+next visit on, Gone · Better · Same · Worse (no How long, no More info, no note); "+ symptom" under the group searches Fang Bing Ren
+signs (one tap ticks the sign Yes and puts it there). A sign belongs to one complaint: the one she chose (`rec.ccTrack.sxGrp[signKey]` =
+the complaint's row key, "-" = back to Signs to check), else the one it was added under or whose words it shares, else the FIRST
+complaint of its body area (pre-filled, her pick 4; never a sign on the bar). Signs to check keeps the rest. To move one: a computer taps
+the sign's name ("Goes with" chips under it); a phone taps its name (the drawer's "Goes with") or its ▾ (Under … / Back to Signs to
+check). Grouped symptoms are never behind "+ n more". Copy for Cliniko and the visit summary add ", with Bowels (Constipation, Excessive
+Flatulence) and Appetite (Poor)" to the complaint (one heading once). Never one score for a group (her pick 1: each tracks its own).
 **A complaint's details open under its row, a pain's with its body drawing (her 2026-11-19 "how do i add details to the chief complaint
 or any complaints? ... where you add the visual pain diagram" + "keep it simple and simplified"; her pick B of three mocks
 `shots/came-in-for-mock-*-2026-11-19.png`; memory project_lcm_came_in_for_details_body_2026_11_19; BUILD-NOTES "Came in for: details

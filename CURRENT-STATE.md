@@ -913,6 +913,15 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
   table box (`phCxtSel`). The chart is closed until ⋯ › Chart (`phCxChartOpen[pk] === true`). The measured rows and red flags stay
   rows under the table. The narrow card (a phone) is unchanged.
 
+## Came in for: symptom groups (2026-11-21, her 8 picks)
+- `phCxModel` sets `r.grp` on every sign row (`phCxSxGrpMap` = `rec.ccTrack.sxGrp`, then `r.under`, then the first complaint of its
+  area); `M.parts.grp[ccKey]` = its rows A to Z, out of `parts.sx` and out of the caps; the asked order is complaint, its symptoms.
+- Drawn by `phCxTblHtml` (`sxRow(r, true)` = `tr.sx.gp`, then `tr.gadd`) and `phCxPartsHtml` (`phCxSignRowHtml(.., gp)`, then
+  `.ph-cx-row.gadd`). "+ symptom" = `phCxGaddHtml` (view state `phCxGa`; its list `phCxGaResHtml` sits in the flow, not floating);
+  a result = `phCxGaAdd` (ticks Now Yes unless already Yes, writes sxGrp + sxPin). Moves = `phCxGrpSet` from `data-cx-grp="sign|cc"`
+  ("Goes with" `phCxGrpLineHtml` under a tapped sign on the table and in a phone row's drawer; the ▾ menu's Under … items).
+- Words: `phCxGrpWith(name, plan)` -> { ccKey: "with ..." } read by `phCnCameIn` and `phVsFilled`.
+
 ## Today's visit steps table (2026-11-19, her pick B; two columns since her same-day "Yes, build it")
 - **Now:** the card is the page's full width and first on Today's visit; the list 240px, the step beside it. `phTvRenHtml(name, cx)`
   always gets the Came in for card (empty or full) and `cc`'s pane is that card + Next; nothing above the card. `phCxRefresh` inside the
