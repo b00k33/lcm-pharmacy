@@ -17068,3 +17068,12 @@ a transfer's date took a month and year only, and an estimated day lived only on
   square passes the booking's date (`phCkStyle(a.service, a.date)`, 9 places). Weekdays are unchanged.
 - **Tested** (sandbox, the Acupreg login faked): a blank-type booking on Fri 20 Nov = sage, on Sat 21 Nov = her usual lilac; an Initial
   Acupuncture on the Saturday = its Cliniko navy.
+
+## 2026-11-21: Lotus red on Saturday blocks
+**Why:** after the Saturday sage fix, her picture of the Lotus Healing Arts site's red band and "lotus is red like".
+- **Built:** `PH_LOTUS_COLOUR` #B02C2E (sampled from her picture), `phDayClinColour(k)` (the day's clinic is Lotus → its red).
+  `phCkStyle(service, day)` and `phOthCk` give every booking on a Lotus day that red, from either login, before the Acupreg sage
+  check; a home visit still keeps its own colour (as with Acupreg). Words on it are white by contrast. A location colour like
+  Acupreg's sage, a calendar-block colour her word allows; nothing else in the app turns red for it.
+- **Tested** (sandbox): blank type Sat 21 Nov = red, white words; Fri 20 Nov = its type colour (CBD) / sage (Acupreg faked);
+  Initial Acupuncture on the Saturday from the Acupreg login = red; Home visit on the Saturday = its purple. Day view drawn: the block red.
