@@ -107626,10 +107626,28 @@ Difficult to sweat|no_sweat_tend:r`;
     plan: "care plan goals duration frequency review", timeline: "timeline ivf pregnancy", cliniko: "copy cliniko notes", patient: "details name birthday contact dob",
     ren: "ren constitution body type", usual: "usual change of life energy sleep", supplements: "medicines supplements medications", checklist: "checklist facial",
     ivf: "ivf egg transfer semen", log: "log dated records", diet: "diet food meals", apptshist: "appointments bookings", clkvisits: "cliniko visits",
-    messages: "messages email sms", notes: "notes"
+    messages: "messages email sms", notes: "notes",
+    "hub-week": "week calendar schedule plan", diet: "meals food kj calories fasting", "hub-fit": "fitness workout gym exercise", "hub-hab": "habits tracker streak", routines: "routines daily",
+    "hub-work": "work hours clinic", "hub-money": "money bills tax budget", "hub-code": "code programming plans", "hub-ns": "numbers stars numerology astrology", bdays: "birthdays", herbs: "herbs doses what i take"
   };
   const presNavKey = p => { const m = /^data-([a-z-]+)="([^"]*)"$/.exec(p.attr); return m ? (m[1] === "flow-prof" ? "p:" : m[1] === "flow-go" ? "g:" : m[1] === "pres-stage" ? "s:" : "l:") + m[2] : ""; };
-  // the model: steps[] = { id, label, n, nf, done, on, go (the part a tap on the step opens), parts[], groups[][] (the bars), next, flags }
+  function presNavSettle(t, steps, nextUp) {
+  // which step is lit, what a tap on a step opens, the gold dot (a patient's steps and, in stage 3, her own record's places)
+  // a step may carry pref (the part its tap opens on when none was picked) ; a part may carry noauto (never what a step opens on by itself, but a pick of it is remembered)
+  const pick = (presNavPick && presNavPick.id === t.id) ? presNavPick.m : (presNavPick = { id: t.id, m: {} }).m;
+  steps.forEach(s => {
+    s.on = s.parts.some(p => p.on);
+    const cur = s.parts.find(p => p.on);
+    if (cur && !cur.add && !cur.locked && !cur.nodef) pick[s.id] = cur.attr;   // the Care Plan and Timeline are never what a step reopens on
+    const open = s.parts.filter(p => !p.locked && !p.add), picked = pick[s.id] && s.parts.find(p => p.attr === pick[s.id] && !p.locked && !p.add);
+    const dflt = (s.pref && open.find(p => p.id === s.pref)) || open.find(p => !p.quiet && !p.done && !p.nodef && !p.noauto) || open.find(p => !p.quiet && !p.nodef) || open[0] || s.parts[0];
+    s.go = picked || dflt;
+    s.parts.forEach(p => { p.next = !!(nextUp && !p.on && nextUp.attr === p.attr); });
+    s.next = !s.on && s.parts.some(p => nextUp && nextUp.attr === p.attr);
+  });
+  let n = 0; steps.forEach(s => { if (!s.nf) s.n = ++n; });
+  }
+  // the model: steps[] = { id, label, n, nf, ic (a place's icon), done, on, go (the part a tap on the step opens), parts[], groups[][] (the bars), next, flags }
   // part = { id, label, title, attr, on, done, quiet, locked, add, next }
   function presNavBuild(t, f, nextUp) {
     const name = f.name, aGo = id => `data-flow-go="${id}"`, aPr = id => `data-flow-prof="${id}"`, aDp = `data-pres-stage="dispense"`;
@@ -107672,23 +107690,49 @@ Difficult to sweat|no_sweat_tend:r`;
     (f.subs || []).forEach(s => g2.push(P(s.id === "treatment" ? "visits" : s.id, s.label, aGo(s.id), { on: !!s.on })));
     const groups = [g1.filter(Boolean), g2.filter(Boolean)].filter(g => g.length);
     if (groups.length) steps.push({ id: "file", label: "File", nf: true, done: false, parts: [].concat.apply([], groups), groups });
-    // which step is lit, what a tap on a step opens, the gold dot
-    const pick = (presNavPick && presNavPick.id === t.id) ? presNavPick.m : (presNavPick = { id: t.id, m: {} }).m;
-    steps.forEach(s => {
-      s.on = s.parts.some(p => p.on);
-      const cur = s.parts.find(p => p.on);
-      if (cur && !cur.add && !cur.locked && !cur.nodef) pick[s.id] = cur.attr;   // the Care Plan and Timeline are never what a step reopens on
-      const open = s.parts.filter(p => !p.locked && !p.add), picked = pick[s.id] && s.parts.find(p => p.attr === pick[s.id] && !p.locked && !p.add);
-      const dflt = open.find(p => !p.quiet && !p.done && !p.nodef) || open.find(p => !p.quiet && !p.nodef) || open[0] || s.parts[0];
-      s.go = picked || dflt;
-      s.parts.forEach(p => { p.next = !!(nextUp && !p.on && nextUp.attr === p.attr); });
-      s.next = !s.on && s.parts.some(p => nextUp && nextUp.attr === p.attr);
-    });
-    let n = 0; steps.forEach(s => { if (!s.nf) s.n = ++n; });
+    presNavSettle(t, steps, nextUp);
     const fileTop = !!f.first || !(prS && prS.done);
     const order = steps.filter(s => s.id !== "file"), file = steps.find(s => s.id === "file");
     const rail = file ? (fileTop ? [file].concat(order) : order.concat([file])) : order;
     return { id: t.id, steps, rail, fileTop, all: [].concat.apply([], rail.map(s => s.parts.map(p => ({ s, p })))) };
+  }
+  // SIMPLER NAVIGATION, stage 3: HER OWN RECORD (her 2026-11-21 pick 3): four places, ONE page each with a joined bar of its parts, the same
+  // rail rows, bar, jump search, ‹ ›, Next dot and phone bar as a patient's. My day: Week · Meals · Fitness · Habits · Routines. Check myself:
+  // Cycle · Tongue · Pulse · Abdomen · Fang Bing Ren · Diagnosis · Herbs (the old "Treat myself" 1 Check myself · 2 Fang Bing Ren · 3 Herbs
+  // walk is this one bar, in that order; Tongue / Pulse / Abdomen tick when charted today). Life: Work · Money · Birthdays · Code ·
+  // Numbers & Stars · a trip each (Money, Code and a trip she has not used are quiet chips, no "More" row). My file: Details · Medical history
+  // · Ren · Log · Tests · Medicines · Photos · Messages · Appointments. Same pages, same ids, same old links; only where they are reached.
+  function presNavBuildMe(t, f, nextUp) {
+    const aGo = id => `data-flow-go="${id}"`, aPr = id => `data-flow-prof="${id}"`;
+    const pu = id => f.profSubs.find(u => u.id === id) || null;
+    const P = (id, label, attr, o) => Object.assign({ id, label, title: label, attr, on: false, done: false, quiet: false, locked: false, add: false }, o || {});
+    const prof = (id, label, o) => { const u = pu(id); return u ? P(id, label || PRES_NAV_LBL[id] || u.label, aPr(id), Object.assign({ title: PRES_NAV_TTL[id] || u.label, on: !!u.on, done: !!u.dn, locked: !!u.locked }, o)) : null; };
+    const quietIf = id => ({ quiet: !(pu(id) || {}).on && phMeRailFold(id) });   // a page she has not used (phMeRailFold) is a lighter chip, never what her place opens on
+    const today = id => ({ done: (pu(id) || {}).mini === "Today" });
+    const steps = [];
+    // My day
+    const day = ["hub-week", "diet", "hub-fit", "hub-hab", "routines"].map(id => prof(id)).filter(Boolean);
+    if (day.length) steps.push({ id: "day", label: "My day", ic: "hub-week", nf: true, me: true, done: false, parts: day, pref: "diet" });   // she opens on Meals (her 2026-11-03 pick)
+    // Check myself: Cycle (a page, never "done") · Tongue · Pulse · Abdomen · Fang Bing Ren · Diagnosis · Herbs
+    const patS = f.steps.find(s => s.id === "patterns"), pDx = f.patSubs.find(s => s.id === "patdx");
+    const chk = [prof("cycle", "", { noauto: true }), prof("tongue", "", today("tongue")), prof("pulse", "", today("pulse")), prof("abdomen", "", today("abdomen"))].filter(Boolean);
+    const exam = chk.filter(p => p.id !== "cycle");
+    if (patS) chk.push(P("patterns", "Fang Bing Ren", aGo("patterns"), { on: !!patS.on && !(pDx && pDx.on), done: !!patS.done }));
+    if (pDx) chk.push(P("patdx", "Diagnosis", aGo("patdx"), { on: !!pDx.on, done: !!pDx.done }));
+    const hb = prof("herbs"); if (hb) chk.push(hb);
+    if (chk.length) steps.push({ id: "check", label: "Check myself", ic: "tongue", nf: true, me: true, done: exam.length > 0 && exam.every(p => p.done), flags: patS ? patS.flags || 0 : 0, parts: chk });
+    // Life
+    const life = ["hub-work", "hub-money", "bdays", "hub-code", "hub-ns"].map(id => prof(id, "", quietIf(id)))
+      .concat(f.profSubs.filter(u => /^trip-/.test(u.id)).map(u => prof(u.id, "", quietIf(u.id)))).filter(Boolean);
+    if (life.length) steps.push({ id: "life", label: "Life", ic: "hub-work", nf: true, me: true, done: false, parts: life });
+    // My file: the rest of her record
+    const FILE = ["patient", "medhx", "ren", "log", "bloods", "supplements", "photos", "messages", "apptshist"];
+    const left = f.profSubs.filter(u => u.grp === "file");
+    const file = FILE.map(id => left.find(u => u.id === id)).filter(Boolean).concat(left.filter(u => !FILE.includes(u.id)))
+      .map(u => prof(u.id, u.id === "medhx" ? "Medical history" : "", { quiet: !u.on && !u.dn && ["supplements", "bloods", "photos", "messages", "apptshist"].includes(u.id) })).filter(Boolean);
+    if (file.length) steps.push({ id: "file", label: "My file", ic: "patient", nf: true, me: true, done: false, parts: file });
+    presNavSettle(t, steps, nextUp);
+    return { id: t.id, me: true, steps, rail: steps, fileTop: false, all: [].concat.apply([], steps.map(s => s.parts.map(p => ({ s, p })))) };
   }
   // what the open page is: its lit part (else its lit step), and where it sits in the order ‹ › step through (no greyed or "+" parts)
   function presNavLit() {
@@ -107737,7 +107781,7 @@ Difficult to sweat|no_sweat_tend:r`;
     return out.length ? out.slice(0, 8).map(x => `<button type="button" class="${x.p.locked ? "locked " : ""}${x.p.on ? "on" : ""}" ${x.p.attr}>${esc(nm(x))}<small>${esc(x.s.label)}</small></button>`).join("") : `<span class="none">No page</span>`;
   }
   function presJsHtml() {
-    return `<div class="ph-js" id="presJs"><svg class="icn" aria-hidden="true"><use href="#i-search"></use></svg><input type="text" id="presJsIn" value="${esc(presJsQ)}" placeholder="Jump to" autocomplete="off" spellcheck="false" enterkeyhint="go" aria-label="Jump to a page of this patient"><div class="ph-js-res" id="presJsRes">${presJsResHtml()}</div></div>`;
+    return `<div class="ph-js" id="presJs"><svg class="icn" aria-hidden="true"><use href="#i-search"></use></svg><input type="text" id="presJsIn" value="${esc(presJsQ)}" placeholder="Jump to" autocomplete="off" spellcheck="false" enterkeyhint="go" aria-label="Jump to a page of ${presNavCur && presNavCur.me ? "my record" : "this patient"}"><div class="ph-js-res" id="presJsRes">${presJsResHtml()}</div></div>`;
   }
   function presJsRender() { const r = document.getElementById("presJsRes"); if (r) r.innerHTML = presJsResHtml(); }
   function presJsClear() { presJsQ = ""; const i = document.getElementById("presJsIn"); if (i) i.value = ""; presJsRender(); }
@@ -107917,31 +107961,24 @@ Difficult to sweat|no_sweat_tend:r`;
     // her own record: My day · Treat myself · Life · My file (Money, Code and a trip join Life once they hold something, phMeRailFold)
     const meG = g => f.profSubs.filter(u => u.grp === g);
     let inner;
-    if (isMe) {
-      presNavCur = null;
-      const mck = meG("mck"), herb = f.profSubs.find(u => u.id === "herbs");
-      const mckDone = mck.some(u => u.id !== "cycle") && mck.filter(u => u.id !== "cycle").every(u => u.mini === "Today");
-      const tm = [mck.length ? { id: "mck", label: "Check myself", small: "cycle · tongue · pulse · abdomen", done: mckDone, on: mck.some(u => u.on), attr: `data-flow-prof="${mck[0].id}"` } : null,
-        Object.assign({}, patStep), herb ? { id: "herbs", label: "Herbs", small: "what I take", done: false, on: !!herb.on, solo: true, attr: `data-flow-prof="herbs"` } : null].filter(Boolean).map((s, k, all) => Object.assign(s, { n: k + 1, last: k === all.length - 1 }));
-      const tmHtml = `<div class="ph-flow-sub keep g-tm"><span class="cap">Treat myself</span></div>` + tm.map(s => stepHtml(s) + (s.id === "mck" ? `<div class="ph-flow-sub keep plan${mckDone ? " done" : ""}">${mck.map(profBtn).join("")}</div>` : "")).join("");
-      inner = `${who}${openGrp("day", "My day", meG("day"), "prof")}${tmHtml}${openGrp("life", "Life", meG("life").filter(u => !foldOf(u)), "prof")}${footHtml("mefile", "My file", meG("file"), [], ["patient", "medhx", "ren", "log", "bloods", "supplements", "photos"], 3, "prof")}${foot}`;
-    } else {
+    {
       // a patient's rail (her 2026-11-21 simpler navigation, stage 1): 1 Came in for · 2 Exam · 3 Diagnosis · 4 Treat, then File ›
       // (at the top on a first visit or while sex + DOB are missing, else at the foot). Each step is one page; its parts are the bar.
-      const vkHtml = phVkChipHtml(f) + (f.first ? "" : phHbsChipHtml(presPatientFor(t) || t.name || ""));
-      const nm = presNavBuild(t, f, nextUp);
+      // Her own record (stage 3): four places, My day · Check myself · Life · My file, the same rows and the same bar (presNavBuildMe).
+      const vkHtml = isMe ? "" : phVkChipHtml(f) + (f.first ? "" : phHbsChipHtml(presPatientFor(t) || t.name || ""));
+      const nm = isMe ? presNavBuildMe(t, f, nextUp) : presNavBuild(t, f, nextUp);
       presNavCur = nm;
       presFlowLast.done = nm.steps.filter(s => s.done).map(s => "n:" + s.id);
       const rowHtml = s => {
         const anim = s.done && same && prevDoneAll.length > 0 && !prevDoneAll.includes("n:" + s.id);
         return `<button type="button" class="ph-flow-step${s.on ? " on" : ""}${s.done ? " done" : ""}${anim ? " anim" : ""}${s.nf ? " nf" : ""}${s.locked ? " locked" : ""}" data-nav-step="${s.id}" ${s.go.attr} role="tab" aria-selected="${s.on ? "true" : "false"}"${mini ? tip(s.label) : s.parts.length > 1 ? ` title="${esc(s.parts.map(p => p.label.replace(/^\+ /, "")).join(" · "))}"` : ""}>
-        ${s.nf ? `<span class="c ic" aria-hidden="true">${presRailIcn("patient")}</span>` : `<span class="c${anim ? " pop" : ""}" aria-hidden="true">${s.done ? "✓" : s.n}</span>`}<span class="t"><b>${esc(s.label)}${s.flags ? `<span class="flag" title="${esc(s.flags + " likely, not yet agreed")}">${s.flags}</span>` : ""}</b></span>${s.nf ? `<svg class="icn cv" aria-hidden="true"><use href="#i-chev-r"></use></svg>` : ""}${s.next ? `<i class="ph-rail-nx" title="Next up: ${esc(nextUp.label)}"></i>` : ""}
+        ${s.nf ? `<span class="c ic" aria-hidden="true">${presRailIcn(s.ic || "patient")}</span>` : `<span class="c${anim ? " pop" : ""}" aria-hidden="true">${s.done ? "✓" : s.n}</span>`}<span class="t"><b>${esc(s.label)}${s.flags ? `<span class="flag" title="${esc(s.flags + " likely, not yet agreed")}">${s.flags}</span>` : ""}</b></span>${s.nf && !nm.me ? `<svg class="icn cv" aria-hidden="true"><use href="#i-chev-r"></use></svg>` : ""}${s.next ? `<i class="ph-rail-nx" title="Next up: ${esc(nextUp.label)}"></i>` : ""}
       </button>`;
       };
       inner = `${who}@@js@@${vkHtml}${nm.rail.map(rowHtml).join("")}${foot}`;
     }
     let sig = 0; for (let i = 0; i < inner.length; i++) sig = (sig * 31 + inner.charCodeAt(i)) | 0;   // lets a repaint skip an identical rail
-    return `<div class="ph-flow-rail${mini ? " mini" : ""}" id="presFlowRail" role="tablist" aria-label="Where you are" data-sig="${sig}"${isMe ? "" : " data-nav=\"1\""}><div class="ph-rail-in">
+    return `<div class="ph-flow-rail${mini ? " mini" : ""}" id="presFlowRail" role="tablist" aria-label="Where you are" data-sig="${sig}" data-nav="1"${isMe ? " data-me=\"1\"" : ""}><div class="ph-rail-in">
       ${inner.replace("@@js@@", () => presJsHtml())}
     </div></div>`;
   }
@@ -107982,6 +108019,10 @@ Difficult to sweat|no_sweat_tend:r`;
     if (fromId === "profile") return `<button type="button" class="ph-pres-stage-next" data-flow-go="today">Today's visit →</button>`;
     const toCn = `<button type="button" class="ph-pres-stage-next" data-plan-next="1" data-flow-go="cliniko">Copy for Cliniko →</button>`;   // the visit's last step (her 2026-11-19 synth22 ask 4)
     if (fromId === "dispense") return toCn;
+    if (fromId === "plan" && presNavCur && presNavCur.me && presNavCur.id === presOpenId) {   // her own record (stage 3)
+      const pages = presNavCur.all.filter(x => !x.p.locked && !x.p.add), k = pages.findIndex(x => x.p.id === presTpMainTab), nx = k >= 0 ? pages.slice(k + 1).find(x => !x.p.quiet) : null;
+      return nx ? `<button type="button" class="ph-pres-stage-next" data-plan-next="1" ${nx.p.attr}>${esc(nx.p.label.replace(/^\+ /, ""))} →</button>` : "";
+    }
     if (fromId === "plan") {
       if (presTpMainTab === "cliniko") return "";
       const t = PRESC.items.find(x => x.id === presOpenId);
@@ -111833,7 +111874,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const NL = presNavLit();
     if (NL) {   // a patient: Step · Part, the step's number in front; the arrows step through the parts in the rail's order
       const nm = NL.p.label.replace(/^\+ /, ""), g = NL.s.label.toLowerCase() === nm.toLowerCase() ? "" : NL.s.label;
-      const lead = NL.s.nf ? presRailIcn("patient") : `<span class="c${NL.s.done ? " dn" : ""}" aria-hidden="true">${NL.s.done ? "✓" : NL.s.n}</span>`;
+      const lead = NL.s.nf ? presRailIcn(NL.s.ic || "patient") : `<span class="c${NL.s.done ? " dn" : ""}" aria-hidden="true">${NL.s.done ? "✓" : NL.s.n}</span>`;
       bar.querySelector(".pg").innerHTML = `${lead}${g ? `<span class="g">${esc(g)} ·</span>` : ""}<b>${esc(nm)}</b>`;
       bar.querySelector('[data-rail-step="-1"]').disabled = NL.i <= 0;
       bar.querySelector('[data-rail-step="1"]').disabled = NL.i < 0 || NL.i >= NL.pages.length - 1;
@@ -130135,6 +130176,9 @@ Difficult to sweat|no_sweat_tend:r`;
   // are not part of the walk.
   function presProfNextBtnHtml(sections, selId) {
     const i = sections.findIndex(s => s.id === selId);
+    { const m = presNavCur && presNavCur.me && presNavCur.id === presOpenId ? presNavCur : null;   // her own record (stage 3): the next part of her four places, never a quiet chip
+      if (m) { const pages = m.all.filter(x => !x.p.locked && !x.p.add), k = pages.findIndex(x => x.p.id === selId), nx = k >= 0 ? pages.slice(k + 1).find(x => !x.p.quiet) : null;
+        return nx ? `<button type="button" class="ph-pres-stage-next" ${nx.p.attr}>${esc(nx.p.label.replace(/^\+ /, ""))} →</button>` : ""; } }
     // on her own record (ONE ME) a page of hers leads to her next page, the last one to her file
     const mine = s => !!s && ["day", "mck", "tm", "life"].includes(s.grp);
     if (i >= 0 && sections[i].grp === "exam") {   // an Exam page of her file (her 2026-11-18 pick 2): the next page of her visit, in the kind's order
