@@ -557,6 +557,8 @@ each (20 kept). Never store the full note text (the origin's about 5 MB is share
 "CBD"):** the clinic a weekday is at overrides the login's: `phDayClin(dateKey)` (shared Me row `hubset.dayClin`, default
 `{6: "Lotus Healing Arts"}`, set at Hub › Money's rates "Saturdays at"). That day's bookings, from either login, carry its tag ("Lotus") and, on its calendar blocks, Lotus's own red #B02C2E (`PH_LOTUS_COLOUR`, her 2026-11-21 "lotus is red like"; never Acupreg's sage on that day);
 the Hub counts that day as its own clinic (hours, its own income tile at the visit prices, never the CBD split or a CBD admin week).
+Acupreg's booking on such a day never offers "Open in Acupreg" (her 2026-11-21 "dont open nikki in acupreg"): its card shows Profile,
+her file in THIS login, when this login has her (`phOthStays`; `phOthOpen` refuses it too). A Friday's Acupreg booking still opens there.
 
 **The Potts Point shelf (her 2026-11-21 "track a separate inventory for potts point because i work there on saturdays"; her 4 picks
 of `mocks/potts-shelf-mock-2026-11-21-*.png`, all the recommended one):** `h.qtyPP` = a herb's grams at Potts Point, only for a herb she

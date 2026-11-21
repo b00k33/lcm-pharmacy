@@ -17135,3 +17135,13 @@ ticked signs of the complaint's body area · rated like signs · every complaint
   13 mo, with Bowels (Constipation, Excessive Flatulence, Smelly Stools) and Digestion (Worse After Eating); Lower back pain · ...".
   tap-audit + style-audit at 1220 and 360 (menu open, search open): nothing new; the older finds stay (table name spans, the pills
   spilling a few px into the empty last column at 1220, the drawer's Track with pills).
+
+## 2026-11-21: A Lotus Saturday booking never opens in Acupreg (SAVED, not live)
+**Why:** her screenshot of the Appointments card "Nikki Potent · LOTUS · Sat 21 Nov · 12:30 – 1:15 pm · [Open in Acupreg]" and "dont
+open nikki in acupreg". The card offered to switch the whole app to the Acupreg login for a booking on her Lotus day.
+- **Built:** `phOthStays(a)` = the other clinic is Acupreg and the booking's day is at another clinic (`phDayClinElse`: Saturdays,
+  Lotus). `phOthPopHtml` then shows Profile (`data-ph-dash-patient-open`, the normal card's own door: her file here) when this login has
+  her, else no button; `phOthOpen` refuses it. A Friday (Acupreg's day) still shows Open in Acupreg.
+- **Not done (her live data not read):** why the Saturday booking sits on Acupreg's side; that login's bookings are left as they are.
+- **Tested** (test copy, pretend Acupreg list): Sat 12:30 "Test Nikki" card = Profile, tap = her file here (presOpenId), no switch; Sat
+  "Test Nobody" (not in this login) = no button; Fri 10:00 = Open in Acupreg, switches. Profile 68 x 32.
