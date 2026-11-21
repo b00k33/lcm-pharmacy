@@ -107,6 +107,8 @@
   .ivf-row2 input { padding: 9px 10px; font-size: 13px; }
   #ivfAddRow { margin-top: 10px; }
   #cycleSec[hidden], #femaleHx[hidden] { display: none; }
+  /* her 2026-11-21 IVF | Off: the link of a patient whose IVF is off (prefill.noIvf) skips these two questions */
+  #ttcQ[hidden], #ivfQ[hidden] { display: none; }
   .submitbar { position: sticky; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, var(--ph-paper) 70%, transparent); padding: 16px 0 0; margin-top: 4px; }
   .submitbtn { width: 100%; padding: 15px; border-radius: 999px; border: none; background: var(--ph-green-deep); color: #fff; font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; }
   .submitbtn:disabled { opacity: 0.5; cursor: default; }
@@ -394,15 +396,15 @@
             '<div class="field"><label class="checkrow"><input type="checkbox" id="fRegular" checked> My cycle is usually regular</label></div>' +
             '<div class="field"><label class="q" for="fMenarche">Age at first period (menarche)</label><input type="number" id="fMenarche" min="8" max="20" placeholder=""></div>' +
             '<div class="field"><label class="q" for="fContraception">Current contraception</label>' + selHtml("fContraception", PH_CYCLE_CONTRACEPTION, "none") + '</div>' +
-            '<div class="field"><label class="q" for="fTtc">Trying to conceive — how long? <span style="font-weight:400;color:var(--ph-soft)">(months, if applicable)</span></label><input type="number" id="fTtc" min="0" max="240" placeholder="leave blank if not applicable"></div>' +
+            '<div class="field" id="ttcQ"><label class="q" for="fTtc">Trying to conceive — how long? <span style="font-weight:400;color:var(--ph-soft)">(months, if applicable)</span></label><input type="number" id="fTtc" min="0" max="240" placeholder="leave blank if not applicable"></div>' +
             '<div class="field"><span class="q">Any typical period or PMS symptoms?</span><div class="chips" id="symptomChips">' + PH_CYCLE_SYMPTOMS.map(function (s) { return '<button type="button" class="chip" data-symptom="' + s[0] + '">' + esc(s[1]) + '</button>'; }).join("") + '</div></div>' +
-            '<div class="field"><span class="q">Have you had IVF, egg collection, or egg freezing before?</span>' +
+            '<div id="ivfQ"><div class="field"><span class="q">Have you had IVF, egg collection, or egg freezing before?</span>' +
               '<div class="seg" id="ivfSeg"><button type="button" class="sexbtn" data-ivf="yes">Yes</button><button type="button" class="sexbtn" data-ivf="no">No</button></div>' +
             '</div>' +
             '<div id="ivfList" hidden>' +
               '<div id="ivfRows"></div>' +
               '<button type="button" class="chip" id="ivfAddRow">+ Add a cycle</button>' +
-            '</div>' +
+            '</div></div>' +
           '</div>' +
         '</div>' +
         '<div class="section-h">How you usually are</div>' +
@@ -490,6 +492,7 @@
   // there; set directly (no events), so nothing is flagged as missing before the patient has touched the form.
   function applyPrefill(p) {
     if (!p || typeof p !== "object") return;
+    if (p.noIvf) { document.getElementById("ttcQ").hidden = true; document.getElementById("ivfQ").hidden = true; }
     if (p.sex === "F" || p.sex === "M") {
       var sexBtn = document.querySelector('#sexSeg .sexbtn[data-sex="' + p.sex + '"]');
       if (sexBtn) {
@@ -506,7 +509,7 @@
     if (typeof p.mobile === "string") document.getElementById("fPhone").value = p.mobile;
     if (typeof p.email === "string") document.getElementById("fEmail").value = p.email;
     if (typeof p.address === "string") document.getElementById("fAddress").value = p.address;
-    document.getElementById("pfNote").hidden = !Object.keys(p).filter(function (k) { return k !== "qs"; }).length;
+    document.getElementById("pfNote").hidden = !Object.keys(p).filter(function (k) { return k !== "qs" && k !== "noIvf"; }).length;
     // her ask 2026-10-13 ("integrate the form with her profile"): the cycle answers and the Yes / No medical history her file already holds.
     // The app only sends values that carry real information (never its own starting values), so a blank here is a question still to answer.
     var cy = p.cycle && typeof p.cycle === "object" ? p.cycle : null;
@@ -650,7 +653,7 @@
       if (blank("fCycleLen")) miss.push({ label: "Usual cycle length", el: document.getElementById("fCycleLen") });
       if (blank("fFlowDays")) miss.push({ label: "Days you bleed", el: document.getElementById("fFlowDays") });
       if (blank("fMenarche")) miss.push({ label: "Age at first period", el: document.getElementById("fMenarche") });
-      if (!document.querySelector("#ivfSeg .sexbtn.on")) miss.push({ label: "IVF question", el: document.getElementById("ivfSeg") });
+      if (!document.getElementById("ivfQ").hidden && !document.querySelector("#ivfSeg .sexbtn.on")) miss.push({ label: "IVF question", el: document.getElementById("ivfSeg") });
     }
     CONSENT_TX.forEach(function (t) {
       var row = document.querySelector('[data-cn-item="' + t[0] + '"]');
@@ -759,7 +762,7 @@
               frozen: r.frozen === "" ? null : Number(r.frozen) }; })
         : [];
       var hasCycleAnswer = lmp || cycleLen != null || flowDays != null || menarcheAge != null || contraception !== "none" || ttcMonths != null || symptoms.length || flowIntensity !== "moderate" || pain !== "none" || !regular || ivfCycles.length;
-      if (hasCycleAnswer) cycle = { lmp: lmp, cycleLen: cycleLen, flowDays: flowDays, flowIntensity: flowIntensity, pain: pain, regular: regular, menarcheAge: menarcheAge, contraception: contraception, ttcMonths: ttcMonths, symptoms: symptoms, ivfCycles: ivfCycles };
+      if (hasCycleAnswer) cycle = { lmp: lmp, cycleLen: cycleLen, flowDays: flowDays, flowIntensity: flowIntensity, pain: pain, regular: regular, menarcheAge: menarcheAge, contraception: contraception, ttcMonths: ttcMonths, symptoms: symptoms, ivfCycles: document.getElementById("ivfQ").hidden ? undefined : ivfCycles };
     }
     return { demographics: demographics, history: history, cycle: cycle };
   }
@@ -795,6 +798,7 @@
   function answersAsPrefill(row) {
     var d = row.demographics || {}, h = row.history || {}, c = row.cycle || null, p = { history: {} };
     if (row.prefill && Array.isArray(row.prefill.qs)) p.qs = row.prefill.qs;
+    if (row.prefill && row.prefill.noIvf) p.noIvf = true;
     ["sex", "dob", "mobile", "email", "address"].forEach(function (k) { if (d[k]) p[k] = d[k]; });
     Object.keys(h).forEach(function (k) { if (h[k] === "yes" || h[k] === "no" || h[k] === "unsure") p.history[k] = h[k]; });
     if (h.notes) p.notes = h.notes;
