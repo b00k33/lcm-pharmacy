@@ -17462,3 +17462,18 @@ phone and the Day view.
   Medical history greyed), a pregnancy plan (Timeline part); the whole Next chain on each kind; every old id (15 data-flow-go, 15 data-flow-prof, dispense) lands on its host step + part;
   jump search (pulse · goals · tongue · herbs · "xyz" · Enter · Esc · tap clears); head search + its badges + a result tap; phone 360 drawer, ‹ ›, a step tap; mini rail. tap-audit + style-audit at 1220
   and 360 on the rail (drawer open) and the bar on 14+ pages, jump results and the visit-kind menu open: 0 off.
+
+## 2026-11-21: Her own blocks, bigger pictures in a badge (SAVED, not live)
+**Why:** her 3-day screenshot after the pictures went live and "make the pictures a bit bigger. improve visual". Seen on it: the
+18px picture lost in a wide block; Break Fast blank on Sun and Mon (a run's later days hid `.r1`); the Code picture under the invoice
+block and the Travel train under a 9:30 Lotus booking (a centred picture is covered by what overlaps it). Widget
+`lcm_own_blocks_bigger_pictures_mock` (A top-left, B top-centre, C top-left in a soft badge) and one popup; her picks: top centre
+in a soft badge (her own words, B + C) · 24px · a picture on every day of a repeat.
+- **Built:** `pkP` / `pkB` / `pkT` from the block's height (`--pk`, `--pp`, `--pt` on the block); `.pic .r1` at the top centre;
+  the picture a round badge (`color-mix(in srgb, currentColor 16%, transparent)`: white 16% on slate, ink 16% on the palest
+  shades); the emoji in the same badge; `.pic.ph-am-run .r1` / `.pic.ph-am-once .r1` shown.
+- **My call (told her):** a 30-minute block in the week view (24-28px tall) cannot hold a 36px badge: it takes the biggest that fits
+  (22-26px) with the picture at 18px, centred in the block; 40px and taller get the full 24 in 36 at the top.
+- **Tested** (pretend week): 3 days at 1440: 24px blocks badge 22 (picture 18) centred, 49px and taller badge 36 at 5px from the top,
+  all centred across; a run's middle / last cell and a once-only meal show the picture (display flex). Phone 360: 64px blocks badge
+  36 at 6px, a 31px block badge 29. tap-audit + style-audit at 1220 and 360: the same lists as the build before.

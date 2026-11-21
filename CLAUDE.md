@@ -874,7 +874,10 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   colours, Me's own pages keep the group colours, birthdays stay coral. Never bring the six group colours back to the calendar
   without her word.
   **Her own blocks show ONE picture, no words** (her 2026-11-21 "personal blocks only shown by an image/icon", pick A of widget
-  `lcm_my_events_icons_only_mock`): the slate block keeps its shade, one 18px picture in the middle, no name, no time (her mouse
+  `lcm_my_events_icons_only_mock`; bigger since her same-day "make the pictures a bit bigger. improve visual", widget
+  `lcm_own_blocks_bigger_pictures_mock`): the slate block keeps its shade, one 24px picture at the TOP CENTRE in a soft round badge
+  (36px, the picture's own colour at 16%; a short block takes the biggest badge that fits, the picture never under 18px), on every
+  day of a repeating block; anything overlapping lower down never covers it; no name, no time (her mouse
   resting on it says the name; a tap opens its card); week, day and the phone alike. The picture comes from the words of the title
   (`PH_C22_PICS`: Travel = train, a drive = car, a flight = plane, bus, Gym = dumbbell, Shoulder Rehab = a person stretching a band,
   Hair wash = shower, Haircare / skincare = hair and soap, Break Fast = bowl, an invoice = receipt, Code = brackets), else its
