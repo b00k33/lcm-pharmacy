@@ -2001,6 +2001,10 @@ not repeated here.
   every tongue photo came back unlabelled).
 - Zygomatic branch stays at one checklist item on the facial-paralysis
   checklist — she's declined a second, twice.
+- **The face score has two doors, one score** (her 2026-11-21 picks): Profile › Checklist and the face exam rows under the face
+  complaint on Came in for read and write the SAME `rec.facialScores` entry for the day. Never a second copy, never a second list
+  of items: both draw `PH_FP_MOVES` / `PH_FP_SYMS` (her labels word for word). A face complaint = `phFpCcKey` (the Face / nerve tile, or
+  words: Bell's, facial palsy / paralysis / nerve / weakness, face droop, Ramsay Hunt); it also fills the Case Neurological.
 
 ---
 
