@@ -36391,6 +36391,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
           <button type="button" class="ph-nav-item" data-ph-tab="alltemplates" data-ph-tip="All templates"><span class="ph-nav-ic"><svg class="icn"><use href="#i-bookmark"/></svg></span><span class="ph-nav-label">All templates</span></button>
           <button type="button" id="phBackup" class="ph-nav-item" data-ph-tip="Back up" title="Download all your pharmacy data as one backup .json — import it into the synced LCM - Linh Chinese Medicine, or keep it safe"><span class="ph-nav-ic"><svg class="icn"><use href="#i-download"/></svg></span><span class="ph-nav-label">Back up</span></button>
           <button type="button" id="phRestoreBtn" class="ph-nav-item" data-ph-tip="Restore" title="Restore from an earlier automatic backup, or load a backup .json file"><span class="ph-nav-ic"><svg class="icn"><use href="#i-undo"/></svg></span><span class="ph-nav-label">Restore</span></button>
+          <button type="button" id="phAcInBtn" class="ph-nav-item" data-ph-tip="Bring in Acupreg" title="Bring the Acupreg login's herbs, patients and bookings into this one (CBD login only). Adds only; nothing is deleted."><span class="ph-nav-ic"><svg class="icn"><use href="#i-download"/></svg></span><span class="ph-nav-label">Bring in Acupreg</span></button>
           <button type="button" id="phInstallBtn" class="ph-nav-item" data-ph-tip="Install app" title="Install LCM - Linh Chinese Medicine as an app on this computer or phone — its own window, its own icon, works offline" hidden><span class="ph-nav-ic"><svg class="icn"><use href="#i-home"/></svg></span><span class="ph-nav-label">Install app</span></button>
           </div>
         </div>
@@ -43909,7 +43910,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   const PH_PLACE_BADGE = { communications: "phCommNavBadge", intake: "phIntakeNavBadge", dashboard: "phDashFuBadge", refill: "phRefillBadge", restock: "phSideBadge" };
   const PH_PLACE_KEY = "daybook-ph-place-last";
   // the old Admin rows, now under the sidebar's ⋯ (her pick; Settings itself is stage 4)
-  const PH_ADMIN_ROWS = [["relocation", "Relocation"], ["alltemplates", "All templates"], ["#phBackup", "Back up"], ["#phRestoreBtn", "Restore"], ["#phInstallBtn", "Install app"]];
+  const PH_ADMIN_ROWS = [["relocation", "Relocation"], ["alltemplates", "All templates"], ["#phBackup", "Back up"], ["#phRestoreBtn", "Restore"], ["#phAcInBtn", "Bring in Acupreg"], ["#phInstallBtn", "Install app"]];
   // the place + chip the open page belongs to (End of day sits under Dashboard, Price review under Suppliers); null = Today, Me, Admin, Settings
   function phPlaceCurTab() {
     const t = PHARMACY.activeTab;
@@ -56914,6 +56915,56 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   // the sync layer's read of the other login: email = that login, P = its pharmacy store, me = this login (only
   // passed while this tab's data is this login's own, ownerOk). Writes only THIS login's record.
+  // ---- bring in Acupreg (her 2026-11-21 one-login move; widget lcm_one_login_places_mock, her 4 picks) ----
+  // what coming in would do, counted without changing anything (P = the Acupreg login's pharmacy core, read only)
+  function phAcPlan(P) {
+    const herbs = (Array.isArray(P.herbs) ? P.herbs : []).filter(x => x && x.name);
+    const matchOf = H => { for (const c of phHerbCodes(H)) { const m = findHerbByCode(c, H.name); if (m) return m; } return findHerbByName(H.name) || null; };
+    const hm = herbs.map(H => ({ H, C: matchOf(H) }));
+    const pats = Object.keys(P.patients || {}).filter(k => k && P.patients[k] && typeof P.patients[k] === "object");
+    const gone = PHARMACY.deletedPatients || {};
+    const newP = pats.filter(k => !(PHARMACY.patients && PHARMACY.patients[k]) && !gone[k]), pairs = pats.filter(k => PHARMACY.patients && PHARMACY.patients[k]);
+    const have = new Set((PHARMACY.appointments || []).map(a => a && String(a.id)));
+    const k3 = new Set((PHARMACY.appointments || []).map(a => a ? `${a.date}|${a.time}|${String(a.patient || "").toLowerCase()}` : ""));
+    const newA = (Array.isArray(P.appointments) ? P.appointments : []).filter(a => a && a.id && !have.has(String(a.id)) && !k3.has(`${a.date}|${a.time}|${String(a.patient || "").toLowerCase()}`));
+    return { hm, newH: hm.filter(x => !x.C).length, onH: hm.filter(x => x.C && !phHasAC(x.C)).length, newP, pairs, newA, all: { h: herbs.length, p: pats.length, a: (P.appointments || []).length } };
+  }
+  async function phAcMoveIn() {
+    if (phIsAcupregLoc()) { await phAsk({ title: "Bring in Acupreg", message: "Open this on the CBD login: it brings Acupreg in.", yes: "OK", no: "Close" }); return; }
+    if (typeof window.__lcmReadOther !== "function") return;
+    presSavedToast("Reading Acupreg…", 4000);
+    let R;
+    try { R = await window.__lcmReadOther(); } catch (e) { await phAsk({ title: "Bring in Acupreg", message: String((e && e.message) || e), yes: "OK", no: "Close" }); return; }
+    const P = R.P;
+    if (!/acu\s*preg|acupuncture\s+pregnancy/i.test(String(P.locName || ""))) { await phAsk({ title: "Bring in Acupreg", message: "The other saved login isn't Acupreg.", yes: "OK", no: "Close" }); return; }
+    const pl = phAcPlan(P);
+    const msg = `Herbs ${pl.all.h}: ${pl.onH} onto the Acupreg shelf, ${pl.newH} new to this list · Patients ${pl.all.p}: ${pl.newP.length} added, ${pl.pairs.length} same name left alone · Bookings: ${pl.newA.length} added of ${pl.all.a}. Nothing is deleted or changed. A backup downloads first.`;
+    if (!(await phAsk({ title: "Bring in Acupreg", message: msg, yes: "Bring in", no: "Cancel" }))) return;
+    try { const b = document.getElementById("phBackup"); if (b) b.click(); } catch (e) {}
+    const now = Date.now(), before = { h: PHARMACY.herbs.length, p: Object.keys(PHARMACY.patients || {}).length, a: (PHARMACY.appointments || []).length };
+    pl.hm.forEach(({ H, C }) => {
+      if (C) { if (!phHasAC(C) && H.qty != null && Number.isFinite(+H.qty)) { C.qtyAC = Math.floor(+H.qty); if (+H.low > 0 && !(+C.lowAC > 0)) C.lowAC = +H.low; } }
+      else if (!PHARMACY.herbs.some(x => x.id === H.id)) {
+        const N = JSON.parse(JSON.stringify(H));
+        if (N.qty != null && Number.isFinite(+N.qty)) N.qtyAC = Math.floor(+N.qty);
+        if (+N.low > 0) N.lowAC = +N.low;
+        N.qty = null; delete N.low; N.addedFrom = "Acupreg";
+        PHARMACY.herbs.push(N);
+      }
+    });
+    if (!PHARMACY.patients) PHARMACY.patients = {};
+    pl.newP.forEach(k => { const r = JSON.parse(JSON.stringify(P.patients[k])); r.places = ["Acupreg"]; r.updatedAt = now; PHARMACY.patients[k] = r; });
+    if (!Array.isArray(PHARMACY.appointments)) PHARMACY.appointments = [];
+    pl.newA.forEach(a => { const c = JSON.parse(JSON.stringify(a)); c.place = "Acupreg"; PHARMACY.appointments.push(c); });
+    PHARMACY.acMovedIn = { at: now, pairs: pl.pairs.slice(0, 400), herbs: pl.all.h, patients: pl.newP.length, bookings: pl.newA.length };
+    if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3600); return; }
+    let sent = false; try { sent = await window.__lcmFlushBeforeReload(); } catch (e) {}
+    const after = { h: PHARMACY.herbs.length, p: Object.keys(PHARMACY.patients).length, a: PHARMACY.appointments.length };
+    renderPharmacy();
+    await phAsk({ title: "Acupreg brought in", message: `Herbs ${before.h} → ${after.h} · Patients ${before.p} → ${after.p} · Bookings ${before.a} → ${after.a}${pl.pairs.length ? ` · ${pl.pairs.length} same-name patients left alone` : ""}. ${sent ? "Saved to the cloud." : "Not yet sent to the cloud: reload to retry."}`, yes: "OK", no: "Close" });
+  }
+  document.addEventListener("click", e => { if (e.target instanceof Element && e.target.closest("#phAcInBtn")) phAcMoveIn(); });
+  window.phAcPlan = phAcPlan; window.phAcMoveIn = phAcMoveIn;
   window.phOthTake = (email, P, me) => {
     if (!email || !P || typeof P !== "object" || !me || email === me || localStorage.getItem("lcm-data-owner") !== me) return;
     const acupreg = /acu\s*preg|acupuncture\s+pregnancy/i.test(String(P.locName || ""));
@@ -178759,6 +178810,36 @@ Dosage: {dosage}
   }
   document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") othRead(false); });
   setInterval(function () { if (document.visibilityState === "visible") othRead(false); }, 300000);
+  // Bring in Acupreg (her 2026-11-21 one-login move): the same second client, ONE select of the other login's pharmacy core, handed to the
+  // importer; read only, never an upsert, never signOut(); the saved login's rotated tokens go back into REG_KEY exactly as othRead does
+  window.__lcmReadOther = function () {
+    return new Promise(function (resolve, reject) {
+      if (othBusy || switching || !ready || offlineMode || !navigator.onLine || !ownerOk()) return reject(new Error("This tab isn't ready or is offline."));
+      var e = othEntry(), cfg = loadCfg();
+      if (!e || !cfg || !window.supabase) return reject(new Error("No other login is saved on this device."));
+      othBusy = true;
+      var me = myEmail, oc;
+      try { oc = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false, storageKey: "lcm-oth-auth" } }); }
+      catch (x) { othBusy = false; return reject(x); }
+      oc.auth.setSession({ access_token: e.access_token || "", refresh_token: e.refresh_token }).then(function (r) {
+        var s = r && r.data && r.data.session;
+        if (!s || !s.user || s.user.email !== e.email) throw new Error("The other login wouldn't sign in.");
+        if (s.refresh_token !== e.refresh_token || s.access_token !== e.access_token) {
+          var reg = loadReg();
+          reg.forEach(function (x) { if (x.email === e.email) { x.access_token = s.access_token; x.refresh_token = s.refresh_token; } });
+          saveReg(reg);
+        }
+        return oc.from("settings").select("data").maybeSingle();
+      }).then(function (r) {
+        othBusy = false;
+        if (!r || r.error || !r.data || !r.data.data || myEmail !== me || !ownerOk()) throw new Error("Couldn't read the other login.");
+        var P = null;
+        try { P = JSON.parse(r.data.data[PH_KEY] || "null"); } catch (x) {}
+        if (!P || typeof P !== "object") throw new Error("The other login holds no pharmacy.");
+        resolve({ email: e.email, P: P });
+      }).catch(function (x) { othBusy = false; reject(x); });
+    });
+  };
   // "Open in <clinic>" on the other clinic's booking: switch to that login, landing on this booking (?appt=&d=, phApptDeepLinkBefore)
   window.__lcmOthSwitch = function (email, a) {
     if (switching || !ready || !email || !a) return;
