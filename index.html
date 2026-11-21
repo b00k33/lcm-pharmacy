@@ -10354,6 +10354,9 @@
   #pharmacyPage .ph-sg-rows { display: flex; flex-direction: column; gap: 6px; }
   #pharmacyPage .ph-sg-row { display: flex; align-items: center; gap: 10px; border: 1px solid var(--ph-line); border-radius: 10px; padding: 5px 6px 5px 10px; background: #fff; transition: border-color .15s, box-shadow .15s; }
   #pharmacyPage .ph-sg-row:hover { border-color: var(--ph-ink); box-shadow: 0 0 0 1px var(--ph-ink); }
+  #pharmacyPage .ph-sg-row[data-sg-edit] { cursor: pointer; }
+  #pharmacyPage .ph-sg-row.on { background: var(--ph-herb-tint); }
+  #pharmacyPage#pharmacyPage .ph-sg-row .ph-pm-x.ph-sg-pen { right: 30px; font-size: var(--fs-18); }
   #pharmacyPage .ph-sg-n { flex: none; min-width: 26px; padding: 2px 6px; border-radius: 6px; background: var(--ph-ink); color: #fff; font-size: var(--fs-10-5); font-weight: 700; text-align: center; letter-spacing: .02em; }
   #pharmacyPage .ph-sg-what { flex: 1 1 120px; min-width: 0; font-size: var(--fs-12-5, 12.5px); font-weight: 700; line-height: 1.25; color: var(--ph-ink); }
   #pharmacyPage .ph-sg-what em { font-style: normal; font-weight: 600; color: var(--ph-faint); }
@@ -146707,9 +146710,10 @@ Difficult to sweat|no_sweat_tend:r`;
     const open = !!(d && d.open);
     const R = PH_PAIN_REGIONS.REGIONS;
     const pm = host === "pm";
-    const rows = list.map((sg, i) => `<div class="ph-sg-row"${pm ? ` data-pm-row="s${i}"` : ""}>
+    const rows = list.map((sg, i) => `<div class="ph-sg-row${d && d.id === sg.id ? " on" : ""}"${pm ? ` data-pm-row="s${i}"` : ` data-sg-edit="${esc(sg.id)}" role="button" tabindex="0"`}>
         <b class="ph-sg-n">S${i + 1}</b>
         <span class="ph-sg-what">${esc(sg.what)}${sg.when ? ` <em>${esc(sg.when)}</em>` : ""}<small>${esc(phSgWhere(sg) || "Not on the body map")}${sg.note ? ` · ${esc(sg.note)}` : ""}</small></span>
+        <button type="button" class="ph-pm-x ph-sg-pen" data-sg-edit="${esc(sg.id)}" aria-label="Change ${esc(sg.what)}" title="Change">✎</button>
         <button type="button" class="ph-pm-x" data-sg-del="${esc(sg.id)}" aria-label="Remove ${esc(sg.what)}">×</button>
       </div>`).join("");
     const reg = d && d.r ? R[d.r] : null;
@@ -146720,7 +146724,7 @@ Difficult to sweat|no_sweat_tend:r`;
         <label class="ph-sg-f"><span>Where</span><select class="field-bare" data-sg-f="r" aria-label="Where on the body"><option value="">Not on the body map</option>${PH_PM_GROUPS.map(([gl, rs]) => `<optgroup label="${esc(gl)}">${rs.map(opt).join("")}</optgroup>`).join("")}</select></label>
         ${reg && !reg.central ? `<span class="ph-pm-seg ph-sg-side" role="group" aria-label="Side"><span class="cap">Side</span>${[["R", "R"], ["L", "L"], ["B", "Both"]].map(([v, t]) => `<button type="button" class="${d.s === v ? "on" : ""}" data-sg-side="${v}" aria-pressed="${d.s === v}">${t}</button>`).join("")}</span>` : ""}
         <label class="ph-sg-f wide"><span>Note</span><input type="text" class="field-bare" data-sg-f="note" value="${esc(d.note || "")}" placeholder="" maxlength="160" autocomplete="off" aria-label="Note"></label>
-        <div class="ph-sg-actions"><button type="button" class="ph-pm-addbtn" data-sg-add="1">Add surgery</button><button type="button" class="ph-pm-pickbtn" data-sg-cancel="1">Cancel</button></div>
+        <div class="ph-sg-actions"><button type="button" class="ph-pm-addbtn" data-sg-add="1">${d.id ? "Save" : "Add surgery"}</button><button type="button" class="ph-pm-pickbtn" data-sg-cancel="1">Cancel</button></div>
         <div class="ph-sg-msg" aria-live="polite"></div>
       </div>` : "";
     return `<div class="ph-sg ph-sg-${pm ? "pm" : "hx"}" data-sg-name="${esc(name)}" data-sg-host="${pm ? "pm" : "hx"}">
@@ -146762,10 +146766,11 @@ Difficult to sweat|no_sweat_tend:r`;
     const r = d.r || "", reg = r ? PH_PAIN_REGIONS.REGIONS[r] : null;
     if (reg && !reg.central && !d.s) { say("Pick a side — Right, Left or Both."); return; }
     const s = !reg ? "" : reg.central ? "C" : d.s;
-    const ok = phSgWrite(name, list => list.push({ id: uid(), what, when: String(d.when || "").trim(), r: reg ? r : "", s, note: String(d.note || "").trim() }));
+    const one = { what, when: String(d.when || "").trim(), r: reg ? r : "", s, note: String(d.note || "").trim() };
+    const ok = phSgWrite(name, list => { const old = d.id ? list.find(x => x.id === d.id) : null; if (old) Object.assign(old, one); else list.push(Object.assign({ id: uid() }, one)); });
     if (!ok) { say("Couldn't save that — check the warning at the top and try again."); return; }
     phSgDraft.delete(key);
-    presSavedToast("✓ Surgery added");
+    presSavedToast(d.id ? "✓ Surgery saved" : "✓ Surgery added");
     phSurgRepaint(name);
   }
   document.addEventListener("click", e => {
@@ -146778,6 +146783,16 @@ Difficult to sweat|no_sweat_tend:r`;
       const id = b.dataset.sgDel;
       const ok = phSgWrite(name, list => { const i = list.findIndex(x => x.id === id); if (i >= 0) list.splice(i, 1); });
       if (ok) { presSavedToast("✓ Surgery removed"); phSurgRepaint(name); } else presSavedToast("Not saved — check the warning at the top");
+      return;
+    }
+    if ((b = t.closest("[data-sg-edit]"))) {
+      const sg = phSgList(phPatientPeek(name)).find(x => x.id === b.dataset.sgEdit);
+      if (!sg) return;
+      const d0 = phSgDraft.get(key);
+      if (d0 && d0.id === sg.id) { phSgDraft.delete(key); phSgSwap(el); return; }   // a second tap shuts it
+      phSgDraft.set(key, { open: true, id: sg.id, what: sg.what || "", when: sg.when || "", r: sg.r || "", s: sg.s === "C" ? "" : (sg.s || ""), note: sg.note || "" });
+      const fresh = phSgSwap(el), w = fresh.querySelector('[data-sg-f="what"]');
+      if (w) { w.focus(); w.select(); }
       return;
     }
     if ((b = t.closest("[data-sg-toggle]"))) {
@@ -146814,6 +146829,8 @@ Difficult to sweat|no_sweat_tend:r`;
     }
   }));
   document.addEventListener("keydown", e => {
+    const row = e.target && e.target.matches && e.target.matches(".ph-sg-row[data-sg-edit]") ? e.target : null;
+    if (row && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); row.click(); return; }
     const f = e.target && e.target.closest ? e.target.closest('[data-sg-f="what"]') : null;
     if (!f || e.key !== "Enter") return;
     e.preventDefault();
