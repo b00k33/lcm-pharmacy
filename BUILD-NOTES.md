@@ -17167,3 +17167,139 @@ Note + Fang Bing Ren under the calendar · 44px days · the phone the same.
   her first period) open; a Note on 8 Nov saved to that day from under the month. 1220: head wraps to two lines, PMS 4 rows of 3. 360:
   day card 1147 -> 811px, PMS 6 rows of 2, page 360 wide. Today's visit card unchanged (Note, trail, three PMS bars). tap-audit +
   style-audit at 1220 and 360, Period folded and open: nothing new (the 44px days and the fold head on the KEEP list).
+
+## synth22 batch 2026-11-21: Pulse box first, fingers, Came in for, Supplements + rail, Summary for her (SAVED, not live)
+Her synth22 batch (11 asks, closed with "ok done"; memory project_lcm_synth22_batch_2026_11_21; mocks in widget
+lcm_synth22_pulse_cameinfor_supps_rail_summary_mocks; her picks in three popups). Built as five patches, one per part (the five notes
+below), each tested on its own copy. **Combined test:** all five applied in order fingers → pulse → supp → cif → sum to f8de3de4
+cleanly (every anchor its exact count), no console errors on load or on the pages opened; on the combined copy the Pulse taps work
+(a box picks, the chips show that box, the next box's chips start from its own contents, Normal + Soft saved where tapped), and
+Summary for her read the new pulse taps in plain words and printed the Came in for goal under The plan. SAVED, not live until her
+"push live".
+
+## Pulse page: the box first (synth22 2026-11-21)
+Her words (synth22 batch, items 1-3): taps drew what she did not want and pulses went missing; she charts depth first, then width
+and texture, and forgot what was lit from the column before; "the normal pulses are not supposed to appear". Cause, reproduced on a
+copy of the code: since 11/20 a lit-chip tap STAMPED all lit qualities and a second tap on a box holding them all took them OFF
+(`phPulseStampCell`); her first tap on a side also wrote that side's three Normals (`phPulseFillNormal`), so a later Normal tap on Guan
+erased the hidden Normal there; and the Normal key chip hid plain-normal boxes (`phPulseIsPlainNormal`), so a box she charted Normal
+vanished from view. Her picks: "box first, and each column charting gets a reset/refresh"; the Normal chip hides "Only the guide line".
+Built: `presPulseSel` (view state, the picked box) replaces `presPulseLit` and the box popup (`presPulsePop`, `presPulsePopGrp`,
+`phPulsePopHtml` / `phPulsePopPlace` / `phPulsePopClose` and its tap-outside listener; the Abdomen page keeps its own `.ph-pls-pop`).
+A box tap picks / lets go (Erase still clears); a quality chip toggles that one quality in the picked box through `phPulseCellToggle`;
+a row's More ▾ adds its pick or ("More") takes the row's More qualities out; Esc lets go. `PH_PLS_USUAL` moved to module scope;
+`phPulseSelName` names the box over the rows (`.ph-pls-selh`, 13 at 600); the picked cell `.sel` = the herb outline + herb tint.
+Removed: `phPulseStampCell`, `phPulseIsPlainNormal`, `phPulseNoPlain`, the `hideNorm` argument of `phVisitPulseCellHtml` /
+`phVisitPulseHalfHtml`. `phPulseFillNormal` stays for All as normal only. Kept: `phPulseTplAt` (Fang Bing Ren's normal-depth rule).
+MY call: a quality tap with no box picked does nothing (no hint line, her terse rule).
+Tested on a copy (Test Pulse): her exact taps (Normal + Soft on R Cun Qi, then Guan; back to Cun, Normal off and on; Weak replaces
+Soft; re-tap lets go) leave every mark she made and write no Normal she did not tap; Normal key off = no guide, her two charted boxes
+still drawn; More ▾ Muddy on and off; Esc; Erase; ▶ Play; no console errors. tap-audit + style-audit on the Pulse page with a box
+picked: 1220 36/36 ok, 360 22/22 ok, no off sizes / weights / chip looks / colours / side lines / rowAlign; no sideways scroll at 360.
+Pictures: shots/s22-pulse-1220.png, shots/s22-pulse-360.png (local). Pages checked: the Pulse page (chart, ▶ Play, the description
+box, the visits table under it); the Table view and the visit / Summary text were not touched.
+
+## Fingers as pain areas (2026-11-21, synth22 batch item 10, her pick "each finger")
+Her words: "patient described right hand middle finger pain but i cant input it" (Musculoskeletal › Pain; the map stopped at Hand).
+- `PH_PAIN_REGIONS`: finger_index / finger_middle / finger_ring / finger_little ("index finger" … "little finger"), small upright
+  spots on the figure's hand at the fingers' height (male and female figures; the figure's hand is a mitten, so the four spots sit
+  side by side across its end, index nearest the thumb).
+- Words: PHRASES gain the finger names (index / pointer finger, forefinger, middle, ring, little, pinky / pinkie, plurals); a clause
+  naming a finger drops "hand" and "fingers" from the same clause ("right hand middle finger pain" = finger_middle|R only). Plain
+  "index" was left out on purpose (other uses of the word).
+- `PH_PM_GROUPS` Shoulder & arm: … Forearm · Wrist · Hand · Thumb · Index · Middle · Ring · Little finger · All fingers (a scale:
+  thumb → little; `PH_PM_PICK_LABEL.fingers` = "all fingers").
+- Hand close-up: `PH_PM_ZOOMS.hands` + `PH_PM_HAND_AT` (each finger at the middle of its own digit in handDigits: base, angle, half its
+  length); palm and back mirror as before. `PH_PM_SIDE_AT` and `PH_MSK_PAINREG` (→ wrist) carry the four.
+- Checked: parse of 9 phrases; Areas chips; close-ups right palm / back and left palm / back with four fingers + thumb marked (each
+  on its own finger); the pain row reads "Right middle finger"; figure spots at 1220 and 360 (`shots/s22-fingers-1220.png` / `-360.png`).
+- Readers checked: every reader looks a region up in PH_PAIN_REGIONS.REGIONS (row names, summaries, Cliniko copy via the label);
+  the region tables keyed by id (side view, exam region, close-up) carry the four. Left: `PH_FBBP_APP["@close:hand_palm"].lit`
+  ("hand", "fingers") is a Fang Bing Ren sign's lit structures, not a pain; not touched.
+- Audits (pain map + close-ups + Areas picker drawn alone, 1220 and 360): no new findings; tap-audit lists only the picker's
+  existing pill chips / tabs (24-25px, 999 corners, 11.5px), the colour dot (14px) and the close-up Lat / Med corner labels (8.5px),
+  all as before this build (data only: no CSS or markup changed).
+
+## Came in for: how long, goals, Ren, the FBR mark, shorter rows (2026-11-21, synth22 batch picks 4-7)
+Her batch (memory project_lcm_synth22_batch_2026_11_21; mock B of widget lcm_synth22_pulse_cameinfor_supps_rail_summary_mocks): "allow for
+option to note how long the problem has been going on for the symptoms under the main symptoms", "allow for me to set goals for main
+complaint and secondary complaint e.g. mood: burnout - goal 'happiness' 30-50% mood improvement in 1 month", "i want data here to connect
+with fang bing ren and ren pages", "improve page visual so theres not too much scrolling". Picks: How long in the How long column; goal =
+word + % + time on every row, progress on later visits; Ren fills from it + Ren picks feed back + see the ticks; shorter rows only.
+- How long: `phCxSxSince(rec, keys)` reads `rec.tri.since` (the Acupuncture page's Since box writes the same), shown only when typed
+  here (`ccTrack.sxSinceSet[k]` = precision) or a date before the first visit (the app stamps a ticked sign with the first visit's date,
+  so equal-or-later dates are the stamp, not hers). Write `phCxSxSinceWrite` (phTriWrite + phCxWrite, the twin pair together). Table: a
+  dashed "+ how long" chip (`data-cx-hlb`) opens the symptom's details (`phCxEd`) focused on `data-cx-sxsince`; phone: the drawer's
+  "Goes with" block holds the same fields (the phone hides a sign's since on the row, as before).
+- Goals: `phCxGoalToGet` / `phCxGoalToNorm` / `phCxGoalToWrite` (complaint via phCcWrite, pain via phPmWrite, symptom via phCxWrite),
+  `phCxGoalDue`, `phCxGoalToTxt`, `phCxGoalPct` (% better since the first score through `phCxVal`), `phCxGoalToLineHtml`,
+  `phCxGoalEdHtml` (Goal · % better from–to · In n weeks/months; no placeholder words). Fields save on change; the card repaints when
+  the cursor leaves the details line (`phCxGRepaint`, `.ph-cx-gfs` + focusout), so tabbing between boxes is never interrupted.
+  `phCcGoalLines(rec)` exported; `phCnParts` adds "Goals: …" after Came in for.
+- Ren: `phCxRenFromCc(rec)` (complaint mainFbrKey / secondary fbrKey / sxGrp keys ticked Yes → their Ren twin, Ren-page subjects only)
+  joins phTriEffectiveRaw's derived sources for kind "p" (picks first, so her answer wins); phTriAutoWhy says "From Came in for". The
+  feed-back direction already held: a Ren pick goes under the complaint of its subject (the model's `under`); it now shows "Ren".
+- The mark: `phCxFbmHtml(rec, keys, cc)` = `button.sg.ph-cx-fbm` "FBR" / "Ren", 16px, inside the name (complaint rows inside `.t` so a
+  long name wraps once, not twice); the wide card and the phone both hid `.sg` tags, so `.ph-cx button.sg.ph-cx-fbm` is shown on purpose.
+  `phCxFbrJump`: a Ren page subject with its step on screen clicks `data-tvs-go="rq:<subject>"`; else `phCxFocusFbr(name, cc)` then
+  `phFlowGoPlanTab("patterns")` and the sign's chip is outlined 1.8 s where Fang Bing Ren draws it (a ticked sign may not have a chip on
+  the Ask next lines; then Fang Bing Ren just opens on the complaint).
+- Rows (measured at 1220, the test patient, first visit): complaint 44 → 36px, symptom 44 → 33px, "+ symptom" 41 → 37px; the same
+  12 rows 519 → 406px. A long symptom name wraps whole (an ellipsis was tried and dropped: never cut real data).
+- Audits (tap-audit + style-audit, `[data-cx-host]`, 1220 closed / main details open / symptom details open, and 360 closed / drawer
+  open): nothing new. Left, all present on the unchanged build too: the Energy row's `span.nm` (16px, a tappable name), the area dots
+  (data colours), "spills" for the Gone · Better · Same · Worse bar in the 24% name-column back table, the drawer's Track with bar
+  (34px, 999 corners) and the hidden 9px Sign tag on the phone. The FBR / Ren mark passes as `.sg` (tap-audit KEEP, "sign rows");
+  her pick named it "a small mark".
+- Checked: Came in for table (first visit + later visit), the phone parts + drawer, the Ren steps table (Skin Dry from a grouped
+  dry_skin_now; Energy listless under Energy with "Ren"), Fang Bing Ren opening on the complaint, Copy for Cliniko's Goals line.
+  Not checked: Summary for her (the Summary fork prints `phCcGoalLines`), the Care Plan (reads the old text Goal, unchanged).
+Screens: shots/s22-cif-1220.png (first visit, a symptom's details open), shots/s22-cif-later-1220.png, shots/s22-cif-360.png.
+
+## synth22 2026-11-21: Supplements, only what she takes · rail step bands
+Her batch items "improve this view, audit chips" (Supplements screenshot) and "is there a way to make the numbered steps more
+obvious?" (rail screenshot); picks "Only what she takes" and "A · Step bands" (mocks C and D, widget
+lcm_synth22_pulse_cameinfor_supps_rail_summary_mocks).
+- `phSupp3Html`: the chip row only adds (off rows: stopped first, then hasProd, then the PH_SUPPLEMENTS seed kinds; 8 max A–Z; rest
+  in More ▾; + Add), wrapped in `.ph-np-row.ph-supp3-add` with an "Add" capitals label. Taken chips (solid, repeating the ✓ rows) gone.
+- More ▾ change: the table no longer has the off rows, so it clicks a one-off hidden `data-supp-tick` button (same tick door).
+- `phSuppEditorHtml`: `phSuppRows(rec).filter(r => r.on)`; the add row is one `th colspan=7` (no `.ph-supp-plus`); `phMedsHtml` add
+  row `colspan=5` the same way.
+- `phSuppKindDose`: her Settings dose (`PHARMACY.suppKindDose`) or product dose first; a seed's words only when they hold a digit.
+  The cause of "Per the ferritin result — ferrous bisglycinate is best tolerated" in a patient's Dose box: PH_SUPPLEMENTS' iron
+  `dose` seed, pre-filled on tick. Rows already holding it keep it (stored on the patient; never overwritten): she can clear it.
+- CSS: `.ph-supp-tbl textarea.ph-supp-fld` 6px corners, `field-sizing: content`, no resize; `tr.on th[scope=row]` 600 ink; the row
+  ✕ (`.ph-supp-own-rm` in the table) 32px (tap floor, was 28).
+- Rail (CSS only, after the `.ph-flow-step.done .c` ink line): `:not(.mini) .ph-flow-step:is(:not(.on), .on.par)` band
+  `color-mix(var(--ph-herb) 62%, #000)` (hover 52%), 10px above; circles white with `--ph-herb` digits / ✓; the open step's circle
+  solid `--ph-herb`; `.ph-flow-step ~ .ph-flow-sub:not(.foot):not(.g-vk) > button:not(.cap)` padding-left 20px.
+Tested (sandbox, pretend patient "Test Suppla"): a chip (Prenatal) starts it with "1 daily, with food"; More ▾ Calcium starts it
+(dose empty); ✓ Iron stops it, it leaves the table and its chip reads "Stopped 21 Nov 2026 · tap to start again", a tap restarts
+it; a fresh Iron tick starts with an empty Dose; + Medicine adds. Audits: Supplements page tap-audit off [] and style-audit
+offSizes / offWeights / chipLooks / sideLines / rowAlign [] at 1220 and 360 (one rowAlign "centre" line only while a Dose wraps
+to several lines: the tall box sits from the top, on purpose); rail at 1220 tap [] except the "Records" foot cap 45.8px (two-line
+foot head, there before this build) and style []; phone drawer at 360 tap [] style []; mini rail's 44x32 icon rows were flagged
+before this build (all rows, not the steps). Pictures: shots/s22-supp-1220.png, shots/s22-supp-360.png, shots/s22-rail-1220.png.
+Checked where the fact shows: Supplements page, the rail's "Medicines & supplements · n" count (phSuppTaking unchanged), the band.
+Left: on a phone the Medicines / Supplements tables still scroll sideways inside their card (min-width 580 / 720, as before), so
+the add row's Add button sits past the edge until scrolled.
+
+## Summary for her: a letter, not a form (2026-11-21, synth22 batch pick 10)
+Her batch (synth22, 2026-11-21) on a screenshot of Summary for her ("i like this but make it more appealing to look at"; four grey
+textareas, a run-on "What you came in for" scrolling inside its box, the pulse as chart words with every normal position); her pick
+"Letter, not a form" (mock F in widget `lcm_synth22_pulse_cameinfor_supps_rail_summary_mocks`).
+- `phVsPageHtml`: each part = `.ph-vs-view` (role=button, the lines as `.ph-vs-ul` bullets, `phVsViewHtml`; empty = "＋ Add") + its
+  textarea, hidden until a tap (`phVsEditOpen`); the box grows (`phVsGrow` on input, `resize: none; overflow: hidden`); focusout puts
+  the lines back (the existing change handler has saved by then). Enter / Space on a part opens it. ↺ Fill again redraws the lines.
+- `phVsFilled`: complaints `phSymCase(text)` + ", with ..." + `phVsLong(since)` (" · 3 years", " · 2 weeks"; nothing for today or no
+  date); pulse = `phVsPulseWords(rec)` (plain words, `PH_VS_PULSE_POS` / `PH_VS_PULSE_Q`, the same words at two positions said once,
+  "Other pulse positions normal" when some were normal, "Pulse: normal at every position" when all were); The plan appends
+  `phCcGoalLines(rec)` when that function exists (the goals build). Title capitals too.
+- `phVsText` (Copy / Email / Messages) and `phVsDocHtml` (Print): each part's lines as "• " bullets / a `<ul>`.
+- MY calls, disclosed: the complaint keeps Fang Bing Ren's words with capitals (no rewording to "Irregular periods, perimenopause":
+  a word-order rewrite cannot be done safely from the data); the pulse names are plain words ("bladder / kidney", "adrenal /
+  reproductive", Chemical Poisoning = "chemical load"); Skin depth = "floating", Organ depth (where the position's normal is not
+  Organ) = "deep"; Wiry = "tight (wiry)", Flat = "very weak", Soft = "a little soft"; the Pulse page's own functions are not read.
+- Checked: Summary for her at 1220 + 360 (tap-audit `off` empty, style-audit offSizes / offWeights / chipLooks / sideLines / rowAlign
+  empty, with a part open and closed), Copy text, the printed page's HTML, ↺ Fill again, a saved part's lines after leaving it.
+  Pictures: `shots/s22-sum-1220.png`, `shots/s22-sum-360.png` (pretend patient).
