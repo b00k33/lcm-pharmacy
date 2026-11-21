@@ -966,6 +966,18 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
   time left and, on a scored complaint, how far it has come; a small FBR / Ren mark on each ticked row opens that sign's place; Ren pages
   fill from the complaints' and symptoms' Bing twins (derived); Copy for Cliniko adds "Goals: …"; `phCcGoalLines(rec)` for Summary for her.
 
+## Came in for: the face exam (2026-11-21, her picks; BUILD-NOTES "Came in for, the face exam")
+- A complaint whose words say face (`phFpCcKey`: "main" or "s:<id>"; the Face / nerve tile, Bell's, facial palsy / paralysis /
+  nerve / weakness, face droop, Ramsay Hunt; not "facial rejuvenation", not cerebral palsy) gets the face exam under it, after its
+  symptoms: a computer's table `phFpCxRowsHtml` (caption FACE EXAM · got / max + `.ph-fp-due` "score due", 7 movements None ·
+  Partial · Normal, SIGNS, 6 signs No | Yes; First · Last · Change from `rec.facialScores`; How long = the short muscle, the full
+  line on hover; a camera per movement = the Checklist's own `data-fp-shot`), a phone's list `phFpCxListHtml`. A face complaint the
+  table has no row for gets them after the complaints.
+- A tap (`data-cx-fp="m|s:<key>:<val>"`, `phFpCxWrite`) saves at once into the day being scored (today, or the Scoring bar's earlier
+  visit: no cameras then); the same tap clears; an empty entry goes; `presFpDraft` is dropped; `phCcFillCase` fills the Case
+  (a typed face complaint = the Face / nerve family, Neurological). `phFpApplies` also says yes for a face complaint, so the
+  Checklist page and Today's Face score tile show for it. The Checklist opens on today's saved answers ("last" = before today).
+
 ## Today's visit steps table (2026-11-19, her pick B; two columns since her same-day "Yes, build it")
 - **Now:** the card is the page's full width and first on Today's visit; the list 240px, the step beside it. `phTvRenHtml(name, cx)`
   always gets the Came in for card (empty or full) and `cc`'s pane is that card + Next; nothing above the card. `phCxRefresh` inside the

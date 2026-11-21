@@ -17501,3 +17501,30 @@ Her word: "the system looks so complicated ... less tabs, things in one place", 
 - **My calls (told her):** (1) Relocation and Templates are chips in the Settings bar, but they stay their own pages (their renderers, CSS and handlers are keyed to their own wrappers; moving them inside Settings' wrapper would have meant rewriting both), so on All templates the page's own kinds bar sits under the Settings bar; (2) the ⋯ keeps Back up · Restore · Bring in Acupreg · Install app (actions, not set-once settings) and the gear stays where it was; (3) "Device" is renamed "Data & device" because it now holds backups; (4) the Calendar chip hides while it has no card (Me off), like the card did; (5) no "last chip remembered" key: the gear reopens on the last group (it already did, `setg`), and Templates / Relocation are one tap away; (6) the Find box matches names and a few extra words, A–Z, not the text inside a card.
 - **Tested** (the test copy `_zz-n4.html`, the shared preview server): every chip (6 shown + Calendar with Me forced on) lands on the right page, group and lit chip; Templates -> Clinic -> Relocation -> Clinic round trips; the four deep links (Supplements, Care Plan templates, Progress letter, Event presets path by the same assignments) from Settings and from the All templates page; the gear, the hidden old rows (All templates, Relocation) and the Dashboard relocation line; the ⋯ menu (Back up, Restore; Install app when the browser offers it, shown in headless Edge); the Back up card tap reaches the old `#phBackup` handler once; Find a setting (backup, label, templ, supplement, move, empty, no match; Enter on the first match). tap-audit / style-audit / titlebar-audit at 1220 and 360 with every card open on every chip: the bar, the find box, the results bar and the Back up buttons are clean; what is left sits inside cards this stage did not touch (the Clinic logo note 16px, the Fang Bing Ren names field pill 16px and its colour dots, the Care Plan template category colours, on the phone the working-day chips 11.5px / pill, the Supplements row chips 22px / pill, two "Undo / Reset" buttons 11.5px).
 - **NOT tested:** her real signed-in data; a real phone; an installed app; the Acupreg and Lotus logins; a real Backup download or Restore (the tap was intercepted, not run).
+
+## 2026-11-21: Came in for, the face exam (SAVED, not live)
+**Why:** her screenshot of a Came in for page (main complaint Ramsay Hunt Syndrome, typed) and "THIS PATIENT had a facial paralysis
+exam - where is it? it needs to be on her what she came in for page - show mock". Root cause: the exam (Profile › Checklist, the
+Bell's palsy checklist) showed only for a Neurological Case or a patient already scored; a typed complaint has no tile id, so
+`phCcMain` was null, the Case never filled, and `phFpApplies` said no. Widget `lcm_face_exam_on_came_in_for_mock` (A rows in the
+table, B a card under it, C a face to tap) and popups; her picks, all as recommended: A; it appears when the complaint's words say
+face and it sets the Case Neurological; keep the Checklist page (one score, two doors); the short muscle name in How long, the full
+line on hover; signs as No | Yes rows; a tap saves; a "score due" tag; a camera on each movement row.
+- **Built:** `PH_FP_CC_RE` / `phFpCcSays` / `phFpCcKey`; `phFpApplies` + a face complaint; `phCcFillCase` takes the Face / nerve family
+  for a typed face complaint; `phFpCxView` / `phFpCxCap` / `phFpCxSeg` / `phFpCxCam` / `phFpCxRowsHtml` (table) / `phFpCxListHtml`
+  (phone) / `phFpCxWrite`; in `phCxTblHtml` the rows go after the face complaint's symptoms (`fpR`, a fallback after the complaints),
+  the table gets `.fp` (Today 24%, Complaint 22%, How long 13%, Change 11%); the same in `phCxPartsHtml` (`fpL`); the `data-cx-fp`
+  tap in `phCxClick`; `phFpPhotosRefresh` turns a camera teal once today's photo is in; `presFacialOpenHtml` opens on today's saved
+  answers. CSS: `tr.sub.fp`, `.ph-cx-fpcam` (a 32px circle), `.ph-cx-fp` (phone list).
+- **My calls (told her):** (1) her labels word for word (as on the Checklist: "Eyebrow Elevation (Eyebrow Raise)", "Lagophthalmos
+  (Eyelid unable to close)" ...), not the mock's short names, so one score reads the same in both doors; (2) the rows sit under the
+  complaint after its symptoms and "+ symptom"; (3) "score due" = never scored, or 4 visits since the last score (the Checklist's own
+  cadence), and it goes once anything is scored today; (4) scoring an earlier visit from the Scoring bar writes that day, with no
+  cameras (a photo is always today's); (5) the Case fills on the first tap or the next complaint save, never on just opening the page;
+  (6) on a phone the signs sit beside their names, the movements' buttons under theirs.
+- **Tested** (pretend patients on the test copy, never her data): a typed "Ramsay Hunt Syndrome" with a 23 Sep score: 15 rows, First /
+  Last from 23 Sep, taps save today's entry (Better / Same / Worse right, Yes→No = Better), the same tap clears, all cleared = the entry
+  goes; the Case became Neurological (`caseFromCc`); the camera starts the take for that movement today; the Checklist opened on the
+  same answers with "last" from 23 Sep. A typed "Bell's palsy" first visit: 4 columns, the "score due" tag. "Facial palsy" as an
+  Also came in for under a Sleep main: rows under it. An earlier visit (1 Nov) wrote 1 Nov, no cameras. Phone 360: the list, no page
+  scroll sideways. tap-audit + style-audit at 1220 and 360: nothing new (the Energy name and the gold group dot were there before).
