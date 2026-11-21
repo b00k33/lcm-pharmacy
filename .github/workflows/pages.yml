@@ -26,10 +26,11 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  # 2026-11-21: build and deploy are two jobs (GitHub's own layout). They were one job, and deploy-pages sometimes asked for the
+  # uploaded artifact before GitHub listed it ("Found 0 artifact(s)", "No artifacts named github-pages"): 4 of 100 publishes between
+  # 2026-11-19 and 11-21 failed that way (each failure emailed her), each fixed by a re-run. A second job starts on a fresh runner
+  # after the upload has finished, which is the gap that race needs. If a run still fails: gh run rerun <id> -R b00k33/lcm-pharmacy
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -99,6 +100,13 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           path: '_site'
+  deploy:
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
