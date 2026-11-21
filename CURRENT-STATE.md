@@ -966,6 +966,13 @@ if never ticked. Either way one toast "Removed · Choline" with Undo. A stopped 
   time left and, on a scored complaint, how far it has come; a small FBR / Ren mark on each ticked row opens that sign's place; Ren pages
   fill from the complaints' and symptoms' Bing twins (derived); Copy for Cliniko adds "Goals: …"; `phCcGoalLines(rec)` for Summary for her.
 
+## Her design profile and the voice audit (2026-11-21, BUILD-NOTES "Her design profile")
+- ABOUT-ME.md "HER DESIGN PROFILE": three headline rules (Exact · Simple · Efficient) and eight under them, each with how it is checked.
+  The personal wording behind them is private (memory), never in this public repo.
+- `.github/scripts/voice-audit.js` (`lcmVoiceAudit({ root })` -> `{ mode, checked, ok, off: [{ kind, what, eg, n }] }`): kinds example · suggest ·
+  hint · tell · long · link. Skips inputs, svg, the Guide's study sentences (its placeholders, links and buttons ARE audited) and anything
+  `data-voice-skip`. A build is done when `off` is empty (her pick), beside the tap, style and title-bar audits.
+
 ## Came in for: the face exam (2026-11-21, her picks; BUILD-NOTES "Came in for, the face exam")
 - A complaint whose words say face (`phFpCcKey`: "main" or "s:<id>"; the Face / nerve tile, Bell's, facial palsy / paralysis /
   nerve / weakness, face droop, Ramsay Hunt; not "facial rejuvenation", not cerebral palsy) gets the face exam under it, after its

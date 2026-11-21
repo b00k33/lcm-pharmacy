@@ -14042,8 +14042,7 @@ calendar, with a gold outline. (A computer already had no card since 2026-11-05:
 
 ## The learning table: a wider picture column and a body picture on each row name (formula pages), 2026-11-11
 
-Her synth22 items 2 and 5: "improve the width of the animation and make this page more learning friendly. im a visual autistic
-learning who memorises images well when the information is organised and makes sense" and "improve animation column width
+Her synth22 items 2 and 5: "improve the width of the animation and make this page more learning friendly" (images stick when the information is organised and makes sense) and "improve animation column width
 throughout the app". Her picks on `mocks/synth22-plan-guide-2026-11-11.html`: B, a wider picture column on the right, each
 picture lined up with its sign; A, a small body picture beside each row name; the same column on a case's table and Compare
 (not built in this step: the next one).
@@ -14110,8 +14109,7 @@ code; it confirmed it had no unsaved work there before this was built.
 
 ## Guide › Cases: no ticks, days with cases, the formula's person, 2026-11-11
 
-Her synth22 items 3 and 4 ("the tick round buttons dont serve a purpose", "improve the design of this page for me. im a
-visual autistic learning who memorises images well when the information is organised and makes sense") and her three picks:
+Her synth22 items 3 and 4 ("the tick round buttons dont serve a purpose", "improve the design of this page for me"; images stick when the information is organised and makes sense) and her three picks:
 ticks **B** (out; a "Compare with" chip on the open case), days **A** (only days with cases + "All days"), case list **A**
 (the formula's person). Tour Cases is the "B33 C4 LCM" session's code; it had confirmed no unsaved work there.
 
@@ -17583,3 +17581,28 @@ Test copy: `lcm-pharmacy-app/_zz-l1.html` (hook `window.__tc`), seeded by `_zz-l
 ## Birthdays table, fix after the first live look (2026-11-21)
 - Found on the live page right after "push live" (build 20261121-222700): the table class `ph-me-bdt` already styled the birthday card title (`display:flex`), so the table collapsed; `.dn` already existed too. The table is now `ph-me-bdtb` and the Status mark `stfin`; names no longer draw in capitals (a global th rule); the page is 1100px wide like Routines' 880px (it was the 560px list width); When 100px, Name 210px.
 - Lesson (also for the next table): grep the whole file for a new class name before using it (`grep -c "ph-me-xyz"`), and look at the page in a real browser, not only the sizes. The first publish (222700) showed the broken table until this fix.
+
+## 2026-11-21: Her design profile and the voice audit (SAVED, not live)
+**Why:** her "audit lcm codes - find any information regarding my personality, embed my personality into the design of the app for
+current and future builds", then "what about things like [...] and i need simplicity and efficiency?". A one-glance picture
+(widget `lcm_her_personality_into_design_map`) and two popup rounds; her picks: the personal wording stays private (Claude's memory),
+this public repo gets rules only; the BUILD-NOTES lines that named a personal trait come out; working style only (her chart does not
+shape the look); the voice audit is added and a build is not done until its list is empty; every app follows the profile; extra rules
+picked: corrections stick (low time) and routines and anchors.
+- **Built:** ABOUT-ME.md "HER DESIGN PROFILE" (Exact · Simple · Efficient + 8 rules, each with its check); the CLAUDE.md pointer and a
+  "Words" line beside Sizes / Look / Top bar; `.github/scripts/voice-audit.js`; a CURRENT-STATE paragraph. Memory
+  `user_personality_design_profile` (private) and a line in the shared folder CLAUDE.md so C22 and C7 read it too.
+- **The audit found, and the build fixed:** one "e.g." placeholder (the Guide's source box: now "Who / where"); the sign-in page's text
+  link "Change database connection" (now a 32px chip button); on the Treatment page "Acupuncture tracking is off for this patient — herbs
+  only." (the sentence went, "Turn on acupuncture" is one chip, `.ph-acu-enable-chip`) and "Recording herbs & response only — points, pulse
+  and tongue are skipped for today." (it repeated the toggle beside it, "✓ Herbs only — no acupuncture today": removed).
+- **Scrubbed from this public repo:** two BUILD-NOTES quotes (synth22 items 2-5, 2026-11-11) that named a personal trait: now her request
+  without the reason. GitHub's history still holds the old copies.
+- **Tested** (pretend patients, the test copy): the audit caught every planted bad case (example, hint, link as an <a> and as an
+  underlined button, long line, suggestion word, how-to line) and let a proper chip and short labels through; it ran clean on 12 main
+  views and 14 profile pages plus the plan / dispense stages at 1220 (before the fixes: 2 findings, both on Treatment), and on three
+  pages at 360; tap-audit on the Treatment page at 1220: the "Turn on acupuncture" text link is gone, 2 older lines left (the Response bar's
+  `span.ph-acu-outcome`: 11.5px text, 27.5px high, round ends); style-audit: empty.
+- **NOT tested:** the sign-in overlay's new button (it shows only when sign-in is needed: not drawn here); every other page and state
+  (patient modals, the Guide's inner pages, Settings pages, the phone's menus); the Response bar's old tap-audit lines are not fixed
+  (not in this ask).

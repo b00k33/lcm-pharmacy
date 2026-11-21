@@ -6,7 +6,7 @@ Also read ABOUT-ME.md before any work — build to this user's preferences.
 - **CURRENT-STATE.md** = what each part of the app is today, by area. Before changing a part, read its section in full.
 - **BUILD-NOTES.md** = the dated build history (one section per build, from 2026-10-10). Before changing a feature, grep it for the feature's function names and read its note. **A new build note goes at the END of BUILD-NOTES.md, never in this file.** When a build changes a standing rule, fix that line here; when it changes what an area is today, fix that area's paragraph in CURRENT-STATE.md; both in the same commit.
 - **STYLE-LCM.md** = the phone type scale (≤480px) only.
-- **ABOUT-ME.md** = how she likes to work.
+- **ABOUT-ME.md** = how she likes to work, and its **HER DESIGN PROFILE** (Exact · Simple · Efficient, her 2026-11-21): read it before designing or mocking. This repo is PUBLIC: nothing about her health, identity, family or chart goes in any file, comment or commit message here.
 DESIGN-CONVENTIONS.md was merged into this file on 2026-10-21; its stub went to the Recycle Bin on 2026-10-27 (git history keeps it).
 **The folder (tidy 2026-10-27):** the root holds the app (index.html, intake.html, chart.html, manifest.json,
 chart.webmanifest, sw.js, icons/, screenshots/, supabase/, foods-au.json, eggs.html, eating-eggs.html, ninety-days-wide.mp4, ninety-days-poster.jpg), these docs, fang-bing-ren-questionnaire.html (kept on purpose, untracked), the September specs the code and memory point to
@@ -2059,6 +2059,7 @@ origin/main:index.html`; don't trust this list's age.
   boxes open and its side list open and folded; `off` is empty, or each line left is on the script's KEEP list with her word
   (TAPPABLE THINGS, "Measured"); then look at the page: nothing squeezed or sitting on top of words.
 - **Look:** run `.github/scripts/style-audit.js` on every page the build touches, at 1220-1280px and at 360px, the page drawn with its panels open: `offSizes`, `sideLines` and `rowAlign` are empty (`rowAlign`: no row's boxes wrap, spill out of their cell, or sit off their column head, her 2026-11-19), and each `offColours` line is on purpose ("One page standard" and "Shaded blocks, four colours", under Fit the screen).
+- **Words:** run `.github/scripts/voice-audit.js` on every page the build touches, at 1220-1280px and at 360px, menus open: `off` is empty (no "e.g.", suggestion words, hints, how-to lines, explaining sentences or text links), or each line left is on its KEEP list with her word (ABOUT-ME.md "HER DESIGN PROFILE"; her 2026-11-21 pick: a build is not done until the list is empty). Text she wrote or a patient's letter takes `data-voice-skip`.
 - **Top bar:** run `.github/scripts/titlebar-audit.js` on every page whose bar the build touches (a new control in a head, a changed head, a new page), at 1220-1280px and at 360px, menus open; `off` is empty ("TOP BAR", under Fit the screen).
 - Write the build's note at the END of BUILD-NOTES.md (her words, her
   picks, where the code lives, what was tested and what was NOT); fix any
