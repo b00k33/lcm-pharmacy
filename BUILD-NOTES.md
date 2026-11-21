@@ -17427,3 +17427,22 @@ two halves IVF | Off · men the same switch · Cycle stays apart · the phone th
   do not; intake.html with `noIvf`: both questions hidden, the missing list has no IVF question, the sent cycle has no `ivfCycles`;
   a reopened link stays hidden; without `noIvf` the form is as before. tap-audit + style-audit at 1220 and 360 on Patient details:
   nothing new (same lists as the build before).
+
+## 2026-11-21: Her own blocks, pictures only (SAVED, not live)
+**Why:** her screenshot of the Appointments week and "mock how the personal blocks is only shown by an image/icon e.g. train
+travel has a train, hair care has a hair with soap etc". Widget `lcm_my_events_icons_only_mock` (A slate block + white picture,
+B pale block + slate picture, C a circle only) with the picture for each of her blocks; two popups; her 8 picks, all the
+recommended one: A · Shoulder Rehab = a person stretching a band · two hair pictures (shower; hair + soap) · Break Fast = bowl ·
+Travel by the word (train; car; bus; plane) · no picture of its own = its group's picture · tap opens its card · the same on the
+phone and the Day view.
+- **Built:** `PH_C22_PICS` + `phC22PicOf`; `phC22Ic` picture first; `phC22LifeHtml` picture only (`.pic`); six new symbols
+  (`i-pk-bowl`, `i-pk-rehab`, `i-pk-shower`, `i-pk-hair`, `i-pk-receipt`, `i-pk-code`); CSS after the done-tick rule.
+- **My calls (told her):** the time and the meal line (planned meal, its ✓) leave the block too, the gutter and the card carry them
+  (done still shows paler); a title starting with an emoji shows that emoji at 18px; the picture's colour stays white or ink by the
+  shade's measured contrast (the palest shades take ink).
+- **Tested** (pretend week like her screenshot, never her data): 27 blocks at 1440, every one a picture, centred (0 / 0), 18px, no
+  words: Break Fast bowl, Gym dumbbell, Payee invoice receipt, Travel train, Dentist (Self-care) sparkle, Shoulder Rehab band, Hair
+  wash shower, Haircare + skincare hair + soap, Code brackets, Drive car, Flight plane, an emoji title its emoji. A tap opens the card
+  (name + the same picture). Phone Day view 360: pictures centred, page 360 wide. tap-audit at 1220 and 360: the picture-only block
+  read as an icon button, so `.ph-c22-life` joins `.ph-appt-block` on the KEEP list; then nothing new. style-audit: the 26 "words
+  400" lines on her blocks are gone; nothing new.

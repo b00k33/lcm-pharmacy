@@ -863,6 +863,12 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   pale (Fitness, Work, Home, Self-care, Together, Meals), a hand-picked colour follows the look; the patients keep their Cliniko
   colours, Me's own pages keep the group colours, birthdays stay coral. Never bring the six group colours back to the calendar
   without her word.
+  **Her own blocks show ONE picture, no words** (her 2026-11-21 "personal blocks only shown by an image/icon", pick A of widget
+  `lcm_my_events_icons_only_mock`): the slate block keeps its shade, one 18px picture in the middle, no name, no time (her mouse
+  resting on it says the name; a tap opens its card); week, day and the phone alike. The picture comes from the words of the title
+  (`PH_C22_PICS`: Travel = train, a drive = car, a flight = plane, bus, Gym = dumbbell, Shoulder Rehab = a person stretching a band,
+  Hair wash = shower, Haircare / skincare = hair and soap, Break Fast = bowl, an invoice = receipt, Code = brackets), else its
+  group's glyph, else the calendar one; a title starting with an emoji shows the emoji. Never bring the words back without her word.
   **One page standard (her 4 picks, 2026-11-18, "the pages within that group look different"):** on a
   computer every list page has a 58px top bar, its content 16px under it at the one left edge, the search a
   280px white box FIRST on the tool row, the filters ONE 32px joined bar (picked = solid teal, count inside),
