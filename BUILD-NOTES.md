@@ -17371,3 +17371,37 @@ four parts; What I found = Tongue, Pulse, Abdomen + Cycle + Pain/MSK + Blood tes
 - **Calls disclosed:** What it means lists agreed + Likely patterns (Possible only when none is Likely); the Findings line leaves the
   cycle out (the page shows the phase); patient words keep the marker's own name ("Ferritin low (12 µg/L)").
 - Pictures (local): `shots/s23-fs-sum-1220.jpg`, `shots/s23-fs-acu-1220.jpg`, `shots/s23-fs-sum-360.jpg`.
+
+## Care Plan: the four parts (synth22 2026-11-21, SAVED, not live until her "push live")
+
+Her words: "care plan needs to use the profiles collected info to prefill and alow me to more easily design the plan", "care plans most
+important aspects: show patient complaint and goals / show treatment selections / treatment duration nad frequency", "and review date".
+Mock A of widget `lcm_synth22_careplan_summary_findings_schedule_mocks`; her picks 5–8 (all the recommended one): the four parts on top,
+the rest folded under one bar; Treatments pre-ticked from the visit; one length + one rate; review 4 weeks in, shown when due.
+
+**Built** (patch `/tmp/b/s23-cp.pl`, on session-a ded0858e):
+- `phTp4Html` / `phTp4Refresh` / `phTp4Write` (the card, repainted in place; writes mutate the plan and `savePharmacy()`, as
+  `phTpPlanWrite` does; a "Saved" flash). Handlers: `data-tp4-mod`, `data-tp4-len`, `data-tp4-lenx` (Other ▾), `data-tp4-rate`,
+  `data-tp4-rv` (date), `data-tp4-rvd` (Reviewed), `data-tp4-fold`; a capture handler on `data-tp4-cc` sets `phCxEd` and the steps
+  table's step (`phTvStep` "cc") so the Came in for page opens on that row's details (then `data-flow-go="today"` moves the page).
+- `phTp4Read` (start = `plan.createdDate`; length / visits / end from `phTpSessionCells` until she picks, the length rounded to the nearest
+  of the four; rate from the live phase's `phTpRhKeyOf`; review default start + 28 days, or the end when sooner; `due` = active, not
+  reviewed, review ≤ today), `phTp4ModsAuto`, `phTpKeyFour`, `phTp4RvApptId` + `phApptRvTxt` (memo keyed on `phDataRev` + the day).
+- Appointments: "Review" as the block's `.ivf` tag and the list row's `.ph-appt-preg` tag (no new colour). Visit summary card: chip
+  "Review due <date>" (`wn`), opens the Care Plan.
+- CSS block after `.ph-cx-gto i`: `.ph-tp4*`; the bars are the app's wrapping joined bar (`.ph-tng2-seg.wrap` + `.ph-tng2-wr`), segments 31px
+  so the bar is 32; the computer layout in `@media (min-width: 641px)` (the phone default = the label over its part), so no rule outside
+  PHONE REDESIGN.
+
+**Tested** (test copy, a made-up patient "Zz Plan Four", Perimenopause course, created 20 Oct, Came in for Periods: Irregular 3 yr + Stress,
+a main goal; removed after): pre-fill read Acupuncture ticked, 3 mo, "6 visits · to 2 Jan", review 17 Nov due; Cupping on → `mods {cup:true}`;
+6 wk + 2× a week → "12 visits · to 1 Dec"; Acupuncture off then on → no override left; Other ▾ 2 months → `len {n:2,u:"m"}`, the select
+lit; review date 25 Nov → not due; set back to 20 Nov → due, Appointments' 25 Nov booking "Review" (2 Dec none), the visit summary "Review
+due 20 Nov"; Reviewed → "Reviewed 21 Nov", the tag and chip gone; the fold opens (the grid there) and closes; a complaint tap opened Came in
+for with Periods' details (Goal fields) open. tap-audit + style-audit on the card at 1220 and 360: clean; no sideways scroll at 360.
+**Known:** in a narrow week column the "Review" tag clips like the IVF / Pregnant tags beside it.
+**Disclosed calls:** the rate keys are the Session grid's own ("1w" · "2w" · "fn" · "mo", not "2wk" / "1m"); a pick here never rewrites the
+grid's phases (the grid is LOCKED), so the four parts' length / rate are the plan's headline and the grid keeps its own; the derived rate is
+blank when the phase's rhythm is not one of the four (e.g. a range); Diet and Supplements are never pre-ticked (nothing in the visit says
+them); the review line on Today's visit is a chip on the visit summary card; a goal is edited on Came in for (the tap goes there).
+Checked: Care Plan page (four parts, fold), Came in for (details open from the tap), Appointments grid, the visit summary card.
