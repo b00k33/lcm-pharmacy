@@ -274,8 +274,12 @@ dropdowns: A–Z. A new list is A–Z from its first build.
   `phTripGo`, the profile search `phPs*`, the head's "/ Page" and the phone's ‹ › all read it unchanged). The model is `presNavBuild` (it only
   regroups `presFlowSteps`' answer; `presFlowSteps` itself is unchanged). A **jump search** (`#presJs`, 32px, under the name) lists the parts of THIS
   patient by name or word (pulse · goals · tongue · herbs), A–Z, one tap opens that step + part, Esc clears; the content search in the head (phPs*)
-  stays. The Fang Bing Ren page's own three-way switch hides (`.ph-fbr-switch`): the Diagnosis bar says the same. Her own record keeps its old rail
-  until stage 3 (My day · Treat myself · Life · My file). Never put a page in two places; never add a step without her word.
+  stays. The Fang Bing Ren page's own three-way switch hides (`.ph-fbr-switch`): the Diagnosis bar says the same. Her own record uses the SAME rail rows, bar, jump search and Next dot (stage 3, her 2026-11-21 pick 3): **four places, ONE page each** (`presNavBuildMe`):
+  **My day** (Week · Meals · Fitness · Habits · Routines; opens on Meals) · **Check myself** (Cycle · Tongue · Pulse · Abdomen · Fang Bing Ren · Diagnosis · Herbs;
+  Tongue / Pulse / Abdomen tick when charted today; Next walks Abdomen → Fang Bing Ren → Diagnosis → Herbs) · **Life** (Work · Money · Birthdays · Code · Numbers & Stars · a
+  trip each; Money, Code and a trip she has not used are quiet chips, never a "More" row) · **My file** (Details · Medical history · Ren · Log · Tests · Medicines · Photos ·
+  Messages · Appointments · IVF history). Rail rows are icon rows with no number (they are places, not a sequence); the old "Treat myself" 1-2-3 walk, the group
+  captions and the fold rows are gone. Same pages, same ids, same old links. Never put a page in two places; never add a step without her word.
 - **Timeline** (her picks 2026-10-13 and 2026-10-16): a part of Treat (after Care Plan), and in the Next walk, only on a Pregnancy / Natural fertility / IVF plan; no rail row, no "⋯ More" row for a patient.
 - Other pages (Photos, Appointments, Messages, IVF history, Log, Checklist)
   are unchanged and sit outside this law. (Visit checks and the plan's
