@@ -1983,6 +1983,7 @@ Fitness + Exercises), the rest in Life.
   first empty price with Show $ on (`data-hub-prices`). **One note:** on her record the note under a day IS Today's visit's note
   for that day (her main complaint's, 140 characters, `phCxTypeSave`); an older Week note (`d.jn`) still reads where the record
   has none.
+- **Priorities** (top of the page; her 2026-11-21 picks "Top of Week" and "Personal · Social · Work"): three tiles, Personal · Social · Work, each a tick (a 32px circle) and a one-line field (80 characters). One set a week, kept under the week's Monday (earlier weeks keep theirs). **On this device only** (her "keep private data local"): `localStorage` key `daybook-ph-pri` = `{ "<Monday>": { P | S | W: { t, d } } }`, never in the Me row, never synced, never in the cloud. Code: "PRIORITIES, top of Week" (`phPri*`, `.ph-hub-pri`).
 - **Work**: the month: hours per clinic, the Acupreg invoice table, work + travel. Hours come from BOOKINGS, never stored: first
   patient's start → last patient's end per clinic per day (this login's that are hers + the other clinic's). Each calendar day
   heading has a hover title ("CBD 8 h · 3 patients").
