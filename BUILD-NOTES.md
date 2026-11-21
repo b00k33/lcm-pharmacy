@@ -17145,3 +17145,25 @@ open nikki in acupreg". The card offered to switch the whole app to the Acupreg 
 - **Not done (her live data not read):** why the Saturday booking sits on Acupreg's side; that login's bookings are left as they are.
 - **Tested** (test copy, pretend Acupreg list): Sat 12:30 "Test Nikki" card = Profile, tap = her file here (presOpenId), no switch; Sat
   "Test Nobody" (not in this login) = no button; Fri 10:00 = Open in Acupreg, switches. Profile 68 x 32.
+
+## 2026-11-21: Cycle page space saving (SAVED, not live)
+**Why:** her screenshot of the Cycle page (Calendar tab, CD 15 luteal) and "improve this view, make it more space saving". Measured on
+a pretend patient at 1440x915: the left half ran 783px (head 97, Period 200, Between periods 231, PMS & mood + Note 221, Fang Bing Ren
+64), the right 622, so the page scrolled. Two widgets (`lcm_cycle_page_space_saving_options`, then `..._measured` after LH beside Other
+and Discharge on one row measured too wide: 564 and 447px for a 421px bar) and two popups; her 8 picks, all the recommended one:
+C (both) · fold Period on a day with no bleeding · one head line, CD said once · PMS one wrapped field · Discharge keeps its words ·
+Note + Fang Bing Ren under the calendar · 44px days · the phone the same.
+- **Built:** `phCpHeadHtml(rec, name, inline)` (inline = the dates in `.cp-hdb`, no big CD; its own fill key "si|");
+  `phCycDayHeadHtml(.., extra)`; in the flat card `cpPage`: `perFold` + `grp(title, head, body, fold)` (the title is the fold button,
+  folded = the title alone, `.shut`), the PMS sets as one `.seg.ph-cs-pmsf`, `opts.foot` = Note + trail; the click handler
+  `[data-cyc-perfold]`; `phCsFit` takes [2,3,4,6] rows with pictures for `.ph-cs-pmsf`; CSS block after the Cycle page's reduced-motion
+  line; `.cp-h2 .ff .ffgrid .c` 54 -> 44px (5px 6px padding). tap-audit.js KEEP: `.ph-cs-gfold` (a fold head) and `.ph-cp .ffgrid .c`
+  (calendar days; the phone's 44px days were already flagged before this build).
+- **My calls (told her):** the fold opens on its title (the whole line, chevron at its end) and a second tap folds it again; a day
+  with no cycle yet (before her first logged period) keeps Period open; the dates on the head line are 13px (the line's own size).
+- **Tested** (pretend patient "Test Cycle", CD 15 luteal): 1440: day card 783 -> 461px (619 with Period open), the tallest half
+  783 -> 648, the page no longer scrolls; head on one line; PMS 3 rows of 4 with pictures. Fold: tap opens (rows rise once), tap folds;
+  Spotting logged keeps it open (no fold); 8 Nov (CD 2, flow logged) and 10 Nov (CD 4, nothing logged) open, no fold; 5 Sep (before
+  her first period) open; a Note on 8 Nov saved to that day from under the month. 1220: head wraps to two lines, PMS 4 rows of 3. 360:
+  day card 1147 -> 811px, PMS 6 rows of 2, page 360 wide. Today's visit card unchanged (Note, trail, three PMS bars). tap-audit +
+  style-audit at 1220 and 360, Period folded and open: nothing new (the 44px days and the fold head on the KEEP list).
