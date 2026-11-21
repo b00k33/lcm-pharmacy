@@ -454,6 +454,23 @@ left empty; the pill never says plan ("Pain ▾", "Type ▾" when empty).
 them. (The Oct 10 tab order put it before, so it opened empty on a first
 visit. That is fixed by this law.)
 
+**The Care Plan opens on its four parts (her synth22 2026-11-21: "care plans most important aspects: show patient complaint and goals /
+show treatment selections / treatment duration nad frequency" + "and review date", "care plan needs to use the profiles collected info to
+prefill"; her picks, all the recommended one; memory project_lcm_synth22_careplan_2026_11_21):** one white card under the band
+(`phTp4Html`), a capitals label left of each part (over it on a phone): **1 Complaints & goals**, the Came in for rows read live (the main
+first, how long, the latest score, its ◎ goal; three rows then "+ n"; a tap opens that row's details on Came in for, where the goal is set:
+never a second goal store); **2 Treatments**, ONE joined bar A–Z (Acupuncture · Cupping · Diet · Electro · Gua sha · Herbs · Moxa ·
+Supplements), pre-ticked on read from the visit (`phTp4ModsAuto`: Acupuncture from the visit kind, Herbs once a formula, a point method or a
+visit / phase therapy on this plan), her taps saved only as overrides (`plan.mods`); **3 Duration & frequency**, one length bar (4 wk · 6 wk ·
+3 mo · 6 mo · Other ▾) and one rate bar (1× a week · 2× a week · Fortnightly · Monthly), read from the course's dated squares until she
+picks (`plan.len`, `plan.rate` = the grid's own rhythm keys); "n visits · to <date>" worked out; a second tap on her pick goes back to the
+course's; **4 Review**, 4 weeks after the start (or the end when sooner) until she sets a date (`plan.reviewAt`); once due, a red-lined date,
+**Reviewed** (`plan.reviewedAt`), a "Review" tag on the first booking on or after it (Appointments grid + list) and "Review due <date>" on the
+visit summary card (`phVsumHtml`). Findings · Diagnosis · Watch · Session grid sit under ONE fold bar, unchanged inside (the grid stays
+LOCKED), folded by default, remembered on the device (`lcm-tp4-rest`). Her picks here never rewrite the Session grid's phases. The one read
+for other pages is `phTpKeyFour(name, plan?)` (plan defaults to `phTpShownPlan`). Never put a part of the four behind the fold, or the fold
+on top, without her word.
+
 **One "what I found" read, and Summary for her follows the Care Plan (her synth22 batch 2, 2026-11-21: "need findings of tongue
 abdomen and all diagnostics used", "summary for her is the same as treatment plan"; her picks 1–4, all the recommended one; memory
 project_lcm_synth22_careplan_2026_11_21):** `phFindingsRead(rec, name, mode, { parts })` is the ONE read of today's findings: Tongue,

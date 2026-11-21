@@ -241,12 +241,16 @@ pattern is agreed, `phTpStartAnyway`). Start (`phTpDoorStart` → `presTpInlineC
 condition: a Main ★ row whose type no running plan covers (`phTpOpenConcerns`, its type read from its words) gets its own door,
 its course and its own How long (`phTpCreateSince`); "+ New" lists those doors over the course cards.
 
-**The page** (`presTpPlanTabBodyHtml`) = a band over the left column (Findings, then one card: the scans line, the pain map small,
-Also treating; `phTpCcSideHtml`) | the plan (side by side from 1280px; stacked below, that card last) [Care Plan = the findings
-beside the plan] [Care Plan page tidied]. Band: title (tap = rename), stage pill, **Course · <template> ▾** (course picker
-`phTpProtocolPickHtml`; also "⇄ Change course" in ⋯), ⋯ (short, More ▸ fold; `phTpPlanMenuHtml` = the Care Plan, Treatment and
-Dispense menus) [Care Plan page "Case | Course"]. Every shown title (band, patient header, plan tabs, appointment pills / lists,
-Today's visit, Treatment, print record) = `phTpTitleShown(name, plan)`: hers once renamed, else the main concern's words (on the
+**The page** (`presTpPlanTabBodyHtml`) = the band (title, stage pill, Course ▾, ⋯), the cycle bar, then **the four parts** (since 2026-11-21,
+her synth22: `phTp4Html`, one white card: Complaints & goals · Treatments · Duration & frequency · Review, CLAUDE.md "The Care Plan opens on
+its four parts"), then one fold bar "Findings · Diagnosis · Watch · Session grid ▾" (`data-tp4-rest`, folded by default, `lcm-tp4-rest` on
+the device) over what the page was before: the left column (Findings, then one card: the scans line, the pain map small, Also treating;
+`phTpCcSideHtml`) | the plan (side by side from 1280px; stacked below, that card last). The four parts' data: `plan.mods` ({key: true|false},
+overrides on the derived ticks), `plan.len` ({n, u:"w"|"m"}), `plan.rate` ("1w"|"2w"|"fn"|"mo"), `plan.reviewAt`, `plan.reviewedAt` (date
+keys); everything else derived on read (`phTp4Read`, `phTp4ModsAuto`); `phTpKeyFour` = the plain-words read (goals, treatments, length,
+rate, visits, end, review, due). The review shows on Appointments ("Review" on the first booking on or after it, `phApptRvTxt`, worked out
+once per data change) and on the visit summary card ("Review due"). Every shown title (band, patient header, plan tabs, appointment pills /
+lists, Today's visit, Treatment, print record) = `phTpTitleShown(name, plan)`: hers once renamed, else the main concern's words (on the
 plan treating it, or one with no course), else the course name; `plan.title` is never rewritten.
 **Findings**: Came in for, Ren, Tongue, Pulse, Abdomen, Cycle, Ask her, Blood tests, History, Musculoskeletal, each via the app's
 own renderer; purple dot = changed since last visit; tap = its drawer, + Watch / + Aim, lines to the diagnosis it feeds. **Blood tests draws each marker as its small low–high bar with the dot** (her 2026-10-31 pick, idea 5: `phBldMiniHtml`, the flagged markers else the first three; the drawer keeps the words).
