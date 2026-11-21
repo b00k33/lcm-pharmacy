@@ -17111,7 +17111,7 @@ hover) and added again.
 - **Tested** (sandbox, made-up patient, 1024 wide): tap a row → filled form, Save → the same surgery changed (What and When), the
   list order kept; ✎ beside × (no overlap). tap-audit / style-audit on the section: none.
 
-## 2026-11-21: Symptom groups on Came in for (SAVED, not live)
+## 2026-11-21: Symptom groups on Came in for (LIVE in build 20261121-120700, her "push live")
 **Why:** her screenshot of Came in for (Bloating main, Lower Back, Signs to check · 32 by area) and "i want to be able to group some
 symptoms together e.g. bloating is the main complaint but secondary incldues gas constipation etc etc". Widget
 `lcm_came_in_for_group_symptoms_options` + two popups, her 8 picks (all the recommended one): see what belongs together, track each,
