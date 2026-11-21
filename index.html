@@ -4883,6 +4883,14 @@
   #pharmacyPage .ph-hub-tdin input { width: 100%; }
   #pharmacyPage .ph-fast-card > .ph-hub-td + .ph-hub-td { margin-top: 4px; }
   #pharmacyPage .ph-fast-card > .ph-hub-tdin { margin-top: 8px; }
+  /* her Priorities, top of Week (her 2026-11-21 pick; kept on this device only): three tiles, each a tick box, the area in capitals and the field */
+  #pharmacyPage .ph-hub-pri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  #pharmacyPage .ph-hub-prc { display: grid; grid-template-columns: 32px 64px minmax(0, 1fr); gap: 8px; align-items: center; background: var(--ph-paper); border-radius: 10px; padding: 8px 10px; min-width: 0; }
+  #pharmacyPage .ph-hub-prc .bx { width: 32px; height: 32px; padding: 0; border-radius: 50%; border: 1px solid var(--ph-line); background: var(--ph-white); color: #fff; display: grid; place-items: center; cursor: pointer; }   /* icon alone = a 32px circle (THE LOOK) */
+  #pharmacyPage .ph-hub-prc.done .bx { background: var(--ph-herb); border-color: var(--ph-herb); }
+  #pharmacyPage .ph-hub-prc .bx .ph-hab-ck { width: 16px; height: 16px; }
+  #pharmacyPage .ph-hub-prc input { height: 32px; width: 100%; min-width: 0; box-sizing: border-box; border: 0; border-radius: 6px; --field-radius: 6px; --field-radius-sm: 6px; background: var(--ph-herb-tint); padding: 0 10px; color: var(--ph-ink); font: 400 var(--fs-13) var(--font-body, inherit); }
+  #pharmacyPage .ph-hub-prc.done input { text-decoration: line-through; color: var(--ph-faint); }
   #pharmacyPage .ph-hub-pill { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; font-size: var(--fs-11-5); font-weight: 600; background: var(--ph-herb-tint); color: var(--ph-ink); }
   #pharmacyPage .ph-hub-pill.due { background: var(--ph-gold-tint); color: var(--ph-ink); }
   #pharmacyPage .ph-hub-pill.ok { background: var(--ph-good-tint); color: var(--ph-ink); }
@@ -30070,6 +30078,8 @@
     /* ---- the Mine hub on a phone (MINE HUB): two stats a row, the week table scrolls inside itself, the journal stacks ---- */
     #pharmacyPage .ph-hub-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #pharmacyPage .ph-hub-stats b { font-size: var(--fs-20); }
+    #pharmacyPage .ph-hub-pri { grid-template-columns: minmax(0, 1fr); }
+    #pharmacyPage .ph-hub-prc input { font-size: 16px; }
     #pharmacyPage .ph-hub-tbl.wk { min-width: 760px; }
     #pharmacyPage .ph-hub-cols > .ph-fast-tw { overflow-x: auto; }
     #pharmacyPage .ph-hub-tbl.code { min-width: 560px; }
@@ -58496,6 +58506,35 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       ${list.length ? list.join("") : `<div class="ph-fast-empty">No to-dos</div>`}
       ${phHubTdOn || !list.length ? `<label class="ph-fast-fld ph-hub-tdin">+<input type="text" data-hub-tdnew="1" aria-label="New to-do" autocomplete="off" enterkeyhint="done"></label>` : `<button type="button" class="ph-hub-add" data-hub-tdadd="1">+ To-do</button>`}</aside>`;
   }
+  // PRIORITIES, top of Week (her 2026-11-21 picks: "Top of Week", Personal · Social · Work, and "keep private data local"): three a
+  // week, a line each with its tick. Kept on this device only ("daybook-ph-pri": { "<the week's Monday>": { P | S | W: { t, d } } }),
+  // never in the Me row, so it never syncs and no other login reads it. A week's own, so last week's stay as they were
+  const PH_PRI_KEY = "daybook-ph-pri", PH_PRI_AREAS = [["P", "Personal"], ["S", "Social"], ["W", "Work"]];
+  function phPriAll() { try { const o = JSON.parse(localStorage.getItem(PH_PRI_KEY) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; } }
+  function phPriSet(wk, a, f, v) {
+    try {
+      const all = phPriAll(), w = Object.assign({}, all[wk] || {}), c = Object.assign({ t: "", d: 0 }, w[a] || {});
+      c[f] = v; w[a] = c; all[wk] = w;
+      localStorage.setItem(PH_PRI_KEY, JSON.stringify(all));
+      return true;
+    } catch (e) { phShowSaveError("Couldn't save that on this device. Nothing changed."); return false; }
+  }
+  function phPriHtml(W) {
+    const wk = W.keys[0], w = phPriAll()[wk] || {};
+    return `<div class="ph-hub-pri" data-pri-wk="${wk}" role="group" aria-label="Priorities">${PH_PRI_AREAS.map(([a, l]) => {
+      const c = w[a] || {}, done = !!c.d;
+      return `<div class="ph-hub-prc${done ? " done" : ""}"><button type="button" class="bx" data-pri-tick="${a}" aria-pressed="${done}" aria-label="${done ? "Not done" : "Done"}: ${l}">${done ? phHabCk() : ""}</button><span class="ph-hub-lab">${l}</span><input type="text" data-pri-in="${a}" maxlength="80" value="${esc(c.t || "")}" aria-label="${l} priority" autocomplete="off" enterkeyhint="done"></div>`;
+    }).join("")}</div>`;
+  }
+  function phPriTick(a) {
+    const h = document.querySelector("#pharmacyPage [data-pri-wk]"); if (!h) return;
+    const wk = h.dataset.priWk, c = phPriAll()[wk] && phPriAll()[wk][a];
+    if (phPriSet(wk, a, "d", c && c.d ? 0 : 1)) phHubRepaint();
+  }
+  function phPriType(inp) {
+    const h = inp.closest("[data-pri-wk]"); if (!h) return;
+    phPriSet(h.dataset.priWk, inp.dataset.priIn, "t", inp.value.trim().slice(0, 80));
+  }
   function phHubWeekHtml() {
     const W = phHubWeek(phHubWk), tk = keyOf(TODAY), aim = phFastAim(), stg = phStpGoal(), openK = phHubDayOpen === null ? (W.keys.includes(tk) ? tk : "") : phHubDayOpen;
     // her picks (2026-10-29, the Me audit): a column with nothing this week folds into "+ n more" (Income until a price, Steps until
@@ -58522,6 +58561,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const miss = W.inc.miss.length ? `<button type="button" class="ph-hub-hint" data-hub-go="money" data-hub-prices="1">${W.inc.miss.length} visit type${W.inc.miss.length === 1 ? "" : "s"} without a price · Prices</button>` : "";
     return `<div class="ph-hub" data-hub-host="1">
       <div class="ph-hub-bar">${phHubWkBar()}${nFold ? `<button type="button" class="ph-hub-chip" data-hub-cols="1" aria-pressed="${phHubColsOpen}" title="${esc(foldLbl)}">${phHubColsOpen ? "−" : "+"} ${nFold} more</button>` : ""}${phHubShowBtn()}</div>
+      ${phPriHtml(W)}
       <div class="ph-hub-stats">
         ${phHubStat(phHubWk ? phHubH(W.m) : `${phHubH(W.mDone).replace(" h", "")} / ${phHubH(W.m)}`, phHubWk ? "hours" : "hours · done / booked", W.m ? W.mDone / W.m * 100 : 0)}
         ${phHubStat(W.n, "patients")}
@@ -62518,6 +62558,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     else if ((el = T.closest("[data-hub-go]"))) { const pr = !!el.dataset.hubPrices; if (pr) phHubShow = true; presAssessTab = "hub-" + el.dataset.hubGo; phHubRepaint(); if (pr) phHubFocus("tr.nop [data-hub-price]"); }   // the banner lands on the first price to type
     else if ((el = T.closest("[data-hub-td]"))) phHubTodoTick(el.dataset.hubTd);
     else if (T.closest("[data-hub-tdadd]")) { phHubTdOn = true; phHubRepaint(); phHubFocus("[data-hub-tdnew]"); }
+    else if ((el = T.closest("[data-pri-tick]"))) phPriTick(el.dataset.priTick);
     else if ((el = T.closest("[data-hub-due]"))) { const key = el.dataset.hubDue, y = (phMeD().dueT || {})[key], was = !!(y && !y.del && y.at); phHubWrite((d, now) => { d.dueT[key] = was ? { id: key, del: now, up: now } : { id: key, at: now, up: now }; }); }
     else if ((el = T.closest("[data-hub-tax]"))) { const id = el.dataset.hubTax, y0 = phMeD().taxp[id]; phHubTdFx = y0 && !y0.in && !phTpReduceMotion() ? id : ""; phHubWrite((d, now) => { const y = d.taxp[id]; if (!y) return; if (y.in) delete y.in; else y.in = now; y.up = now; }); phHubTdFx = ""; }
     else if ((el = T.closest("[data-hub-taxdel]"))) { const x = phMeD().taxp[el.dataset.hubTaxdel]; if (x) phHubDel("taxp", x.id, x.t); }
@@ -62550,6 +62591,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     else if (T.matches("[data-hub-biz]")) { const f = T.dataset.hubBiz, v = T.value.trim(); phHubWrite((d, now) => { const b = Object.assign({ id: "biz" }, d.hubset.biz || {}); b[f] = v; b.up = now; d.hubset.biz = b; }); }
     else if (T.matches("[data-hub-wt]")) { const name = phMeProfile(); if (name && phBodyWrite(name, "w", T.value)) { phHubRepaint(); presSavedToast(`✓ ${T.value} kg`); } }
     else if (T.matches("[data-hub-jn]")) phHubJnSave(T.dataset.hubJn, T.value);
+    else if (T.matches("[data-pri-in]")) phPriType(T);
     else if (T.matches("[data-hl-f]")) { const id = T.dataset.hlId, f = T.dataset.hlF, v = T.value; phHlKeep(() => phHlSet(id, f, v)); }
     else if (T.matches("[data-hl-lim]")) { const k = T.dataset.hlLim, v = T.value; phHlKeep(() => phHlLimSet(k, v)); }
   });
@@ -62568,6 +62610,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     else if (e.key === "Enter" && T.matches("[data-hl-other]")) { e.preventDefault(); const t = T.value.trim(); if (t) phHlLog("other", t); }
     else if (e.key === "Enter" && T.matches("[data-hl-f], [data-hl-lim]")) { e.preventDefault(); T.blur(); }
     else if (e.key === "Enter" && T.matches("[data-hub-tdnew]")) { e.preventDefault(); phHubTodoAdd(T.value); }
+    else if (e.key === "Enter" && T.matches("[data-pri-in]")) { e.preventDefault(); T.blur(); }
     else if (e.key === "Enter" && T.matches("[data-hub-taxnew]")) { e.preventDefault(); const t = T.value.trim(); if (t) { const id = uid(); phHubWrite((d, now) => { d.taxp[id] = { id, t: t.slice(0, 160), at: now, up: now }; }); phHubFocus("[data-hub-taxnew]"); } }
     else if (e.key === "Enter" && (r = T.closest("[data-hub-billrow]"))) { e.preventDefault(); phHubBillSave(r); }
     else if (e.key === "Enter" && (r = T.closest("[data-hub-planrow]"))) { e.preventDefault(); phHubPlanSave(r); }
