@@ -17146,7 +17146,7 @@ open nikki in acupreg". The card offered to switch the whole app to the Acupreg 
 - **Tested** (test copy, pretend Acupreg list): Sat 12:30 "Test Nikki" card = Profile, tap = her file here (presOpenId), no switch; Sat
   "Test Nobody" (not in this login) = no button; Fri 10:00 = Open in Acupreg, switches. Profile 68 x 32.
 
-## 2026-11-21: Cycle page space saving (SAVED, not live)
+## 2026-11-21: Cycle page space saving (LIVE in build 20261121-173900, her "push live")
 **Why:** her screenshot of the Cycle page (Calendar tab, CD 15 luteal) and "improve this view, make it more space saving". Measured on
 a pretend patient at 1440x915: the left half ran 783px (head 97, Period 200, Between periods 231, PMS & mood + Note 221, Fang Bing Ren
 64), the right 622, so the page scrolled. Two widgets (`lcm_cycle_page_space_saving_options`, then `..._measured` after LH beside Other
