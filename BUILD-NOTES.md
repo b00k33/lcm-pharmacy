@@ -17428,7 +17428,7 @@ two halves IVF | Off · men the same switch · Cycle stays apart · the phone th
   a reopened link stays hidden; without `noIvf` the form is as before. tap-audit + style-audit at 1220 and 360 on Patient details:
   nothing new (same lists as the build before).
 
-## 2026-11-21: Her own blocks, pictures only (SAVED, not live)
+## 2026-11-21: Her own blocks, pictures only (LIVE in build 20261121-203000, her "push live", with the simpler navigation stage 1)
 **Why:** her screenshot of the Appointments week and "mock how the personal blocks is only shown by an image/icon e.g. train
 travel has a train, hair care has a hair with soap etc". Widget `lcm_my_events_icons_only_mock` (A slate block + white picture,
 B pale block + slate picture, C a circle only) with the picture for each of her blocks; two popups; her 8 picks, all the
