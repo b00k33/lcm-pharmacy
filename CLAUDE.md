@@ -126,7 +126,7 @@ while four table columns squeezed the words under them to 8px). A control that s
 4. **Field = a value you edit.** Faint tint (`--ph-herb-tint`), 6px corners, no outline. A number, supplier or note you tap to edit is a field, never bare text (Inventory stock, low-at, notes).
 5. **Row = open something.** The whole row is the target, on a faint surface. A herb name or code in a list stays plain text inside its row (Dashboard, Inventory, Refill, To order).
 
-**Menus** (sidebar, patient rail, tabs): each item a full-width row on a faint surface with its icon or number; the open item is filled. **The patient rail is the teal band** (her picks 2026-11-02, rail-mock2 "C"; CURRENT-STATE "The teal rail"; crimson / navy on a Gynae / MSK Case, her same-day word): an icon on every page row, the open row = the light tint, no bar (one lit row: its step stays plain), number circles on the steps (one line each), groups fold on a ▾ head, the ‹ at its foot folds it to 56px icons. **On a computer a patient has no top row** (her 2026-11-17 picks, CURRENT-STATE "No top row on a computer"): the name, age · cycle day, red flag, saved alert and Book appt. · search · photo head the rail; Next up is a gold dot on its row; never a band, a This visit box or a Next up card back. **On a phone it is a drawer from the left** (her picks 2026-11-02, phone-rail mock A): one 44px bar at the foot of the head, "group · page ▾" + ‹ ›, opens it; never a strip of steps or a boxed tab row back.
+**Menus** (sidebar, patient rail, tabs): each item a full-width row on a faint surface with its icon or number; the open item is filled. **The patient rail is the teal band** (her picks 2026-11-02, rail-mock2 "C"; CURRENT-STATE "The teal rail"; crimson / navy on a Gynae / MSK Case, her same-day word): number circles on the steps (one line each; File has its icon), the open step = the light tint, a step's parts are a joined bar at the top of its page (a patient); her own record keeps an icon on every page row and groups that fold on a ▾ head until stage 3; the ‹ at its foot folds the rail to 56px icons. **On a computer a patient has no top row** (her 2026-11-17 picks, CURRENT-STATE "No top row on a computer"): the name, age · cycle day, red flag, saved alert and Book appt. · search · photo head the rail; Next up is a gold dot on its row; never a band, a This visit box or a Next up card back. **On a phone it is a drawer from the left** (her picks 2026-11-02, phone-rail mock A): one 44px bar at the foot of the head, "group · page ▾" + ‹ ›, opens it; never a strip of steps or a boxed tab row back.
 **0–10 scores:** one joined bar of 11 cells, one tap. Never 11 separate chips.
 **Chip rows for one category join into a bar** (her 2026-10-15 pick, the Tongue photo viewer chip audit; **confirmed as the standard 2026-10-16** — screenshot of the Abdomen exam's live Tension row, her words "i like this chip design. make this the standard for grouping chips"): chips from ONE category — whether she picks one or ticks several — sit edge to edge in a single pill-shaped segmented bar, no gaps, a 1px `--ph-line` divider between segments, the bar rounded only at its two ends (not each chip). Picked segment(s) fill solid `--ph-herb` (or the page's case colour, where one applies — Tension's screenshot was a gynae-case crimson page), white text, same as a lone chip. Where an option has its own meaningful colour (a `[key, label, hex]` triple — Tension's soft/medium/hard, Colour, Coat colour), draw it as a small round dot (`<i style="background:hex">`) inside the segment, same position picked or not — keep the dot, don't simplify it away. A gap only separates two DIFFERENT categories sharing one row (e.g. Coat's Thickness group vs its Colour group) — it never splits one category into loose chips with air between them. Applies wherever a chip row is really one pick/tick set (the Tongue analysis rows: Colour, Shape, Coat, Under, Marks; the "Which shot" row; the Abdomen Tension row) — not to a row of unrelated actions (footer buttons, Same as / Clear).
 **NEVER:** underlined, dotted, arrowed OR PLAIN COLOURED text that taps; a tap target the same colour as the words beside it; a new chip size, corner or font size; a sentence under a control that explains it. A trailing › / → stays only where audit step 5 kept it (flow-wide "Next: ..." buttons, earlier / later pair, arrow-only buttons, data arrows).
@@ -255,13 +255,28 @@ dropdowns: A–Z. A new list is A–Z from its first build.
   Tongue, Pulse and Abdomen pages beside it (her 2026-11-03 "tongue and pulse tab?" + "Add Abdomen too"; no Care Plan needed).
 - **The Review step is retired** — folded into Today's visit (strip + pain
   map + pain intake). Nothing lost, only repeats removed.
-- **The rail since 2026-11-18 (her "redesign this based on workflow ... too disorganised", 8 picks + full mock, "Yes, build it"):**
-  ONE numbered visit, each step's pages under it (1 Better / worse · 2 Exam: Ask her · Cycle · Tongue · Pulse · Abdomen · 3 Fang Bing Ren:
-  Similar cases · Diagnosis · 4 Treatment · 5 Herbs; **the Care Plan is no step since 2026-11-18**, see "A Care Plan is an option"),
-  then "Her file ›" and "Records ›" closed at the foot; a first
-  visit has Her file open on top and no Better / worse. No Fertility & cycle group, no More row (this replaces the Timeline / More lines
-  below for the RAIL only; the pages are unchanged). Her own record: My day · Treat myself · Life · My file. CURRENT-STATE "The rail by workflow".
-- **Timeline** (her picks 2026-10-13 and 2026-10-16): a rail item right after Fang Bing Ren, before Treatment Care Plan, and in the Next walk, only on a Pregnancy / Natural fertility / IVF plan (see "Timeline promoted to its own rail step" in BUILD-NOTES.md). **Since 2026-10-29 (her audit pick) it and Patterns · Diagnosis sit folded under one "⋯ More" row there** (`presFlowMoreOpen`): open on a tap or while one of them is the page, closed when she leaves.
+- **The patient rail since 2026-11-21 (her "the system looks so complicated. can you make it more simple and easy to navigate and organise? less
+  tabs, things in one place", the mock `lcm_simpler_navigation_direction_mock`, every pick the recommended one; memory
+  project_lcm_simpler_navigation_2026_11_21, stage 1 of 4; BUILD-NOTES "Simpler navigation, stage 1"):** a patient's rail is **4 numbered
+  steps and File ›**: 1 Came in for (a return visit: Better / worse) · 2 Exam · 3 Diagnosis · 4 Treat, then **File ›** (no number) at the foot
+  (at the TOP on a first visit and while sex + DOB are missing, with the Start-here lock as today). **A step is ONE page.** Steps 2-4 and File
+  carry a **joined bar of their parts** at the top of the page (`#presPartBar`, the app's wrapping joined bar `.ph-tng2-seg.wrap`, 32px chips,
+  THE LOOK) and show the picked part's own page below it (every page body is unchanged). The parts: **Exam** = the kind's Exam order
+  (`PH_VK_ORDER`: Tongue · Pulse · Abdomen · Cycle if tracked · Pain (Musculoskeletal) · Tests (Tests & scans) · History (Medical history) · Photos
+  for internal disease), a sometimes page lighter (`.quiet`, `phVkQuiet`) and never counted, a ✓ on a part done; **Diagnosis** = Fang Bing Ren ·
+  Similar cases · Diagnosis · Summary for her; **Treat** = Acupuncture · Herbs · Care Plan · Timeline (a fertility / pregnancy plan only) · Copy for
+  Cliniko; **File** = two joined bars on one row, her file (Details · Medical history only when the kind's Exam does not list it · Ren · Usual ·
+  Medicines · Checklist · IVF history) and the records (Log · Diet · Photos · Appointments · Cliniko visits · Messages · Notes · Visits). **A step
+  opens on its first part not done** (never a quiet part, never the Care Plan or Timeline); **a part she picks stays picked for the open visit**
+  (`presNavPick`, cleared by `presOpenScript`). The gold "next up" dot sits on the part's chip while its step is open, on the step's row while not.
+  **Every id and old link keeps working**: `data-flow-go="pulse"` / `data-flow-prof="bloods"` / `data-pres-stage="dispense"` open the host step with
+  that part picked (a part chip carries the SAME data-* attribute its old rail row did, so the click handlers, `presVisitNext`, the Next → buttons,
+  `phTripGo`, the profile search `phPs*`, the head's "/ Page" and the phone's ‹ › all read it unchanged). The model is `presNavBuild` (it only
+  regroups `presFlowSteps`' answer; `presFlowSteps` itself is unchanged). A **jump search** (`#presJs`, 32px, under the name) lists the parts of THIS
+  patient by name or word (pulse · goals · tongue · herbs), A–Z, one tap opens that step + part, Esc clears; the content search in the head (phPs*)
+  stays. The Fang Bing Ren page's own three-way switch hides (`.ph-fbr-switch`): the Diagnosis bar says the same. Her own record keeps its old rail
+  until stage 3 (My day · Treat myself · Life · My file). Never put a page in two places; never add a step without her word.
+- **Timeline** (her picks 2026-10-13 and 2026-10-16): a part of Treat (after Care Plan), and in the Next walk, only on a Pregnancy / Natural fertility / IVF plan; no rail row, no "⋯ More" row for a patient.
 - Other pages (Photos, Appointments, Messages, IVF history, Log, Checklist)
   are unchanged and sit outside this law. (Visit checks and the plan's
   Treatment log tab went on 2026-10-29: the Treatment tab's visits table is
@@ -397,11 +412,8 @@ under the name (`.g-vk`, `phVkChipHtml`) wins (`rec.visitKind`) until "Read from
 Ask her · Cycle · history · tongue · pulse · abdomen · Tests & scans; internal disease: Ask her · Photos · Cycle · history · tongue ·
 pulse · abdomen · musculoskeletal · Tests & scans). A page done only SOMETIMES (`phVkQuiet`: an acupuncture patient's history, tongue,
 pulse, abdomen, and Musculoskeletal for internal disease; a herbs patient's Musculoskeletal unless a pain patient) is lighter (`.quiet`),
-never counted (`phVkParts` for n of m, the Exam ✓, the Next-up walk, the Dispense note) and never Next (`phVkNextOf`). Medical history and
-Tests & scans (Photos too for internal disease) are Exam pages (grp "exam" in `presAssessSections`), out of Her file / Records. Fang Bing
-Ren lists Similar cases · Diagnosis · **Summary for her** (`phVsPageHtml`). Acupuncture patients' step is **Acupuncture**; a herbs patient
-has none (Fang Bing Ren → Herbs; the visits table is "Visits" in Records). An acupuncture patient's Herbs is a dashed **"+ Herbs"** row
-(Next stops after Acupuncture) until a formula is started (`phVkHasFormula`), then step Herbs on every later visit. Never make a page
+never counted (`phVkParts` for n of m, the Exam ✓, the Next-up walk, the Dispense note) and never Next (`phVkNextOf`). Medical history and Tests & scans (Photos too for internal disease) are Exam PARTS (grp "exam" in `presAssessSections`; the chips History · Tests · Photos in the Exam bar), out of File's bars; when the kind's Exam does not list Medical history it sits in File. Fang Bing
+Ren lists Similar cases · Diagnosis · **Summary for her** (`phVsPageHtml`). Acupuncture patients' Treat bar starts with **Acupuncture**; a herbs patient has none (Fang Bing Ren → Herbs in the walk; the visits table is the part "Visits" in File's records bar). An acupuncture patient's Herbs is a **"+ Herbs"** part (Next stops after Acupuncture) until a formula is started (`phVkHasFormula`), then the part Herbs on every later visit. Never make a page
 the same for all three kinds without her word; never count a sometimes page.
 **Summary for her is a letter, not a form (her synth22 batch 2026-11-21, pick 10, mock F):** each part (What you came in for · What I
 found · What it means · The plan) reads as its capitals label and bulleted lines in plain words, no grey box; a tap on a part opens it as
@@ -415,12 +427,10 @@ Copy and Email read the same lines as bullets. Never bring the four grey boxes o
 Normal") back to the patient's letter without her word.
 **A Care Plan is an OPTION, never a step (her 2026-11-18 "i need to remove the requirement for a patient to have a treatment plan",
 "it needs to be an option", "the highest priority is the fang bing ren tongue pulse abdomen etc"; her 8 picks, all the recommended
-one; memory project_lcm_care_plan_optional_2026_11_18):** the visit is Exam · Fang Bing Ren (Similar cases, Diagnosis: Diagnosis shows
-with or without a plan) · Treatment · Herbs, numbered; the Care Plan is one quiet row under Herbs (`.g-cp`): "+ Care Plan" (dashed) until
-she starts one, then "Care Plan" and its live phase with Timeline under it. **Next never goes to the Care Plan or its Timeline** (Diagnosis
+one; memory project_lcm_care_plan_optional_2026_11_18):** the visit is Came in for · Exam · Diagnosis · Treat, numbered; the Care Plan is one PART of Treat, never a step: the chip "+ Care Plan" until she starts one (it opens the builder at once), then "Care Plan", with Timeline after it on a fertility / pregnancy plan. **Next never goes to the Care Plan or its Timeline** (Diagnosis
 → Treatment), with or without a plan; `presVisitNext` walks the exam, Fang Bing Ren and Treatment for a patient with no plan too, and
 Fang Bing Ren + Diagnosis are in the walk on return visits too (her "yes" the same day). Her two
-doors to start one: the + Care Plan row (the builder at once, no "Fang Bing Ren first") and the end of Diagnosis (`phTpFbrStartHtml`,
+doors to start one: the + Care Plan chip (the builder at once, no "Fang Bing Ren first") and the end of Diagnosis (`phTpFbrStartHtml`,
 headed "Treatment Care Plan", never "Next"). No "No plan yet" anywhere: Appointments' list shows her Came in for words, Patient details
 shows no plan line until one exists. Today's visit's "Care Plan ›" only with a plan. Never add a plan gate, nudge or numbered plan step.
 This overrides the lines below where they say Care Plan step / "Fang Bing Ren first ›" / Next → Care Plan.
@@ -542,7 +552,7 @@ sex + DOB Start-here lock (with its "Later, open it anyway" override).
 headers, buttons, popups). Patient letters and messages are NOT touched. If the
 rail text cuts off at 360px, only the rail may use "Care Plan" — and tell her.
 Never call it "Treatment plan", "Plan tab" or bare "Plan" in new UI text.
-**The rail's numbered steps (her 2026-11-17 picks, BUILD-NOTES "Visit flow, simpler"; the Care Plan left them 2026-11-18, "A Care Plan is an option"):** 1 Better / worse · 2 Exam · 3 Fang Bing Ren · 4 Treatment · 5 Herbs, the Care Plan row under them (since 2026-11-18 by kind: "Her three patients" above); Profile sits in File after them, File folded once sex + DOB are in. Her yes covers the rail's "Care Plan" and "Herbs"; other UI text keeps the rule above.
+**The rail's numbered steps (her 2026-11-21 simpler navigation, stage 1):** 1 Came in for (Better / worse) · 2 Exam · 3 Diagnosis · 4 Treat, then File ›; the old Treatment / Herbs / Care Plan / Copy for Cliniko steps are the parts of Treat. Her yes covers the rail's "Care Plan" and "Herbs" as PARTS; other UI text keeps the rule above.
 
 ## 8 · Build phases — all built and LIVE
 Phases 0-6 were built on 2026-10-10 and confirmed on `origin/main` 2026-10-18 (the phase table was folded on

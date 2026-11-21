@@ -17446,3 +17446,19 @@ phone and the Day view.
   (name + the same picture). Phone Day view 360: pictures centred, page 360 wide. tap-audit at 1220 and 360: the picture-only block
   read as an icon button, so `.ph-c22-life` joins `.ph-appt-block` on the KEEP list; then nothing new. style-audit: the 26 "words
   400" lines on her blocks are gone; nothing new.
+
+### Simpler navigation, stage 1: a patient's pages (2026-11-21, her "the system looks so complicated ..."; SAVED, not live until her "push live")
+- **Her picks** (mock `lcm_simpler_navigation_direction_mock`, all the recommended one): a patient = 4 steps + File ›, a joined bar of parts on steps 2-4 and
+  File, a step opens on its first part not done, a jump search + the Next button stay. Stages 2 main menu · 3 her own record · 4 Settings come after her review.
+- **Built:** `presNavBuild` / `presNavLit` / `presNavGo` / `presPartBarHostHtml` / `presPartBarSync` / `presJs*` / `presNavPsPages` / `presNavPsBadges` before
+  `presFlowRailHtml`; the non-me branch of `presFlowRailHtml` draws steps; `#presPartBar` first in `.ph-flow-body`; `presFlowRailRefreshRun` syncs the bar and keeps the jump
+  box's focus; `phPsPages` / `phPsCurPage` / `phPsBadges` / the phPs navigate click read the model for a patient; `presBandPageSync` / `presRailBarSync` / `presRailStep` read it for the
+  phone; `presOpenScript` clears `presNavPick` + `presJsQ`; CSS before the last `</style>` (rail File row, bar, jump box, `.ph-fbr-switch` hidden under `[data-nav]`).
+  `presFlowSteps`, `presVisitNext`, `phVkNextOf`, the click handlers and every page body are unchanged.
+- **My calls (told her):** Timeline is a part of Treat after Care Plan (it had its own row); Notes and Visits are File parts; Medical history shows in File only when the kind's Exam
+  does not list it (and on a new patient, where Exam is greyed until sex + DOB); the Care Plan and Timeline are never what a step reopens on; the Fang Bing Ren page's
+  own three-way switch is hidden (the bar says the same); the Next button still reads "Patterns · Diagnosis →".
+- **Tested** (pretend patients Zz Nav One-Five, never her data): acupuncture internal disease with and without a formula, musculoskeletal (male), herbs, a new patient (File on top, Exam greyed,
+  Medical history greyed), a pregnancy plan (Timeline part); the whole Next chain on each kind; every old id (15 data-flow-go, 15 data-flow-prof, dispense) lands on its host step + part;
+  jump search (pulse · goals · tongue · herbs · "xyz" · Enter · Esc · tap clears); head search + its badges + a result tap; phone 360 drawer, ‹ ›, a step tap; mini rail. tap-audit + style-audit at 1220
+  and 360 on the rail (drawer open) and the bar on 14+ pages, jump results and the visit-kind menu open: 0 off.
