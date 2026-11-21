@@ -17528,3 +17528,9 @@ line on hover; signs as No | Yes rows; a tap saves; a "score due" tag; a camera 
   same answers with "last" from 23 Sep. A typed "Bell's palsy" first visit: 4 columns, the "score due" tag. "Facial palsy" as an
   Also came in for under a Sleep main: rows under it. An earlier visit (1 Nov) wrote 1 Nov, no cameras. Phone 360: the list, no page
   scroll sideways. tap-audit + style-audit at 1220 and 360: nothing new (the Energy name and the gold group dot were there before).
+
+## Birthday Note (2026-11-21, her "include these details in lcm in the birthday table for future reference" then "Build a notes field")
+- A birthday (lcm-me bdays entry) now carries one optional free-text 
+ote (500 characters, like an event's note). It follows the event form's own Note box: the Birthday form has a Note box under Day / Month / Year (data-me-f="note", same placeholder and look, no new control size), phMeFormSave writes or removes x.note, phMeFormInit reads it back, phMeBdaysAhead carries it, phMeBdRowHtml shows it after the name as an <em> in soft 11.5 text (the routine row's own look) with the whole note in the hover.
+- Syncs with no other change: phMeMerge takes a whole entry by its up stamp, so the note rides the same cloud row (public.lcm_me). Nothing else reads it yet: the calendar chip and the birthday card are unchanged.
+- Checked: the patched page loads with no script error and phMeBdRowHtml draws the note (and nothing when there is none) in a local copy. NOT done: tap-audit / style-audit at 1220-1280px and 360px, and a save round trip in the signed-in app. Not pushed live: waits for her "push live".
