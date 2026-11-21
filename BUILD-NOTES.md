@@ -16935,7 +16935,7 @@ transcribing to note take. but i need that information organised into lcm so i c
   abdomen / plan in all 5 recent notes. tap-audit + style-audit: nothing on the new page, the review or the head chips at 1220; at 360
   only the patient head's own three (there before). Not tried: her real LCM (it was open on Acupreg), a Cliniko patient with no notes.
 
-## 2026-11-20: Abdomen and Pulse match the Tongue page's visits table (SAVED, not live)
+## 2026-11-20: Abdomen and Pulse match the Tongue page's visits table (LIVE 20261120-154700, her "push live")
 - **Her word:** "Yes, match them" (asked after the Tongue page build: no trend line, and the changes since the last visit in the Today row
   instead of a separate line, on Abdomen and Pulse too).
 - **Done:** `phFvHtml` draws only the table now (`phFvTrendHtml` removed; nothing else called it; the Findings trend sheet at the top is
@@ -16968,7 +16968,7 @@ LCM held them the same way, in the Taking prescribed medication row's note. Item
   sideways at 580px like the supplements table. Not tried: her real records (the imported patients' medicines move into the list as
   a data step after this is live).
 
-## 2026-11-20: Abdomen visits table under today's photo (SAVED, not live)
+## 2026-11-20: Abdomen visits table under today's photo (LIVE 20261120-154700, her "push live")
 - **Why:** after the match above I asked about the Abdomen table (in the narrow right panel its Findings column ran one word a line,
   as it already did before today); her "Yes, fix it", then widget `lcm_abdomen_visits_table_fix_options` (Now / A Under the photo /
   B Stay right, two lines): her picks A and "Under the photo".
