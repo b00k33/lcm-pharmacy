@@ -607,6 +607,12 @@ by themselves while it has no date); **The 6–7 wk scan** (her 8 picks, 2026-11
 symbols. No "+ transfer from these eggs": Use ▸ and "+ Transfer" stay.
 
 ## Dispense, Refill & To Order
+- **Schedule on the band (2026-11-21):** `presSchedBtnHtml(t)` before the + (phone: `.ph-pres-menu-sch` in the band's ⋯). `presSchedStart(rxId, forceForm)`
+  opens `#phSchedSheet` (`schedSheet` = { rx, view: "form" | "list" }), painted by `schedSheetPaint()` at the top of every
+  `renderPharmacy()` (the form's own taps all re-render through it); a form error (`phFlash`) shows inside the sheet, a save closes it
+  with the one toast ("✓ Scheduled for 5 Dec — name"). While the sheet shows the form, the page's `#schedForm` stays empty (one copy of
+  its ids); while it lists an entry, the page's queue leaves that prescription's rows out. Esc or ✕ closes it. The form and the queue
+  rows take THE LOOK in both places (inputs / selects 32px · 6px · 13px, Schedule it / Cancel 13px, the row's stage button and ✕ 32px).
 Dispense always opens the full script (her "No, keep the friction"). **Three numbered steps**: 1 Calculate, 2 Dispense & copy
 label (calculates first when needed), 3 Log; Log is always its own tap, never automatic. The Total line always shows grams · days
 · cost · profit. Desktop (≥901px): the one-screen `.ph-dsp-fit` layout, supply-by-days chips (7/10/14/21/28), one Blood-moving
@@ -971,6 +977,17 @@ Post-ET points and Advice given), stored on the transfer. BUILD-NOTES "Visit sum
 - **Summary for her** (Fang Bing Ren's third page, `phVsPageHtml`): a letter, each part's lines as bullets, a tap opens that part as a
   box that grows; complaints with capitals and how long; the pulse in plain words, only what is not normal; goals under The plan. Print,
   Email and Copy read the same lines (2026-11-21).
+
+Since synth22 batch 2 (2026-11-21, her picks 1–4): What I found reads the one findings read (`phFindingsRead(..., "plain")`): Tongue,
+Pulse, Abdomen, Cycle, Pain + positive tests, Blood tests out of range (under 12 months), only what is not normal; What you came in for is
+short (`phVsWithShort`, first three symptoms + "+n"); What it means fills from the Diagnosis (`phTpDxHersText`, else
+`phTpAutoDx(...).pats` agreed / Likely); The plan reads the Care Plan's four parts (`phTpKeyFour`, read defensively by
+`phVsKeyFourLines`) and the goals once each.
+
+**Acupuncture › Findings** (2026-11-21, synth22 batch 2): one short clinical line from `phFindingsRead(rec, null, "short", { parts:
+tongue, pulse, abdomen, msk, blood })`, labels at 600 ("Tongue pale, teethmarks both sides · Pulse R Guan deep; R Chi blocked; L Chi
+weak · Abdomen … · Pain … · Blood tests Ferritin 12 ↓"), an exam with nothing off as "Pulse normal"; Change = a 32px chip (1px line, 600).
+It no longer lists every Normal box.
 
 ## Medicines with doses (2026-11-20)
 The Supplements page (rail: "Medicines & supplements") opens with a Medicines table (`rec.meds`: name, dose, since, taking / stopped), the

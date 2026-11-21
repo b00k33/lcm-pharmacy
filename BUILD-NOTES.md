@@ -17303,3 +17303,71 @@ textareas, a run-on "What you came in for" scrolling inside its box, the pulse a
 - Checked: Summary for her at 1220 + 360 (tap-audit `off` empty, style-audit offSizes / offWeights / chipLooks / sideLines / rowAlign
   empty, with a part open and closed), Copy text, the printed page's HTML, ↺ Fill again, a saved part's lines after leaving it.
   Pictures: `shots/s22-sum-1220.png`, `shots/s22-sum-360.png` (pretend patient).
+
+## Schedule button on the prescription band (2026-11-21, synth22 batch 2; SAVED; LIVE on her "push live" 2026-11-21)
+Her words: "how do  schedule dispense?" (on a screenshot of the open prescription's Dispense step), then "yes add schedule button".
+Before: the form lived only on the Patient profile page (#schedWidget, the calendar button on the list's tool row, or Appointments ›
+⋯ › Schedule a dispense); the prescription's own ⋯ More › Schedule (data-sched-new = the prescription id) opened that form BEHIND the
+full-screen prescription (#presPanel, fixed), so nothing seemed to happen.
+Built (s23-sch.pl on ded0858e, +88 lines):
+- `presSchedOpen(id)` (this prescription's entries not dispensed, soonest first), `presSchedBtnWord(t)`, `presSchedBtnHtml(t)` on
+  `presScriptSwitcherHtml`'s band before the +; `.ph-pres-menu-sch` as the band ⋯'s item, shown only at 640px and under (the band's
+  button hides there).
+- `presSchedStart(rxId, forceForm)`, `schedSheetClose()`, `schedSheetPaint()` (called from `renderPharmacy()` right after
+  `phTripSync()`), the sheet `#phSchedSheet` on the app's `.ph-lk-sheet` / `.ph-lk-card` shell (z 9000 over #presPanel's 60).
+  `renderSchedWidget` writes "" to `#schedForm` while the form is in the sheet and filters the sheet's rows out of `#schedRows`.
+- Taps: `data-pres-sched` (band / ⋯ item), `data-pres-sched-new` ("+ Schedule another"), `data-sched-sheet-close` (✕ / backdrop);
+  `data-sched-new` with a prescription id inside #presPanel now goes to the sheet (my call, disclosed: it opened behind before).
+  Esc closes the sheet (a capture listener, so the trip chip's Esc does not also fire).
+- A save's "Scheduled for …" phFlash becomes the one toast (`presSavedToast`), an error's phFlash a red-dot line inside the sheet.
+- CSS: `.ph-dsp-band .sch` (32px, 6px, the band's white hairline, 13px at 600, the sprite's #i-cal); the form and queue rows to THE
+  LOOK in the sheet AND on the Patient profile page (`:is(#phSchedSheet, #schedForm)` inputs / selects 32px · 6px · 13px · 1px line,
+  `.btn-save` / `.btn-cancel` 13px; `:is(#phSchedSheet, #schedRows)` `.ph-stage-btn` 32px · 13px, the row's ✕ 32px).
+Tested (test copy, pretend patient "Zz Sched Rx", no console errors): Schedule → the sheet over the open prescription with the
+patient preset; Pickup ↔ Postage keeps the sheet; Schedule it with no pickup time → "Choose a pickup date and time first." inside the
+sheet; Postage 5 Dec → saved (`PRESC.scheduled`: postage, 2026-12-05), the toast "✓ Scheduled for 5 Dec — Zz Sched Rx", the button
+"5 Dec" (title "Scheduled: post · 5 Dec"), the prescription still open on the Dispense step; the button again → "Scheduled · Zz Sched
+Rx" with its row (Prepare opens inside the sheet), the page queue leaving it out meanwhile; "+ Schedule another" → the form; Esc and ✕
+close; the dose card's ⋯ More › Schedule → the same sheet, Cancel closes it. 360px: the band's button hidden, the ⋯ item "Schedule"
+then "5 Dec", the sheet 336px wide, no sideways scroll.
+Audits: tap-audit + style-audit + titlebar-audit at 1220 and 360 on the band (clean), the band's ⋯ menu (clean) and the sheet (form,
+Pickup and Postage: clean). Left, older than this build and the same on the Patient profile page: the queue row's patient name
+(`.ph-name-link`, plain text that taps, 16px tall) and its 9px "Postage" pill (`.ph-pill.postage-warn`, 1220 only).
+Shots (local): `shots/s23-sch-1220.png` (the band), `shots/s23-sch-form-1220.png` (the form open over the prescription).
+
+## synth22 batch 2: one findings read, Acupuncture's Findings line, Summary for her follows the Care Plan (2026-11-21, SAVED; LIVE on her "push live" 2026-11-21)
+Her words: "need findings of tongue abdomen and all diagnostics used" (on Summary for her), "summary for her is the same as treatment
+plan", and her Acupuncture screenshot whose Findings line listed every Normal box. Her picks 1–4 (mock widget
+`lcm_synth22_careplan_summary_findings_schedule_mocks` B and C; memory project_lcm_synth22_careplan_2026_11_21): The plan = the Care Plan's
+four parts; What I found = Tongue, Pulse, Abdomen + Cycle + Pain/MSK + Blood tests; What it means from the Diagnosis; Came in for short.
+- **The one read** `phFindingsRead(rec, name, mode, opt)` (beside Summary for her's code): Tongue `phTng2Summary(phTngToday)`; Pulse plain
+  `phVsPulseWords`, short `phFindPulseShort` (positions by `PH_PA_NEAR`, a box holding only Normal or its own normal quality at its own
+  depth left out, Skin = floating, Organ off its normal depth = deep; joined "; "); Abdomen `phAbd2Summary(phAbdToday)` minus "no …",
+  "Normal" and the medium tension, plain "tight below the right ribs"; Cycle only when `phCycleTracked` (plain "day 15, around
+  ovulation", short "CD 15 · Ovulation"); Pain from `phMskToday(rec).pains["region|side"].now` named by `phPmSideName` + positive tests
+  (`PH_MSK_TESTS[rk][i].name`); Blood tests: the newest value of each marker across results under 12 months (`phBldIsOld`), flagged by
+  `phBldMeta` / `phBldFlag`. One exam's parts join with commas; " · " stays the split between exams. Each part is in its own try: one
+  failing read never blanks the others.
+- **Acupuncture › Findings** (`phVisitFndLineHtml`): the short read for tongue, pulse, abdomen, pain and bloods (not the cycle: the page's
+  own phase line says it); its Change chip was a 26px, 1.5px, 700 `tab-link` → 32px, 1px `--ph-line`, 600 (a scoped rule beside
+  `.ph-acu-fndrow .tab-link`).
+- **Summary for her** (`phVsFilled`): cc via `phVsWithShort` (from `phCxModel`'s groups, parentheses dropped, words lower-case except
+  ALL-CAPS ones; the Cliniko copy keeps `phCxGrpWith`'s full wording); found = the plain read + scans; means = `phTpDxHersText(P)` or
+  `phTpAutoDx(name, P).pats` (agreed / Likely, else all); P = the open plan, else `phTpPlanForToday`; plan = `phVsKeyFourLines(phTpKeyFour(name,
+  P))` when the Care Plan build's function exists (mods "Acupuncture and herbs", rate "1× a week" → "weekly", len "3 mo" → "3 months",
+  review dateKey → "Review on 19 December", goals words or `{w, lo, hi, n, u}`), else the old lines; goals from both sources once each by
+  their first word ("Goal: Happiness, 30–50% better by 21 Dec").
+- **Tested** on a pretend patient "Zz Findings Read" (pale tongue with teethmarks; pulse blocked R Chi, Normal + Weak L Chi, normal R Cun
+  Qi, wiry L Guan Blood (its own normal), Normal at R Stomach Organ; abdomen medium + tight R hypochondrium + no water; cycle day 15; a
+  right middle finger 6/10 + a positive Phalen's; ferritin 12, TSH 2.1; four grouped symptoms): Summary lines as above ("Pulse: blocked at
+  the right bladder / kidney position; weak at the left adrenal / reproductive position; deep at the right stomach / spleen position" +
+  "Other pulse positions normal", wiry L Guan and TSH left out); a stub `phTpKeyFour` gave "Acupuncture and herbs, weekly for 3 months",
+  "Review on 19 December", "Goal: Regular cycle, 30–50% better in 3 months" with a duplicate Regular cycle goal from `phCcGoalLines`
+  dropped; Copy text and the printed page carry the same lines; Acupuncture's line read "Tongue pale, teethmarks both sides · Pulse R Guan
+  deep; R Chi blocked; L Chi weak · Abdomen tight hypochondrium right · Pain Right middle finger 6/10, Phalen's test +ve · Blood tests
+  Ferritin 12 ↓". No console errors.
+- **Audits:** tap-audit + style-audit clean (off, offSizes, offWeights, chipLooks, sideLines, rowAlign empty) on Summary for her and the
+  Findings row at 1220 and 360; no sideways scroll at 360.
+- **Calls disclosed:** What it means lists agreed + Likely patterns (Possible only when none is Likely); the Findings line leaves the
+  cycle out (the page shows the phase); patient words keep the marker's own name ("Ferritin low (12 µg/L)").
+- Pictures (local): `shots/s23-fs-sum-1220.jpg`, `shots/s23-fs-acu-1220.jpg`, `shots/s23-fs-sum-360.jpg`.
