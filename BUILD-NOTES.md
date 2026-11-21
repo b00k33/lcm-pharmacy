@@ -17463,7 +17463,7 @@ phone and the Day view.
   jump search (pulse · goals · tongue · herbs · "xyz" · Enter · Esc · tap clears); head search + its badges + a result tap; phone 360 drawer, ‹ ›, a step tap; mini rail. tap-audit + style-audit at 1220
   and 360 on the rail (drawer open) and the bar on 14+ pages, jump results and the visit-kind menu open: 0 off.
 
-## 2026-11-21: Her own blocks, bigger pictures in a badge (SAVED, not live)
+## 2026-11-21: Her own blocks, bigger pictures in a badge (LIVE in build 20261121-204500, her "push live")
 **Why:** her 3-day screenshot after the pictures went live and "make the pictures a bit bigger. improve visual". Seen on it: the
 18px picture lost in a wide block; Break Fast blank on Sun and Mon (a run's later days hid `.r1`); the Code picture under the invoice
 block and the Travel train under a 9:30 Lotus booking (a centred picture is covered by what overlaps it). Widget
