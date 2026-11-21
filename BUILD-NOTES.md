@@ -17168,7 +17168,7 @@ Note + Fang Bing Ren under the calendar · 44px days · the phone the same.
   day card 1147 -> 811px, PMS 6 rows of 2, page 360 wide. Today's visit card unchanged (Note, trail, three PMS bars). tap-audit +
   style-audit at 1220 and 360, Period folded and open: nothing new (the 44px days and the fold head on the KEEP list).
 
-## synth22 batch 2026-11-21: Pulse box first, fingers, Came in for, Supplements + rail, Summary for her (SAVED, not live)
+## synth22 batch 2026-11-21: Pulse box first, fingers, Came in for, Supplements + rail, Summary for her (SAVED 0694a3c3; LIVE in build 20261121-180700, her "push live")
 Her synth22 batch (11 asks, closed with "ok done"; memory project_lcm_synth22_batch_2026_11_21; mocks in widget
 lcm_synth22_pulse_cameinfor_supps_rail_summary_mocks; her picks in three popups). Built as five patches, one per part (the five notes
 below), each tested on its own copy. **Combined test:** all five applied in order fingers → pulse → supp → cif → sum to f8de3de4
