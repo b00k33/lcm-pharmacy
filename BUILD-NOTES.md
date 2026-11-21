@@ -17110,3 +17110,28 @@ hover) and added again.
   number and mark stay). A second tap shuts it; Cancel too. tap-audit KEEP + style-audit NOT_CHIP name `.ph-sg-row` (a row).
 - **Tested** (sandbox, made-up patient, 1024 wide): tap a row → filled form, Save → the same surgery changed (What and When), the
   list order kept; ✎ beside × (no overlap). tap-audit / style-audit on the section: none.
+
+## 2026-11-21: Symptom groups on Came in for (SAVED, not live)
+**Why:** her screenshot of Came in for (Bloating main, Lower Back, Signs to check · 32 by area) and "i want to be able to group some
+symptoms together e.g. bloating is the main complaint but secondary incldues gas constipation etc etc". Widget
+`lcm_came_in_for_group_symptoms_options` + two popups, her 8 picks (all the recommended one): see what belongs together, track each,
+read as one line (not one score) · A nested rows · add both ways (+ symptom search, and a sign tapped → its complaint) · pre-fill the
+ticked signs of the complaint's body area · rated like signs · every complaint · name + rating, no More info · "with ..." wording.
+- **Built:** `phCxSxGrpMap`; `phCxModel` `r.grp` + `M.parts.grp` (grouped rows skip the caps; `own` leaves them out of Signs to check;
+  asked order follows); `phCxSignRowHtml(.., gp)` (elbow, no since, no note cell; ▾ menu Under … / Back to Signs to check);
+  `phCxPartsHtml` and `phCxTblHtml` draw each complaint's rows then "+ symptom"; `phCxGrpTargets`, `phCxGrpLineHtml`, `phCxGaddHtml`,
+  `phCxGaResHtml`, `phCxGaPaint`, `phCxGaAdd`, `phCxGrpSet`, `phCxGrpWith`; click, input and key handlers (↑↓ Enter Esc); the phone
+  drawer gets "Goes with"; `phCxRefresh` keeps the cursor in the "+ symptom" box; `phCnCameIn` + `phVsFilled` add the "with ..." words.
+  `sxGrp` joins the empty-map cleanup. The table's chips (+ symptom, Done, an area's Same as last time) are 32px / 13px (THE LOOK).
+- **My calls (told her):** a tap on a sign's name opens "Goes with" (the panel is off on the simple visit, so it could not live there);
+  a phone also has it in the row's drawer and the ▾ menu; signs under one heading read once in the words ("Bowels (Constipation,
+  Excessive Flatulence)"), as the app's signs are "Bowels: ..." not "Gas"; an Energy complaint is "Energy" on a computer (its row's name)
+  and her words on a phone (that card's name); the complaint's own sign, fixed signs and exam findings are left out of the search.
+- **Tested** (pretend patient "Test Bloat": Bloating, Lower back pain, Tired all day; 7 Bing signs): 1440 return visit: Bloating holds
+  Appetite: Poor, Bowels x3, Digestion: Worse After Eating, each with Gone · Better · Same · Worse; Signs to check 2. + symptom under
+  Lower back: "stiff" → ↓ Enter added Joints: Pain (ticked, sxGrp + pin), the box kept the cursor; Sleep's Goes with → Lower Back Pain
+  moved it; Appetite → Signs to check moved it back ("-"); a reload kept all three. First visit: names only. 360: same parts, ▾ menu
+  Under Bloating moved Periods in; a name tap opens the drawer with Goes with; page 360 wide. Copy for Cliniko: "Bloating · Chronic ·
+  13 mo, with Bowels (Constipation, Excessive Flatulence, Smelly Stools) and Digestion (Worse After Eating); Lower back pain · ...".
+  tap-audit + style-audit at 1220 and 360 (menu open, search open): nothing new; the older finds stay (table name spans, the pills
+  spilling a few px into the empty last column at 1220, the drawer's Track with pills).
