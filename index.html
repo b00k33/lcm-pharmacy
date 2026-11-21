@@ -33195,6 +33195,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   #pharmacyPage .ph-pp-dir { display: flex; margin: 4px 0 8px; }
   #pharmacyPage .ph-sh-move { display: grid; gap: 6px; margin: 4px 0 8px; }
   #pharmacyPage .ph-sh-row { display: flex; align-items: center; gap: 8px; }
+  #pharmacyPage .ph-ac-arr { display: inline-flex; align-items: center; gap: 6px; }
+  #pharmacyPage .ph-ac-arr input, #pharmacyPage input.ph-ac-low { width: 72px; text-align: right; border: 1px solid var(--ph-line); border-radius: 6px; }
   #pharmacyPage .ph-ac-card { width: min(560px, 100%); }
   #pharmacyPage .ph-ac-scr { max-height: 60vh; overflow: auto; border-radius: 10px; }
   #pharmacyPage .ph-ac-tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
@@ -79996,6 +79998,31 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       after(false);
     }
   }
+  // ---- the Acupreg shelf's own order list ----
+  const phAcLowList = () => (PHARMACY.herbs || []).filter(h => !h.stopped && phHasAC(h) && +h.qtyAC <= phShelfLow(h, "ac")).sort(phByName);
+  function phAcOrderCardHtml(hit, nm, sup) {
+    const list = phAcLowList().filter(hit);
+    const rows = list.map(h => `<tr><td>${nm(h)}</td><td>${sup(h)}</td><td class="num"><span class="ph-pp-low" title="Low at Acupreg"></span>${phFmtG(+h.qtyAC)}</td><td class="num"><input type="number" min="0" step="10" class="field-bare ph-ac-low" data-ac-low="${esc(h.id)}" value="${phShelfLow(h, "ac")}" aria-label="Low at, grams"></td><td><span class="ph-ac-arr"><input type="number" min="1" step="10" class="field-bare" aria-label="Grams arrived"><button type="button" class="btn-save" data-ac-arr="${esc(h.id)}">Add</button></span></td></tr>`).join("");
+    return `<div class="ph-ost-card"><div class="ph-ost-scroll"><table class="ph-ost-tbl acupreg"><thead><tr><th>Herb</th><th>Supplier</th><th class="num">Left (g)</th><th class="num">Low at (g)</th><th>Arrived (g)</th></tr></thead><tbody>${rows || `<tr><td class="ph-ost-empty" colspan="5">Nothing running low at Acupreg</td></tr>`}</tbody></table></div></div>`;
+  }
+  document.addEventListener("click", e => {
+    const b = e.target instanceof Element && e.target.closest("[data-ac-arr]");
+    if (!b) return;
+    const h = PHARMACY.herbs.find(x => x.id === b.dataset.acArr), inp = b.parentElement.querySelector("input"), g = Math.floor(parseFloat(inp && inp.value));
+    if (!h || !(g > 0)) return;
+    phShelfAdd(h, g, "ac");
+    if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
+    presSavedToast(`+${phFmtG(g)} g at Acupreg`);
+    renderPhRestock();
+  });
+  document.addEventListener("change", e => {
+    const i = e.target instanceof Element && e.target.closest("[data-ac-low]");
+    if (!i) return;
+    const h = PHARMACY.herbs.find(x => x.id === i.dataset.acLow), v = Math.floor(parseFloat(i.value));
+    if (!h) return;
+    if (v > 0) h.lowAC = v; else delete h.lowAC;
+    savePharmacy(); renderPhRestock();
+  });
   function renderPhRestock() {
     const herbs = PHARMACY.herbs;
     const toOrder = herbs.filter(phOnOrderList);
@@ -80106,6 +80133,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // an emptied Snoozed tab hands over to Running low, where its herbs went
     if (phOsbSide == null) phOsbSide = listN || !unflagged.length ? "toorder" : "low";
     if (phOsbSide === "snoozed" && !snoozed.length) phOsbSide = "low";
+    if (phOsbSide === "acupreg" && !phShelfCount("ac")) phOsbSide = "toorder";
     const side = phOsbSide;
     // the stock cell: the level bar against the low mark, then the grams in the jar now
     const osStk = h => {
@@ -80289,23 +80317,23 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         osRows += osSupBand(sup, bySupList[sup], cols.length) + shown.map((h, i) => osTbl ? osTr(h, h.ordered ? "ordered" : "toorder", cols, i) : osLi(h, h.ordered ? "ordered" : "toorder", i)).join("");
       });
     } else {
-      const shown = (side === "low" ? unflagged : side === "arrived" ? (phOsArrOlderOpen ? recentlyArrived : arrRecent) : snoozed).filter(osHit);
+      const shown = (side === "low" ? unflagged : side === "arrived" ? (phOsArrOlderOpen ? recentlyArrived : arrRecent) : side === "snoozed" ? snoozed : []).filter(osHit);
       osAny = shown.length > 0;
       osRows = shown.map((h, i) => osTbl ? osTr(h, side, cols, i) : osLi(h, side, i)).join("");
     }
     // the tabs: one joined bar, the open one filled, each with its count; a herb that just flew in lights its tab gold
     const litOn = Date.now() < phOsbTabLit ? phOstLitTab : "";
-    const osTabs = [["toorder", "To order", listN], ["low", "Running low", unflagged.length], ["arrived", "Arrived", recentlyArrived.length], ["snoozed", "Snoozed", snoozed.length]]
-      .filter(([k, , n]) => k !== "snoozed" || n);
+    const osTabs = [["toorder", "To order", listN], ["low", "Running low", unflagged.length], ["arrived", "Arrived", recentlyArrived.length], ["snoozed", "Snoozed", snoozed.length], ["acupreg", "Acupreg", phAcLowList().length]]
+      .filter(([k, , n]) => (k !== "snoozed" || n) && (k !== "acupreg" || phShelfCount("ac")));
     const osTabsHtml = `<div class="ph-ost-tabs" role="tablist" aria-label="To order">${osTabs.map(([k, l, n]) => `<button type="button" role="tab" class="${side === k ? "on" : ""}${litOn === k ? " lit" : ""}" aria-selected="${side === k}" data-ph-osb-side="${k}">${l}<span class="k" data-ost-n="${k}">${n}</span></button>`).join("")}</div>`;
     // one fact beside the tabs: how many are ordered / how much of what is low is on the list (the gold bar) / Clear
     const osMeta = side === "toorder" ? (onTheWay.length ? `<span class="ph-ost-meta">${onTheWay.length} ordered</span>` : "")
       : side === "low" ? `<span class="ph-ost-meta" title="${covered} of ${covered + lowOpen} low herbs are on the order list"><span class="ph-os-gbar"><i style="width:${coverPct}%${osGbarFrom != null ? `;--from:${osGbarFrom}%` : ""}"${osGbarFrom != null ? ` class="ease"` : ""}></i></span>${covered} of ${covered + lowOpen} on the list</span>`
       : side === "arrived" ? `<span class="ph-ost-meta">${arrOlder.length && !phOsArrOlderOpen ? "last 14 days" : ""}${recentlyArrived.length ? `<button type="button" class="ph-ost-chip" data-ph-clear-arrived="1" title="Take every arrived row off the list">Clear</button>` : ""}</span>` : "";
-    const osEmpty = osQ ? "No match" : { toorder: "Nothing on the list", low: "Nothing running low", arrived: "Nothing arrived", snoozed: "Nothing snoozed" }[side];
+    const osEmpty = osQ ? "No match" : { toorder: "Nothing on the list", low: "Nothing running low", arrived: "Nothing arrived", snoozed: "Nothing snoozed", acupreg: "Nothing running low at Acupreg" }[side];
     const osFoot = side === "toorder" && osAny;
     const osOlder = side === "arrived" && !phOsArrOlderOpen && arrOlder.length ? `<button type="button" class="ph-ost-chip ph-ost-older" data-ph-os-arr-older="1">+ ${arrOlder.length} older</button>` : "";
-    const osCard = osTbl
+    const osCard = side === "acupreg" ? phAcOrderCardHtml(osHit, osNm, osSupTxt) : osTbl
       ? `<div class="ph-ost-card"><div class="ph-ost-scroll"><table class="ph-ost-tbl ${side}"><thead><tr>${cols.map(k => `<th class="${osCls(k)}">${OS_COL[k][0]}</th>`).join("")}</tr></thead><tbody>${osAny ? osRows : `<tr><td class="ph-ost-empty" colspan="${cols.length}">${osEmpty}</td></tr>`}</tbody>${osFoot ? `<tfoot><tr><td colspan="4">Total</td><td class="c-cost num"><b data-ost-money="total">${phMoney(needsTotal)}</b></td><td colspan="2"></td></tr></tfoot>` : ""}</table></div></div>`
       : `<div class="ph-ost-card">${osAny ? osRows : `<div class="ph-ost-empty">${osEmpty}</div>`}${osFoot ? `<div class="ph-ost-foot"><span>Total</span><b data-ost-money="total">${phMoney(needsTotal)}</b></div>` : ""}</div>`;
     const osSideEl = osSideHtml();
