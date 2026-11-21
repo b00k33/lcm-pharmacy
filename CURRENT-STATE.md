@@ -47,7 +47,9 @@ timeout had fired before the sync's own `<script>` was parsed, so the housekeepi
 plane, car, bus, train, pk-bowl, pk-rehab, dumbbell, pk-shower, pk-hair, pk-receipt, pk-code; the pk-* symbols sit after `i-train`
 in the sprite); `phC22Ic` uses it before the group glyph, so the card title, the stacks' marks and the fold chips get the same
 picture. `phC22LifeHtml` draws `.ph-c22-life.pic` with `.r1` = the picture (or the title's leading emoji) + `x.mr`, no title span,
-no time, no meal line; `.pic .r1` is absolute, inset 0, centred (a run's middle / last cell and a once-only meal keep `.r1` hidden).
+no time, no meal line. Since her "bigger, improve visual" picks (same day): `.pic .r1` sits at the top centre (`--pt`, height
+`--pk`), the picture is a round badge (`--pk` wide, `--pp` padding, `color-mix(currentColor 16%)`): 24px in 36px, set per block from
+its height in `phC22LifeHtml` (`pkP` / `pkB` / `pkT`); a run's middle / last cell and a once-only meal show it too.
 tap-audit.js KEEPs `.ph-c22-life` beside `.ph-appt-block`.
 
 The app opens here. It mirrors Cliniko's day view: solid blocks coloured from `PH_CLINIKO_TYPE_COLOURS` (her Settings →
