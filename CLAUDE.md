@@ -545,7 +545,7 @@ each (20 kept). Never store the full note text (the origin's about 5 MB is share
 
 **Saturdays are Lotus Healing Arts (her word 2026-11-20, "sat is for lotus healing arts", on a Saturday of CBD blocks tagged
 "CBD"):** the clinic a weekday is at overrides the login's: `phDayClin(dateKey)` (shared Me row `hubset.dayClin`, default
-`{6: "Lotus Healing Arts"}`, set at Hub › Money's rates "Saturdays at"). That day's bookings, from either login, carry its tag ("Lotus");
+`{6: "Lotus Healing Arts"}`, set at Hub › Money's rates "Saturdays at"). That day's bookings, from either login, carry its tag ("Lotus") and, on its calendar blocks, Lotus's own red #B02C2E (`PH_LOTUS_COLOUR`, her 2026-11-21 "lotus is red like"; never Acupreg's sage on that day);
 the Hub counts that day as its own clinic (hours, its own income tile at the visit prices, never the CBD split or a CBD admin week).
 
 **Phone type scale:** STYLE-LCM.md (≤480px). If a request conflicts with a
