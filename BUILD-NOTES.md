@@ -17085,3 +17085,18 @@ a transfer's date took a month and year only, and an estimated day lived only on
 **Built:** `phHxFromCc(rec, k)`: a complaint (chief or other, its words or its More info) that names one of her own Medical history conditions, found by the paste box's own words (`PH_HX_PASTE_RULES`, never a family row), reads as that row's Yes. It sits inside `phHxVal`, the one reader, so the page, the counts, the body figure, the flags and both Fang Bing Ren doors follow. Derived on read, never stored; an answer she gave wins (`phHxSet` now compares her stored answer). Tapping such a row off saves a No that stays (else the complaint would tick it again); the row's hover says "From Came in for". New history → Fang Bing Ren links: Autoimmune → `dx_autoimmune`, PMS / PMDD → `pms_now`, the thyroid note's Hyperthyroid / Graves' → `hyperthyroid`, Hashimoto's → `dx_hashimoto`.
 **Tested** (test copy, made-up patients): a chief "Diagnosis: endometriosis", another complaint "Diagnosis: diabetes" and one whose More info says asthma → Medical history shows the three ticked with the hover, nothing stored, the body figure lights the three, Fang Bing Ren's endo clue and `dx_diabetes` / `dx_asthma` pre-fills read yes; family rows and PCOS stay unasked; untick → stored No, row off, clue gone; tick again → stored Yes; the four new links read yes from their rows. No new control (no tap audit needed).
 **Pages checked:** Medical history (rows, count, figure), Fang Bing Ren pre-fill reads; **not checked:** her real patients, the Fang Bing Ren page drawn, the phone.
+
+## The Potts Point shelf (2026-11-21)
+Her words: "is tehre a way to track a separate inventory for potts point because i work there on saturdays?"; offered a shelf inside the CBD
+herbs or a third login, then "yes" to a mock of the shelf (`mocks/potts-shelf-mock-2026-11-21-1..4.png`, drawn on the real Inventory page);
+her picks, all the recommended one: Saturday dispenses take from Potts Point by themselves, orders arrive at CBD, low is per shelf, only the
+herbs she moves there get a count. Built in index.html: `PH_PP_LOW`, `phInvPlace`, `presDispShelfPick`, `phHasPP`, `phPPCount`, `phPPCol`,
+`presDispShelf`, `phShelfOf`, `phShelfQty`, `phShelfAdd`, `phPPBarHtml`, `phPPCellHtml`, `phPPMoveOpen` (before `phRowPasses`); hooks in
+`phRowPasses`, the stock head + cell, the inline edit (`qtyPP`), renderPhFlags' strip, the row ⋮, the click handlers, `phDispenseGate`
+(shelfAware), `presDispenseCommit`, the three put-backs, `presIngStockCellCore` + the table's short checks, `presDoseTimelineHtml`
+(Take from, the done line), the per-open reset. Checked on a test copy (the built-in catalogue, no login, made-up stock): Move 100 g took
+CBD 410 → 310 and Potts Point 0 → 100 through the real ⋮ and box; the head reads CBD (g) · Potts Pt (g) and the bar Both · CBD · Potts
+Point 1; on Saturday a 60 g dispense took Potts Point 100 → 40 (deducted shelf pp), `phReverseEntry` put it back on Potts Point, CBD
+picked took CBD; the shortfall check read Potts Point for a prescription (200 g short) and CBD for a batch; In stock read 100 → 40 g, then
+250 → 190 g on CBD. tap-audit + style-audit: the place bar, the Potts column and Take from clean at 1220, Take from clean at 360; the Move
+box's input and buttons are the shared ask box's own 40px / 10px look (every phAsk), left as it is.

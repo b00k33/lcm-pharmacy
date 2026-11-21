@@ -548,6 +548,14 @@ each (20 kept). Never store the full note text (the origin's about 5 MB is share
 `{6: "Lotus Healing Arts"}`, set at Hub › Money's rates "Saturdays at"). That day's bookings, from either login, carry its tag ("Lotus") and, on its calendar blocks, Lotus's own red #B02C2E (`PH_LOTUS_COLOUR`, her 2026-11-21 "lotus is red like"; never Acupreg's sage on that day);
 the Hub counts that day as its own clinic (hours, its own income tile at the visit prices, never the CBD split or a CBD admin week).
 
+**The Potts Point shelf (her 2026-11-21 "track a separate inventory for potts point because i work there on saturdays"; her 4 picks
+of `mocks/potts-shelf-mock-2026-11-21-*.png`, all the recommended one):** `h.qtyPP` = a herb's grams at Potts Point, only for a herb she
+moved there (⋮ › Move to Potts Point, or a number typed in its Potts Pt cell; empty takes it off); `h.qty` stays CBD's and is the only count
+orders (they arrive at CBD), low lists, the Dashboard and Stocktake read. A dispense on a day at another clinic (`phDayClin`, Saturday)
+takes from Potts Point for a herb kept there (Take from CBD · Potts Point on the step, this open only), and its undo puts the grams back on
+the same shelf (`deducted[].shelf`, `phShelfAdd`). Low is per shelf: Potts Point under 50 g is its own red dot (`PH_PP_LOW`). Never one
+count for both shelves, never a second login for Potts Point.
+
 **Phone type scale:** STYLE-LCM.md (≤480px). If a request conflicts with a
 rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
 

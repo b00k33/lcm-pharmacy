@@ -33129,6 +33129,11 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   #pharmacyPage .ph-clkg td.none { background: #FAFBFC; }
   #pharmacyPage .ph-clkg tr.cc td { font-weight: 600; }
   #pharmacyPage .ph-clkg tbody tr:last-child > * { border-bottom: 0; }
+  /* the Potts Point shelf (her 2026-11-21 picks): a low count's red dot, the dispense step's Take from line, the Move box's bar */
+  #pharmacyPage .ph-pp-low { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ph-zero); margin-right: 6px; vertical-align: middle; }
+  #pharmacyPage .ph-dose-from { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: var(--fs-11-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-pp-dir { display: flex; margin: 4px 0 8px; }
+  #pharmacyPage .ph-pp-after:empty { display: none; }
   @media (max-width: 640px) {
     #pharmacyPage :is(.ph-appthist-hd, .ph-appthist-row) { grid-template-columns: minmax(0, 1fr) auto; padding: 7px 10px; }
     #pharmacyPage .ph-appthist-hd > span:nth-child(n+2) { display: none; }
@@ -39714,6 +39719,72 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // tick the gold ph-row-hh row wash already reads) -- same pure-view-state
   // idiom as phInHouseOnly right above, not persisted, resets on reload.
   let phHHOnly = false;
+  // ---- the Potts Point shelf (her 2026-11-21 "track a separate inventory for potts point because i work there on saturdays";
+  // mocks/potts-shelf-mock-2026-11-21-*.png, her 4 picks, all the recommended one) ----
+  // h.qtyPP = grams on the Potts Point shelf (undefined = not kept there; she moves a herb there first); h.qty stays CBD's and
+  // is the only count orders, low lists, the Dashboard and Stocktake read (orders arrive at CBD). A dispense on a day at another
+  // clinic (phDayClin, Saturday = Lotus) takes from Potts Point for a herb kept there, unless she taps CBD (this open only).
+  const PH_PP_LOW = 50;   // grams: a Potts Point count under this shows its own red dot (low is per shelf)
+  let phInvPlace = "all";   // Inventory's place bar: "all" · "cbd" · "pp"
+  let presDispShelfPick = null;   // the open prescription's Take from: null = by the day · "cbd" · "pp"
+  const phHasPP = h => !!h && h.qtyPP != null && Number.isFinite(+h.qtyPP);
+  const phPPCount = () => (PHARMACY.herbs || []).filter(phHasPP).length;
+  const phPPCol = () => phInvPlace !== "cbd" && phPPCount() > 0;
+  function presDispShelf() { return presDispShelfPick || (phDayClin(keyOf(TODAY)) ? "pp" : "cbd"); }
+  const phShelfOf = h => presDispShelf() === "pp" && phHasPP(h) ? "pp" : "cbd";
+  const phShelfQty = h => phShelfOf(h) === "pp" ? +h.qtyPP : h.qty;
+  // grams back onto (or, negative, off) a shelf: a dispense's undo / roll-back puts them where they came from
+  function phShelfAdd(h, grams, shelf) {
+    if (shelf === "pp") h.qtyPP = phRound2((+h.qtyPP || 0) + grams); else h.qty = phRound2((h.qty || 0) + grams);
+    phAfterQtyChange(h);
+  }
+  function phPPBarHtml() {
+    const n = phPPCount();
+    if (!n) return "";
+    const b = (k, l) => `<button type="button" class="ph-ltr-qual${phInvPlace === k ? " on" : ""}" data-ph-inv-place="${k}" aria-pressed="${phInvPlace === k}">${l}</button>`;
+    return `<span class="ph-tng2-seg ph-pl-fbar ph-inv-place" role="group" aria-label="Shelf">${b("all", "Both")}${b("cbd", "CBD")}${b("pp", `Potts Point<i>${n}</i>`)}</span>`;
+  }
+  function phPPCellHtml(h, lock) {
+    const v = phHasPP(h) ? +h.qtyPP : null;
+    return `<td class="ph-num" data-col="qtyPP">${lock("qtyPP", v == null ? "—" : `${v < PH_PP_LOW ? `<span class="ph-pp-low" title="Low at Potts Point"></span>` : ""}${phFmtG(v)}`, `Potts Point stock of ${esc(h.name)}`)}</td>`;
+  }
+  // Move: CBD → Potts Point, or back (the bar in the box); the two counts change together
+  function phPPMoveOpen(h) {
+    let dir = "in";
+    const now = () => `Now: CBD ${h.qty == null ? "—" : phFmtG(h.qty) + " g"} · Potts Point ${phFmtG(+h.qtyPP || 0)} g`;
+    const p = phAsk({ title: `Move ${phPinyinName(h)}`, message: now(), input: { type: "number", inputmode: "decimal", min: 0, step: 10, value: "" }, yes: "Move", no: "Cancel" });
+    const card = document.querySelector("#phAskWrap .ph-ask-card");
+    if (card) {
+      const inp = card.querySelector(".ph-ask-input"), yes = card.querySelector("[data-ph-ask-yes]");
+      const after = document.createElement("p"); after.className = "ph-ask-msg ph-pp-after";
+      const paint = () => {
+        const g = Math.max(0, Math.floor(parseFloat(inp.value) || 0)), s = dir === "in" ? 1 : -1;
+        after.textContent = g ? `After: CBD ${h.qty == null ? "—" : phFmtG(h.qty - s * g) + " g"} · Potts Point ${phFmtG((+h.qtyPP || 0) + s * g)} g` : "";
+        yes.textContent = g ? `Move ${phFmtG(g)} g` : "Move";
+        card.querySelectorAll("[data-pp-dir]").forEach(x => { const on = x.dataset.ppDir === dir; x.classList.toggle("on", on); x.setAttribute("aria-pressed", on); });
+      };
+      if ((+h.qtyPP || 0) > 0) {
+        const bar = document.createElement("span"); bar.className = "ph-tng2-seg ph-pp-dir"; bar.setAttribute("role", "group");
+        bar.innerHTML = `<button type="button" class="ph-ltr-qual" data-pp-dir="in">CBD → Potts Point</button><button type="button" class="ph-ltr-qual" data-pp-dir="out">Potts Point → CBD</button>`;
+        bar.addEventListener("click", e => { const b = e.target.closest("[data-pp-dir]"); if (b) { dir = b.dataset.ppDir; paint(); inp.focus(); } });
+        card.querySelector("h3").after(bar);
+      }
+      inp.after(after);
+      inp.addEventListener("input", paint);
+      paint();
+    }
+    p.then(v => {
+      const g = Math.floor(parseFloat(v));
+      if (!(g > 0)) return;
+      const s = dir === "in" ? 1 : -1;
+      if (h.qty != null) h.qty = phRound2(h.qty - s * g);
+      h.qtyPP = phRound2((+h.qtyPP || 0) + s * g);
+      phAfterQtyChange(h);
+      if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
+      presSavedToast(`Moved ${phFmtG(g)} g ${dir === "in" ? "to Potts Point" : "to CBD"}`);
+      renderPhFlags(); renderPhStock();
+    });
+  }
   function phRowPasses(h) {
     const terms = phSearchTerms();
     if (terms.length && !terms.some(q => phRowMatchesTerm(h, q))) return false;
@@ -39721,6 +39792,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (phHHOnly && !h.usedByHH) return false;
     // herbs and formulas separate on demand — the two kinds of the pharmacy
     if (phKindFilter !== "all" && (phKindFilter === "formula") !== phIsFormula(h)) return false;
+    if (phInvPlace === "pp") return phHasPP(h);   // the Potts Point shelf: every herb kept there, counted or not
     // a row she just edited stays put even if the edit knocked it out of the
     // active status filter — so a filtered list stays editable (her ask)
     if (phKeepVisible.has(h.id)) return true;
@@ -40866,7 +40938,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       cost: th("cost", "Cost $/g", "Cost per gram — what it costs you"),
       costFlag: th("costFlag", "Sell $/g", "Sell per gram — $/g rounded up to the nearest 10c"),
       bottleCost: th("bottleCost", "Bottle $"),
-      qty: th("qty", "Stock (g)"),
+      qty: th("qty", phPPCol() ? "CBD (g)" : "Stock (g)") + (phPPCol() ? `<th data-col="qtyPP" title="Potts Point"><span class="ph-th-sort">Potts Pt (g)</span></th>` : ""),
       level: th("level", "Level"),
       low: th("low", "Low at"),
       status: th("status", "Status"),
@@ -41431,6 +41503,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     return `<span class="ph-rp-menuwrap ph-inv-menuwrap"><button type="button" class="ph-os-dots${open ? " on" : ""}" data-ph-inv-menu="${h.id}" aria-haspopup="true" aria-expanded="${open}" aria-label="More for ${esc(h.name)}">⋮</button>${open ? `<div class="ph-rp-menu">
       <div class="ph-rp-mh">${esc(phPinyinName(h))}</div>
       <button type="button" class="ph-rp-mi" data-ph-herb-edit="${h.id}">Edit</button>
+      <button type="button" class="ph-rp-mi" data-ph-pp-move="${h.id}">Move to Potts Point</button>
       ${phIsFormula(h) ? `<button type="button" class="ph-rp-mi" data-ph-dash-refill-open="${h.id}">Make a refill</button>` : ""}
       ${!h.stopped && !phIsInHouseSup((phActiveSupplier(h) || {}).name) ? `<button type="button" class="ph-rp-mi" data-ph-order="${h.id}">${h.order ? "Take off the order list" : "Add to order"}</button>` : ""}
       ${k === "stopped" || k === "phaseout"
@@ -41574,7 +41647,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         cost: `<td class="ph-num" data-col="cost"><span title="${rl ? `From its recipe: ${esc(rl)}. A herb's price or the recipe changes it.` : `Cost per gram of ${esc(h.name)} — set the Bottle $ to change it`}">${h.cost ? "$" + h.cost : "—"}</span>${rl ? `<span class="ph-sub ph-cost-rcp">recipe</span>` : ""}${priceMore}</td>`,
         costFlag: `<td class="ph-num" data-col="costFlag"><span title="$/g rounded up to the nearest 10c">${h.cost ? "$" + phRound2(phRoundUp10c(h.cost)) : "—"}</span></td>`,
         bottleCost: `<td class="ph-num" data-col="bottleCost">${bottleCell}</td>`,
-        qty: `<td class="ph-num" data-col="qty">${lock("qty", h.qty != null ? h.qty : "—", `Stock of ${esc(h.name)}`)}</td>`,
+        qty: `<td class="ph-num" data-col="qty">${lock("qty", h.qty != null ? h.qty : "—", `Stock of ${esc(h.name)}`)}</td>${phPPCol() ? phPPCellHtml(h, lock) : ""}`,
         level: `<td data-col="level">${phStockBarPct(h.qty, h.low)}</td>`,
         low: `<td class="ph-num" data-col="low">${lock("low", h.low != null ? h.low : "—", `Reorder point of ${esc(h.name)}`)}</td>`,
         status: `<td class="ph-status-cell" data-col="status">${phStatusPills(h)}${phStatusMenuFor === h.id ? phStatusMenuHtml(h) : ""}</td>`,
@@ -42066,7 +42139,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       : { n, label, attrs: `data-ph-inv-count="${key}"` };   // the narrow list: the chips say Zero / Low / Overstock (her 2026-11-01 "Chips only")
     if (invHeadEl) {
       invHeadEl.classList.toggle("ph-ds-polish", sheet);
-      invHeadEl.innerHTML = phShellHead("Inventory", `${PHARMACY.herbs.length} herbs & formulas`, phShellStripHtml([
+      invHeadEl.innerHTML = phShellHead("Inventory", `${PHARMACY.herbs.length} herbs & formulas`, (s => sheet && phPPCount() ? s.replace(`<div class="ph-shell-fbar">`, `<div class="ph-shell-fbar">${phPPBarHtml()}`) : s)(phShellStripHtml([
         tile(zero.length, "Zero", "zero", "x", statusOn("zero")),
         tile(low.length, "Low", "low", "warn", statusOn("low")),
         tile(phaseout.length, sheet ? "Phasing out" : "Phasing<br>out", "phaseout", "jar-empty", statusOn("phaseout")),
@@ -42081,7 +42154,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         // default filter AND with no control left to change it. Same tile
         // helper, same [data-ph-inv-tile] handler, nothing new underneath.
         tile(untrackedN, "Never counted", "untracked", "clipboard", statusOn("untracked")),
-      ]));
+      ])));
     }
     if (phListingOpen === "stopped" && !stopped.length) phListingOpen = null;   // last one resumed
     if (phListingOpen === "phaseout" && !phaseout.length) phListingOpen = null; // last one sold down
@@ -42832,7 +42905,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       // on purpose (her rule, 2026-08-06); flooring the restore at 0 here
       // would silently erase a still-outstanding shortfall if an earlier,
       // still-undispensed deduction is what's keeping qty negative
-      if (h) { h.qty = phRound2((h.qty || 0) + x.grams); phAfterQtyChange(h); }
+      if (h) phShelfAdd(h, x.grams, x.shelf);
     });
     (Array.isArray(entry.added) ? entry.added : []).forEach(x => {
       const h = PHARMACY.herbs.find(hh => hh.id === x.herbId);
@@ -68856,6 +68929,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         }
         return;
       }
+      if (e.target.closest("[data-pres-shelf]")) { presDispShelfPick = e.target.closest("[data-pres-shelf]").dataset.presShelf; renderPresPanel(); return; }
       if (e.target.closest("[data-pres-lastdisp-view]")) {
         const id = e.target.closest("[data-pres-lastdisp-view]").dataset.presLastdispView;
         presLastDispViewId = presLastDispViewId === id ? null : id;
@@ -74301,7 +74375,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       const dispUndo = e.target.closest("[data-pres-dispense-undo]");
       if (dispUndo) {
         const id = dispUndo.dataset.presDispenseUndo;
-        (presPending[id] || []).forEach(x => { const h = PHARMACY.herbs.find(hh => hh.id === x.herbId); if (h) { h.qty = phRound2((h.qty || 0) + x.grams); phAfterQtyChange(h); } });
+        (presPending[id] || []).forEach(x => { const h = PHARMACY.herbs.find(hh => hh.id === x.herbId); if (h) phShelfAdd(h, x.grams, x.shelf); });
         delete presPending[id];
         delete presPendingNotes[id];
         delete presPendingAt[id];
@@ -75615,6 +75689,15 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         if (phInvMenu) phRefillMenuFixPosition();
         return;
       }
+      const ppMove = e.target.closest("[data-ph-pp-move]");
+      if (ppMove) {
+        const h = PHARMACY.herbs.find(x => x.id === ppMove.dataset.phPpMove);
+        phInvMenu = null; renderPhRows();
+        if (h) phPPMoveOpen(h);
+        return;
+      }
+      const invPlace = e.target.closest("[data-ph-inv-place]");
+      if (invPlace) { phInvPlace = invPlace.dataset.phInvPlace; phInvPage = 1; renderPhFlags(); renderPhStock(); return; }
       const invTile = e.target.closest("[data-ph-inv-tile]");
       if (invTile) {
         const k = invTile.dataset.phInvTile;
@@ -77099,7 +77182,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
           if (v != null && (h.qty == null || v > h.qty)) { h.order = false; h.ordered = false; }  // restocked → off the order list
           h.qty = v == null ? null : Math.floor(v);   // shelf stock is whole grams, rounded down
           phAfterQtyChange(h);   // a phase-out sold to 0 becomes a plain write-off
-        } else if (field === "low") h.low = v;
+        } else if (field === "qtyPP") { if (v == null) delete h.qtyPP; else h.qtyPP = Math.floor(v); }
+        else if (field === "low") h.low = v;
         // her catch (2026-08-04): "$23 a bottle should be $0.23/g, not $0.30" --
         // $/g and $/g^ are two DIFFERENT numbers on purpose (exact cost, then
         // that same cost rounded up to the nearest 10c for quoting), but every
@@ -82811,6 +82895,7 @@ or changing anything in Cliniko.
     if (identName && presHxUntaken(identName) && pfBasics) presAssessTab = "medhx";
     presCalcSessionDone = false;
     presLastDispViewId = null;
+    presDispShelfPick = null;
   }
   // her ask 2026-09-15: "audit the whole app to make the back click more
   // consistent" -- every place that jumps to a patient's script from ANOTHER
@@ -166467,6 +166552,9 @@ Please let me know if you have any questions.`;
     // moves here instead of the flash carrying the whole sentence again.
     const dispGrams = pending ? (t.totalGrams || (presPending[t.id] || []).reduce((n, x) => n + (x.grams || 0), 0)) : t.lastDispensedGrams;
     const lastRec = !dispensed ? presLastDispRecord(t, presOpenSnapshot) : null;
+    const ppOut = (pending ? presPending[t.id] || [] : logged ? ((PHARMACY.log.find(x => x.id === t.lastDispenseLogId) || {}).deducted || []) : []).some(x => x && x.shelf === "pp");
+    const ppHere = !dispensed && (t.ingredients || []).some(i => phHasPP((i.code && findHerbByCode(i.code, i.herb)) || findHerbByName(i.herb || i.name || "")));
+    const sh = presDispShelf(), shelfBar = ppHere ? `<div class="ph-dose-from">Take from <span class="ph-tng2-seg" role="group" aria-label="Take from"><button type="button" class="ph-ltr-qual${sh === "cbd" ? " on" : ""}" data-pres-shelf="cbd" aria-pressed="${sh === "cbd"}">CBD</button><button type="button" class="ph-ltr-qual${sh === "pp" ? " on" : ""}" data-pres-shelf="pp" aria-pressed="${sh === "pp"}">Potts Point</button></span></div>` : "";
     return `${lastRec ? `<div class="ph-lastdisp-line">
       <span><svg class=icn aria-hidden=true><use href=#i-clock></use></svg> Last dispensed · ${esc(presDispDateTimeStr(lastRec.at))}${lastRec.grams ? ` · ${phFmtG(lastRec.grams)}g` : ""}${lastRec.price != null ? ` · ${phMoney(lastRec.price)}` : ""}</span>
       <button type="button" class="ph-load-btn" data-pres-lastdisp-view="${t.id}" aria-expanded="${presLastDispViewId === t.id ? "true" : "false"}">${presLastDispViewId === t.id ? "Hide" : "View"}</button>
@@ -166496,10 +166584,10 @@ Please let me know if you have any questions.`;
         <span class="ph-dose-step-node" aria-hidden="true">✓</span>
         <span class="ph-dose-step-body">
           <span class="ph-dose-step-label">${wentOut ? "Dispensed &amp; logged" : "Logged"}</span>
-          <span class="ph-dose-step-tag">${dispAt ? esc(presDispDateTimeStr(dispAt)) : ""}${dispGrams ? ` · ${phFmtG(dispGrams)}g` : ""}${wentOut ? " · label copied" : ""}</span>
+          <span class="ph-dose-step-tag">${dispAt ? esc(presDispDateTimeStr(dispAt)) : ""}${dispGrams ? ` · ${phFmtG(dispGrams)}g` : ""}${ppOut ? " · Potts Point" : ""}${wentOut ? " · label copied" : ""}</span>
         </span>
         <button type="button" class="ph-arr-editbtn ph-dose-step-menubtn" data-pres-disp-menu="${t.id}" title="Undo this dispense, or dispense again" aria-label="Undo or re-dispense ${esc(t.name)}">⋯</button>
-      </div>` : `
+      </div>` : `${shelfBar}
       <div class="ph-dose-timeline">
         <div class="ph-dose-step${calcDone ? " done" : ""}">
           <button type="button" class="ph-dose-step-main" data-pres-calc="${t.id}">
@@ -166516,7 +166604,7 @@ Please let me know if you have any questions.`;
             <span class="ph-dose-step-node" aria-hidden="true">✓</span>
             <span class="ph-dose-step-body">
               <span class="ph-dose-step-label">Dispensed &amp; copied</span>
-              <span class="ph-dose-step-tag">${dispAt ? esc(presDispDateTimeStr(dispAt)) : ""}${dispGrams ? ` · ${phFmtG(dispGrams)}g` : ""}</span>
+              <span class="ph-dose-step-tag">${dispAt ? esc(presDispDateTimeStr(dispAt)) : ""}${dispGrams ? ` · ${phFmtG(dispGrams)}g` : ""}${ppOut ? " · Potts Point" : ""}</span>
             </span>
           </span>` : `
           <button type="button" class="ph-dose-step-main" data-pres-dispense="${t.id}" data-pres-calc-first="1">
@@ -168140,7 +168228,7 @@ Please let me know if you have any questions.`;
         const h = presResolveLineName(i.name);
         const g = i.grams || 0;
         const need = presIngBagOut() ? 0 : phRound2(g * _scale);
-        const q = h ? (h.qty || 0) : 0;
+        const q = h ? (phShelfQty(h) || 0) : 0;
         const short = !presIngBagOut() && !!h && (q <= 0 || q - need < 0);
         if (short) negNow.add(i.name);
         const cls = [first ? "rise" : "", prevNames && !prevNames.has(i.name) ? "new" : "", short && !first && !prevNeg.has(i.name) ? "shake" : ""].filter(Boolean).join(" ");
@@ -168227,8 +168315,8 @@ Please let me know if you have any questions.`;
     return `<span class="ph-instock-mk" title="${esc(wi ? `On Formula refill · ${wi.rel} · ${wi.range}` : "On Formula refill")}">To make${wi ? ` · Wk ${wi.wk}` : ""}</span>`;
   }
   function presIngStockCellCore(h, neededG) {
-    const q = h.qty || 0, need = neededG || 0;
-    const low = (h.low != null && h.low > 0) ? h.low : null;
+    const atPP = phShelfOf(h) === "pp", q = (atPP ? +h.qtyPP : h.qty) || 0, need = neededG || 0;
+    const low = atPP ? PH_PP_LOW : (h.low != null && h.low > 0) ? h.low : null;
     if (q <= 0) return `<span class="ph-instock short neg" title="Nothing on the shelf">${phFmtG(q)} g · out</span>`;
     const after = phRound2(q - need);
     const cls = after < 0 ? "short neg" : (low != null && after <= low) ? "short" : "ok";
@@ -168236,7 +168324,7 @@ Please let me know if you have any questions.`;
     const txt = need > 0
       ? (after < 0 ? `${phFmtG(q)} g · short ${phFmtG(-after)} g` : `${phFmtG(q)} → ${phFmtG(after)} g`)
       : `${phFmtG(q)} g`;
-    const tip = `${phFmtG(q)} g on the shelf · this bag takes ${phFmtG(need)} g · ${after < 0 ? `short by ${phFmtG(-after)} g` : `${phFmtG(after)} g left`}${low != null ? ` · refill line ${phFmtG(low)} g` : ""}`;
+    const tip = `${phFmtG(q)} g ${atPP ? "at Potts Point" : "on the shelf"} · this bag takes ${phFmtG(need)} g · ${after < 0 ? `short by ${phFmtG(-after)} g` : `${phFmtG(after)} g left`}${low != null ? ` · refill line ${phFmtG(low)} g` : ""}`;
     return `<span class="ph-instock ${cls}" title="${esc(tip)}">${txt}<span class="ph-instock-bar"><i style="width:${pct}%"></i></span></span>`;
   }
   // Repaint just the In stock cells in place (grams / dose changes) -- the
@@ -168256,7 +168344,7 @@ Please let me know if you have any questions.`;
       const negNow = new Set();
       list.forEach(i => {
         const h = presResolveLineName(i.name);
-        if (h && !presIngBagOut() && ((h.qty || 0) <= 0 || (h.qty || 0) - phRound2((i.grams || 0) * scale) < 0)) negNow.add(i.name);
+        if (h && !presIngBagOut() && ((phShelfQty(h) || 0) <= 0 || (phShelfQty(h) || 0) - phRound2((i.grams || 0) * scale) < 0)) negNow.add(i.name);
       });
       const same = negNow.size === presIngSeen.neg.size && [...negNow].every(n => presIngSeen.neg.has(n));
       if (!same) { presRefreshIngTable(); return; }
@@ -169709,11 +169797,12 @@ Dosage: {dosage}
   // already build. onCommit(resolvedItems) gets that same shape back, with
   // any substituted row's h/grams swapped to the replacement herb/chosen
   // amount and .subFor set to {code,name} of the herb it replaced.
-  function phDispenseGate(items, onCommit) {
+  function phDispenseGate(items, onCommit, shelfAware) {   // shelfAware: a prescription's dispense reads its shelf (a batch make is CBD's)
     // one jar on two lines is one shortfall: the check adds its lines up first
     const need = new Map();
     items.forEach(x => { if (x.h) need.set(x.h.id, phRound2((need.get(x.h.id) || 0) + x.grams)); });
-    const shorts = [...new Set(items.filter(x => x.h && x.h.qty != null && phRound2(x.h.qty - need.get(x.h.id)) < 0).map(x => x.h))];
+    const q = h => shelfAware ? phShelfQty(h) : h.qty;
+    const shorts = [...new Set(items.filter(x => x.h && q(x.h) != null && phRound2(q(x.h) - need.get(x.h.id)) < 0).map(x => x.h))];
     if (!shorts.length) { onCommit(items); return; }
     phDispCheck = {
       allItems: items,
@@ -169843,7 +169932,7 @@ Dosage: {dosage}
       renderPharmacy();
       return;
     }
-    phDispenseGate(items, resolved => { presDispenseCommit(t, resolved); if (onDone) onDone(); });
+    phDispenseGate(items, resolved => { presDispenseCommit(t, resolved); if (onDone) onDone(); }, true);
   }
   function presDispenseCommit(t, items) {
     // her split: 💊 Dispense Stock deducts inventory ONLY — the record is
@@ -169853,7 +169942,8 @@ Dosage: {dosage}
     const notes = [];
     const subs = {};
     items.forEach(x => {
-      if (!x.h || x.h.qty == null) return;
+      if (!x.h || (x.h.qty == null && phShelfOf(x.h) === "cbd")) return;
+      const shelf = phShelfOf(x.h);   // Potts Point on its day for a herb kept there (her 2026-11-21 pick), else CBD
       // her rule (2026-08-06): dispense the FULL amount prescribed even if
       // stock can't cover it -- stock goes negative to show the shortfall,
       // rather than silently capping the deduction at whatever's left.
@@ -169862,11 +169952,11 @@ Dosage: {dosage}
       // go-ahead, substituted or not.
       const actual = phRound2(x.grams);
       if (actual > 0) {
-        const before = x.h.qty;
-        x.h.qty = phRound2(x.h.qty - actual);
-        deducted.push({ herbId: x.h.id, grams: actual });
+        const before = shelf === "pp" ? +x.h.qtyPP : x.h.qty;
+        if (shelf === "pp") x.h.qtyPP = phRound2(before - actual); else x.h.qty = phRound2(x.h.qty - actual);
+        deducted.push(shelf === "pp" ? { herbId: x.h.id, grams: actual, shelf: "pp" } : { herbId: x.h.id, grams: actual });
         if (x.subFor) { notes.push(`↔ ${x.subFor.code ? esc(x.subFor.code) + " " : ""}${esc(x.subFor.name)} substituted with ${phHerbCode(x.h) ? esc(phHerbCode(x.h)) + " " : ""}${esc(x.h.name)} × ${phFmtG(actual)}g for this dispense only.`); subs[(x.subFor.code || "") + "|" + (x.subFor.name || "")] = { code: phHerbCode(x.h) || "", name: x.h.name || "", grams: actual }; }
-        else if (x.h.qty < 0) notes.push(`⚠ ${phHerbCode(x.h) ? esc(phHerbCode(x.h)) + " " : ""}${esc(x.h.name)} dispensed at ${phFmtG(x.h.qty)}g (${phFmtG(before)}g in stock, ${phFmtG(actual)}g needed) — confirmed anyway.`);
+        else if ((shelf === "pp" ? x.h.qtyPP : x.h.qty) < 0) notes.push(`⚠ ${phHerbCode(x.h) ? esc(phHerbCode(x.h)) + " " : ""}${esc(x.h.name)} dispensed at ${phFmtG(shelf === "pp" ? x.h.qtyPP : x.h.qty)}g${shelf === "pp" ? " at Potts Point" : ""} (${phFmtG(before)}g in stock, ${phFmtG(actual)}g needed) — confirmed anyway.`);
       }
       phAfterQtyChange(x.h);
     });
@@ -169903,7 +169993,7 @@ Dosage: {dosage}
     if (!okPh || !okPr) {
       deducted.forEach(d => {
         const h = PHARMACY.herbs.find(hh => hh.id === d.herbId);
-        if (h) { h.qty = phRound2((h.qty || 0) + d.grams); phAfterQtyChange(h); }
+        if (h) phShelfAdd(h, d.grams, d.shelf);
       });
       delete presPending[t.id];
       delete presPendingNotes[t.id];

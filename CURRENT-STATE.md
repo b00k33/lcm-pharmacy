@@ -749,6 +749,19 @@ carry sprite icons; a row says each fact once ("never" / the amber date carry no
 hover), short condition names (2 then +N), one 18px pill look, 44px rows. Her 9/4 bones stay: fold bands, timeline rows, the two
 round buttons. The phone keeps its chips and Scheduled line.
 
+## The Potts Point shelf (2026-11-21)
+- **Stock:** `h.qtyPP` (grams at Potts Point; undefined = not kept there), `h.qty` = CBD. `phHasPP`, `phPPCount`. Orders, Low / Zero,
+  the Dashboard, To order and Stocktake read CBD only.
+- **Inventory (computer):** once a herb is kept there, the filter row leads with Both · CBD · Potts Point n (`phPPBarHtml`, `phInvPlace`;
+  Potts Point lists every herb kept there whatever its status); the Stock column reads CBD (g) and Potts Pt (g) follows it (`phPPCol`,
+  `phPPCellHtml`, typed like the stock: empty = off the shelf); a count under `PH_PP_LOW` (50 g) has the red dot. ⋮ › Move to Potts Point
+  (`phPPMoveOpen`): grams in, Now / After lines, CBD → Potts Point · Potts Point → CBD once it holds some; both counts change together.
+- **Dispense:** `presDispShelf()` = her tap (`presDispShelfPick`, reset each open) else Potts Point on a `phDayClin` day; `phShelfOf(h)`
+  is Potts Point only for a herb kept there. The step shows Take from CBD · Potts Point when the prescription holds such a herb
+  (`.ph-dose-from`); the In stock column, the shortfall check (`phDispenseGate(..., true)`, prescriptions only; a batch make stays CBD)
+  and the deduction read that shelf; `deducted[]` carries `shelf: "pp"`, and all three put-backs (`phReverseEntry`, the pending undo,
+  the failed-save roll-back) use `phShelfAdd`. The done line says "· Potts Point".
+
 ## The day's clinic (2026-11-20: Saturdays = Lotus Healing Arts)
 - `PH_DAY_CLIN0` / `phDayClinMap` / `phDayClin` / `phDayClinShort` / `phDayClinTagHtml` (by `phApptPracTagHtml`); the setting is the
   shared Me row's `hubset.dayClin = {id, v: {weekday: clinic name}, up}`, an input "Saturdays at" beside the Hub rates (empty = off).
