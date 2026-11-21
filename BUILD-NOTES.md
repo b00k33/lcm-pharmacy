@@ -17304,7 +17304,7 @@ textareas, a run-on "What you came in for" scrolling inside its box, the pulse a
   empty, with a part open and closed), Copy text, the printed page's HTML, ↺ Fill again, a saved part's lines after leaving it.
   Pictures: `shots/s22-sum-1220.png`, `shots/s22-sum-360.png` (pretend patient).
 
-## Schedule button on the prescription band (2026-11-21, synth22 batch 2; SAVED; LIVE on her "push live" 2026-11-21)
+## Schedule button on the prescription band (2026-11-21, synth22 batch 2; SAVED 38771546; LIVE in build 20261121-184700, her "push live")
 Her words: "how do  schedule dispense?" (on a screenshot of the open prescription's Dispense step), then "yes add schedule button".
 Before: the form lived only on the Patient profile page (#schedWidget, the calendar button on the list's tool row, or Appointments ›
 ⋯ › Schedule a dispense); the prescription's own ⋯ More › Schedule (data-sched-new = the prescription id) opened that form BEHIND the
@@ -17335,7 +17335,7 @@ Pickup and Postage: clean). Left, older than this build and the same on the Pati
 (`.ph-name-link`, plain text that taps, 16px tall) and its 9px "Postage" pill (`.ph-pill.postage-warn`, 1220 only).
 Shots (local): `shots/s23-sch-1220.png` (the band), `shots/s23-sch-form-1220.png` (the form open over the prescription).
 
-## synth22 batch 2: one findings read, Acupuncture's Findings line, Summary for her follows the Care Plan (2026-11-21, SAVED; LIVE on her "push live" 2026-11-21)
+## synth22 batch 2: one findings read, Acupuncture's Findings line, Summary for her follows the Care Plan (2026-11-21, SAVED 38771546; LIVE in build 20261121-184700, her "push live")
 Her words: "need findings of tongue abdomen and all diagnostics used" (on Summary for her), "summary for her is the same as treatment
 plan", and her Acupuncture screenshot whose Findings line listed every Normal box. Her picks 1–4 (mock widget
 `lcm_synth22_careplan_summary_findings_schedule_mocks` B and C; memory project_lcm_synth22_careplan_2026_11_21): The plan = the Care Plan's
