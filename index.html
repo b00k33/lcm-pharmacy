@@ -5968,6 +5968,19 @@
   #pharmacyPage .ph-fit .ph-fit-tcard .ctoday { padding: 12px 16px; box-sizing: border-box; }
   #pharmacyPage .ph-fit .ph-fit-tcard .ctypes .wm { margin-left: 0; }
   #pharmacyPage .ph-fit-tcard .ctypes .sp { flex: 1 1 auto; margin: 0; height: auto; }
+  /* MENU THIS WEEK · DAY TO BE DECIDED (Meals): one card, a band with its + , one chip a dish, Place it = a day bar and a meal bar */
+  #pharmacyPage .ph-mmn { --field-radius: 6px; }
+  #pharmacyPage .ph-mmn .ph-mmn-bd { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 16px; }
+  #pharmacyPage .ph-mmn .ph-mmn-bd + .ph-mmn-bd { padding-top: 0; }
+  #pharmacyPage .ph-mmn .ph-hub-chip.on { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
+  #pharmacyPage .ph-mmn .ph-hub-chip.main { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
+  #pharmacyPage .ph-mmn .ph-mmn-in { flex: 1 1 200px; max-width: 320px; min-width: 0; box-sizing: border-box; min-height: 32px; border-radius: 6px; }
+  #pharmacyPage .ph-mmn .ph-mmn-in input { width: 100%; min-width: 0; height: 32px; box-sizing: border-box; border-radius: 6px; }
+  #pharmacyPage .ph-mmn .ph-mmn-pl { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 0 16px 12px; }
+  @media (max-width: 640px) {
+    #pharmacyPage .ph-mmn .ph-mmn-pl .ph-meal-bar { display: flex; width: 100%; }
+    #pharmacyPage .ph-mmn .ph-mmn-pl .ph-meal-bar button { flex: 1 1 0; min-width: 0; justify-content: center; padding: 0 4px; }
+  }
   #pharmacyPage .ph-fit-chips { display: flex; flex-wrap: wrap; gap: 8px; }
   #pharmacyPage .ph-fit-fd { display: grid; gap: 12px; min-width: 0; }
   /* the older components behind the chips: one margin rule, the teal, the row centre, the joined pain chips */
@@ -56586,6 +56599,74 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   document.addEventListener("dragend", () => { phMplDrag = null; document.querySelectorAll("#pharmacyPage .ph-mpl-ml.drop").forEach(x => x.classList.remove("drop")); });
   // her Meals page (MEALS TABLE): the toolbar, today's rings (fasting first, Stop / Start beside them), the week as a Table or a
   // Grid with its column, the key, Reactions by food, Targets; a phone: the rings, the steps, a day at a time, Copy a day + Shopping
+  /* ============================================================
+     MENU THIS WEEK · DAY TO BE DECIDED (her PA's brief 2026-11-22, the one-frame Meals page; BUILD-NOTES "Meals, one frame")
+     A card between the goals and the week box: the dishes she has for the week but no day for, one chip each. A chip opens
+     "Place it": a day, then a meal (Breakfast · Lunch · Dinner · Snacks); that puts the dish in the meal through the planner's
+     own door (phMealDayPut / the snack list) and takes it off the card in the SAME save (one Undo puts both back). Empty by
+     default, nothing written in it. Data in the Me row: d.hubset["mmn:<id>"] = {id: "mmn:<id>", v ("dish:<id>" when it names a
+     dish of hers, else "own:<words>"), at, up, del?}. It lives in hubset, NOT in a map of its own: a build from before this one
+     rebuilds the Me row from the keys it knows and would drop a new map the first time that device saved, but it merges
+     hubset entry by entry and never loops over it, so it keeps a dish it does not know (like hubset.habAt / stride / fitIn).
+     ============================================================ */
+  let phMmnUi = null;   // null | { add: true } | { id, day }
+  const phMmnOf = id => { const x = phMeOk() ? (phMeD().hubset || {})[id] : null; return x && !x.del && /^mmn:/.test(String(x.id || "")) && typeof x.v === "string" && x.v ? x : null; };
+  const phMmnList = () => (phMeOk() ? Object.values(phMeD().hubset || {}) : []).filter(x => x && /^mmn:/.test(String(x.id || "")) && phMmnOf(x.id)).sort(phAzBy(x => phMealName(x.v)));
+  function phMmnAdd(text) {
+    const t = String(text || "").trim().slice(0, 80);
+    if (!t) return false;
+    const dish = Object.values(phDishes()).find(x => x && !x.del && String(x.n || "").trim().toLowerCase() === t.toLowerCase());
+    const v = dish ? "dish:" + dish.id : "own:" + t, id = "mmn:" + uid();
+    if (phMmnList().some(x => x.v === v)) return true;
+    phMeSave((d, now) => { d.hubset = d.hubset && typeof d.hubset === "object" ? d.hubset : {}; d.hubset[id] = { id, v, at: now, up: now }; });
+    return true;
+  }
+  function phMmnPlace(id, day, sl) {
+    const x = phMmnOf(id);
+    if (!x || !day) return;
+    const meal = sl === "s" ? "Snacks" : phMealWord(sl), on = phHubDl(day);
+    phDietFresh = day + "|" + sl;
+    phMealSave((d, now) => {
+      d.hubset = d.hubset && typeof d.hubset === "object" ? d.hubset : {};
+      if (sl === "s") phMealPut(d, day + "|s", now, e => { e.list = (Array.isArray(e.list) ? e.list : []).concat([{ v: phMealWithSg(x.v, 100), at: now }]); });
+      else { const cur = phMealVs(phMealPlan(day, sl, d.meals).v); phMealDayPut(d, day, sl, phMealV(cur.includes(x.v) ? cur : cur.concat(x.v)), now); }
+      d.hubset[id] = Object.assign({}, x, { del: 1, up: now });
+    }, `✓ ${phMealName(x.v)} · ${meal} · ${on}`, [["meals", day + "|" + sl], ["hubset", id]]);
+    phMmnUi = null;
+    phDietRefresh();
+  }
+  function phMmnHtml(days) {
+    const L = phMmnList(), U = phMmnUi, op = U && U.id ? L.find(x => x.id === U.id) : null;
+    if (U && U.id && !op) phMmnUi = null;
+    const tk = keyOf(TODAY), U2 = phMmnUi;
+    if (op && U2 && !days.includes(U2.day)) U2.day = days.includes(tk) ? tk : days[0];
+    const chips = L.map(x => `<button type="button" class="ph-hub-chip${op && op.id === x.id ? " on" : ""}" data-mmn-open="${esc(x.id)}" aria-expanded="${!!op && op.id === x.id}">${esc(phMealName(x.v))}</button>`).join("");
+    const add = U2 && U2.add ? `<label class="ph-fast-fld ph-mmn-in"><input type="text" data-mmn-text="1" list="phMmnDl" maxlength="80" placeholder="Dish" aria-label="Dish" autocomplete="off" enterkeyhint="done"></label><datalist id="phMmnDl">${Object.values(phDishes()).filter(x => x && !x.del && x.n).map(x => String(x.n)).sort(phAz).map(n => `<option value="${esc(n)}"></option>`).join("")}</datalist><button type="button" class="ph-hub-chip main" data-mmn-save="1">Add</button><button type="button" class="ph-hab-cir" data-mmn-x="1" aria-label="Close">✕</button>` : "";
+    const slots = [["b", "Breakfast"], ["l", "Lunch"], ["d", "Dinner"], ["s", "Snacks"]];
+    const place = op ? `<div class="ph-mmn-pl"><span class="ph-meal-bar" role="group" aria-label="Day">${days.map(k => `<button type="button" class="${U2.day === k ? "on" : ""}" data-mmn-day="${k}" aria-pressed="${U2.day === k}">${esc(DOW_SHORT[parseKey(k).getDay()])}</button>`).join("")}</span><span class="ph-meal-bar" role="group" aria-label="Meal">${slots.map(([sl, l]) => `<button type="button" data-mmn-put="${sl}">${l}</button>`).join("")}</span><button type="button" class="ph-hub-chip" data-mmn-del="${esc(op.id)}">Remove</button><button type="button" class="ph-hab-cir" data-mmn-x="1" aria-label="Close">✕</button></div>` : "";
+    const plus = U2 && U2.add ? "" : `<button type="button" class="ph-hab-cir" data-mmn-add="1" aria-label="Add to the menu">+</button>`;
+    const body = (chips ? `<div class="ph-mmn-bd">${chips}</div>` : "") + (add ? `<div class="ph-mmn-bd">${add}</div>` : "") + place;
+    return `<div class="ph-hab-card ph-mmn"><div class="ph-hab-band"><span class="cp">Menu this week</span><span class="sf">Day to be decided</span><span class="fx"></span>${plus}</div>${body}</div>`;
+  }
+  document.addEventListener("click", e => {
+    const T = e.target;
+    if (!T || !T.closest || !T.closest("#pharmacyPage .ph-mmn")) return;
+    const el = T.closest("[data-mmn-open], [data-mmn-add], [data-mmn-save], [data-mmn-x], [data-mmn-day], [data-mmn-put], [data-mmn-del]");
+    if (!el) return;
+    e.stopImmediatePropagation();
+    const ds = el.dataset;
+    if (ds.mmnAdd) { phMmnUi = { add: true }; phDietRefresh(); const f = document.querySelector("#pharmacyPage [data-mmn-text]"); if (f) f.focus(); return; }
+    if (ds.mmnSave) { const f = document.querySelector("#pharmacyPage [data-mmn-text]"); if (f && phMmnAdd(f.value)) { phMmnUi = { add: true }; phDietRefresh(); const g = document.querySelector("#pharmacyPage [data-mmn-text]"); if (g) g.focus(); } return; }
+    if (ds.mmnX) { phMmnUi = null; phDietRefresh(); return; }
+    if (ds.mmnOpen) { phMmnUi = phMmnUi && phMmnUi.id === ds.mmnOpen ? null : { id: ds.mmnOpen, day: "" }; phDietRefresh(); return; }
+    if (ds.mmnDay) { phMmnUi = Object.assign({}, phMmnUi, { day: ds.mmnDay }); phDietRefresh(); return; }
+    if (ds.mmnPut && phMmnUi && phMmnUi.id) { phMmnPlace(phMmnUi.id, phMmnUi.day || keyOf(TODAY), ds.mmnPut); return; }
+    if (ds.mmnDel) { const x = phMmnOf(ds.mmnDel); if (x) { phMmnUi = null; phMeSave((d, now) => { d.hubset[ds.mmnDel] = Object.assign({}, x, { del: 1, up: now }); }); phDietRefresh(); } return; }
+  }, true);
+  document.addEventListener("keydown", e => {
+    const T = e.target;
+    if (e.key === "Enter" && T && T.matches && T.matches("#pharmacyPage [data-mmn-text]")) { e.preventDefault(); if (phMmnAdd(T.value)) { phMmnUi = { add: true }; phDietRefresh(); const g = document.querySelector("#pharmacyPage [data-mmn-text]"); if (g) g.focus(); } }
+  });
   function phMplHtml() {
     const tk = keyOf(TODAY), goal = phDietGoal(), phone = window.innerWidth <= 640;
     if (phMealPhs === null) phMealPhLoad();   // MEAL PHOTOS: read once, then painted in
@@ -56597,6 +56678,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     phMtryV = phMplLay() === "try" ? phMtryNut() : null;   // TRY A MEAL: the open try laid over the goals' day
     const rings = phMplGoalsHtml(rk, tk, goal, rk === tk ? phMplFastRingHtml(days, phMplRactsHtml()) : phMplDayFastRingHtml(rk, tk, phMplRactsHtml()), phone);
     phMtryV = null;
+    const mmn = phMplLay() === "try" || phMplLay() === "bd" ? "" : phMmnHtml(days);   // MENU THIS WEEK: the dishes with no day yet
     const cpI = k => phMplCopied && !phTpReduceMotion() ? phMplCopied.indexOf(k) : -1;   // a day a copy just filled: its turn
     if (phone) {
       const help = phMplCopyHtml() + phMplShopHtml(days), tail = (help ? `<div class="ph-mpl-helpers">${help}</div>` : "") + rx;
@@ -56613,7 +56695,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       const dh = `<div class="dh"><b>${esc(phHubDl(k))}</b><small>${k === tk ? "Today" : esc(MON_SHORT[parseKey(k).getMonth()])}</small>${phMplPd ? `<button type="button" class="ph-meal-back" data-mpl-pd="0">Today</button>` : ""}<span class="ph-diet-wk"><button type="button" data-mpl-pd="-1" aria-label="Day before"${phMplPd <= -30 ? " disabled" : ""}>‹</button><button type="button" data-mpl-pd="1" aria-label="Day after"${phMplPd >= 56 ? " disabled" : ""}>›</button></span></div>`;
       const cp = !!(phMplCopy && phMplCopy.from === k);
       const chips = `<div class="ph-mpl-pchips"><button type="button" class="ph-mpl-q" data-mpl-lay="${phMplLay() === "num" ? "table" : "num"}" aria-pressed="${phMplLay() === "num"}">Numbers</button><button type="button" class="ph-mpl-q" data-mpl-lay="${phMplLay() === "try" ? "table" : "try"}" aria-pressed="${phMplLay() === "try"}">Try</button><button type="button" class="ph-mpl-q" data-mpl-lay="${phMplLay() === "bd" ? "table" : "bd"}" aria-pressed="${phMplLay() === "bd"}">Body</button><button type="button" class="ph-mpl-q" data-mpl-copy="${k}" aria-pressed="${cp}">${phMealSvg("copy")}Copy day</button><button type="button" class="ph-mpl-q" data-mpl-lastwk="${days[0]}">Copy last week</button><button type="button" class="ph-mpl-q" data-mpl-recipes="1">${phMealSvg("pt-bowl")}Recipes</button><button type="button" class="ph-diet-tgb" data-diet-tg="1" aria-pressed="${phDietTg}">Targets</button></div>`;   // MEAL REPEATS (her pick 5): no Usual chip, each food carries its repeat
-      return `<div class="ph-mpl">${rings}<div class="ph-mpl-card">${phMplStepsHtml(days, tk)}<div class="ph-mpl-pday${cpI(k) >= 0 ? " cpf" : ""}">${dh}${rows}</div>${chips}</div>${tail}</div>`;
+      return `<div class="ph-mpl">${rings}${mmn}<div class="ph-mpl-card">${phMplStepsHtml(days, tk)}<div class="ph-mpl-pday${cpI(k) >= 0 ? " cpf" : ""}">${dh}${rows}</div>${chips}</div>${tail}</div>`;
     }
     const lay = phMplLay(), sh = phMplShown(days, tk), se = sh === days ? evs : sh.map(k => phMealEvents(k));   // DAY · 3 DAYS · WEEK: the days shown; the usual times, the steps and Shopping stay the week's
     phMplPv = lay === "ph";   // MEAL PHOTOS: the Photos view (her pick 6 B) = the Table with each meal as its photo
@@ -56621,7 +56703,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     phMplPv = false;
     const key = lay === "bd" ? "" : lay === "try" ? `<div class="ph-mpl-key"><span><i class="kb mac"></i>had</span><span><i class="kb tr"></i>this try</span><span><i class="kb ln"></i>your goal</span></div>` : lay === "num" ? `<div class="ph-mpl-key"><span><i class="kb gl"></i>your goal</span><span><i class="kb mac lo"></i>under 60%</span><span><i class="kb mac rd"></i>kJ · carbs over</span><span><i class="kb mac ov"></i>over goal</span><span><i class="kb mac pl"></i>planned</span><span><i class="kb mac ok"></i>fast reached</span></div>` : "";   // MEALS GOALS: the colour words went (each goal says its state)
     setTimeout(phMplStickyTop, 0);   // MEALS WEEK BOX: the bar sits under the patient's name band when that band stays in view
-    return `<div class="ph-mpl">${rings}<div class="ph-mpl-card ph-mpl-wkbox">${phMplToolbarHtml(days, tk)}<div class="ph-mpl-body"><div class="ph-mpl-tw${lay === "try" ? " try" : lay === "bd" ? " bf" : ""}"${lay === "try" || lay === "bd" || lay === "num" ? "" : ` title="Ticked circle = had it · circling arrows = repeats · bold = that day only · moon = planned fast · camera = add a photo"`}>${wk}</div>${lay === "try" ? phMbdHtml(tk, rk, goal) : lay === "bd" ? "" : phMplColHtml(days, tk, goal)}</div>${key}</div>${rx}</div>`;
+    return `<div class="ph-mpl">${rings}${mmn}<div class="ph-mpl-card ph-mpl-wkbox">${phMplToolbarHtml(days, tk)}<div class="ph-mpl-body"><div class="ph-mpl-tw${lay === "try" ? " try" : lay === "bd" ? " bf" : ""}"${lay === "try" || lay === "bd" || lay === "num" ? "" : ` title="Ticked circle = had it · circling arrows = repeats · bold = that day only · moon = planned fast · camera = add a photo"`}>${wk}</div>${lay === "try" ? phMbdHtml(tk, rk, goal) : lay === "bd" ? "" : phMplColHtml(days, tk, goal)}</div>${key}</div>${rx}</div>`;
   }
   document.addEventListener("click", e => {
     const T = e.target;
