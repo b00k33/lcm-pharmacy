@@ -17582,7 +17582,7 @@ Test copy: `lcm-pharmacy-app/_zz-l1.html` (hook `window.__tc`), seeded by `_zz-l
 - Found on the live page right after "push live" (build 20261121-222700): the table class `ph-me-bdt` already styled the birthday card title (`display:flex`), so the table collapsed; `.dn` already existed too. The table is now `ph-me-bdtb` and the Status mark `stfin`; names no longer draw in capitals (a global th rule); the page is 1100px wide like Routines' 880px (it was the 560px list width); When 100px, Name 210px.
 - Lesson (also for the next table): grep the whole file for a new class name before using it (`grep -c "ph-me-xyz"`), and look at the page in a real browser, not only the sizes. The first publish (222700) showed the broken table until this fix.
 
-## 2026-11-21: Her design profile and the voice audit (SAVED, not live)
+## 2026-11-21: Her design profile and the voice audit (LIVE in build 20261122-115500, carried by another session's publish; her "push live" came after)
 **Why:** her "audit lcm codes - find any information regarding my personality, embed my personality into the design of the app for
 current and future builds", then "what about things like [...] and i need simplicity and efficiency?". A one-glance picture
 (widget `lcm_her_personality_into_design_map`) and two popup rounds; her picks: the personal wording stays private (Claude's memory),
