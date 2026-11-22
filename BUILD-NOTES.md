@@ -17758,3 +17758,7 @@ Her "majority of this is very overwhelming: look through all the tabs and improv
 - Before / after at 1220 (made-up data, profile "Zz Test Me"): Exercises 978 → 254 / 217 / 502 / 209 by view; Progress 591 → 360; Health 297 unchanged. Her own record read live: Exercises 1,590, Progress 545.
 - tap-audit / style-audit / voice-audit at 1220 and 360 on Plan, the four Exercises views, Health, Progress: offSizes, offWeights, sideLines, rowAlign empty; no sideways scroll. Left (not new): the workout-kind and muscle bars' square inner segments, the 48px set circles, the phone's 48px day rows, one long tip line and the muscle disclaimer line.
 - NOT exercised: the signed-in app, her real data, a real device.
+
+## Pilates out of the workout kinds (2026-11-22, saved on session-a)
+
+Her "i dont do pilates anymore remove it". `PH_FIT_TYPES` is now Gym, F45, Bouldering, Stretching; the Pilates tip is out. Her past Pilates sessions (Jul-Aug 2026) and her one Pilates calendar event stay (history). Left in code, unreachable now: the Pilates milestone counter (`phFitPilN`). Tested in a scratch copy (profile "Zz Test Me"): the kinds row reads Bouldering, F45, Gym, Stretching and no Pilates word is on the Plan page. NOT exercised: her signed-in app.
