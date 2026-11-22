@@ -17711,3 +17711,7 @@ What changed: the Readings bar holds one right-aligned pair, **Import** and **+ 
 Private: the list is made from her own files and kept in her folder, outside every repo; no name, born date or goal is in this commit. The file is never read by the app on its own: only the chip's file picker reads it.
 Disclosed calls: (1) the chip stays on the Readings bar after the import (one chip, 32px); it can come out once she has loaded the list. (2) For is Charity (the new-reading default) on every imported row; $ is blank. (3) Her own received readings are not in the list.
 Tested: made-up "Zz Test" people in a scratch copy served from the scratchpad (never her record): 5 rows in, 3 kept (a bad day, an empty list and a bad born date handled), the same file again added 0, a non-JSON file toasted "Not a readings file", and the real file input's change event added 1. tap-audit, style-audit (offSizes, sideLines, rowAlign empty; offColours are the existing number circles) and voice-audit were empty at 1240 and 360 on the Readings tab. NOT tested: her real file on her device, a sync round trip.
+
+## Numbers & Stars Readings Import is LIVE (2026-11-22, build 20261122-142300, her "push live")
+
+Commit 842cf92d went out as publish ab0478d1 (with the earlier notes-only commit). Checked: the live page serves 20261122-142300; the dry run listed only those two commits; private-audit clean. Not yet done on her device: Update, then Readings > Import with her file.
