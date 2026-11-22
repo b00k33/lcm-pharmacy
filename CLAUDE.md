@@ -1821,6 +1821,11 @@ before touching an area that smells similar.
   path that skips that call gets its disc from the 0 ms retry instead, and its bar grows after paint. A page that rebuilds its own
   bar with `innerHTML` wipes the cluster; the shell's `#pharmacyPage` observer puts it back in the same task, before paint (a removed
   `.ph-tbmerge` with none left, 2026-11-01): never add a page-level heal or a timed re-merge.
+- **A list that opens from a control inside `.ph-cmp` is cut to that card.** `.ph-cmp` is `overflow: hidden`, so an absolutely placed
+  menu (`.ph-cmp-addl`) shows only the part inside the card's own box: on a bare one-row bar (Cases) that was a 34px sliver (her
+  2026-11-22 phone picture). Give the card `overflow: visible` where it holds a menu (`.tcd-top > .ph-cmp`, `.ph-tc-flat`). And never
+  right-align a list to its button without opening it at 360px and 1220px: a list wider than the room left of its button starts off
+  the page (BUILD-NOTES "Cases: the Condition ▾ / Formula ▾ list").
 
 ---
 
