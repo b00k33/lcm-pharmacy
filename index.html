@@ -4893,6 +4893,12 @@
   #pharmacyPage .ph-hub-prc .bx .ph-hab-ck { width: 16px; height: 16px; }
   #pharmacyPage .ph-hub-prc input { height: 32px; width: 100%; min-width: 0; box-sizing: border-box; border: 0; border-radius: 6px; --field-radius: 6px; --field-radius-sm: 6px; background: var(--ph-herb-tint); padding: 0 10px; color: var(--ph-ink); font: 400 var(--fs-13) var(--font-body, inherit); }
   #pharmacyPage .ph-hub-prc.done input { text-decoration: line-through; color: var(--ph-faint); }
+  /* her Review, Life (her 2026-11-21 pick): four stat tiles, then Still open and Next week side by side; one column on a phone */
+  #pharmacyPage .ph-rv { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: start; }
+  #pharmacyPage .ph-rv-r { display: grid; grid-template-columns: 88px minmax(0, 1fr) auto; gap: 8px; align-items: center; min-height: 32px; }
+  #pharmacyPage .ph-rv-r .tx { font: 400 var(--fs-13)/1.3 var(--font-body, inherit); color: var(--ph-ink); min-width: 0; overflow-wrap: anywhere; }
+  #pharmacyPage .ph-rv-nx { display: grid; grid-template-columns: 88px minmax(0, 1fr); gap: 8px; align-items: center; }
+  #pharmacyPage .ph-rv-nx input { height: 32px; width: 100%; min-width: 0; box-sizing: border-box; border: 0; border-radius: 6px; --field-radius: 6px; --field-radius-sm: 6px; background: var(--ph-white); padding: 0 10px; color: var(--ph-ink); font: 400 var(--fs-13) var(--font-body, inherit); }
   #pharmacyPage .ph-hub-pill { display: inline-flex; align-items: center; height: 22px; padding: 0 8px; border-radius: 6px; font-size: var(--fs-11-5); font-weight: 600; background: var(--ph-herb-tint); color: var(--ph-ink); }
   #pharmacyPage .ph-hub-pill.due { background: var(--ph-gold-tint); color: var(--ph-ink); }
   #pharmacyPage .ph-hub-pill.ok { background: var(--ph-good-tint); color: var(--ph-ink); }
@@ -30138,6 +30144,8 @@
     #pharmacyPage .ph-hub-stats b { font-size: var(--fs-20); }
     #pharmacyPage .ph-hub-pri { grid-template-columns: minmax(0, 1fr); }
     #pharmacyPage .ph-hub-prc input { font-size: 16px; }
+    #pharmacyPage .ph-rv { grid-template-columns: minmax(0, 1fr); }
+    #pharmacyPage .ph-rv-nx input { font-size: 16px; }
     #pharmacyPage .ph-hub-tbl.wk { min-width: 760px; }
     #pharmacyPage .ph-hub-cols > .ph-fast-tw { overflow-x: auto; }
     #pharmacyPage .ph-hub-tbl.code { min-width: 560px; }
@@ -58670,6 +58678,45 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const h = inp.closest("[data-pri-wk]"); if (!h) return;
     phPriSet(h.dataset.priWk, inp.dataset.priIn, "t", inp.value.trim().slice(0, 80));
   }
+  // REVIEW, Life (her 2026-11-21 pick, "Week · People · Review"): this week in four numbers, what is still open, and next week's three
+  // priorities. It reads Habits, People, Priorities and the to-dos as they are. The only thing it writes is NEXT week's priorities (the
+  // same device-only store as Priorities: "daybook-ph-pri"), so nothing new is kept or synced
+  const phRvNxKey = () => phHubWeekKeys(-1)[0];
+  function phRvHtml() {
+    const W = phHubWeek(0), tk = keyOf(TODAY), mon = W.keys[0], sun = W.keys[6], tom = phHubAdd(tk, 1), nxk = phRvNxKey(), upto = W.keys.filter(k => k <= tk);
+    const hb = phHabList().reduce((a, h) => { const x = phHabWk(h, upto); return [a[0] + x[0], a[1] + x[1]]; }, [0, 0]);
+    const pa = phPplAll(), pp = phMeBdaysAhead().filter(b => b.id && pa[b.id] && phPplNext(pa[b.id]) && (pa[b.id].l >= mon || phPplNext(pa[b.id]) <= sun));
+    const ppDone = pp.filter(b => pa[b.id].l >= mon).length;
+    const wk = phPriAll()[mon] || {}, nw = phPriAll()[nxk] || {};
+    const pri = PH_PRI_AREAS.map(([a, l]) => ({ a, l, t: String((wk[a] || {}).t || ""), d: !!(wk[a] || {}).d })).filter(x => x.t || x.d);
+    const prDone = pri.filter(x => x.d).length;
+    const live = (phMeOk() ? phMeLive(phMeD().todos) : []).filter(t => !t.done), open = live.filter(t => !phMeTdDay(t) || phMeTdDay(t) <= sun);
+    const tdDone = W.tds, tdOf = tdDone + open.length;
+    const tile = (n, of, s) => phHubStat(of ? `${n} / ${of}` : "–", s, of ? n / of * 100 : 0);
+    const carry = pri.filter(x => x.t && !x.d).map(x => `<div class="ph-rv-r"><span class="ph-hub-lab">${x.l}</span><span class="tx">${esc(x.t)}</span><button type="button" class="ph-hub-chip" data-rv-carry="${x.a}" aria-pressed="${String((nw[x.a] || {}).t || "") === x.t}">Carry</button></div>`);
+    const due = live.filter(t => phMeTdDay(t) && phMeTdDay(t) <= tom).sort(phMeTodoSort).map(t => { const k = phMeTdDay(t); return `<div class="ph-rv-r"><span class="ph-hub-lab">${k < tk ? "Late" : k === tk ? "Today" : "Tomorrow"}</span><span class="tx">${esc(t.t)}</span></div>`; });
+    const rows = carry.concat(due);
+    return `<div class="ph-hub" data-hub-host="1">
+      <div class="ph-hub-sh"><span class="ph-hub-lab">This week · ${esc(phHubWkLbl(W.keys))}</span></div>
+      <div class="ph-hub-stats fit">${tile(hb[0], hb[1], "habits")}${tile(ppDone, pp.length, "people")}${tile(prDone, pri.length, "priorities")}${tile(tdDone, tdOf, "to-dos")}</div>
+      <div class="ph-rv">
+        <section class="ph-hub-side" aria-label="Still open"><div class="ph-hub-sh"><span class="ph-hub-lab">Still open</span></div>${rows.length ? rows.join("") : `<div class="ph-fast-empty">Nothing open</div>`}</section>
+        <section class="ph-hub-side" aria-label="Next week" data-rv-wk="${nxk}"><div class="ph-hub-sh"><span class="ph-hub-lab">Next week · ${esc(phHubWkLbl(phHubWeekKeys(-1)))}</span></div>${PH_PRI_AREAS.map(([a, l]) =>
+          `<label class="ph-rv-nx"><span class="ph-hub-lab">${l}</span><input type="text" data-rv-nx="${a}" maxlength="80" value="${esc(String((nw[a] || {}).t || ""))}" aria-label="${l}, next week" autocomplete="off" enterkeyhint="done"></label>`).join("")}</section>
+      </div>
+    </div>`;
+  }
+  // Carry: this week's unfinished priority becomes next week's in the same area, when that line is empty; a second tap takes it back out
+  function phRvCarry(a) {
+    const mon = phHubWeekKeys(0)[0], nxk = phRvNxKey(), t = String(((phPriAll()[mon] || {})[a] || {}).t || ""), cur = String(((phPriAll()[nxk] || {})[a] || {}).t || "");
+    if (!t) return;
+    if (cur && cur !== t) { presSavedToast(`Next week's ${(PH_PRI_AREAS.find(x => x[0] === a) || [])[1]} line has its own`); return; }
+    if (phPriSet(nxk, a, "t", cur === t ? "" : t)) phHubRepaint();
+  }
+  function phRvType(inp) {
+    const h = inp.closest("[data-rv-wk]"); if (!h) return;
+    if (phPriSet(h.dataset.rvWk, inp.dataset.rvNx, "t", inp.value.trim().slice(0, 80))) phHubRepaint();
+  }
   function phHubWeekHtml() {
     const W = phHubWeek(phHubWk), tk = keyOf(TODAY), aim = phFastAim(), stg = phStpGoal(), openK = phHubDayOpen === null ? (W.keys.includes(tk) ? tk : "") : phHubDayOpen;
     // her picks (2026-10-29, the Me audit): a column with nothing this week folds into "+ n more" (Income until a price, Steps until
@@ -62614,10 +62661,10 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     else if (e.key === "Enter" && T.matches("input[data-ns-pf], input[data-ns-rf]")) { e.preventDefault(); phNsRdSave(); }
     else if (e.key === "Enter" && T.matches("tr[data-ns-rd]")) { e.preventDefault(); phNsRdOpen(T.dataset.nsRd); }
   });
-  const PH_HUB_PAGES = { week: phHubWeekHtml, work: phHubWorkHtml, money: phHubMoneyHtml, fit: phHubFitHtml, ex: phHubExHtml, hab: phHubHabHtml, health: phHubHealthHtml, code: phHubCodeHtml, ns: phNsHtml };
+  const PH_HUB_PAGES = { week: phHubWeekHtml, review: phRvHtml, work: phHubWorkHtml, money: phHubMoneyHtml, fit: phHubFitHtml, ex: phHubExHtml, hab: phHubHabHtml, health: phHubHealthHtml, code: phHubCodeHtml, ns: phNsHtml };
   // her steps on her own record (called from presAssessSections); Exercises and Health are tabs of Fitness (her body week, 2026-10-28)
   function phHubSections(sections) {
-    [["week", "Week"], ["work", "Work"], ["money", "Money"], ["fit", "Fitness"], ["hab", "Habits"], ["code", "Code"], ["ns", "Numbers & Stars"]].forEach(([id, label]) =>
+    [["week", "Week"], ["work", "Work"], ["money", "Money"], ["fit", "Fitness"], ["hab", "Habits"], ["code", "Code"], ["ns", "Numbers & Stars"], ["review", "Review"]].forEach(([id, label]) =>
       sections.push({ id: "hub-" + id, label, mini: phHubMini(id), body: () => { phHubSeed(false); phHubPg = id; phHubSi = 0; try { return PH_HUB_PAGES[id](); } finally { phHubPg = ""; } } }));
   }
   // the Me drawer's line (her mock): "This week 38.5 h · 1 of 4 workouts · 2 due"
@@ -62693,6 +62740,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     else if ((el = T.closest("[data-hub-td]"))) phHubTodoTick(el.dataset.hubTd);
     else if (T.closest("[data-hub-tdadd]")) { phHubTdOn = true; phHubRepaint(); phHubFocus("[data-hub-tdnew]"); }
     else if ((el = T.closest("[data-pri-tick]"))) phPriTick(el.dataset.priTick);
+    else if ((el = T.closest("[data-rv-carry]"))) phRvCarry(el.dataset.rvCarry);
     else if ((el = T.closest("[data-hub-due]"))) { const key = el.dataset.hubDue, y = (phMeD().dueT || {})[key], was = !!(y && !y.del && y.at); phHubWrite((d, now) => { d.dueT[key] = was ? { id: key, del: now, up: now } : { id: key, at: now, up: now }; }); }
     else if ((el = T.closest("[data-hub-tax]"))) { const id = el.dataset.hubTax, y0 = phMeD().taxp[id]; phHubTdFx = y0 && !y0.in && !phTpReduceMotion() ? id : ""; phHubWrite((d, now) => { const y = d.taxp[id]; if (!y) return; if (y.in) delete y.in; else y.in = now; y.up = now; }); phHubTdFx = ""; }
     else if ((el = T.closest("[data-hub-taxdel]"))) { const x = phMeD().taxp[el.dataset.hubTaxdel]; if (x) phHubDel("taxp", x.id, x.t); }
@@ -62727,6 +62775,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     else if (T.matches("[data-hub-wt]")) { const name = phMeProfile(); if (name && phBodyWrite(name, "w", T.value)) { phHubRepaint(); presSavedToast(`✓ ${T.value} kg`); } }
     else if (T.matches("[data-hub-jn]")) phHubJnSave(T.dataset.hubJn, T.value);
     else if (T.matches("[data-pri-in]")) phPriType(T);
+    else if (T.matches("[data-rv-nx]")) phRvType(T);
     else if (T.matches("[data-hl-f]")) { const id = T.dataset.hlId, f = T.dataset.hlF, v = T.value; phHlKeep(() => phHlSet(id, f, v)); }
     else if (T.matches("[data-hl-lim]")) { const k = T.dataset.hlLim, v = T.value; phHlKeep(() => phHlLimSet(k, v)); }
   });
@@ -62746,6 +62795,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     else if (e.key === "Enter" && T.matches("[data-hl-f], [data-hl-lim]")) { e.preventDefault(); T.blur(); }
     else if (e.key === "Enter" && T.matches("[data-hub-tdnew]")) { e.preventDefault(); phHubTodoAdd(T.value); }
     else if (e.key === "Enter" && T.matches("[data-pri-in]")) { e.preventDefault(); T.blur(); }
+    else if (e.key === "Enter" && T.matches("[data-rv-nx]")) { e.preventDefault(); T.blur(); }
     else if (e.key === "Enter" && T.matches("[data-hub-taxnew]")) { e.preventDefault(); const t = T.value.trim(); if (t) { const id = uid(); phHubWrite((d, now) => { d.taxp[id] = { id, t: t.slice(0, 160), at: now, up: now }; }); phHubFocus("[data-hub-taxnew]"); } }
     else if (e.key === "Enter" && (r = T.closest("[data-hub-billrow]"))) { e.preventDefault(); phHubBillSave(r); }
     else if (e.key === "Enter" && (r = T.closest("[data-hub-planrow]"))) { e.preventDefault(); phHubPlanSave(r); }
@@ -108072,7 +108122,7 @@ Difficult to sweat|no_sweat_tend:r`;
     checklist: "i-list", photos: "i-camera", apptshist: "i-cal", messages: "i-mail", log: "i-book", diet: "i-c22-meal", fasting: "i-clock",
     herbs: "i-leaf", cycle: "i-pt-drop", bdays: "i-c22-cake", routines: "i-refresh", ivf: "i-egg", similar: "i-book", timeline: "i-flag", askher: "i-msg",
     tongue: "i-pt-tongue", pulse: "i-pt-pulse", abdomen: "i-pt-bowl", msk: "i-dumbbell", patterns: "i-leaf", patdx: "i-chart", notes: "i-edit", summary: "i-mail", treatment: "i-list",
-    more: "i-more", clkvisits: "i-list", "hub-week": "i-c22-cal", "hub-work": "i-c22-work", "hub-money": "i-coin", "hub-fit": "i-dumbbell", "hub-hab": "i-habit", "hub-code": "i-doc", "hub-ns": "i-moon" };
+    more: "i-more", clkvisits: "i-list", "hub-week": "i-c22-cal", "hub-work": "i-c22-work", "hub-money": "i-coin", "hub-fit": "i-dumbbell", "hub-hab": "i-habit", "hub-code": "i-doc", "hub-ns": "i-moon", "hub-review": "i-clipboard" };
   const presRailIcn = id => `<svg class="icn" aria-hidden="true"><use href="#${PRES_RAIL_ICN[id] || (/^trip-/.test(id) ? "i-plane" : "i-doc")}"></use></svg>`;
   let presRailFoldSet = null, presRailMiniOn = null;
   function presRailFolds() {
@@ -108138,7 +108188,7 @@ Difficult to sweat|no_sweat_tend:r`;
     ivf: "ivf egg transfer semen", log: "log dated records", diet: "diet food meals", apptshist: "appointments bookings", clkvisits: "cliniko visits",
     messages: "messages email sms", notes: "notes",
     "hub-week": "week calendar schedule plan", diet: "meals food kj calories fasting", "hub-fit": "fitness workout gym exercise", "hub-hab": "habits tracker streak", routines: "routines daily",
-    "hub-work": "work hours clinic", "hub-money": "money bills tax budget", "hub-code": "code programming plans", "hub-ns": "numbers stars numerology astrology", bdays: "birthdays", herbs: "herbs doses what i take"
+    "hub-work": "work hours clinic", "hub-money": "money bills tax budget", "hub-code": "code programming plans", "hub-ns": "numbers stars numerology astrology", "hub-review": "review week carry over next week", bdays: "birthdays", herbs: "herbs doses what i take"
   };
   const presNavKey = p => { const m = /^data-([a-z-]+)="([^"]*)"$/.exec(p.attr); return m ? (m[1] === "flow-prof" ? "p:" : m[1] === "flow-go" ? "g:" : m[1] === "pres-stage" ? "s:" : "l:") + m[2] : ""; };
   function presNavSettle(t, steps, nextUp) {
@@ -108232,7 +108282,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const hb = prof("herbs"); if (hb) chk.push(hb);
     if (chk.length) steps.push({ id: "check", label: "Check myself", ic: "tongue", nf: true, me: true, done: exam.length > 0 && exam.every(p => p.done), flags: patS ? patS.flags || 0 : 0, parts: chk });
     // Life
-    const life = ["hub-work", "hub-money", "bdays", "hub-code", "hub-ns"].map(id => prof(id, "", quietIf(id)))
+    const life = ["hub-work", "hub-money", "bdays", "hub-review", "hub-code", "hub-ns"].map(id => prof(id, "", quietIf(id)))
       .concat(f.profSubs.filter(u => /^trip-/.test(u.id)).map(u => prof(u.id, "", quietIf(u.id)))).filter(Boolean);
     if (life.length) steps.push({ id: "life", label: "Life", ic: "hub-work", nf: true, me: true, done: false, parts: life });
     // My file: the rest of her record
@@ -110046,7 +110096,7 @@ Difficult to sweat|no_sweat_tend:r`;
   // rail shows beside Medical history (her pick: the count lives there only).
   // ONE ME: her own pages' order on her record; under 0.55 = Body, under 1 = Life (her trips sit at 0.7). Health and her Log
   // follow Fitness in Body (her synth22 pick 1, 2026-10-26: "group my personal together, including log stuff")
-  const PRES_MINE_RANK = { cycle: 0.1, tongue: 0.12, pulse: 0.14, abdomen: 0.16, diet: 0.2, fasting: 0.3, herbs: 0.4, "hub-fit": 0.5, "hub-ex": 0.505, "hub-hab": 0.51, "hub-health": 0.52, log: 0.53, "hub-week": 0.19, "hub-work": 0.61, "hub-money": 0.62, "hub-code": 0.63, "hub-ns": 0.635, bdays: 0.8, routines: 0.81 };
+  const PRES_MINE_RANK = { cycle: 0.1, tongue: 0.12, pulse: 0.14, abdomen: 0.16, diet: 0.2, fasting: 0.3, herbs: 0.4, "hub-fit": 0.5, "hub-ex": 0.505, "hub-hab": 0.51, "hub-health": 0.52, log: 0.53, "hub-week": 0.19, "hub-work": 0.61, "hub-money": 0.62, "hub-code": 0.63, "hub-ns": 0.635, bdays: 0.8, "hub-review": 0.805, routines: 0.81 };
   // her picks (2026-10-29, the Me audit): the pages of hers that fold into their group's "⋯ More" row until they hold data
   function phMeRailFold(id) {
     if (id === "hub-code") return !phHubPlans().length;
@@ -110179,7 +110229,7 @@ Difficult to sweat|no_sweat_tend:r`;
     // her 2026-11-18 rail by workflow (her picks, mock lcm_rail_full_mock_2026_11_18): IVF history is a page of Her file; on her own record
     // My day (Week · Meals · Fitness · Habits), Check myself (Cycle · Tongue · Pulse · Abdomen), Herbs (Treat myself), Life, and My file for the rest
     const ME_GRP = { "hub-week": "day", diet: "day", "hub-fit": "day", "hub-hab": "day", cycle: "mck", tongue: "mck", pulse: "mck", abdomen: "mck", herbs: "tm",
-      "hub-work": "life", "hub-money": "life", "hub-code": "life", "hub-ns": "life", bdays: "life", routines: "life" };
+      "hub-work": "life", "hub-money": "life", "hub-code": "life", "hub-ns": "life", bdays: "life", "hub-review": "life", routines: "life" };
     sections.forEach(s => { const r = rk(s); s.grp = me ? (s.id === "fasting" ? "off" : ME_GRP[s.id] || (/^trip-/.test(s.id) ? "life" : "file")) : s.id === "ivf" ? "file" : s.id === "similar" ? "sim" : GRP(r); });   // "off": a page of hers with no rail line   // "off": a page of hers with no rail line
     // her three patients (2026-11-18 pick 2): Medical history and Tests & scans are Exam pages, Photos too for internal disease
     if (!me && name && !presIsFormula(t)) { const vk = phVisitKind(name).k; if (vk) sections.forEach(s => { if (s.id === "medhx" || s.id === "bloods" || (s.id === "photos" && vk === "acuint")) s.grp = "exam"; }); }
