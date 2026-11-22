@@ -58636,6 +58636,21 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       <label class="ph-hub-note"><span class="ph-hub-lab">${esc(phHubDl(D.k))} · note</span><textarea data-hub-jn="${D.k}" rows="3"${meRec ? ` maxlength="140"` : ""} aria-label="Note for ${esc(phHubDl(D.k))}">${esc(meRec ? note : phMeNoteShown("j|" + D.k, note))}</textarea></label>
     </div></td></tr>`;
   }
+  // OWNER on a to-do (her 2026-11-21 pick: an Owner chip, Claude · Me): who does it. Kept on this device only ("keep private data local"):
+  // "daybook-ph-own" = { "<to-do id>": 1 } for the ones that are Claude's; no entry = hers. Never in the Me row, so it never syncs
+  // and no other login reads it. A to-do's own record (text, area, day, done) is untouched
+  const PH_OWN_KEY = "daybook-ph-own";
+  function phOwnAll() { try { const o = JSON.parse(localStorage.getItem(PH_OWN_KEY) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; } }
+  const phOwnIsC = id => !!id && !!phOwnAll()[id];
+  function phOwnToggle(id) {
+    try {
+      const o = phOwnAll();
+      if (o[id]) delete o[id]; else o[id] = 1;
+      localStorage.setItem(PH_OWN_KEY, JSON.stringify(o));
+      return true;
+    } catch (e) { phShowSaveError("Couldn't save that on this device. Nothing changed."); return false; }
+  }
+  const phOwnChip = t => { const c = phOwnIsC(t.id); return `<button type="button" class="ph-hub-chip ow" data-own-tg="${esc(t.id)}" aria-pressed="${c}" aria-label="Owner: ${c ? "Claude" : "Me"}">${c ? "Claude" : "Me"}</button>`; };
   function phHubTodoHtml(W) {
     const all = phMeOk() ? phMeLive(phMeD().todos) : [], open = all.filter(t => !t.done).sort(phMeTodoSort);
     const doneWk = all.filter(t => t.done && W.keys.includes(keyOf(new Date(phHubTdAt(t))))).sort((a, b) => phHubTdAt(b) - phHubTdAt(a));
@@ -58643,7 +58658,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const opt = [["all", "All"]].concat(PH_HUB_AREAS).map(([v, l]) => `<option value="${v}"${v === phHubArea ? " selected" : ""}>${l}${v === "all" ? ` · ${open.length}` : ` · ${open.filter(t => phHubTdArea(t) === v).length}`}</option>`).join("");
     const when = t => { const k = phMeTdDay(t); return !k ? "" : k === tk ? "Today" : k < tk ? `${phHubDl(k)} · late` : phHubDl(k); };
     const area = t => t.trip ? `<span class="ar">Travel</span>` : `<select class="ar" data-hub-tdarea="${esc(t.id)}" aria-label="Area"><option value="">Area</option>${PH_HUB_AREAS.filter(a => a[0] !== "travel").map(([v, l]) => `<option value="${v}"${t.a === v ? " selected" : ""}>${l}</option>`).join("")}</select>`;
-    const row = t => `<div class="ph-hub-td${t.done ? " done" : ""}${phHubTdFx === t.id ? " mo" : ""}"><button type="button" class="bx${phHubTdFx === t.id ? " mo-draw" : ""}" data-hub-td="${esc(t.id)}" aria-pressed="${!!t.done}" aria-label="${t.done ? "Not done" : "Done"}: ${esc(t.t)}">${t.done ? phHabCk() : ""}</button><span class="tt" title="${esc(t.t)}">${esc(t.t)}</span>${t.done ? "" : area(t)}<span class="du">${esc(when(t))}</span></div>`;
+    const row = t => `<div class="ph-hub-td${t.done ? " done" : ""}${phHubTdFx === t.id ? " mo" : ""}"><button type="button" class="bx${phHubTdFx === t.id ? " mo-draw" : ""}" data-hub-td="${esc(t.id)}" aria-pressed="${!!t.done}" aria-label="${t.done ? "Not done" : "Done"}: ${esc(t.t)}">${t.done ? phHabCk() : ""}</button><span class="tt" title="${esc(t.t)}">${esc(t.t)}</span>${t.done ? "" : area(t) + phOwnChip(t)}<span class="du">${esc(when(t))}</span></div>`;
     const list = open.filter(inA).map(row).concat(doneWk.filter(inA).map(row));
     return `<aside class="ph-hub-side"><div class="ph-hub-sh"><span class="ph-hub-lab">To-dos</span><select class="ph-hub-chip" data-hub-area="1" aria-label="Area">${opt}</select></div>
       ${list.length ? list.join("") : `<div class="ph-fast-empty">No to-dos</div>`}
@@ -58694,7 +58709,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const tdDone = W.tds, tdOf = tdDone + open.length;
     const tile = (n, of, s) => phHubStat(of ? `${n} / ${of}` : "–", s, of ? n / of * 100 : 0);
     const carry = pri.filter(x => x.t && !x.d).map(x => `<div class="ph-rv-r"><span class="ph-hub-lab">${x.l}</span><span class="tx">${esc(x.t)}</span><button type="button" class="ph-hub-chip" data-rv-carry="${x.a}" aria-pressed="${String((nw[x.a] || {}).t || "") === x.t}">Carry</button></div>`);
-    const due = live.filter(t => phMeTdDay(t) && phMeTdDay(t) <= tom).sort(phMeTodoSort).map(t => { const k = phMeTdDay(t); return `<div class="ph-rv-r"><span class="ph-hub-lab">${k < tk ? "Late" : k === tk ? "Today" : "Tomorrow"}</span><span class="tx">${esc(t.t)}</span></div>`; });
+    const due = live.filter(t => phMeTdDay(t) && phMeTdDay(t) <= tom).sort(phMeTodoSort).map(t => { const k = phMeTdDay(t); return `<div class="ph-rv-r"><span class="ph-hub-lab">${k < tk ? "Late" : k === tk ? "Today" : "Tomorrow"}</span><span class="tx">${esc(t.t)}</span>${phOwnIsC(t.id) ? `<span class="ph-hub-lab">Claude</span>` : ""}</div>`; });
     const rows = carry.concat(due);
     return `<div class="ph-hub" data-hub-host="1">
       <div class="ph-hub-sh"><span class="ph-hub-lab">This week · ${esc(phHubWkLbl(W.keys))}</span></div>
@@ -62738,6 +62753,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     else if (T.closest("[data-hub-cols]")) { phHubColsOpen = !phHubColsOpen; phHubRepaint(); }   // the Week table's folded columns (her pick 2026-10-29)
     else if ((el = T.closest("[data-hub-go]"))) { const pr = !!el.dataset.hubPrices; if (pr) { phHubShow = true; phHubPrOpen = true; } presAssessTab = "hub-" + el.dataset.hubGo; phHubRepaint(); if (pr) phHubFocus("tr.nop [data-hub-price]"); }   // the banner lands on the first price to type
     else if ((el = T.closest("[data-hub-td]"))) phHubTodoTick(el.dataset.hubTd);
+    else if ((el = T.closest("[data-own-tg]"))) { if (phOwnToggle(el.dataset.ownTg)) phHubRepaint(); }
     else if (T.closest("[data-hub-tdadd]")) { phHubTdOn = true; phHubRepaint(); phHubFocus("[data-hub-tdnew]"); }
     else if ((el = T.closest("[data-pri-tick]"))) phPriTick(el.dataset.priTick);
     else if ((el = T.closest("[data-rv-carry]"))) phRvCarry(el.dataset.rvCarry);
