@@ -49949,14 +49949,42 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   const phMeIni = name => name ? name.trim().split(/\s+/).map(w => w[0] || "").join("").slice(0, 2).toUpperCase() : "";   // "Jane Test" -> "JT"
   const phMeTdDay = t => t.day || phTripTdDay(t);   // a trip to-do's day comes from the trip (TRIPS)
   const phMeTodoSort = (a, b) => (phMeTdDay(a) || "9999") < (phMeTdDay(b) || "9999") ? -1 : (phMeTdDay(a) || "9999") > (phMeTdDay(b) || "9999") ? 1 : (a.at || a.up || 0) - (b.at || b.up || 0);   // at = when it was made, so an Undo puts it back in its place
+  // BIRTHDAY DETAILS ON THIS DEVICE (her 2026-11-22 "Move to device"): a person's Relationship, Message and Note are private, so they are
+  // kept on this device only: "daybook-ph-bdp" = { "<birthday id>": { rel, msg, note } }, never in the Me row, so they never sync and no
+  // other login reads them. The first time the app draws on a device, whatever the cloud row still holds is copied here (and kept in
+  // "daybook-ph-bdp-bak", never deleted), then taken out of the cloud row. Via, Language and Status stay in the row as they were
+  const PH_BDP_KEY = "daybook-ph-bdp", PH_BDP_BAK = "daybook-ph-bdp-bak", PH_BDP_F = ["rel", "msg", "note"];
+  const phBdpRead = k => { try { const o = JSON.parse(localStorage.getItem(k) || "{}"); return o && typeof o === "object" && !Array.isArray(o) ? o : {}; } catch (e) { return {}; } };
+  const phBdpAll = () => phBdpRead(PH_BDP_KEY);
+  function phBdpWrite(k, o) { try { localStorage.setItem(k, JSON.stringify(o)); return true; } catch (e) { return false; } }
+  // a person's three details: this device's, else (until they are moved) the row's
+  const phBdpGet = b => { const L = b && b.id ? phBdpAll()[b.id] : null, S = L || b || {}; return { rel: S.rel || "", msg: S.msg || "", note: S.note || "" }; };
+  function phBdpSet(id, v) {
+    const all = phBdpAll(), c = {};
+    PH_BDP_F.forEach(k => { const s = String(v[k] || "").trim(); if (s) c[k] = s; });
+    if (Object.keys(c).length) all[id] = c; else delete all[id];
+    if (!phBdpWrite(PH_BDP_KEY, all)) phShowSaveError("Couldn't save that on this device. Nothing changed.");
+  }
+  function phBdpRestore(id, c) { const all = phBdpAll(); if (c) all[id] = c; else delete all[id]; phBdpWrite(PH_BDP_KEY, all); }
+  let phBdpMoved = false;
+  function phBdpMove() {
+    if (!phMeOk()) return;
+    const rows = phMeLive(phMeD().bdays).filter(b => b.id && PH_BDP_F.some(k => b[k]));
+    if (!rows.length) return;
+    const all = phBdpAll(), bak = phBdpRead(PH_BDP_BAK);
+    rows.forEach(b => { const c = {}; PH_BDP_F.forEach(k => { if (b[k]) c[k] = b[k]; }); if (!bak[b.id]) bak[b.id] = c; if (!all[b.id]) all[b.id] = c; });
+    if (!phBdpWrite(PH_BDP_BAK, bak) || !phBdpWrite(PH_BDP_KEY, all)) return;   // not kept here: the row stays as it is
+    phMeSave((d, now) => { rows.forEach(b => { const x = d.bdays[b.id]; if (!x) return; PH_BDP_F.forEach(k => { delete x[k]; }); x.up = now; }); });
+  }
   // the next time each birthday comes round, soonest first: [{n, age, k, id?}]
   function phMeBdaysAhead() {
     const t0 = TODAY, out = [];
+    if (!phBdpMoved && phMeOk()) { phBdpMoved = true; setTimeout(phBdpMove, 0); }   // once a page load: the details leave the cloud row for this device
     if (phMeOk()) phMeLive(phMeD().bdays).forEach(b => {
       if (!(+b.d >= 1 && +b.m >= 1)) return;
       let d = new Date(t0.getFullYear(), b.m - 1, b.d);
       if (d < t0) d = new Date(t0.getFullYear() + 1, b.m - 1, b.d);
-      out.push({ n: b.n, age: +b.y > 1900 ? d.getFullYear() - b.y : null, k: keyOf(d), id: b.id, note: b.note || "", rel: b.rel || "", via: b.via || "", lang: b.lang || "", msg: b.msg || "", dn: b.dn || 0, dk: b.dk || "", oy: d.getFullYear() });
+      out.push({ n: b.n, age: +b.y > 1900 ? d.getFullYear() - b.y : null, k: keyOf(d), id: b.id, ...phBdpGet(b), via: b.via || "", lang: b.lang || "", dn: b.dn || 0, dk: b.dk || "", oy: d.getFullYear() });
     });
     if (!phMeBrought()) {
       const dg = phC22Days() || {};
@@ -65963,7 +65991,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       return f;
     }
     const b = D.bdays[id];
-    if (b && !b.del) Object.assign(f, { kind: "bd", edit: { type: "bd", id }, bn: b.n || "", bd: String(b.d || ""), bm: String(b.m || ""), by: b.y ? String(b.y) : "", note: b.note || "", rel: b.rel || "", via: b.via || "", lang: b.lang || "", msg: b.msg || "", bst: b.dn && b.dn === phMeBdOccYear(b.m, b.d) ? (b.dk || "") : "" });
+    if (b && !b.del) Object.assign(f, { kind: "bd", edit: { type: "bd", id }, bn: b.n || "", bd: String(b.d || ""), bm: String(b.m || ""), by: b.y ? String(b.y) : "", ...phBdpGet(b), via: b.via || "", lang: b.lang || "", bst: b.dn && b.dn === phMeBdOccYear(b.m, b.d) ? (b.dk || "") : "" });
     return f;
   }
   // the colours she picks from: her C22 Modes, then C22's groups (a group a Mode already names is left out)
@@ -66149,17 +66177,19 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       col = "bdays"; id = ed ? ed.id : uid(); label = n;
       fn = (d, now) => { const x = Object.assign(ed ? d.bdays[id] || { id } : { id }, { n: n.slice(0, 120), d: dd, m: mm, up: now }); if (yy >= 1900 && yy <= 2100) x.y = yy; else delete x.y;
         const put = (k, v, n) => { v = String(v || "").trim(); if (v) x[k] = v.slice(0, n); else delete x[k]; };
-        put("note", f.note, 500); put("rel", f.rel, 80); put("msg", f.msg, 1500);
+        delete x.note; delete x.rel; delete x.msg;   // kept on this device (phBdpSet), never in the row
         ["via", "lang"].forEach(k => { if (f[k]) x[k] = f[k]; else delete x[k]; });
         if (f.bst) { x.dn = phMeBdOccYear(mm, dd); x.dk = f.bst; } else { delete x.dn; delete x.dk; }
         d.bdays[id] = x; };
     }
     const cur = ed ? phMeD()[col][id] : null;
     prev = cur ? JSON.parse(JSON.stringify(cur)) : null;
+    const prevL = col === "bdays" ? phBdpAll()[id] || null : null;
     if (!phMeSave(fn)) return;
+    if (col === "bdays") phBdpSet(id, { rel: f.rel.trim().slice(0, 80), msg: f.msg.trim().slice(0, 1500), note: f.note.trim().slice(0, 500) });
     phApptClose();
     phMeRepaint(true);
-    presSavedToast(`✓ ${label}`, { undo: () => phMeRestore(col, id, prev) });
+    presSavedToast(`✓ ${label}`, { undo: () => { phMeRestore(col, id, prev); if (col === "bdays") phBdpRestore(id, prevL); } });
   }
   function phMeFormDelete() {
     const st = phApptState, f = st && st.me, ed = f && f.edit;
