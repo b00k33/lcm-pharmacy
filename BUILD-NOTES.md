@@ -17727,3 +17727,11 @@ Her "audit my wellness" (PA health and wellness session): tap-audit, style-audit
 - Left on purpose (tiles and cells, not chips): Meals goal tiles and meal-grid cells, the Fitness week rows (48px), the Fitness workout-kind bar's square inner segments, Habits' two-line rows, the page band's back / name / search at 360.
 - Left, named: Fitness phone exercise preset chips at 700 and one 11.5px "More like this" chip; Week's to-do add box (28px, round); Routines' two-line time chip.
 - Checked in a scratch copy of the committed page with a made-up record (profile "Zz Test Me", routines typed in by hand). NOT exercised: the signed-in app, her real data, Key2.
+
+## Steps from Garmin: a Garmin chip on the Steps card (2026-11-22, saved on session-a, NOT live)
+
+Her "use garmin to record my activities": the watch already counts every day, so she should never type steps.
+- **Bookmark page** `garmin-copy.html` (staged by pages.yml beside cliniko-copy.html): the "LCM · Copy from Garmin" bookmark reads the last 56 days of daily steps from the open Garmin Connect page and copies one JSON (`garmin-v1`). Tried against her real Garmin page: 56 days, the same numbers the Garmin page shows.
+- **LCM**: a Garmin chip in the Steps card head (32px, THE LOOK), `phGarminPasteTap` / Ctrl+V, `phGarminParse`, `phGarminApply` (before `phHabSet`); the days with no number are written through `phHubWrite`, her typed days kept, today skipped, bad keys and values (negative, over 200,000, not a day) skipped, one toast + one Undo.
+- Tested in a scratch copy with made-up days (profile "Zz Test Me"): a paste of 8 keys wrote the 3 good days; her typed day kept; Undo took the paste back; a repeat paste said "Steps are up to date"; tap-audit, style-audit and voice-audit on the Steps card at 1220 and 360: all empty, no sideways scroll. NOT exercised: the signed-in app, the chip's clipboard read (the pane refuses clipboard reads; the paste event path was driven), the bookmark in a bookmarks bar, a phone.
+- Not built: Garmin activities, sleep or heart rate; a standing Garmin sign-in (the bookmark uses her open Garmin tab only).

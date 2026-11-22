@@ -2038,6 +2038,13 @@ Fitness + Exercises), the rest in Life.
 
 ## Habits + Steps (her Atomic Habits)
 **Only on her own record.** James Clear's Atomic Habits is the inspiration (her word).
+- **Steps from Garmin** (her 2026-11-22 "use garmin to record my activities"): the Steps card's head has a **Garmin** chip beside Goal. The bookmark page
+  `garmin-copy.html` ("LCM · Copy from Garmin", the Cliniko bookmark's pattern) reads her last 8 weeks of daily steps from the open Garmin Connect page
+  (its own `/gc-api/usersummary-service/stats/steps/daily/<from>/<to>`, two 28-day calls, her signed-in tab's CSRF meta) and copies
+  `{"lcm":"garmin-v1","steps":{"<day>":n}}`. The chip (`phGarminPasteTap`), or Ctrl+V anywhere outside a box (`phGarminParse`), writes every day with no
+  number yet (`phGarminApply`, one `phHubWrite`): her typed number wins, today is never written, one toast with one Undo for the whole paste; a
+  paste with nothing new says "Steps are up to date". No Garmin data on the clipboard opens `garmin-copy.html`. Garmin's activity list is only
+  auto walks and runs, so activities are not imported (Gym, Pilates and F45 stay her taps).
 - **Habits page** (Body, after Fitness, `phHubHabHtml`): a table (habit · last + this week as a chain of dots, linked between done
   days · in a row · this week · Today's tick) in three groups, Movement · Sleep · Care, each with her "I am someone who …" line
   (`d.idn`) and its votes (every tick is a vote; `it.vb` keeps the ticks a routine trims). A row's tap opens the panel beside it (in

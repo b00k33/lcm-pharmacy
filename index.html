@@ -36520,6 +36520,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
 /* the habit a row ticks is the one-tap action: 32px on the phone too (it was 20px there); the check inside follows */
 #pharmacyPage .ph-hab-row .ph-hab-tk.sm { width: 32px; height: 32px; }
 #pharmacyPage .ph-hab-row .ph-hab-tk.sm .ph-hab-ck { width: 14px; height: 14px; }
+/* GARMIN STEPS 2026-11-22 */
+/* the Steps card head holds the Garmin chip and the Goal chip: one row, 6px apart */
+#pharmacyPage .ph-stp .ph-fast-ch .r { display: inline-flex; align-items: center; gap: 6px; }
 </style>
 </head>
 <body>
@@ -62021,6 +62024,40 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (!(n >= 500 && n <= 100000) || n === phStpGoal()) { phHubRepaint(); return; }
     phHubWrite((d, now) => { d.hubset.stg = { id: "stg", v: n, up: now }; }, `✓ Goal ${phStpFmt(n)} steps`);
   }
+  // ---- Garmin -> LCM steps (her 2026-11-22 "use garmin to record my activities"): the "LCM · Copy from Garmin" bookmark (garmin-copy.html)
+  // reads her last 8 weeks of daily steps from the open Garmin Connect page and copies {"lcm":"garmin-v1","steps":{"<day>":n}}; the
+  // Garmin chip on the Steps card, or Ctrl+V anywhere outside a box, writes the days she has no number for. Her own typed number always
+  // wins, today is never written (it is still being walked), and one Undo takes the whole paste back. Same write door as typing a day.
+  function phGarminParse(s) {
+    s = String(s || "").trim();
+    if (s.charAt(0) !== "{" || s.indexOf("garmin-v1") < 0) return null;
+    let p = null;
+    try { p = JSON.parse(s); } catch (e) { return null; }
+    return p && p.lcm === "garmin-v1" && p.steps && typeof p.steps === "object" && !Array.isArray(p.steps) ? p : null;
+  }
+  function phGarminApply(p) {
+    if (!phHubOn()) return;
+    const tk = phHabTk(), put = [];
+    Object.keys(p.steps).sort().forEach(k => { const n = Math.round(+p.steps[k]); if (/^\d{4}-\d{2}-\d{2}$/.test(k) && k < tk && n >= 0 && n <= 200000 && phStpOf(k) == null) put.push([k, n]); });
+    if (!put.length) { phFlashShow("Steps are up to date"); return; }
+    if (!phHubWrite((d, now) => { const M = d.stp || (d.stp = {}); put.forEach(([k, n]) => { M[k] = { id: k, n, up: now }; }); })) return;
+    presSavedToast(`✓ ${put.length} day${put.length === 1 ? "" : "s"} of steps from Garmin`, { undo: () => phHubWrite((d, now) => { const M = d.stp || (d.stp = {}); put.forEach(([k]) => { M[k] = { id: k, n: "", del: now, up: now }; }); }) });
+  }
+  async function phGarminPasteTap() {
+    let s = "";
+    try { s = await navigator.clipboard.readText(); } catch (e) { phFlashShow("Press Ctrl+V to paste from Garmin"); return; }
+    const p = phGarminParse(s);
+    if (!p) { phFlashShow("Copy from Garmin first"); window.open("garmin-copy.html", "_blank", "noopener"); return; }
+    phGarminApply(p);
+  }
+  document.addEventListener("paste", e => {
+    const t = e.target;
+    if (t && t.closest && t.closest("input, textarea, select, [contenteditable]")) return;
+    const p = phGarminParse(e.clipboardData && e.clipboardData.getData("text"));
+    if (!p) return;
+    e.preventDefault();
+    phGarminApply(p);
+  });
   function phHabSet(id, patch, msg) {
     const h = phHabOf(id);
     return phHubWrite((d, now) => { const M = d.hab || (d.hab = {}), cur = M[id] && !M[id].del ? M[id] : {}; M[id] = Object.assign({ id, g: h ? h.g : "cr" }, cur, patch, { up: now }); }, msg);
@@ -62176,7 +62213,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (first && n) setTimeout(phStpCount, 0);
     const goal = phStpGoalEd ? `<label class="ph-fast-fld"><span>Goal</span><input type="number" inputmode="numeric" min="500" max="100000" step="500" data-stp-goal="1" value="${g}" aria-label="Steps goal" enterkeyhint="done"></label>`
       : `<button type="button" class="ph-hub-chip" data-stp-goaled="1" title="Change the goal">Goal ${phStpFmt(g)}${phMeIc("edit")}</button>`;
-    return `<div class="ph-fast-card ph-stp"><div class="ph-fast-ch" title="From your watch">${phMeIc("steps")}Steps<span class="r">${goal}</span></div>
+    return `<div class="ph-fast-card ph-stp"><div class="ph-fast-ch" title="From your watch">${phMeIc("steps")}Steps<span class="r"><button type="button" class="ph-hub-chip" data-stp-garmin="1" title="Paste steps from Garmin">${phMeIc("copy")}Garmin</button>${goal}</span></div>
       <div class="ph-stp-top"><div class="ph-stp-ring"><svg viewBox="0 0 132 132" aria-hidden="true" focusable="false"><circle class="bg" cx="66" cy="66" r="56"/><circle class="fg${first ? " grow" : ""}" cx="66" cy="66" r="56" style="stroke-dasharray:${C.toFixed(1)};stroke-dashoffset:${(C * (1 - p)).toFixed(1)};--len:${C.toFixed(1)}"/></svg>
         <div class="in"><b${first && n ? ` data-stp-n="${n}"` : ""}>${first && n ? "0" : n == null ? "–" : phStpFmt(n)}</b><span>of ${phStpFmt(g)}</span></div></div>
         <div class="ph-stp-facts"><label class="ph-fast-fld"><span>Today</span><input type="number" inputmode="numeric" min="0" max="200000" data-stp-day="${tk}" data-stp-at="fit" value="${n == null ? "" : n}" aria-label="Steps today" enterkeyhint="done"><span>steps</span></label>
@@ -62247,6 +62284,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     else if ((el = T.closest("[data-hab-addg]"))) { const s = document.querySelector("#pharmacyPage [data-hab-pick]"), id = s && s.value; if (!id) return; phHabAdd = false; phHabOpen = id; phHabSet(id, { g: el.dataset.habAddg, off: 0 }, `✓ ${(s.selectedOptions[0] || {}).textContent || "Habit"}`); }
     else if ((el = T.closest("[data-hab-g]"))) { if (el.getAttribute("aria-pressed") !== "true") phHabSet(el.dataset.habId, { g: el.dataset.habG }); }
     else if ((el = T.closest("[data-hab-off]"))) phHabOff(el.dataset.habOff);
+    else if (T.closest("[data-stp-garmin]")) { phGarminPasteTap(); }
     else if (T.closest("[data-stp-goaled]")) { phStpGoalEd = true; phHubRepaint(); const i = document.querySelector("#pharmacyPage [data-stp-goal]"); if (i) { i.focus(); i.select(); } }
   });
   // a field of hers is kept on change, and on Enter (which also leaves it); a second keep of the same value does nothing
