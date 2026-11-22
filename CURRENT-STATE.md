@@ -2510,3 +2510,4 @@ herb caution (on its own words). The same words as a list row answer that row in
 "+ Something else" in the same two groups (`history.others = [{ n, f, note }]`); it comes in as an Added Yes row, the details on
 its note tagged Form; a later link brings back the patient's own conditions (her own typed ones never go to the patient).
 - **Guide > Sources long notes** (BUILD-NOTES "Guide > Sources: long notes"; `phGdSourceRowHtml2`): a note keeps its line breaks, and one over 4 lines or 320 characters is clamped to 4 lines with a Show all / Show less chip; Edit shows the full text.
+- **Meals open pane, picker, Shopping, How did it sit** (BUILD-NOTES "Meals: the open meal, its picker ..."): the tap, style and voice audits are empty on the whole Meals page at 1240 and 360 with each open; phone Numbers' head has a Day cell and no "off head" lines.
