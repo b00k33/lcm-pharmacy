@@ -17746,3 +17746,15 @@ Her "this is overwhelming to navigate" on the Fitness Week page (a Ctrl+F for "g
 - tap-audit / style-audit / voice-audit on the Fitness page at 1220 and 360: chipLooks, offSizes, offWeights, sideLines, rowAlign empty; left (not new): the workout-kind bar's square inner segments, the phone's 48px day rows, the posture tip's long line.
 - Tested in a scratch copy with made-up data (profile "Zz Test Me"): the fold opens and closes and is remembered; Workout Mode opens with it closed; the rehab row returns on its day. NOT exercised: the signed-in app, her real exercise list, a running rest timer with the fold closed.
 - Left for her word: both bars say "Week" (the place bar and Fitness' own first tab); a rename of the inner one was not made.
+
+## Fitness calm round 2: every Fitness tab (2026-11-22, saved on session-a, NOT live)
+
+Her "majority of this is very overwhelming: look through all the tabs and improve the visual display to be simple, sleek, cohesive, consistent, and easy to navigate". Read as the four Fitness tabs (the My day bar was not touched).
+- **Tab names:** the inner bar is Plan · Exercises · Health · Progress ("Week" was said twice).
+- **Exercises:** the page was four stacked sections (library, templates, muscles, Don'ts). Now a joined bar Exercises · Templates · Muscles · Don'ts replaces the page title; one view shows (`phFitXv`, `data-fit-xv`, `lcm-fit-xv` on this device); the others are drawn and hidden so every handler reads them as before. A pain / felt-it chip that opens a muscle (`phMuOpen`) switches to Muscles.
+- **Progress:** a section with nothing in it is not drawn (bests, volume, progress, last 14 days); Goals empty reads "No goals"; Upcoming shows 3 rows with an `All n` / `Fewer` chip.
+- **Plan:** the Booked row's clinic hours moved into the time's hover title; a clash still shows.
+- **Phone / looks:** library chips, the shelf, + New type, the type chips and the muscle sources 11.5 → 13px, chip words 700 → 600, the Goals bar 15px → 30px tall, the Exercises fold chip solid 1px (not the dashed add look).
+- Before / after at 1220 (made-up data, profile "Zz Test Me"): Exercises 978 → 254 / 217 / 502 / 209 by view; Progress 591 → 360; Health 297 unchanged. Her own record read live: Exercises 1,590, Progress 545.
+- tap-audit / style-audit / voice-audit at 1220 and 360 on Plan, the four Exercises views, Health, Progress: offSizes, offWeights, sideLines, rowAlign empty; no sideways scroll. Left (not new): the workout-kind and muscle bars' square inner segments, the 48px set circles, the phone's 48px day rows, one long tip line and the muscle disclaimer line.
+- NOT exercised: the signed-in app, her real data, a real device.
