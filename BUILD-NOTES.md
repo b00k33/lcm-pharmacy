@@ -17715,3 +17715,15 @@ Tested: made-up "Zz Test" people in a scratch copy served from the scratchpad (n
 ## Numbers & Stars Readings Import is LIVE (2026-11-22, build 20261122-142300, her "push live")
 
 Commit 842cf92d went out as publish ab0478d1 (with the earlier notes-only commit). Checked: the live page serves 20261122-142300; the dry run listed only those two commits; private-audit clean. Not yet done on her device: Update, then Readings > Import with her file.
+
+## My day audit: chip lines, phone Fitness chips, habit tick (2026-11-22, saved on session-a, NOT live)
+
+Her "audit my wellness" (PA health and wellness session): tap-audit, style-audit, voice-audit and titlebar-audit on her own record's Meals, Fitness, Habits and Week at 1220 and 360, then every rule breach fixed in one CSS block before the main `</style>` (marker "WELLNESS AUDIT 2026-11-22", three parts).
+- **1px chip lines:** the Fast buttons (Start / Stop / History), the Fitness week arrows and "+ Add exercise", the Meals week arrows, the Snack camera and the habit ticks drew 1.5px. Now 1px (THE LOOK).
+- **Meals picked tab** words 700 → 600.
+- **Fitness on the phone** still wore the old look (tabs, view switch, body-area chips: 11.5px words, 700, 14-16px round bars; the computer rules sit inside a min-width 641px block). Same chip look set for both widths: 13px, 600, ink, 6px bars. The computer is unchanged.
+- **Habits on the phone:** the tick on each habit row was 20px (the `.sm` size); now 32px (`.ph-hab-row .ph-hab-tk.sm`), rows stay 44px. The computer's list does not draw these rows.
+- Before / after (style-audit chipLooks): 1220 Fitness 1 → 0, Habits 1 → 0, Meals 3 → 1; 360 Meals 2 → 1, Habits 0, Fitness the 700-weight tabs (11 chips) gone and two lines left (the week rows, a cell; the exercise preset chips at 700). tap-audit at 360: Habits ticks 20px → 32px, Fitness 11.5px text rows gone. offSizes, offWeights, sideLines, titlebar empty; no sideways scroll at 360.
+- Left on purpose (tiles and cells, not chips): Meals goal tiles and meal-grid cells, the Fitness week rows (48px), the Fitness workout-kind bar's square inner segments, Habits' two-line rows, the page band's back / name / search at 360.
+- Left, named: Fitness phone exercise preset chips at 700 and one 11.5px "More like this" chip; Week's to-do add box (28px, round); Routines' two-line time chip.
+- Checked in a scratch copy of the committed page with a made-up record (profile "Zz Test Me", routines typed in by hand). NOT exercised: the signed-in app, her real data, Key2.
