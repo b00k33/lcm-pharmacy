@@ -4943,7 +4943,7 @@
   /* ---- NUMBERS & STARS (her 2026-11-15 picks, mocks/numerology-guide-2026-11-15.html): number circles in C7's colours (1·4·7 blue,
      2·5·8 green, 3·6·9 red, masters purple, her pick 14), signs by element, Earth animals by her trine colours ---- */
   #pharmacyPage .ph-ns .ns-body { margin-top: 12px; }
-  #pharmacyPage .ph-ns .ns-push { margin-left: auto; }
+  #pharmacyPage .ph-ns .ns-push { margin-left: auto; display: inline-flex; gap: 8px; }
   #pharmacyPage .ns-n { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; color: #fff; font: 700 var(--fs-12)/1 var(--font-body); font-style: normal; font-variant-numeric: tabular-nums; vertical-align: middle; box-sizing: border-box; }
   #pharmacyPage .ns-n.lg { min-width: 30px; height: 30px; border-radius: 15px; font-size: var(--fs-15, 15px); }
   #pharmacyPage .ns-n.a { background: #3A6FB0; } #pharmacyPage .ns-n.b { background: #2F8A5B; } #pharmacyPage .ns-n.c { background: #B5523F; } #pharmacyPage .ns-n.m { background: #7D55A8; }
@@ -62680,7 +62680,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const tabs = [["c", "My chart"], ["i", "Imprinting"], ["r", "Readings"]];
     const pyBar = () => { const b = phNsBorn(dob), Y = phNsPyYear(b, TODAY) + phNsPyOff, l = y => `${y}–${String(y + 1).slice(2)}`;
       return `<span class="ns-pyn"><button type="button" class="ns-arr" data-ns-py="${phNsPyOff - 1}" aria-label="Personal Year ${l(Y - 1)}" title="${l(Y - 1)}">‹</button><b>${l(Y)}</b><button type="button" class="ns-arr" data-ns-py="${phNsPyOff + 1}" aria-label="Personal Year ${l(Y + 1)}" title="${l(Y + 1)}">›</button></span>${phNsPyOff ? `<button type="button" class="ph-hub-chip" data-ns-py="0">This year</button>` : ""}`; };
-    const bar = `<div class="ph-hub-bar"><span class="ph-fast-jbar" role="group" aria-label="View">${tabs.map(([v, l]) => `<button type="button" class="${phNsTab === v ? "on" : ""}" data-ns-tab="${v}" aria-pressed="${phNsTab === v}">${l}</button>`).join("")}</span>${dob && phNsTab === "i" ? pyBar() : ""}${phNsTab === "r" && phNsRdEd !== "new" ? `<button type="button" class="ph-hub-chip ns-push" data-ns-rdnew="1">+ Reading</button>` : ""}</div>`;
+    const bar = `<div class="ph-hub-bar"><span class="ph-fast-jbar" role="group" aria-label="View">${tabs.map(([v, l]) => `<button type="button" class="${phNsTab === v ? "on" : ""}" data-ns-tab="${v}" aria-pressed="${phNsTab === v}">${l}</button>`).join("")}</span>${dob && phNsTab === "i" ? pyBar() : ""}${phNsTab === "r" && phNsRdEd !== "new" ? `<span class="ns-push"><label class="ph-hub-chip">Import<input type="file" accept=".json,application/json" data-ns-imp="1" hidden></label><button type="button" class="ph-hub-chip" data-ns-rdnew="1">+ Reading</button></span>` : ""}</div>`;
     const need = `<div class="ph-fast-empty">No birth date <button type="button" class="ph-hub-chip" data-flow-prof="patient">Patient details</button></div>`;
     const body = phNsTab === "r" ? phNsRdHtml() : !dob ? need : phNsTab === "i" ? phNsImpHtml(dob) : phNsChartHtml(dob);
     return `<div class="ph-hub ph-ns" data-hub-host="1" data-ns-host="1">${bar}<div class="ns-body">${body}</div></div>`;
@@ -62725,6 +62725,33 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       if (f === "m" && amt > 0 && !(d.hubset.nsTax && !d.hubset.nsTax.del)) { const tid = uid(); d.hubset.nsTax = { id: "nsTax", up: now }; d.taxp[tid] = { id: tid, t: "Numbers & Stars readings · Mine", at: now, up: now }; }
     }, `✓ Reading · ${nm}`);
   }
+  // Import: a readings file from her own folder (a JSON list of {at, ppl [{n, b}], sys, note}) becomes rows of the Readings table;
+  // a day with the same people already there is skipped, so the same file twice adds nothing. The file never lives in this repo.
+  function phNsImport(file) {
+    if (!phMeOk()) return;
+    const rd = new FileReader();
+    rd.onerror = () => presSavedToast("Couldn't read that file");
+    rd.onload = () => {
+      let a; try { a = JSON.parse(rd.result); } catch (e) { a = null; }
+      if (a && !Array.isArray(a)) a = a.readings;
+      if (!Array.isArray(a)) { presSavedToast("Not a readings file"); return; }
+      const nk = (at, ppl) => at + "|" + ppl.map(p => String(p.n || p.b || "").toLowerCase()).join("+");
+      const seen = new Set(phNsRds().map(r => nk(r.at, r.ppl))), rows = [];
+      a.forEach(x => {
+        if (!x || !phTripIsDay(x.at)) return;
+        const ppl = (Array.isArray(x.ppl) ? x.ppl : []).map(p => ({ id: uid(), n: String(p && p.n || "").trim().slice(0, 80), b: p && phNsBorn(p.b) ? p.b : "", tm: "", pl: "" })).filter(p => p.n || p.b);
+        if (!ppl.length) return;
+        const k = nk(x.at, ppl);
+        if (seen.has(k)) return;
+        seen.add(k);
+        const sys = Array.isArray(x.sys) ? x.sys : ["num"];
+        rows.push({ id: uid(), at: x.at, ppl, sys: PH_NS_SYS.map(s => s[0]).filter(s => sys.includes(s)), amt: 0, f: ["c", "m", "f"].includes(x.f) ? x.f : "c", note: String(x.note || "").slice(0, 4000) });
+      });
+      if (!rows.length) { presSavedToast("Nothing new to add"); return; }
+      phHubWrite((d, now) => { rows.forEach(r => { d.nsrd[r.id] = Object.assign({ at0: now }, r, { up: now }); }); }, `✓ ${rows.length} reading${rows.length === 1 ? "" : "s"}`);
+    };
+    rd.readAsText(file);
+  }
   // ---- handlers (inside her Numbers & Stars page only) ----
   document.addEventListener("click", e => {
     const T = e.target;
@@ -62760,6 +62787,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (!T || !T.matches || !T.closest || !T.closest("[data-ns-host]")) return;
     if (T.matches("[data-ns-ov]")) phNsOvSave(T.dataset.nsOv, T.value);
     else if (T.matches("[data-ns-me]")) phNsOvSave(T.dataset.nsMe, T.value);
+    else if (T.matches("[data-ns-imp]")) { const f = T.files && T.files[0]; T.value = ""; if (f) phNsImport(f); }
     else if (T.matches("[data-ns-dlt]")) { const k = T.dataset.nsDlt, x = phNsLog(k) || {}, t = String(T.value).slice(0, 4000); if (t !== (x.t || "")) phMeSave((d, now) => { d.nsdl[k] = { id: k, t, mt: x.mt || "", up: now }; }); }   // kept when she leaves the box; nothing repaints under the tap that left it
   });
   document.addEventListener("keydown", e => {

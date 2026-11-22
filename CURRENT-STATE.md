@@ -2022,7 +2022,7 @@ Fitness + Exercises), the rest in Life.
   birth date, C22's numerology with the Personal Year turning on her birthday; a card she types over wins, "Worked out" goes
   back) · Imprinting (the Personal Year's 12 months from her birth month, Personal Month 1 = the imprint month in gold; a
   month's day grid; a day's "What I did" + Matched the number) · Readings (readings she gives: people, worked-out LP / Sun /
-  Earth, Life Path fit, systems, $, For Charity · Mine · Free; totals this year). Data `d.nsme` · `d.nsrd` · `d.nsdl` in her Me row.
+  Earth, Life Path fit, systems, $, For Charity · Mine · Free; totals this year; an Import chip loads a JSON list from her own folder, skipping a day with the same people). Data `d.nsme` · `d.nsrd` · `d.nsdl` in her Me row.
   **A night sky (her 2026-11-16 picks):** while the page is open the whole screen (top bar, rail, page) is navy fading to black
   with twinkling stars, glimmers, a shooting star and a crescent moon in the top bar; cards see-through; picked tabs, the rail's
   open row, Save and Next are gold with dark words. Colours only (the tokens re-set inside it); hand block "NUMBERS & STARS: THE
