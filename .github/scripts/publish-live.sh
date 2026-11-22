@@ -67,6 +67,8 @@ SED_SW="s|var CACHE_VERSION = \"[^\"]*\";|var CACHE_VERSION = \"lcm-$new\";|"
 #    slow fetch). Everything below is built from this one commit, not HEAD,
 #    which other sessions may move while this runs.
 base=$(git rev-parse --verify "refs/heads/session-a^{commit}")
+# Nothing private goes live (her 2026-11-22): her private terms are in a local file outside the repo; a hit stops the publish.
+bash .github/scripts/private-audit.sh "$base" || fail "private details are in what would go live (lines above). Erase them, commit, then re-run."
 echo "Live now:        $served"
 echo "Will publish:    $new"
 echo "Commits going live (session-a not yet on main):"
