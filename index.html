@@ -33709,6 +33709,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   #pharmacyPage .ph-clin-add select { flex: 1 1 220px; min-width: 0; }
   #pharmacyPage .ph-clin-add input { width: 96px; }
   #pharmacyPage #phInvWidget.ph-inv-solo .ph-mchips-wrap, #pharmacyPage #phInvWidget.ph-inv-solo #phInvFilterBtn { display: none !important; }
+  #pharmacyPage .ph-rfc-solo :is(.ph-rfc-tabs, #phRfcWeeks, #phRfcShort, #phRfcMade, #phRfcBulk) { display: none; }
   #pharmacyPage .ph-clin-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: var(--cl); color: #fff; font: 700 var(--fs-11-5) var(--font-body); }
   #pharmacyPage .ph-pp-dir { display: flex; margin: 4px 0 8px; }
   #pharmacyPage .ph-sh-move { display: grid; gap: 6px; margin: 4px 0 8px; }
@@ -40665,7 +40666,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const t = presOpenId ? PRESC.items.find(x => x.id === presOpenId) : null, k = keyOf(TODAY);
     return t && t.name ? phApptList().find(x => x && x.date === k && x.service !== "Break" && phPatientKey(x.patient || x.name) === phPatientKey(t.name)) || null : null;
   }
-  function presDispShelf() { const a = presDispBooking(); return a ? phPlaceShelf(phApptPlaceOf(a)) : phDayShelf(keyOf(TODAY)); }
+  function presDispShelf() { if (phMkCtx) return phMkCtx; const a = presDispBooking(); return a ? phPlaceShelf(phApptPlaceOf(a)) : phDayShelf(keyOf(TODAY)); }
   // why this clinic: "Booked at Lotus" / "Saturday" / "Friday" / "Weekday"
   function presDispShelfWhy() { if (presDispBooking()) return "booked here today"; const d = parseKey(keyOf(TODAY)); return d ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][d.getDay()] : ""; }
   // each clinic's own colour, so a count or a band is never read as another's
@@ -40678,6 +40679,15 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   const phClinicSolo = () => { const c = phClinicNow(); return c === "ac" || c === "pp" ? c : ""; };
   const phShelfHerbs = s => (PHARMACY.herbs || []).filter(h => phHasShelf(h, s));
   const phShelfLowList = s => phShelfHerbs(s).filter(h => !h.stopped && +h[PH_SHELVES[s].f] <= phShelfLow(h, s)).sort(phByName);
+  let phMkCtx = "";   // the clinic a refill batch is being made for, while its stock check runs
+  const phMkShelf = () => { const c = phClinicNow(); return c === "all" ? "" : c; };
+  const phMkQ = (h, s) => s === "cbd" ? h.qty : phHasShelf(h, s) ? +h[PH_SHELVES[s].f] : 0;
+  function phMkGate(items, commit) {
+    const ms = phMkShelf();
+    if (!ms) { phFlashShow("Choose a clinic (CBD, Acupreg or Lotus) before making a batch."); return; }
+    phMkCtx = ms;
+    try { phDispenseGate(items, resolved => commit(resolved, ms), true); } finally { phMkCtx = ""; }
+  }
   function phClinicRowHtml() {
     const cur = phClinicNow(), col = cur === "all" ? "var(--ph-ink)" : phShelfColour(cur);
     const b = (k, l) => `<button type="button" class="ph-ltr-qual ph-clin-b${cur === k ? " on" : ""}" style="--cl:${k === "all" ? "var(--ph-ink)" : phShelfColour(k)}" data-ph-clinic="${k}" aria-pressed="${cur === k}"><i class="ph-clin-dot"></i>${l}</button>`;
@@ -43924,8 +43934,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       }
     });
     if (entry.kind === "refill" && entry.targetId) {
-      const t = PHARMACY.herbs.find(hh => hh.id === entry.targetId);
-      if (t && t.qty != null) t.qty = phRound2(t.qty - (entry.madeGrams || 0));
+      const t = PHARMACY.herbs.find(hh => hh.id === entry.targetId), tf = PH_SHELVES[entry.shelf] ? PH_SHELVES[entry.shelf].f : "qty";
+      if (t && t[tf] != null) t[tf] = phRound2(t[tf] - (entry.madeGrams || 0));
       if (t && entry.planWas && !t.refill) Object.assign(t, entry.planWas);   // a plan made since then stands
     }
     // a price-review entry never touched qty -- undo it by putting the OLD
@@ -68095,25 +68105,28 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     grams = phRound2(grams);
     if (!h || !(grams > 0)) return;
     const recipe = phRefillRecipe(h);
+    const bs = phMkShelf();
+    if (!bs) { phFlashShow("Choose a clinic (CBD, Acupreg or Lotus) before making a batch."); return; }
+    const bf = PH_SHELVES[bs].f;
     const done = entry => {
       if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); repaint(); return; }
       delete phDashMadeG[h.id];
       repaint();
-      presSavedToast(`✓ ${phPinyinName(h)} made · ${phFmtG(grams)} g · jar ${phFmtG(h.qty || 0)} g`, { undo: () => {
+      presSavedToast(`✓ ${phPinyinName(h)} made · ${phFmtG(grams)} g · jar ${phFmtG(h[bf] || 0)} g`, { undo: () => {
         if (phReverseEntry(entry.id)) { savePharmacy(); repaint(); }
       } });
     };
     if (!recipe) {
       const entry = { id: uid(), kind: "refill", date: keyOf(TODAY), what: h.name, madeGrams: grams, cost: 0, items: [], deducted: [], stockNotes: [],
         targetId: h.id, source: h.supplier || PH_IN_HOUSE_SUP };   // the maker is always recorded (her 2026-11-01 data-check pick)
-      h.qty = phQty((h.qty == null ? 0 : h.qty) + grams);
+      h[bf] = phQty((h[bf] == null ? 0 : h[bf]) + grams); if (bs !== "cbd") entry.shelf = bs;
       phRefillClearPlan(h, entry); phAfterQtyChange(h);
       PHARMACY.log.unshift(entry);
       done(entry);
       return;
     }
     const { items, cost } = phRfcMkNums(recipe, grams);
-    phDispenseGate(items, resolved => done(refMakeCommit(recipe, grams, cost, resolved, { quiet: true, jar: h })));
+    phMkGate(items, (resolved, ms) => done(refMakeCommit(recipe, grams, cost, resolved, { quiet: true, jar: h, shelf: ms })));
   }
   // a count she typed (Inventory's Stock number, "Just a count"): the same log entry a stocktake writes
   function phJarCountLog(h, before, newQty, sessionId) {
@@ -81191,8 +81204,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       const needed = phRound2((i.grams || 0) / sum * batchGrams);
       if (needed <= 0) return;
       const src = presFindHerb(i);
-      if (!src || src.qty == null) return;
-      const stock = src.qty || 0;
+      const ms = phMkShelf() || "cbd";
+      if (!src || (ms === "cbd" && src.qty == null)) return;
+      const stock = phMkQ(src, ms) || 0;
       if (needed > stock) shorts.push({ herb: src, name: src.name, needed, stock, short: phRound2(needed - stock) });
     });
     return { noRecipe: false, ok: !shorts.length, shorts };
@@ -176121,7 +176135,7 @@ Dosage: {dosage}
   function phRfcClinicsHtml(h) {
     const cell = (nm, v, low) => `<span class="c${v != null && low != null && v < low ? " lo" : ""}" title="${nm} jar"><i>${nm}</i><b>${v == null ? "—" : phFmtG(v) + " g"}</b></span>`;
     const sh = (s, nm) => { const v = phHasShelf(h, s) ? +h[PH_SHELVES[s].f] : null; return cell(nm, v, phShelfLow(h, s)); };
-    return `<div class="cl">${cell("CBD", h.qty == null ? null : h.qty, phShelfLow(h, "cbd"))}${sh("ac", "Acupreg")}${sh("pp", "Lotus")}</div>`;
+    return `<div class="cl">${cell("CBD", h.qty == null ? null : h.qty, phShelfLow(h, "cbd"))}${phClinicNow() === "all" ? sh("ac", "Acupreg") + sh("pp", "Lotus") : ""}</div>`;
   }
   function phRfcRowHtml(e, tab, boardMap, i) {
     const st = `style="--i:${Math.min(i, 14)}"`;
@@ -176199,7 +176213,17 @@ Dosage: {dosage}
     return `<div class="ph-rfc-shortbar"><span><b>${rows}</b> short · <b>${allShorts.length}</b> herb${allShorts.length === 1 ? "" : "s"} — ${allShorts.slice(0, 3).map(s => esc(phDispName(phPinyinName({ name: s.name }), false))).join(", ")}${allShorts.length > 3 ? `, +${allShorts.length - 3} more` : ""}</span>${allShorts.every(s => s.herb && s.herb.order) ? `<button type="button" class="done" data-rfc-order-all="1">✓ On To order</button>` : `<button type="button" data-rfc-order-all="1"><svg class="icn" aria-hidden="true"><use href="#i-cart"/></svg>Order all ${allShorts.length}</button>`}</div>`;
   }
   let phRfcQuietOpen = false;   // Below the line's "not dispensed in 12 weeks" fold, view state only
+  // Formula refill for Acupreg / Lotus: the formula jars kept at that clinic, that shelf's grams and low line only, and Make for that clinic
+  function phClinicRefillHtml(sc) {
+    const f = PH_SHELVES[sc].f, nm = PH_SHELVES[sc].name, q = phRfcSearch.trim().toLowerCase();
+    const rows = phShelfHerbs(sc).filter(h => phIsFormula(h) && (!q || String(h.name).toLowerCase().includes(q) || phFormulaAbbr(h).toLowerCase().includes(q))).sort(phByName).map(h => {
+      const qv = +h[f], low = phShelfLow(h, sc), rc = phRefillRecipe(h), ab = rc ? presAbbr(rc) : "";
+      return `<tr data-rfc-id="${h.id}"><td class="ph-name"><span class="ph-dash-name">${esc(phRfcTitle(h.name))}</span>${ab && ab !== String(h.name).toUpperCase() ? ` <i class="ph-sub">${esc(ab)}</i>` : ""}</td><td class="ph-num">${qv < low ? `<span class="ph-pp-low" title="Low at ${nm}"></span>` : ""}${phFmtG(qv)} g</td><td>${phStockBarPct(qv, low)}</td><td class="ph-num">${phFmtG(low)}</td><td class="ph-act">${rc ? `<button type="button" class="ph-rfc-btn go" data-rfc-makenow="${h.id}" title="Make a batch for ${nm}">Make for ${nm}</button>` : `<span class="ph-sub">no recipe</span>`}</td></tr>`;
+    }).join("");
+    return `<div class="ph-clin-sheet" style="--cl:${phShelfColour(sc)}"><table class="ph-table ph-clin-tbl"><thead><tr><th>Formula</th><th class="num">${nm} jar</th><th>Level</th><th class="num">Low at (g)</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="5" class="ph-ost-empty">No formula jar is kept at ${nm} yet. Add one on Inventory.</td></tr>`}</tbody></table></div>`;
+  }
   function phRfcListHtml() {
+    if (phClinicSolo()) return phClinicRefillHtml(phClinicSolo());
     const tab = phRefillTab, qRaw = phRfcSearch.trim(), q = qRaw.toLowerCase();
     const wf = tab === "toRefill" && !q ? phRfcWeekFilter : "";
     const list = phRfcEntries(tab).filter(e => phRfcMatches(e, q) && (!wf || (e.h && phRfcWeekKey(e.h) === wf)));
@@ -176273,7 +176297,7 @@ Dosage: {dosage}
     phRfcSeenAt = Date.now(); phRfcRise = false;
     const tabs = PH_RFC_TABS.map(([k, label]) => `<button type="button" role="tab" class="tab${phRefillTab === k ? " on" : ""}" data-rfc-tab="${k}" aria-selected="${phRefillTab === k}">${label}<b class="n">${phRfcCount(k)}</b></button>`).join("");
     return `<div id="refPresPanel"></div>
-      <div class="ph-rfc" id="phRfc">
+      <div class="ph-rfc${phClinicSolo() ? " ph-rfc-solo" : ""}" id="phRfc">
         <div class="ph-rfc-head"><div class="ph-rfc-tabs" role="tablist">${tabs}<i class="ink"></i></div>
           <label class="ph-rfc-srch"><svg class="icn"><use href="#i-search"/></svg><input type="text" id="phRfcSearch" placeholder="Search formulas" autocomplete="off" value="${esc(phRfcSearch)}"><kbd>/</kbd></label></div>
         <div id="phRfcWeeks">${phRfcWeeksHtml()}</div>
@@ -176549,7 +176573,7 @@ Dosage: {dosage}
     const total = phRound2(w.reduce((s, g) => s + g, 0));
     const done = new Set([...M.done].filter(i => i < items.length));
     const n = items.length, d = done.size, bowl = phRound2(w.reduce((s, g, i) => s + (done.has(i) ? g : 0), 0));
-    const pct = n ? d / n : 0, C = 2 * Math.PI * 17, jar0 = h.qty == null ? 0 : h.qty;
+    const pct = n ? d / n : 0, C = 2 * Math.PI * 17, jar0 = phMkQ(h, phMkShelf() || "cbd") || 0;
     const missing = items.filter(x => !x.h).length;
     const rsum = phRound2(refRecipeSum(recipe)), bat = rsum > 0 ? ` <span class="mkb">= <input type="text" inputmode="decimal" class="ph-rfc-wgg field-bare" data-rfc-mk-b="1" value="${phRound2(M.grams / rsum)}" autocomplete="off" aria-label="Batches to make" title="Batches of the recipe (${phFmtG(rsum)} g each)"> batches</span>` : "";
     const cm = phRefillCanMake(h, M.grams), mkShort = cm && cm.shorts && cm.shorts.length ? `<span class="mks">${cm.shorts.length} herb${cm.shorts.length === 1 ? "" : "s"} short</span><button type="button" class="ph-rfc-btn" data-rfc-mk-order="1">Order short</button>` : "";
@@ -176591,8 +176615,8 @@ Dosage: {dosage}
     if (!recipe) return;
     const { items, cost } = phRfcMkNums(recipe, M.grams);
     if (M.finishing) return;   // the glow is playing: a short herb must not ask again over a batch already on its way
-    const before = h.qty == null ? 0 : h.qty;
-    phDispenseGate(items, resolved => {
+    const before = phMkQ(h, phMkShelf() || "cbd") || 0;
+    phMkGate(items, (resolved, ms) => {
       if (M.finishing) return;   // a second tap during the 650 ms glow would deduct the herbs and fill the jar again
       M.finishing = true;
       // lively finish (her pick 7): the row's jar fills and the row glows, then the save runs, the panel closes and the
@@ -176600,7 +176624,7 @@ Dosage: {dosage}
       const row = document.querySelector(`#phRfcList [data-rfc-id="${M.id}"]`);
       const go = () => {
         phRfcMk = null; if (phRfcSide && phRfcSide.k === "weigh") phRfcSide = null;
-        refMakeCommit(recipe, M.grams, cost, resolved, { inRow: true });
+        refMakeCommit(recipe, M.grams, cost, resolved, { inRow: true, shelf: ms });
         phRfcShowToast(`${phRfcTitle(h.name)} made · jar now ${phFmtG(phQty(before + M.grams))} g`);
       };
       if (row && !window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
@@ -177523,7 +177547,7 @@ Dosage: {dosage}
     // her §5: "Yes, make refill" is the one button both bars share --
     // renderRefBarNoRecipe wires it to the same data-ref-make-yes attribute
     // renderRefBar does, so this is where the two paths actually split.
-    if (!refRecipeId && refNoRecipeJarId) { refMakeNoRecipeCommit(); return; }
+    if (!refRecipeId && refNoRecipeJarId) { if (!phMkShelf()) { phFlashShow("Choose a clinic (CBD, Acupreg or Lotus) before making a batch."); return; } refMakeNoRecipeCommit(); return; }
     const recipe = PRESC.items.find(t => t.id === refRecipeId);
     const grams = parseFloat(refGrams) || 0;
     if (!recipe || !grams) return;
@@ -177532,7 +177556,7 @@ Dosage: {dosage}
     // dispense -- stop before deducting anything short, let her substitute
     // or confirm going negative. Cost stays the recipe's own (per her rule,
     // a substitution here doesn't change what the batch is costed at).
-    phDispenseGate(items, resolved => refMakeCommit(recipe, grams, cost, resolved));
+    phMkGate(items, (resolved, ms) => refMakeCommit(recipe, grams, cost, resolved, { shelf: ms }));
   }
   // opts.inRow (her 2026-10-22 pick: Make weighs in the formula's own row): the row's Made today line and toast
   // carry the news, so the workbench's own "Refill made" strip stays quiet
@@ -177540,10 +177564,12 @@ Dosage: {dosage}
     // the inline strip already asked — this is the post-confirm executor.
     // The single herbs are deducted, then the finished batch restocks the
     // formula's own bottle (entry.targetId, so undo/delete drains it back out).
+    const sh = (opts && opts.shelf) || phMkShelf() || "cbd", fq = PH_SHELVES[sh].f;
     const entry = { id: uid(), kind: "refill", date: keyOf(TODAY), what: recipe.name, madeGrams: phRound2(grams),
       cost: phRound2(cost), items: items.map(x => ({ code: x.code, name: x.name, grams: x.grams })), deducted: [], stockNotes: [] };
+    if (sh !== "cbd") entry.shelf = sh;   // the clinic this batch was made for
     items.forEach(x => {
-      if (!x.h || x.h.qty == null) return;
+      if (!x.h || (sh === "cbd" ? x.h.qty == null : !phHasShelf(x.h, sh))) return;
       // her rule (2026-08-18): the shortfall's already been confirmed by
       // phDispenseGate above -- deduct the FULL amount, same as a
       // prescription dispense, instead of the old silent clamp-at-zero.
@@ -177554,12 +177580,12 @@ Dosage: {dosage}
       // the negative back down to a silent zero.
       const actual = phRound2(x.grams);
       if (actual > 0) {
-        const before = x.h.qty;
+        const before = x.h[fq];
         const raw = before - actual;
-        x.h.qty = raw < 0 ? phRound2(raw) : phQty(raw);
-        entry.deducted.push({ herbId: x.h.id, grams: actual });
+        x.h[fq] = raw < 0 ? phRound2(raw) : phQty(raw);
+        entry.deducted.push(sh === "cbd" ? { herbId: x.h.id, grams: actual } : { herbId: x.h.id, grams: actual, shelf: sh });
         if (x.subFor) entry.stockNotes.push(`↔ ${x.subFor.code ? esc(x.subFor.code) + " " : ""}${esc(x.subFor.name)} substituted with ${phHerbCode(x.h) ? esc(phHerbCode(x.h)) + " " : ""}${esc(x.h.name)} × ${phFmtG(actual)}g for this batch only.`);
-        else if (x.h.qty < 0) entry.stockNotes.push(`⚠ ${phHerbCode(x.h) ? esc(phHerbCode(x.h)) + " " : ""}${esc(x.h.name)} used at ${phFmtG(x.h.qty)}g (${phFmtG(before)}g in stock, ${phFmtG(actual)}g needed) — confirmed anyway.`);
+        else if (x.h[fq] < 0) entry.stockNotes.push(`⚠ ${phHerbCode(x.h) ? esc(phHerbCode(x.h)) + " " : ""}${esc(x.h.name)} used at ${phFmtG(x.h[fq])}g (${phFmtG(before)}g in stock, ${phFmtG(actual)}g needed) — confirmed anyway.`);
       }
       phAfterQtyChange(x.h);
     });
@@ -177588,7 +177614,7 @@ Dosage: {dosage}
     // the herb never retroactively relabels a past batch
     entry.source = jar ? (jar.supplier || PH_IN_HOUSE_SUP) : PH_IN_HOUSE_SUP;   // the maker is always recorded (her 2026-11-01 data-check pick); phRefillMaker reads the old entries
     if (jar) {
-      jar.qty = phQty((jar.qty == null ? 0 : jar.qty) + entry.madeGrams);   // the finished batch restocks the formula bottle
+      jar[fq] = phQty((jar[fq] == null ? 0 : jar[fq]) + entry.madeGrams);   // the finished batch restocks the formula bottle, at the clinic it was made for
       entry.targetId = jar.id;                                              // so undo/delete drains the made grams back out
       phRefillClearPlan(jar, entry);                                        // her answer A: finishing the batch ends the plan -- flag, date and batch all clear, so it leaves the list by itself
       phAfterQtyChange(jar);
@@ -177631,7 +177657,7 @@ Dosage: {dosage}
     if (!jar || !grams) return;
     const entry = { id: uid(), kind: "refill", date: keyOf(TODAY), what: jar.name, madeGrams: phRound2(grams),
       cost: 0, items: [], deducted: [], stockNotes: [] };
-    jar.qty = phQty((jar.qty == null ? 0 : jar.qty) + entry.madeGrams);
+    { const sh = phMkShelf() || "cbd", fq = PH_SHELVES[sh].f; jar[fq] = phQty((jar[fq] == null ? 0 : jar[fq]) + entry.madeGrams); if (sh !== "cbd") entry.shelf = sh; }
     entry.targetId = jar.id;
     entry.source = jar.supplier || PH_IN_HOUSE_SUP;   // the maker is always recorded (her 2026-11-01 data-check pick)
     phRefillClearPlan(jar, entry);
