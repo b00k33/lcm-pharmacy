@@ -4096,6 +4096,8 @@
   #pharmacyPage .ph-wk-ch { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-herb); }
   #pharmacyPage .ph-wk-ch .sf { font-weight: 400; color: var(--ph-soft); letter-spacing: 0; text-transform: none; }
   #pharmacyPage .ph-wk-dl { padding: 6px 12px 0; font: 600 var(--fs-11-5) var(--font-body); color: var(--ph-soft); }
+  #pharmacyPage .ph-wk-dl.late { display: flex; align-items: center; gap: 6px; color: var(--ph-ink); }
+  #pharmacyPage .ph-wk-dl.late::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--ph-zero); flex: none; }
   #pharmacyPage .ph-wk-tcol .ph-hub-pri { display: flex; flex-direction: column; gap: 6px; padding: 0 12px 12px; }
   #pharmacyPage .ph-wk-tcol .ph-hub-prc { display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 8px; align-items: center; }
   #pharmacyPage .ph-wk-tcol .ph-hub-prc .ph-hub-lab { grid-column: 2; grid-row: 1; }
@@ -59867,6 +59869,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const opt = [["all", "All"]].concat(PH_HUB_AREAS).map(([v, l]) => `<option value="${v}"${v === phHubArea ? " selected" : ""}>${l}${v === "all" ? ` · ${open.length}` : ` · ${open.filter(t => phHubTdArea(t) === v).length}`}</option>`).join("");
     const when = t => { const k = phMeTdDay(t); return !k ? "" : k === tk ? "Today" : k < tk ? `${phHubDl(k)} · late` : phHubDl(k); };
     const whenK = k => k === tk ? "Today" : k < tk ? `${phHubDl(k)} · late` : phHubDl(k);
+    const catChip = t => `<select class="ar" data-hub-tdcat="${esc(t.id)}" aria-label="Category"><option value="">Category</option>${PH_PRI_AREAS.map(([v, l]) => `<option value="${v}"${t.c === v ? " selected" : ""}>${l}</option>`).join("")}</select>`;
     const area = t => t.trip ? `<span class="ar">Travel</span>` : `<select class="ar" data-hub-tdarea="${esc(t.id)}" aria-label="Area"><option value="">Area</option>${PH_HUB_AREAS.filter(a => a[0] !== "travel").map(([v, l]) => `<option value="${v}"${t.a === v ? " selected" : ""}>${l}</option>`).join("")}</select>`;
     const whenCtl = t => {   // the Day chip: Today and the next 13 days, a day beyond that stays as it is; "Day" clears it
       if (t.trip) return `<span class="du">${esc(when(t))}</span>`;
@@ -59875,21 +59878,22 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     };
     const row = t => {
       const op = !t.done && phHubTdOpenId === t.id, fx = phHubTdFx === t.id;
-      return `<div class="ph-wk-r${t.done ? " done" : ""}${op ? " op" : ""}${fx ? " mo" : ""}"><button type="button" class="bx${fx ? " mo-draw" : ""}" data-hub-td="${esc(t.id)}" aria-pressed="${!!t.done}" aria-label="${t.done ? "Not done" : "Done"}: ${esc(t.t)}">${t.done ? phHabCk() : ""}</button>${t.done ? `<span class="tt" title="${esc(t.t)}">${esc(t.t)}</span>` : `<button type="button" class="tt" data-hub-tdo="${esc(t.id)}" aria-expanded="${op}" title="${esc(t.t)}">${esc(t.t)}</button>`}</div>${op ? `<div class="ph-wk-ro">${area(t)}${whenCtl(t)}${phOwnChip(t)}</div>` : ""}`;
+      return `<div class="ph-wk-r${t.done ? " done" : ""}${op ? " op" : ""}${fx ? " mo" : ""}"><button type="button" class="bx${fx ? " mo-draw" : ""}" data-hub-td="${esc(t.id)}" aria-pressed="${!!t.done}" aria-label="${t.done ? "Not done" : "Done"}: ${esc(t.t)}">${t.done ? phHabCk() : ""}</button>${t.done ? `<span class="tt" title="${esc(t.t)}">${esc(t.t)}</span>` : `<button type="button" class="tt" data-hub-tdo="${esc(t.id)}" aria-expanded="${op}" title="${esc(t.t)}">${esc(t.t)}</button>`}</div>${op ? `<div class="ph-wk-ro">${catChip(t)}${area(t)}${whenCtl(t)}${phOwnChip(t)}</div>` : ""}`;
     };
-    const G = new Map(), put = (k, l, t) => { if (!G.has(k)) G.set(k, { l, rows: [] }); G.get(k).rows.push(t); };
-    open.filter(inA).forEach(t => { const k = phMeTdDay(t); if (!k) put("~none", "No day", t); else if (k < tk) put("0late", "Late", t); else put(k, k === tk ? "Today" : phHubDl(k), t); });
-    doneWk.filter(inA).forEach(t => put("~~done", "Done this week", t));
+    // her 2026-11-23 "organise the to dos into the social personal and work": the same three names, in the same order, as the Priorities
+    // above them (PH_PRI_AREAS), then No category for a to-do she has not placed; inside each group the date state reads as before: Late
+    // (a red dot), Today, each later day, No day. Her real to-dos are never placed for her: the chip on an open row sets the category (todo.c)
+    const catOf = t => t.c === "P" || t.c === "S" || t.c === "W" ? t.c : "";
+    const stateOf = t => { const k = phMeTdDay(t); return !k ? "~none" : k < tk ? "0late" : k; };
+    const sec = L => { const M = new Map(); L.forEach(t => { const k = stateOf(t); if (!M.has(k)) M.set(k, []); M.get(k).push(t); });
+      return [...M.keys()].sort().map(k => `<div class="ph-wk-dl${k === "0late" ? " late" : ""}">${esc(k === "0late" ? "Late" : k === "~none" ? "No day" : k === tk ? "Today" : phHubDl(k))}</div>${M.get(k).map(row).join("")}`).join(""); };
+    const openA = open.filter(inA), doneA = doneWk.filter(inA);
     const pri = phPriAll()[W.keys[0]] || {}, pt = PH_PRI_AREAS.filter(([a]) => (pri[a] || {}).t), pd = pt.filter(([a]) => (pri[a] || {}).d).length;
-    const keys = [...G.keys()].sort(), grp = k => G.get(k);
     const col = (l, n, inner) => `<div class="ph-wk-tcol"><div class="ph-wk-ch"><span class="cp">${esc(l)}</span><span class="sf">${n}</span></div>${inner}</div>`;
     const cols = [col("Priorities", pt.length ? `${pd} of ${pt.length}` : "", phPriHtml(W))];
-    if (G.has("0late")) cols.push(col("Late", grp("0late").rows.length, grp("0late").rows.map(row).join("")));
-    if (G.has(tk)) cols.push(col("Today", grp(tk).rows.length, grp(tk).rows.map(row).join("")));
-    const lk = keys.filter(k => /^\d{4}-/.test(k) && k !== tk);
-    if (lk.length) cols.push(col("Later", lk.reduce((a, k) => a + grp(k).rows.length, 0), lk.map(k => `<div class="ph-wk-dl">${esc(grp(k).l)}</div>${grp(k).rows.map(row).join("")}`).join("")));
-    if (G.has("~none")) cols.push(col("No day", grp("~none").rows.length, grp("~none").rows.map(row).join("")));
-    if (G.has("~~done")) cols.push(col("Done this week", grp("~~done").rows.length, grp("~~done").rows.map(row).join("")));
+    PH_PRI_AREAS.concat([["", "No category"]]).forEach(([c, l]) => { const L = openA.filter(t => catOf(t) === c); if (c === "" && !L.length) return; cols.push(col(l, L.length, sec(L))); });
+    if (doneA.length) cols.push(col("Done this week", doneA.length, doneA.map(row).join("")));
+    const G = { size: openA.length + doneA.length };
     const body = `<div class="ph-wk-tdc">${cols.join("")}</div>`;
     return `<div class="ph-hab-card ph-wk-td"><div class="ph-hab-band"><span class="cp">To-dos</span><span class="sf">${open.filter(inA).length}</span><span class="fx"></span><select class="ph-hub-chip" data-hub-area="1" aria-label="Area">${opt}</select></div>
       ${phHubTdOn ? `<div class="ph-wk-add"><label class="ph-fast-fld ph-hub-tdin">+<input type="text" class="field-bare" data-hub-tdnew="1" aria-label="New to-do" autocomplete="off" enterkeyhint="done"></label></div>` : ""}
@@ -64433,6 +64437,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (!T || !T.matches || !T.closest("[data-hub-host]")) return;
     if (T.matches("[data-hub-area]")) { phHubArea = T.value; phHubRepaint(); }
     else if (T.matches("[data-hub-tdarea]")) { const id = T.dataset.hubTdarea, v = T.value; phHubWrite((d, now) => { const y = d.todos[id]; if (!y) return; if (v) y.a = v; else delete y.a; y.up = now; }); }
+    else if (T.matches("[data-hub-tdcat]")) { const id = T.dataset.hubTdcat, v = T.value; phHubWrite((d, now) => { const y = d.todos[id]; if (!y) return; if (v === "P" || v === "S" || v === "W") y.c = v; else delete y.c; y.up = now; }); }
     else if (T.matches("[data-hub-tdday]")) { const id = T.dataset.hubTdday, v = T.value; phHubWrite((d, now) => { const y = d.todos[id]; if (!y) return; if (phTripIsDay(v)) y.day = v; else delete y.day; y.up = now; }); }
     else if (T.matches("[data-hub-price]")) { const s = T.dataset.hubPrice, v = T.value.trim(); if (v !== "" && !(+v >= 0)) return; phHubWrite((d, now) => { d.price[s] = { id: s, v: v === "" ? "" : Math.round(+v * 100) / 100, up: now }; }, v === "" ? "" : `✓ ${s}`); }
     else if (T.matches("[data-hub-rate]")) { const f = T.dataset.hubRate, v = T.value.trim(); if (!(+v >= 0) || v === "") return; phHubWrite((d, now) => { const r = Object.assign({ id: "rate" }, d.hubset.rate || {}); r[f] = Math.round(+v * 100) / 100; r.up = now; d.hubset.rate = r; }); }
