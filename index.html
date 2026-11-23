@@ -2802,6 +2802,7 @@
   #pharmacyPage #phInvWidget.ph-inv-sheet #phStock .ph-table:not(.ph-hide-low) [data-col="low"],
   #pharmacyPage #phInvWidget.ph-inv-sheet #phStock .ph-table:not(.ph-hide-usedByHH) [data-col="usedByHH"],
   #pharmacyPage #phInvWidget.ph-inv-sheet #phStock .ph-table:not(.ph-hide-supplier) [data-col="supplier"],
+  #pharmacyPage #phInvWidget.ph-inv-sheet #phStock .ph-table:not(.ph-hide-origin) [data-col="origin"],
   #pharmacyPage #phInvWidget.ph-inv-sheet #phStock .ph-table:not(.ph-hide-bottleCost) [data-col="bottleCost"],
   #pharmacyPage #phInvWidget.ph-inv-sheet #phStock .ph-table:not(.ph-hide-costFlag) [data-col="costFlag"],
   #pharmacyPage #phInvWidget.ph-inv-sheet #phStock .ph-table:not(.ph-hide-cart) [data-col="cart"],
@@ -23003,7 +23004,7 @@
     #pharmacyPage #phStock [data-col="usedByHH"] { display: none; }
   }
   @media (max-width: 1110px) {
-    #pharmacyPage #phStock [data-col="supplier"] { display: none; }
+    #pharmacyPage #phStock :is([data-col="supplier"], [data-col="origin"]) { display: none; }
   }
   @media (max-width: 990px) {
     #pharmacyPage #phStock [data-col="bottleCost"] { display: none; }
@@ -37346,6 +37347,16 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
                   <option value="onsite">Made manually (on site)</option>
                 </select>
               </div>
+              <div class="field" data-ph-kindonly="formula">
+                <label for="phHerbOrigin">Origin</label>
+                <select id="phHerbOrigin">
+                  <option value="">—</option>
+                  <option value="Doane">Doane</option>
+                  <option value="Huang Huang">Huang Huang</option>
+                  <option value="Lyttleton">Lyttleton</option>
+                  <option value="Mick">Mick</option>
+                </select>
+              </div>
               <div class="field">
                 <label for="phHerbCost">Cost per gram ($)</label>
                 <input type="number" id="phHerbCost" min="0" step="any" placeholder="" autocomplete="off">
@@ -38283,6 +38294,34 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   const PH_NAMED_INHOUSE_SUPS = ["Huang Huang", "Mick", "Lyttleton", "Doane"];
   const PH_IN_HOUSE_SUPS = [PH_IN_HOUSE_SUP, ...PH_NAMED_INHOUSE_SUPS];
   const phIsInHouseSup = name => PH_IN_HOUSE_SUPS.includes(name);
+  // ORIGIN (her 2026-11-23: "mick huang huang and lyttleton are tags regarding formula origin, not supplier. the origin denotes the herbal
+  // formula contents and dosages"): h.origin = whose recipe a formula follows (Doane, Huang Huang, Lyttleton, Mick). A formula made here
+  // has Supplier "In house" whatever its origin. phHerbOrigin also reads a legacy named source on the herb until phOriginMigrate moves it.
+  const phHerbOrigin = h => h.origin || [h.supplier].concat((h.suppliers || []).map(s => s && s.name)).find(n => PH_NAMED_INHOUSE_SUPS.includes(n)) || "";
+  let phOriginFor = null;
+  function phOriginMigrate() {
+    if (!PHARMACY.herbs || phOriginFor === PHARMACY.herbs) return 0;
+    phOriginFor = PHARMACY.herbs;
+    let n = 0;
+    PHARMACY.herbs.forEach(h => {
+      const rows = Array.isArray(h.suppliers) ? h.suppliers : [];
+      const named = rows.filter(s => s && PH_NAMED_INHOUSE_SUPS.includes(s.name));
+      const supNamed = PH_NAMED_INHOUSE_SUPS.includes(h.supplier);
+      if (!named.length && !supNamed) return;
+      if (!h.origin) h.origin = (named.find(s => s.isDefault) || named[0] || { name: h.supplier }).name;
+      named.forEach(s => { s.name = PH_IN_HOUSE_SUP; });
+      const ih = rows.filter(s => s && s.name === PH_IN_HOUSE_SUP);
+      if (ih.length > 1) {
+        const keep = ih.find(s => s.code) || ih[0];
+        keep.isDefault = ih.some(s => s.isDefault);
+        h.suppliers = rows.filter(s => !s || s.name !== PH_IN_HOUSE_SUP || s === keep);
+      }
+      if (supNamed) h.supplier = PH_IN_HOUSE_SUP;
+      n++;
+    });
+    if (n) { try { savePharmacy(); } catch (e) {} }
+    return n;
+  }
   const phSupDisplayName = name => phIsInHouseSup(name) ? `<span class="ph-sup-inhouse"><svg class=icn aria-hidden=true><use href=#i-home></use></svg> ${esc(name)}</span>` : esc(name);
   // the Inventory row's wash by its active supplier (her 2026-11-20 words): Koda faded green, GMP lighter green, KPC faded yellow,
   // Evergreen faded orange, made in house (any in-house source) white; any other supplier, or none, no class
@@ -38306,7 +38345,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const known = isFormulaKind
       ? PH_KNOWN_SUPPLIERS.filter(n => !PH_SUPPLIER_RULES[n] || PH_SUPPLIER_RULES[n].formulas !== false)
       : PH_KNOWN_SUPPLIERS;
-    const names = isFormulaKind ? [...known, ...PH_NAMED_INHOUSE_SUPS] : known;
+    const names = isFormulaKind ? [...known, PH_IN_HOUSE_SUP] : known;
     const opt = n => `<option value="${esc(n)}"${n === current ? " selected" : ""}>${phIsInHouseSup(n) ? `${esc(n)}` : esc(n)}</option>`;
     const offMenu = current && !names.includes(current) ? opt(current) : "";
     return `<option value=""${current ? "" : " selected"}>— set supplier —</option>${offMenu}${names.map(opt).join("")}`;
@@ -40238,7 +40277,6 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       <select class="ph-hsup-name field-bare" aria-label="Supplier">
         <option value="">— choose supplier —</option>
         <option value="${PH_IN_HOUSE_SUP}"${name === PH_IN_HOUSE_SUP ? " selected" : ""}>In house</option>
-        ${PH_NAMED_INHOUSE_SUPS.slice().sort(phAz).map(n => `<option value="${esc(n)}"${n === name ? " selected" : ""}>${esc(n)}</option>`).join("")}
         ${[...PH_KNOWN_SUPPLIERS.filter(ruleAllows), ...extraKnown.map(s => s.name)].sort(phAz).map(n => `<option value="${esc(n)}"${n === name ? " selected" : ""}>${esc(n)}</option>`).join("")}
         <option value="__new__"${name && !isKnown && !isInHouseAny ? " selected" : ""}>+ New supplier…</option>
       </select>
@@ -40316,7 +40354,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       // recipe/reference code she typed (her ask 2026-08-14).
       if (phIsInHouseSup(name)) {
         const isDefault = row.querySelector('input[name="phHerbSupplierDefault"]').checked;
-        const code = name === PH_IN_HOUSE_SUP ? "" : row.querySelector(".ph-hsup-code").value.trim();
+        const code = row.querySelector(".ph-hsup-code").value.trim();
         return { name, bottleCost: null, code, isDefault };
       }
       const priceRaw = row.querySelector(".ph-hsup-price").value.trim();
@@ -40689,6 +40727,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       : k === "costFlag" ? (h.cost ? phRoundUp10c(h.cost) : null)
       : k === "bottleCost" ? (h.bottleCost != null ? h.bottleCost : (h.cost ? phRound2(h.cost * phOrderPackFor(h)) : null))
       : k === "supplier" ? (h.supplier || null)
+      : k === "origin" ? (phHerbOrigin(h) || null)
       : k === "qty" ? h.qty
       : k === "level" ? (h.low != null && h.low > 0 ? (h.qty || 0) / h.low : null)
       : k === "low" ? h.low
@@ -41797,6 +41836,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // the shell (sortable headers + filter row) and the body render separately, so
   // typing in a filter never rebuilds the very input it's happening in
   function renderPhStock() {
+    phOriginMigrate();
     if (!PHARMACY.herbs.length) {
       document.getElementById("phStock").innerHTML = `<div class="fam-empty">Nothing in stock yet.<br>Add each herb once — code, name, cost per gram, and what's on the shelf.</div>`;
       return;
@@ -41816,6 +41856,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const invColHtml = {
       kind: th("kind", "Kind"),
       supplier: th("supplier", "Supplier"),
+      origin: th("origin", "Origin", "Origin — whose recipe and doses the formula follows"),
       cost: th("cost", "Cost $/g", "Cost per gram — what it costs you"),
       costFlag: th("costFlag", "Sell $/g", "Sell per gram — $/g rounded up to the nearest 10c"),
       bottleCost: th("bottleCost", "Bottle $"),
@@ -41843,12 +41884,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   // Columns ▾ popover: which columns to show, per table (persisted like colW).
   // Name always shows -- everything else is optional.
-  const PH_INV_COL_OPTS = [["code", "Codes"], ["kind", "Kind"], ["supplier", "Supplier"], ["cost", "Cost $/g"], ["costFlag", "Sell $/g"], ["bottleCost", "Bottle $"], ["qty", "In stock"], ["level", "Level"], ["low", "Low at"], ["status", "Status"], ["usedByHH", "Used by HH"], ["cart", "<svg class=icn aria-hidden=true><use href=#i-cart></use></svg>"], ["note", "Notes"]];
+  const PH_INV_COL_OPTS = [["code", "Codes"], ["kind", "Kind"], ["supplier", "Supplier"], ["origin", "Origin"], ["cost", "Cost $/g"], ["costFlag", "Sell $/g"], ["bottleCost", "Bottle $"], ["qty", "In stock"], ["level", "Level"], ["low", "Low at"], ["status", "Status"], ["usedByHH", "Used by HH"], ["cart", "<svg class=icn aria-hidden=true><use href=#i-cart></use></svg>"], ["note", "Notes"]];
   // STEP 8h: drag-to-reorder is a separate, independent setting from show/hide
   // above -- Code and Name (the identity pair) and Actions stay pinned, like
   // sel/actions always have; everything else can move. Restock's To-order row
   // uses CSS `order` on its grid items (same key set, no drag on Herb/×).
-  const PH_INV_COL_DRAG_ORDER = ["kind", "supplier", "cost", "costFlag", "bottleCost", "qty", "level", "low", "status", "usedByHH", "cart", "note"];
+  const PH_INV_COL_DRAG_ORDER = ["kind", "supplier", "origin", "cost", "costFlag", "bottleCost", "qty", "level", "low", "status", "usedByHH", "cart", "note"];
   const PH_RESTOCK_COL_OPTS = [["sup", "Supplier"], ["level", "Level"], ["size", "Size"], ["x", "×"], ["bottle", "Bottle $"], ["total", "Total"], ["status", "Status"]];
   const PH_RESTOCK_COL_DRAG_ORDER = PH_RESTOCK_COL_OPTS.map(o => o[0]);
   // batch 18 (2026-09-17): the desktop To Order "quiet sheet" table
@@ -42340,9 +42381,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // "made in house by Huang Huang" and "an ingredient HH's formulas use" are
   // different facts, and the tag names the source, so it follows the supplier.
   const phSrcTagHtml = h => {
-    const nm = (phActiveSupplier(h) || {}).name;
+    const nm = phHerbOrigin(h);
     const code = nm && phInHousePrefix(nm);
-    return code ? `<span class="srctag" title="Made in house — ${esc(nm)}">${code}</span>` : "";
+    return code ? `<span class="srctag" title="Origin — ${esc(nm)}">${code}</span>` : "";
   };
   const phInvCompactRowHtml = (h, rowCls) => {
     const active = phActiveSupplier(h);
@@ -42356,7 +42397,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // the literal text `HH412 · <span class="ph-sup-inhouse">🏠 Huang Huang</span>`.
     // The plain name is what her spec asks for ("HH412 · Huang Huang") and it
     // also drops a 🏠 that would be an empty box on her Android.
-    const sub = [phHerbCode(h) ? esc(phHerbCode(h)) : "", active ? esc(active.name) : ""].filter(Boolean).join(" · ");
+    const sub = [phHerbCode(h) ? esc(phHerbCode(h)) : "", active ? esc(active.name) : "", phHerbOrigin(h) ? esc(phHerbOrigin(h)) : ""].filter(Boolean).join(" · ");
     return `<tr data-ph-row="${h.id}"${rowCls ? ` class="${rowCls}"` : ""}>
       <td class="ph-inv-compact-cell" colspan="99">
         <div class="ph-inv-compact-inner">
@@ -42525,6 +42566,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
                 : "";
               return `<div class="ph-sup-row">${pick}${codeField}</div>`;
             })()}</td>`,
+        origin: `<td class="ph-origin-cell" data-col="origin">${phIsFormula(h) && phHerbOrigin(h) ? esc(phHerbOrigin(h)) : "—"}</td>`,
         cost: `<td class="ph-num" data-col="cost"><span title="${rl ? `From its recipe: ${esc(rl)}. A herb's price or the recipe changes it.` : `Cost per gram of ${esc(h.name)} — set the Bottle $ to change it`}">${h.cost ? "$" + h.cost : "—"}</span>${rl ? `<span class="ph-sub ph-cost-rcp">recipe</span>` : ""}${priceMore}</td>`,
         costFlag: `<td class="ph-num" data-col="costFlag"><span title="$/g rounded up to the nearest 10c">${h.cost ? "$" + phRound2(phRoundUp10c(h.cost)) : "—"}</span></td>`,
         bottleCost: `<td class="ph-num" data-col="bottleCost">${bottleCell}</td>`,
@@ -42783,7 +42825,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // (phBulkSupApply below) still checks each herb's own kind before writing.
   const phBulkSupOptionsHtml = () => {
     const opt = n => `<option value="${esc(n)}">${phIsInHouseSup(n) ? "" : ""}${esc(n)}</option>`;
-    return `<option value="" selected disabled>Set supplier…</option>${PH_KNOWN_SUPPLIERS.map(opt).join("")}${PH_NAMED_INHOUSE_SUPS.map(opt).join("")}`;
+    return `<option value="" selected disabled>Set supplier…</option>${PH_KNOWN_SUPPLIERS.map(opt).join("")}${opt(PH_IN_HOUSE_SUP)}`;
   };
   // her rule, applied per-item since a selection can mix herbs and formulas:
   // in-house is formula-only, KPC/Jing Shen are herb-only (PH_SUPPLIER_RULES).
@@ -43124,7 +43166,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // nothing needs horizontal scrolling.
     const mRow = h => {
       const active = phActiveSupplier(h);
-      const sub = [phHerbCode(h) ? esc(phHerbCode(h)) : "", active ? esc(active.name) : ""].filter(Boolean).join(" · ");
+      const sub = [phHerbCode(h) ? esc(phHerbCode(h)) : "", active ? esc(active.name) : "", phHerbOrigin(h) ? esc(phHerbOrigin(h)) : ""].filter(Boolean).join(" · ");
       const tail = phListingOpen === "snoozed" ? esc(phShortDate(h.snoozedUntil))
         : phListingOpen === "overstock" ? esc(phOverstockWhyText(h))
         : (h.low != null ? h.low + "g low" : "");
@@ -68533,12 +68575,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       : `<div class="fam-empty">No suppliers yet.<br>Record where each herb comes from and the order list will group itself by supplier.</div>`;
 
     const inHouseCountEl = document.getElementById("phInHouseCount");
-    if (inHouseCountEl) inHouseCountEl.textContent = `${PH_NAMED_INHOUSE_SUPS.length} sources`;
+    if (inHouseCountEl) inHouseCountEl.textContent = `${PH_NAMED_INHOUSE_SUPS.length} origins`;
     document.getElementById("phInHouseSources").innerHTML = `
       <div class="rtn-table-wrap"><table class="rtn-table ph-table ph-inhouse-spec">
-        <thead><tr><th>Source</th><th>Code prefix</th><th style="text-align:right">Formulas</th><th style="text-align:right">Batch size</th></tr></thead>
+        <thead><tr><th>Origin</th><th>Code prefix</th><th style="text-align:right">Formulas</th><th style="text-align:right">Batch size</th></tr></thead>
         <tbody>${PH_NAMED_INHOUSE_SUPS.map(name => {
-          const { formulasN } = phSupplierStatsFor(name);
+          const formulasN = PHARMACY.herbs.filter(h => phIsFormula(h) && phHerbOrigin(h) === name).length;
           const prefix = phInHousePrefix(name);
           const prefixEditOpen = phInHousePrefixEdit === name;
           const prefixCell = prefixEditOpen
@@ -78405,6 +78447,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       document.getElementById("phHerbOverstockAt").value = h.overstockAt == null ? "" : h.overstockAt;
       document.getElementById("phHerbStatus").value = h.stopped ? (h.phaseOut ? "phaseout" : "stopped") : "current";
       document.getElementById("phHerbSource").value = h.source || "";
+      document.getElementById("phHerbOrigin").value = phHerbOrigin(h);
       // Kind must be set before the supplier rows render -- their live
       // $/g preview reads the Kind field to pick herb vs formula pack size
       document.getElementById("phHerbKind").value = phIsFormula(h) ? "formula" : "herb";
@@ -78616,6 +78659,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         low: numOrNull("phHerbLow"),
         overstockAt: numOrNull("phHerbOverstockAt"),
         source: document.getElementById("phHerbSource").value,   // premade | onsite | "" (formulas only)
+        origin: document.getElementById("phHerbKind").value === "formula" ? document.getElementById("phHerbOrigin").value : "",   // whose recipe it follows
         // the select always says Herb or Formula (no Auto category, her call);
         // store an override only when her choice disagrees with the name rule,
         // so un-overridden items keep following their name if it changes
