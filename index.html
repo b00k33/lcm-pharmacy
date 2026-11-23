@@ -49897,6 +49897,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (JSON.stringify(phMeS().d) !== before || JSON.stringify(phMeS().who) !== whoBefore) phMeRepaint(false);
     phSelfIn();   // her own file: what the other location changed comes in (HER OWN FILE IN BOTH LOCATIONS)
     phFeedRead(false);   // her clinic calendars' copies (CALENDAR FEEDS)
+    phInboxRead(false);   // to-dos her helpers left in her inbox (TO-DO INBOX)
     if (phMeAgain) { phMeAgain = false; phMePushSoon(); }
   }
   window.addEventListener("lcm-sync-caught-up", () => setTimeout(() => phMeSync(false), 900));
@@ -58183,6 +58184,39 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") phFeedRead(false); });
   setInterval(() => { if (document.visibilityState === "visible") phFeedRead(false); }, 300000);
+  /* ============================================================
+     TO-DO INBOX (her helpers and her morning note leave to-dos for her without a session editing her open tab)
+     A private table in her own Supabase (supabase/todo_inbox_setup.sql): the helpers add a row through one function that
+     checks a write-only key (it can add to-dos, it cannot read anything). This reads the rows from the last 30 days
+     (her signed-in login only, at most every 2 minutes), and each row not in her to-dos yet becomes one, in ONE
+     phMeSave, with the id "in-<row id>": the same row on a second device writes the same entry, so it is never added
+     twice, and one she deleted stays deleted (a tombstone keeps the id). A row only ever adds; nothing is read back out,
+     marked or removed here. Offline, signed out, no table, any error: nothing changes. No words on screen.
+     ============================================================ */
+  let phInboxBusy = false, phInboxAt = 0;
+  async function phInboxRead(force) {
+    if (phInboxBusy || !navigator.onLine) return;
+    if (!force && Date.now() - phInboxAt < 120000) return;
+    const sb = phMeClient();
+    if (!sb || !phMeOwnerOk() || !phMeOk()) return;
+    phInboxBusy = true; phInboxAt = Date.now();
+    try {
+      const r = await sb.from("lcm_todo_inbox").select("id, title, day, area, created_at").gte("created_at", new Date(Date.now() - 30 * 864e5).toISOString()).order("created_at", { ascending: true }).limit(200);
+      if (r.error || !Array.isArray(r.data) || !r.data.length) return;
+      const have = phMeD().todos || {}, areas = new Set(["work", "money", "code", "fit", "home"]);
+      const add = r.data.filter(x => x && x.id && String(x.title || "").trim() && !have["in-" + x.id]).map(x => {
+        const ts = Date.parse(x.created_at), at = isNaN(ts) ? Date.now() : ts;
+        const o = { id: "in-" + x.id, t: String(x.title).trim().slice(0, 300), at, up: at };
+        if (/^\d{4}-\d\d-\d\d$/.test(x.day || "")) o.day = x.day;
+        if (areas.has(x.area)) o.a = x.area;
+        return o;
+      });
+      if (!add.length) return;
+      if (phMeSave(d => { add.forEach(o => { if (!d.todos[o.id]) d.todos[o.id] = o; }); })) { try { phMeRepaint(false); } catch (e) {} }
+    } catch (e) {} finally { phInboxBusy = false; }
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") phInboxRead(false); });
+  setInterval(() => { if (document.visibilityState === "visible") phInboxRead(false); }, 300000);
   function phFeedNewFile(name) {
     if (!name) return;
     phPatientRec(name); savePharmacy();
