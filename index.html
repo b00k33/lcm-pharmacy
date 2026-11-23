@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="lcm-build" content="20261123-173000">
+<meta name="lcm-build" content="20261123-171900">
 <!-- The old auto-reload-on-stale-build script that used to live here was REMOVED
      2026-08-15. It swapped the running app out from under her mid-session, which
      is exactly when data got lost. Detection now runs in phUpdateCheck() and only
@@ -4090,6 +4090,19 @@
      computed inline from PH_APPTCAL_PX_PER_MIN, these rules only lay out the
      fixed chrome (gutter, day columns, hour lines) around them. */
   #pharmacyPage .ph-apptcal-wrap { margin: 0 auto; border: 1px solid var(--ph-line); border-radius: 10px; overflow: hidden; }
+  /* Schedule a stocktake: a small sheet, boxes at the app's size */
+  #pharmacyPage .ph-stk-sch-card { max-width: 440px; }
+  #pharmacyPage .ph-stk-sch { display: flex; flex-direction: column; gap: 12px; padding: 12px 16px 16px; }
+  #pharmacyPage .ph-stk-sch-f { display: flex; gap: 8px; flex-wrap: wrap; }
+  #pharmacyPage .ph-stk-sch-f label { display: flex; flex-direction: column; gap: 4px; font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-ink); flex: 1 1 110px; }
+  #pharmacyPage#pharmacyPage #phStkSchSheet .ph-stk-sch-f input { border-radius: 6px !important; }
+  #pharmacyPage .ph-stk-sch-f input { height: 32px; min-height: 32px; border-radius: 6px !important; font: 400 var(--fs-13) var(--font-body); }
+  #pharmacyPage#pharmacyPage #phStkSchSheet .ph-stk-sch-act button { height: 32px; min-height: 0; font-size: var(--fs-13); }
+  #pharmacyPage .ph-stk-sch-act { display: flex; gap: 8px; justify-content: flex-end; }
+  #pharmacyPage .ph-stk-next { display: flex; gap: 8px; flex-wrap: wrap; padding: 8px 0 0; }
+  #pharmacyPage .ph-stk-nx { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 4px 0 10px; border: 1px solid var(--ph-line); border-radius: 6px; background: #fff; font: 400 var(--fs-13) var(--font-body); color: var(--ph-ink); }
+  #pharmacyPage .ph-stk-nx b { font-weight: 600; }
+  #pharmacyPage .ph-stk-nx-x { width: 32px; height: 32px; border: 0; background: transparent; border-radius: 50%; font-size: var(--fs-18); color: var(--ph-ink); cursor: pointer; }
   /* the Prepare panel, on the Dashboard and on Patient profile: its boxes at the app's size */
   #pharmacyPage#pharmacyPage .ph-sched-prep .ph-load-btn { height: 32px; min-height: 0; }
   #pharmacyPage#pharmacyPage .ph-sched-prep .ph-prep-tickall { width: 32px; height: 32px; min-height: 0; }
@@ -41693,6 +41706,65 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   // a clinic page keeps the page title bar (with the clinic switch) and swaps only what is under it
   function phClinicPageBody(wrap, html) { if (!wrap) return; const tb = wrap.querySelector(".ph-shell-topblock"); if (tb) { while (tb.nextSibling) tb.nextSibling.remove(); tb.insertAdjacentHTML("afterend", html); } else wrap.innerHTML = html; }
+  // Schedule a stocktake: one event on her own calendar ("Stocktake · Lotus"), on the clinic's day (Fri Acupreg, Sat Lotus)
+  let phStkSch = null;
+  const phStkName = sc => (PH_SHELVES[sc] && PH_SHELVES[sc].name) || "CBD";
+  function phStkDay(sc) { const dow = sc === "ac" ? 5 : sc === "pp" ? 6 : null, d = new Date(TODAY); d.setDate(d.getDate() + 1); if (dow != null) while (d.getDay() !== dow) d.setDate(d.getDate() + 1); return keyOf(d); }
+  function phStkNext() {
+    if (!phMeOk()) return [];
+    const t = keyOf(TODAY);
+    return phMeLive(phMeD().items).filter(it => /^Stocktake · /.test(it.t || "") && !it.rep && it.d >= t).sort((a, b) => (a.d + (a.s || "")).localeCompare(b.d + (b.s || "")));
+  }
+  function phStkLineHtml() {
+    const n = phStkNext(); if (!n.length) return "";
+    return `<div class="ph-stk-next">${n.slice(0, 3).map(it => `<span class="ph-stk-nx"><svg class="icn" aria-hidden="true"><use href="#i-cal"/></svg><b>${esc(String(it.t).replace(/^Stocktake · /, ""))}</b> ${esc(phMeDayLbl(it.d))}${it.s ? " · " + esc(phHubClk(phC22Min(it.s))) : ""}<button type="button" class="ph-stk-nx-x" data-stk-sch-del="${esc(it.id)}" aria-label="Cancel this stocktake" title="Cancel">✕</button></span>`).join("")}</div>`;
+  }
+  function phStkSchOpen() {
+    const sc = phClinicSolo() || phDayShelf(keyOf(TODAY));
+    phStkSch = { sc, d: phStkDay(sc), s: "09:00", e: "10:00", dirty: false };
+    phStkSchPaint();
+  }
+  function phStkSchRead() {
+    if (!phStkSch) return;
+    const v = id => { const el = document.getElementById(id); return el ? el.value : ""; };
+    const d = v("phStkD"), s = v("phStkS"), e = v("phStkE");
+    if (d && d !== phStkSch.d) { phStkSch.d = d; phStkSch.dirty = true; }
+    if (s) phStkSch.s = s;
+    if (e) phStkSch.e = e;
+  }
+  function phStkSchPaint() {
+    let host = document.getElementById("phStkSchSheet");
+    if (!phStkSch) { if (host) { host.hidden = true; host.innerHTML = ""; } return; }
+    if (!host) { host = document.createElement("div"); host.id = "phStkSchSheet"; host.className = "ph-lk-sheet"; (document.getElementById("pharmacyPage") || document.body).appendChild(host); }
+    const c = phStkSch, b = k => `<button type="button" class="ph-ltr-qual ph-clin-b${c.sc === k ? " on" : ""}" style="--cl:${phShelfColour(k)}" data-stk-sch-clinic="${k}" aria-pressed="${c.sc === k}"><i class="ph-clin-dot"></i>${phStkName(k)}</button>`;
+    host.innerHTML = `<div class="ph-lk-backdrop" data-stk-sch-close="1"></div><div class="ph-lk-card ph-stk-sch-card" role="dialog" aria-label="Schedule a stocktake">
+      <div class="ph-lk-card-hd"><h3>Schedule a stocktake</h3><button type="button" data-stk-sch-close="1" aria-label="Close">✕</button></div>
+      <div class="ph-stk-sch"><span class="ph-tng2-seg ph-clin-bar" role="group" aria-label="Clinic">${b("cbd")}${b("ac")}${b("pp")}</span>
+      <div class="ph-stk-sch-f"><label>Date<input type="date" id="phStkD" value="${esc(c.d)}"></label><label>From<input type="time" id="phStkS" value="${esc(c.s)}"></label><label>To<input type="time" id="phStkE" value="${esc(c.e)}"></label></div>
+      <div class="ph-stk-sch-act"><button type="button" class="btn-cancel" data-stk-sch-close="1">Cancel</button><button type="button" class="btn-save" data-stk-sch-save="1">Schedule</button></div></div></div>`;
+    host.hidden = false;
+  }
+  function phStkSchSave() {
+    phStkSchRead();
+    const c = phStkSch; if (!c) return;
+    if (!phMeOk()) { presSavedToast("Your calendar is not on in this login", 3200); return; }
+    if (!c.d || !c.s || !c.e || c.e <= c.s) { presSavedToast("Check the date and times", 3000); return; }
+    const id = uid(), t = `Stocktake · ${phStkName(c.sc)}`, d = c.d, s = c.s, e = c.e;
+    if (!phMeSave((m, now) => { m.items[id] = { id, t, d, s, e, g: "g-work", up: now }; })) return;
+    phStkSch = null; phStkSchPaint();
+    presSavedToast(`✓ ${t} · ${phMeDayLbl(d)} · ${phHubClk(phC22Min(s))}`, { undo: () => { phFitUndoRts({}, [id]); renderPharmacy(); } });
+    phMeRepaint(true); renderPharmacy();
+  }
+  document.addEventListener("click", e => {
+    const t = e.target instanceof Element ? e.target : null; if (!t) return;
+    const cl = t.closest("[data-stk-sch-clinic]");
+    if (cl && phStkSch) { phStkSchRead(); phStkSch.sc = cl.dataset.stkSchClinic; if (!phStkSch.dirty) phStkSch.d = phStkDay(phStkSch.sc); phStkSchPaint(); return; }
+    if (t.closest("[data-stk-sch-save]")) { phStkSchSave(); return; }
+    if (t.closest("[data-stk-sch-close]")) { phStkSch = null; phStkSchPaint(); return; }
+    const dl = t.closest("[data-stk-sch-del]");
+    if (dl) { const id = dl.dataset.stkSchDel; if (phMeSave((m, now) => { if (m.items[id]) { m.items[id].del = now; m.items[id].up = now; } })) { phMeRepaint(true); renderPharmacy(); presSavedToast("Stocktake cancelled", { undo: () => { phMeSave((m, now) => { if (m.items[id]) { delete m.items[id].del; m.items[id].up = now; } }); phMeRepaint(true); renderPharmacy(); } }); } }
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && phStkSch) { e.stopPropagation(); phStkSch = null; phStkSchPaint(); } }, true);
   function renderPhStocktakePage() {
     if (phClinicNow() === "all") phClinic = phDayShelf(keyOf(TODAY));   // a stocktake counts one clinic: today's
     renderPhStocktakePageBase();
@@ -41703,6 +41775,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       const meta = wrap.querySelector(".ph-shell-titlebar-meta"); if (meta) meta.textContent = "";
       wrap.querySelectorAll(".ph-shell-topblock button, .ph-tbm-bar button").forEach(b => { if (/print last stocktake/i.test(b.textContent)) b.remove(); });
     }
+    const ln = phStkLineHtml();
+    if (ln) { const tb = wrap.querySelector(".ph-shell-topblock"); if (tb) tb.insertAdjacentHTML("afterend", ln); else wrap.insertAdjacentHTML("afterbegin", ln); }
   }
   function renderPhStocktakePageBase() {
     const wrap = document.getElementById("phStocktakeWrap");
@@ -44248,6 +44322,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // success confirmation, not an explanation. Disabling it when there's
     // genuinely nothing to print removes the dead-end click entirely.
     stocktake: [
+      { icon: "i-cal", label: "Schedule stocktake", run: () => phStkSchOpen() },
       { icon: "i-print", label: "Print last stocktake", run: () => phPrintStocktake(), disabled: () => !PHARMACY.stocktakes.length, disabledTitle: "Finish a stocktake first — nothing to print yet" },
     ],
     // no in-page button left to forward to on Refill (both moved fully into
@@ -44310,7 +44385,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (!host) return;
     const raw = PH_TOPBAR_ACTIONS[tab];
     let list = typeof raw === "function" ? raw() : (raw || []);
-    if (tab === "stocktake" && phClinicSolo() && phClinicSolo() !== "cbd") list = [];   // the print is CBD's stocktake
+    if (tab === "stocktake" && phClinicSolo() && phClinicSolo() !== "cbd") list = list.filter(a => !/print/i.test(a.label));   // the print is CBD's stocktake
     if (topbar) topbar.classList.toggle("ph-topbar-crowded", !!list.length);
     // disabled is re-evaluated fresh on every render (a function, not a
     // static flag) -- e.g. Stocktake's print button flips live the moment
