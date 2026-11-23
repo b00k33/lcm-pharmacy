@@ -4090,6 +4090,18 @@
      computed inline from PH_APPTCAL_PX_PER_MIN, these rules only lay out the
      fixed chrome (gutter, day columns, hour lines) around them. */
   #pharmacyPage .ph-apptcal-wrap { margin: 0 auto; border: 1px solid var(--ph-line); border-radius: 10px; overflow: hidden; }
+  /* Week's To-dos as columns: Priorities | Late | Today | Later | No day | Done this week */
+  #pharmacyPage .ph-wk-tdc { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; padding: 12px 14px 14px; align-items: start; }
+  #pharmacyPage .ph-wk-tcol { background: var(--ph-cream); border-radius: 12px; overflow: hidden; min-width: 0; }
+  #pharmacyPage .ph-wk-ch { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-herb); }
+  #pharmacyPage .ph-wk-ch .sf { font-weight: 400; color: var(--ph-soft); letter-spacing: 0; text-transform: none; }
+  #pharmacyPage .ph-wk-dl { padding: 6px 12px 0; font: 600 var(--fs-11-5) var(--font-body); color: var(--ph-soft); }
+  #pharmacyPage .ph-wk-tcol .ph-hub-pri { display: flex; flex-direction: column; gap: 6px; padding: 0 12px 12px; }
+  #pharmacyPage .ph-wk-tcol .ph-hub-prc { display: grid; grid-template-columns: 32px minmax(0, 1fr); column-gap: 8px; align-items: center; }
+  #pharmacyPage .ph-wk-tcol .ph-hub-prc .ph-hub-lab { grid-column: 2; grid-row: 1; }
+  #pharmacyPage .ph-wk-tcol .ph-hub-prc .bx { grid-row: 1 / span 2; }
+  #pharmacyPage .ph-wk-tcol .ph-hub-prc input { grid-column: 2; grid-row: 2; min-width: 0; width: 100%; }
+  #pharmacyPage .ph-wk-tcol .ph-wk-r .tt { white-space: normal; text-align: left; }
   /* Do next + the Formulas | Herbs halves (Dashboard) */
   #pharmacyPage#pharmacyPage #phDashboardWrap .ph-dash-dn { margin: 0 20px 14px; }
   #pharmacyPage#pharmacyPage #phDashboardWrap .dn-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
@@ -45024,7 +45036,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       const mScript = document.getElementById("phMBarScript");
       if (mScript) mScript.addEventListener("click", () => phDashNewPrescription());
       if (backdrop) backdrop.addEventListener("click", closeDrawer);
-      if (sidebar) sidebar.addEventListener("click", e => { if (e.target.closest("#phNavMe")) { closeDrawer(); phMineOpen(null); return; } if (e.target.closest("[data-ph-tab]")) closeDrawer(); });
+      if (sidebar) sidebar.addEventListener("click", e => { if (e.target.closest("#phNavMe")) { closeDrawer(); phMineOpen("hub-week"); return; } if (e.target.closest("[data-ph-tab]")) closeDrawer(); });
       phPlaceBind(closeDrawer);   // the place bars + the ⋯ Admin menu
       // the existing [data-ph-tab] handler (search "presOpenId = null; presEditId")
       // is deliberately scoped to `e.target.closest("#pharmacyPage")` (her 2026-07-31
@@ -59789,14 +59801,17 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const G = new Map(), put = (k, l, t) => { if (!G.has(k)) G.set(k, { l, rows: [] }); G.get(k).rows.push(t); };
     open.filter(inA).forEach(t => { const k = phMeTdDay(t); if (!k) put("~none", "No day", t); else if (k < tk) put("0late", "Late", t); else put(k, k === tk ? "Today" : phHubDl(k), t); });
     doneWk.filter(inA).forEach(t => put("~~done", "Done this week", t));
-    const isOpen = k => k in phHubTdG ? phHubTdG[k] : (k === "0late" || k === tk);
-    const gh = (k, l, n, o) => `<button type="button" class="ph-wk-gh" data-keep-size="1" data-hub-tdg="${esc(k)}" aria-expanded="${o}"><span class="cp">${esc(l)}</span><span class="sf">${n}</span><span class="fx"></span><span class="sf">${o ? "▴" : "▾"}</span></button>`;
     const pri = phPriAll()[W.keys[0]] || {}, pt = PH_PRI_AREAS.filter(([a]) => (pri[a] || {}).t), pd = pt.filter(([a]) => (pri[a] || {}).d).length;
-    const po = isOpen("0pri");
-    const body = [gh("0pri", "Priorities", pt.length ? `${pd} of ${pt.length}` : "", po) + (po ? phPriHtml(W) : "")].concat([...G.keys()].sort().map(k => {
-      const g = G.get(k), o = isOpen(k);
-      return gh(k, g.l, g.rows.length, o) + (o ? g.rows.map(row).join("") : "");
-    })).join("");
+    const keys = [...G.keys()].sort(), grp = k => G.get(k);
+    const col = (l, n, inner) => `<div class="ph-wk-tcol"><div class="ph-wk-ch"><span class="cp">${esc(l)}</span><span class="sf">${n}</span></div>${inner}</div>`;
+    const cols = [col("Priorities", pt.length ? `${pd} of ${pt.length}` : "", phPriHtml(W))];
+    if (G.has("0late")) cols.push(col("Late", grp("0late").rows.length, grp("0late").rows.map(row).join("")));
+    if (G.has(tk)) cols.push(col("Today", grp(tk).rows.length, grp(tk).rows.map(row).join("")));
+    const lk = keys.filter(k => /^\d{4}-/.test(k) && k !== tk);
+    if (lk.length) cols.push(col("Later", lk.reduce((a, k) => a + grp(k).rows.length, 0), lk.map(k => `<div class="ph-wk-dl">${esc(grp(k).l)}</div>${grp(k).rows.map(row).join("")}`).join("")));
+    if (G.has("~none")) cols.push(col("No day", grp("~none").rows.length, grp("~none").rows.map(row).join("")));
+    if (G.has("~~done")) cols.push(col("Done this week", grp("~~done").rows.length, grp("~~done").rows.map(row).join("")));
+    const body = `<div class="ph-wk-tdc">${cols.join("")}</div>`;
     return `<div class="ph-hab-card ph-wk-td"><div class="ph-hab-band"><span class="cp">To-dos</span><span class="sf">${open.filter(inA).length}</span><span class="fx"></span><select class="ph-hub-chip" data-hub-area="1" aria-label="Area">${opt}</select></div>
       ${phHubTdOn ? `<div class="ph-wk-add"><label class="ph-fast-fld ph-hub-tdin">+<input type="text" class="field-bare" data-hub-tdnew="1" aria-label="New to-do" autocomplete="off" enterkeyhint="done"></label></div>` : ""}
       ${G.size ? "" : `<div class="ph-fast-empty">No to-dos</div>`}${body}</div>`;
@@ -110017,7 +110032,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const steps = [];
     // My day
     const day = ["hub-week", "diet", "hub-fit", "hub-hab", "routines"].map(id => prof(id)).filter(Boolean);
-    if (day.length) steps.push({ id: "day", label: "My day", ic: "hub-week", nf: true, me: true, done: false, parts: day, pref: "diet" });   // she opens on Meals (her 2026-11-03 pick)
+    if (day.length) steps.push({ id: "day", label: "My day", ic: "hub-week", nf: true, me: true, done: false, parts: day, pref: "hub-week" });   // she opens on Week (her 2026-11-23, over her 2026-11-03 Meals pick)
     // Check myself: Cycle (a page, never "done") · Tongue · Pulse · Abdomen · Fang Bing Ren · Diagnosis · Herbs
     const patS = f.steps.find(s => s.id === "patterns"), pDx = f.patSubs.find(s => s.id === "patdx");
     const chk = [prof("cycle", "", { noauto: true }), prof("tongue", "", today("tongue")), prof("pulse", "", today("pulse")), prof("abdomen", "", today("abdomen"))].filter(Boolean);
