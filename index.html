@@ -4102,6 +4102,20 @@
   #pharmacyPage .ph-wk-tcol .ph-hub-prc .bx { grid-row: 1 / span 2; }
   #pharmacyPage .ph-wk-tcol .ph-hub-prc input { grid-column: 2; grid-row: 2; min-width: 0; width: 100%; }
   #pharmacyPage .ph-wk-tcol .ph-wk-r .tt { white-space: normal; text-align: left; }
+  /* From last visit (Today's visit): a white card, a pale teal-capitals band, one row a field */
+  #pharmacyPage .ph-lv { background: var(--ph-white); border-radius: 12px; box-shadow: 0 8px 24px rgba(11, 59, 75, .08); overflow: hidden; margin: 0 0 12px; }
+  #pharmacyPage .ph-lv-hd { display: flex; align-items: center; height: 32px; padding: 0 12px; background: var(--ph-herb-tint); font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-herb); }
+  #pharmacyPage .ph-lv-r { display: grid; grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; align-items: center; padding: 6px 12px; min-height: 44px; }
+  #pharmacyPage .ph-lv-r .t { min-width: 0; display: flex; flex-direction: column; }
+  #pharmacyPage .ph-lv-r .k { font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-soft); }
+  #pharmacyPage .ph-lv-r b { font: 600 var(--fs-13) var(--font-body); color: var(--ph-ink); overflow-wrap: anywhere; }
+  #pharmacyPage .ph-lv-r small { font: 400 var(--fs-11-5) var(--font-body); color: var(--ph-faint); overflow-wrap: anywhere; }
+  #pharmacyPage .ph-lv-tk { width: 32px; height: 32px; padding: 0; border-radius: 50%; border: 1px solid var(--ph-line); background: var(--ph-white); color: var(--ph-white); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+  #pharmacyPage .ph-lv-tk.on { background: var(--ph-herb); border-color: var(--ph-herb); }
+  #pharmacyPage .ph-lv-tk .icn { width: 16px; height: 16px; }
+  #pharmacyPage .ph-lv-acts { display: flex; gap: 8px; padding: 6px 12px 12px; }
+  #pharmacyPage .ph-lv .ph-load-btn.on { background: var(--ph-herb); border-color: var(--ph-herb); color: var(--ph-white); }
+  #pharmacyPage .ph-lv-acts .ph-load-btn[disabled] { opacity: .5; cursor: default; }
   /* Do next + the Formulas | Herbs halves (Dashboard) */
   #pharmacyPage#pharmacyPage #phDashboardWrap .ph-dash-dn { margin: 0 20px 14px; }
   #pharmacyPage#pharmacyPage #phDashboardWrap .dn-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
@@ -132373,7 +132387,7 @@ Difficult to sweat|no_sweat_tend:r`;
     // table for a pain patient whose compass has no pain rows yet (her 2026-10-19 ask, phPfPainBlockHtml)
     const cx = phCxCardHtml(t, plan);
     const ren = phTvRenHtml(name, cx);   // the steps card (her 2026-11-19 two columns) holds Came in for as step 1, empty or not
-    const ask = phHbsLineHtml(name) + (ren.indexOf('class="ph-tvs') >= 0 ? "" : cx) + ren + phTodayNudgesHtml(name, rec) + phMskWarnHtml(rec) + (phMskApplies(rec) && cx.indexOf('data-cx-pain="1"') < 0 ? phPfPainBlockHtml(name) : "");
+    const ask = phHbsLineHtml(name) + (ren.indexOf('class="ph-tvs') >= 0 ? "" : cx) + ren + phTodayNudgesHtml(name, rec) + phLvHtml(name, rec) + phMskWarnHtml(rec) + (phMskApplies(rec) && cx.indexOf('data-cx-pain="1"') < 0 ? phPfPainBlockHtml(name) : "");
     // Treat: Fang Bing Ren's quick assess (return visits) above the three steps; the phase review on a phase's last visit (part 2)
     const treat = plan ? phTodayCarePlanEssentialsHtml(name, plan) : "";   // + the cycle review (part 3, step 5)
     setTimeout(phTodayStickyTop, 0);
@@ -132406,6 +132420,88 @@ Difficult to sweat|no_sweat_tend:r`;
   // return visit). Each is answered in one tap, which stamps today (rec.suppSeenAt / rec.hxSeenAt) and
   // the line goes; changing the supplements or the history today counts as answering it too. They
   // never block anything. (The Ren-photo nudge was offered and she skipped it: do not add it.)
+  // "From last visit" (her 2026-11-23 go, step 1 of the Executive PA's plan): the newest Cliniko visit's Came in for, Diagnosis, Points and
+  // Plan beside what today holds. A field empty today is ticked and fills on one tap; a field that already holds her words stays unticked
+  // (Replace?); Herbs only opens the prescription, never copies the herb line. Every field goes through its own door (phCcSetWords,
+  // phTpFgWritePlan, today's points draft, the visit Note) and one Undo in the one toast puts back what the tap changed. Read from
+  // rec.clinikoVisits when drawn, never stored.
+  const phLvSel = {};
+  const phLvNorm = s => String(s || "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+  function phLvData(name, rec) {
+    const v = ((rec && rec.clinikoVisits) || []).find(x => x && (x.cc || x.dx || x.pt || x.pl || x.hb));
+    if (!v) return null;
+    const rows = [], tk = keyOf(TODAY);
+    const add = (id, label, text, now) => {
+      text = String(text || "").trim(); now = String(now || "").trim();
+      if (text && phLvNorm(text) !== phLvNorm(now)) rows.push({ id, label, text, now });
+    };
+    const cc = phCcRibItems(name);
+    add("cc", "Came in for", v.cc, cc ? cc.main.text : "");
+    const plan = phTpPlanForToday(name);
+    if (plan) add("dx", "Diagnosis", v.dx, phTpDxHersText(plan));
+    const logged = (rec.acuSessions || []).some(s => s.date === tk && !s.noTreatment);
+    if (!logged) {
+      try {
+        const ctx = presAcuCtx(name);
+        if (ctx && phAcuSplitList(v.pt).length) {
+          const now = phAcuSplitList(ctx.treatedPhase && ctx.treatedPhase.points).concat(presAcuPointsCustom).filter(p => presAcuPointsChecked ? presAcuPointsChecked.has(p) : true).join(", ");
+          add("pt", "Points", v.pt, now);
+        }
+      } catch (e) { /* the card never blocks the visit */ }
+      add("pl", "Plan", v.pl, presAcuComment);
+    }
+    return { v, rows, hb: String(v.hb || "").trim() };
+  }
+  function phLvHtml(name, rec) {
+    const d = phLvData(name, rec);
+    if (!d || (!d.rows.length && !d.hb)) return "";
+    const sel = phLvSel[phPatientKey(name)] || {};
+    const on = r => r.id in sel ? sel[r.id] : !r.now;
+    const rows = d.rows.map(r => `<div class="ph-lv-r"><button type="button" class="ph-lv-tk${on(r) ? " on" : ""}" data-lv-tk="${r.id}" aria-pressed="${on(r)}" aria-label="${esc(r.label)}">${on(r) ? `<svg class="icn" aria-hidden="true"><use href="#i-check"/></svg>` : ""}</button><div class="t"><span class="k">${esc(r.label)}</span><b>${esc(r.text)}</b>${r.now ? `<small>${esc(r.now)}</small>` : ""}</div>${r.now ? `<button type="button" class="ph-load-btn ph-lv-rp${on(r) ? " on" : ""}" data-lv-tk="${r.id}">Replace?</button>` : ""}</div>`).join("");
+    const hb = d.hb ? `<div class="ph-lv-r"><span></span><div class="t"><span class="k">Herbs</span><b>${esc(d.hb)}</b></div><button type="button" class="ph-load-btn" data-pres-stage="dispense">Open</button></div>` : "";
+    const n = d.rows.filter(on).length;
+    return `<div class="ph-lv" data-lv-host="1"><div class="ph-lv-hd">From last visit · ${esc(phShortDate(d.v.d))}</div>${rows}${hb}${d.rows.length ? `<div class="ph-lv-acts"><button type="button" class="ph-load-btn on" data-lv-use="1"${n ? "" : " disabled"}>Use ${n} ticked</button></div>` : ""}</div>`;
+  }
+  function phLvRepaint(name) {
+    const rec = phPatientPeek(name), host = document.querySelector("#pharmacyPage [data-lv-host]");
+    if (host) { const h = rec ? phLvHtml(name, rec) : ""; if (h) host.outerHTML = h; else host.remove(); }
+  }
+  function phLvAfter(name) {
+    phLvRepaint(name);
+    try { phCcRefresh(true); } catch (e) { /* not drawn */ }
+    try { phCxRefresh(name); } catch (e) { /* not drawn */ }
+    try { const plan = phTpPlanForToday(name); if (plan) phTpFgRefresh(name, plan.id); } catch (e) { /* not drawn */ }
+    try { presAcuOpenRefresh(); } catch (e) { /* not drawn */ }
+    document.querySelectorAll("#pharmacyPage [data-visit-note]").forEach(el => { el.value = presAcuComment; });
+  }
+  function phLvApply(name) {
+    const rec = phPatientRec(name), d = rec ? phLvData(name, rec) : null;
+    if (!d) return;
+    const key = phPatientKey(name), sel = phLvSel[key] || {};
+    const pick = d.rows.filter(r => r.id in sel ? sel[r.id] : !r.now);
+    if (!pick.length) return;
+    const snap = { cc: rec.complaint ? JSON.parse(JSON.stringify(rec.complaint)) : null, plans: JSON.parse(JSON.stringify(rec.treatmentPlans || [])), custom: presAcuPointsCustom.slice(), checked: presAcuPointsChecked ? [...presAcuPointsChecked] : null, note: presAcuComment };
+    pick.forEach(r => {
+      if (r.id === "cc") phCcSetWords(name, r.text);
+      else if (r.id === "dx") { const plan = phTpPlanForToday(name); if (plan) phTpFgWritePlan(name, plan, "focus", r.text); }
+      else if (r.id === "pt") {
+        const ctx = presAcuCtx(name), list = phAcuSplitList(r.text), base = phAcuSplitList(ctx && ctx.treatedPhase && ctx.treatedPhase.points);
+        presAcuPointsCustom = list.filter(p => !base.includes(p));
+        presAcuPointsChecked = new Set(list);
+      } else if (r.id === "pl") presAcuComment = r.text;
+    });
+    delete phLvSel[key];
+    if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
+    phLvAfter(name);
+    presSavedToast(`✓ Used ${pick.length} from last visit`, { ms: 9000, undo: () => {
+      const r2 = phPatientRec(name);
+      if (pick.some(r => r.id === "cc" || r.id === "dx")) { if (snap.cc) r2.complaint = snap.cc; else delete r2.complaint; r2.treatmentPlans = snap.plans; phTpAutoBust(); }
+      presAcuPointsCustom = snap.custom; presAcuPointsChecked = snap.checked ? new Set(snap.checked) : null; presAcuComment = snap.note;
+      if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
+      phLvAfter(name);
+      presSavedToast("↩ Undone");
+    } });
+  }
   function phTodayNudgesHtml(name, rec) {
     const ask = phTodayAskHtml(rec);
     if (!phLastVisitKey(rec)) return ask ? phTodayAskWrap(ask) : "";
@@ -132454,6 +132550,16 @@ Difficult to sweat|no_sweat_tend:r`;
   function phTodayClick(e) {
     const T = e.target;
     if (!T || !T.closest) return false;
+    // From last visit: a tick (or its Replace? chip) flips one field; Use applies the ticked ones
+    let lv;
+    if ((lv = T.closest("[data-lv-tk]"))) {
+      const name = phPfwName(), rec = name ? phPatientPeek(name) : null, d = rec ? phLvData(name, rec) : null, id = lv.dataset.lvTk;
+      if (!d) return true;
+      const key = phPatientKey(name), sel = phLvSel[key] = phLvSel[key] || {}, r = d.rows.find(x => x.id === id);
+      if (r) { sel[id] = !(id in sel ? sel[id] : !r.now); phLvRepaint(name); }
+      return true;
+    }
+    if (T.closest("[data-lv-use]")) { const name = phPfwName(); if (name) phLvApply(name); return true; }
     // the step bar (her 2026-10-23 pick 1): a tap scrolls to its section; Open on a folded Look brings it back
     let jp;
     if ((jp = T.closest("[data-today-jump]"))) {
@@ -170135,6 +170241,9 @@ Please let me know if you have any questions.`;
     phIntakeReviewBusy = true; renderIntakeReviewScreen();
     try {
       const wasNewPatient = !d.rec;
+      // one Undo for the whole Cliniko Apply (her 2026-11-23 go): the record as it stood, kept whole until the toast closes
+      const undoPeek = row.src === "cliniko" ? phPatientPeek(row.patient_name) : null;
+      const undoSnap = undoPeek ? JSON.parse(JSON.stringify(undoPeek)) : null;
       const rec = phPatientRec(row.patient_name);
       // a patient with a PHARMACY.patients record but no script is invisible
       // everywhere in the app -- the Patient profile list is built entirely
@@ -170237,7 +170346,8 @@ Please let me know if you have any questions.`;
       savePharmacy();
       const sb = row.src === "cliniko" ? null : phRenRelayClient();
       if (sb) await sb.from("intake_forms").update({ status: "applied", applied_at: new Date().toISOString() }).eq("id", row.id).eq("submitted_at", row.submitted_at);
-      phFlashShow("✓ Applied to " + esc(phTitle(row.patient_name)));
+      if (row.src === "cliniko") presSavedToast("✓ Applied to " + phTitle(row.patient_name), { undo: () => phClkUndoApply(row, undoSnap), ms: 12000 });
+      else phFlashShow("✓ Applied to " + esc(phTitle(row.patient_name)));
       phIntakeReviewClose();
       phIntakeQueueLoad(true);
       if (PHARMACY.activeTab === "prescriptions") renderPrescriptions();
@@ -170246,6 +170356,22 @@ Please let me know if you have any questions.`;
       phFlashShow("Couldn't apply — try again");
       renderIntakeReviewScreen();
     }
+  }
+  // the one Undo of a Cliniko Apply: the patient's record goes back whole (a patient the Apply created is taken out with her draft script)
+  function phClkUndoApply(row, snap) {
+    const k = phPatientKey(row.patient_name);
+    if (!k || !PHARMACY.patients) return;
+    if (snap) PHARMACY.patients[k] = snap;
+    else {
+      delete PHARMACY.patients[k];
+      const i = (PRESC.items || []).findIndex(x => x.fromIntake === row.id);
+      if (i >= 0) { PRESC.items.splice(i, 1); savePresc(); }
+    }
+    phTpAutoBust();
+    if (savePharmacy() === false) { presSavedToast(PH_PAT_SAVE_FAIL); return; }
+    presSavedToast("↩ Apply undone");
+    phIntakeQueueLoad(true);
+    if (PHARMACY.activeTab === "prescriptions") renderPrescriptions();
   }
   async function phIntakeReviewDismiss() {
     if (!phIntakeReviewRow || phIntakeReviewBusy) return;
