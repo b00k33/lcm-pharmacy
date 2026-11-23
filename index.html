@@ -33702,6 +33702,9 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   #pharmacyPage .ph-clin-bar .ph-clin-b.on .ph-clin-dot { background: #fff; }
   #pharmacyPage .ph-clin-sheet { background: var(--ph-white); border-radius: 12px; overflow-x: auto; width: 100%; box-sizing: border-box; }
   #pharmacyPage .ph-clin-sheet .ph-clin-tbl { width: 100%; table-layout: auto; }
+  #pharmacyPage .ph-clin-sheet .ph-clin-tbl input[data-clin-count] { width: 76px; box-sizing: border-box; text-align: right; }
+  @media (max-width: 900px) { #pharmacyPage#pharmacyPage .ph-clin-sheet .ph-clin-tbl td.ph-name { min-width: 0; } }
+  @media (max-width: 900px) { #pharmacyPage .ph-clin-sheet .ph-clin-tbl td, #pharmacyPage .ph-clin-sheet .ph-clin-tbl th { padding: 8px 8px; } }
   #pharmacyPage .ph-clin-sheet .ph-clin-tbl td, #pharmacyPage .ph-clin-sheet .ph-clin-tbl th { padding: 8px 12px; text-align: left; }
   #pharmacyPage .ph-clin-sheet .ph-clin-tbl .ph-num, #pharmacyPage .ph-clin-sheet .ph-clin-tbl th.num { text-align: right; }
   #pharmacyPage .ph-clin-sheet thead th, #pharmacyPage .ph-clin-tbl thead th { background: color-mix(in srgb, var(--cl) 12%, white); }
@@ -40693,7 +40696,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   function phClinicRowHtml() {
     const cur = phClinicNow(), col = cur === "all" ? "var(--ph-ink)" : phShelfColour(cur);
     const b = (k, l) => `<button type="button" class="ph-ltr-qual ph-clin-b${cur === k ? " on" : ""}" style="--cl:${k === "all" ? "var(--ph-ink)" : phShelfColour(k)}" data-ph-clinic="${k}" aria-pressed="${cur === k}"><i class="ph-clin-dot"></i>${l}</button>`;
-    return `<div class="ph-clin-row" style="--cl:${col}"><span class="ph-tng2-seg ph-clin-bar" role="group" aria-label="Clinic">${b("cbd", "CBD")}${b("ac", "Acupreg")}${b("pp", "Lotus")}${b("all", "All clinics")}</span></div>`;
+    return `<div class="ph-clin-row" style="--cl:${col}"><span class="ph-tng2-seg ph-clin-bar" role="group" aria-label="Clinic">${b("cbd", "CBD")}${b("ac", "Acupreg")}${b("pp", "Lotus")}${PHARMACY.activeTab === "stocktake" ? "" : b("all", "All clinics")}</span></div>`;
   }
   const phShelfOf = h => presDispShelf();
   const phShelfQty = h => { const s = presDispShelf(); return s === "cbd" ? h.qty : phHasShelf(h, s) ? +h[PH_SHELVES[s].f] : 0; };
@@ -41634,10 +41637,15 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // a clinic page keeps the page title bar (with the clinic switch) and swaps only what is under it
   function phClinicPageBody(wrap, html) { if (!wrap) return; const tb = wrap.querySelector(".ph-shell-topblock"); if (tb) { while (tb.nextSibling) tb.nextSibling.remove(); tb.insertAdjacentHTML("afterend", html); } else wrap.innerHTML = html; }
   function renderPhStocktakePage() {
+    if (phClinicNow() === "all") phClinic = phDayShelf(keyOf(TODAY));   // a stocktake counts one clinic: today's
     renderPhStocktakePageBase();
     const wrap = document.getElementById("phStocktakeWrap"), sc = phClinicSolo();
-    if (sc) phClinicPageBody(wrap, phClinicStocktakeHtml(sc));
-    else if (phClinicNow() === "all") phClinicPageBody(wrap, `<div class="ph-clin-sheet"><div class="ph-clin-add"><span class="ph-tng2-seg" role="group" aria-label="Stocktake for"><button type="button" class="ph-ltr-qual" data-ph-clinic="cbd">CBD</button><button type="button" class="ph-ltr-qual" data-ph-clinic="ac">Acupreg</button><button type="button" class="ph-ltr-qual" data-ph-clinic="pp">Lotus</button></span></div></div>`);
+    if (sc) {
+      phClinicPageBody(wrap, phClinicStocktakeHtml(sc));
+      // the past stocktakes and the print are CBD's: not shown under another clinic
+      const meta = wrap.querySelector(".ph-shell-titlebar-meta"); if (meta) meta.textContent = "";
+      wrap.querySelectorAll(".ph-shell-topblock button, .ph-tbm-bar button").forEach(b => { if (/print last stocktake/i.test(b.textContent)) b.remove(); });
+    }
   }
   function renderPhStocktakePageBase() {
     const wrap = document.getElementById("phStocktakeWrap");
@@ -44244,7 +44252,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const topbar = document.getElementById("phTopbar");
     if (!host) return;
     const raw = PH_TOPBAR_ACTIONS[tab];
-    const list = typeof raw === "function" ? raw() : (raw || []);
+    let list = typeof raw === "function" ? raw() : (raw || []);
+    if (tab === "stocktake" && phClinicSolo() && phClinicSolo() !== "cbd") list = [];   // the print is CBD's stocktake
     if (topbar) topbar.classList.toggle("ph-topbar-crowded", !!list.length);
     // disabled is re-evaluated fresh on every render (a function, not a
     // static flag) -- e.g. Stocktake's print button flips live the moment
