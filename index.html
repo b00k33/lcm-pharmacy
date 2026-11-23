@@ -4090,6 +4090,15 @@
      computed inline from PH_APPTCAL_PX_PER_MIN, these rules only lay out the
      fixed chrome (gutter, day columns, hour lines) around them. */
   #pharmacyPage .ph-apptcal-wrap { margin: 0 auto; border: 1px solid var(--ph-line); border-radius: 10px; overflow: hidden; }
+  /* the Prepare panel, on the Dashboard and on Patient profile: its boxes at the app's size */
+  #pharmacyPage#pharmacyPage .ph-sched-prep .ph-load-btn { height: 32px; min-height: 0; }
+  #pharmacyPage#pharmacyPage .ph-sched-prep .ph-prep-tickall { width: 32px; height: 32px; min-height: 0; }
+  #pharmacyPage#pharmacyPage .ph-sched-prep .ph-pill { font-size: var(--fs-10-5); }
+  #pharmacyPage#pharmacyPage .ph-sched-prep .ph-prep-edit-btn { width: 32px; padding: 0; border-radius: 50%; }
+  #pharmacyPage#pharmacyPage .ph-sched-prep .ph-prep-edit-btn { height: 32px; min-height: 0; }
+  #pharmacyPage#pharmacyPage .ph-sched-prep .ph-prep-label-summary, #pharmacyPage#pharmacyPage .ph-sched-prep .btn-cancel { height: 32px; min-height: 0; border-radius: 6px; font-size: var(--fs-13); }
+  #pharmacyPage .ph-apptcal-daylabel .ph-apptcal-pk { display: inline-flex; align-items: center; gap: 2px; margin-left: 4px; font: 700 var(--fs-10-5) var(--font-body); font-style: normal; color: var(--ph-ink); }
+  #pharmacyPage .ph-apptcal-daylabel .ph-apptcal-pk .icn { width: 12px; height: 12px; }
   #pharmacyPage .ph-apptcal-head, #pharmacyPage .ph-apptcal-body { display: grid; grid-template-columns: 52px repeat(7, minmax(0, 1fr)); }
   #pharmacyPage .ph-apptcal-head { border-bottom: 1px solid var(--ph-line); background: var(--ph-white); }
   /* one row like the approved mock: day name, big date, booking count at the right */
@@ -45478,10 +45487,20 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         return (schedDueDate(a) || "").localeCompare(schedDueDate(b) || "");
       });
   }
+  // her 2026-11-23 "add it to the dashboard ... without having to get directly into the patient profile": what is scheduled for a later day
+  function phDashUpcomingSched() {
+    return PRESC.scheduled.filter(s => !s.dispensedAt && schedStatus(s) === "scheduled")
+      .sort((a, b) => (schedDueDate(a) || "").localeCompare(schedDueDate(b) || "") || a.createdAt - b.createdAt);
+  }
+  // scheduled pickups waiting on a day (the calendar's day head and list say how many)
+  function phSchedPickupsOn(key) {
+    return (PRESC.scheduled || []).filter(s => !s.dispensedAt && s.method === "pickup" && schedDueDate(s) === key);
+  }
   // jumps to the REAL Prepare panel on the Prescriptions page -- there's no
   // second copy of it here, same reasoning as the existing
   // data-ph-dash-pres-open hop below: one panel, one place it lives.
   function phDashOpenPrep(schedId) {
+    if (PHARMACY.activeTab === "dashboard") { schedPrepOpenId = schedPrepOpenId === schedId ? null : schedId; schedPrepLabelOpen = false; schedPrepEditKey = null; renderPharmacy(); return; }   // the Prepare panel opens under its row
     PHARMACY.activeTab = "prescriptions";
     schedPrepOpenId = schedId;
     schedPrepLabelOpen = false;
@@ -48617,7 +48636,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       if (!appts.length && showDayHead && lean) return `<tbody><tr class="grp empty${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}"${dayAttrs(d)}><td colspan="10"><span class="lb">${esc(phDashShortDate(parseKey(d.key)))}</span><span class="c">nothing booked</span></td></tr></tbody>`;
       if (!appts.length && showDayHead) return `<div class="ph-apptls-day empty${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}"${dayAttrs(d)}>${esc(phDashShortDate(parseKey(d.key)))}<span class="sub">· nothing booked</span></div>`;
       const dayHead = lean ? `<tr class="grp${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}"${dayAttrs(d)}><td colspan="10"><span class="lb">${esc(phDashShortDate(parseKey(d.key)))}${d.today ? " · today" : ""}</span><span class="c">${appts.length} patient${appts.length === 1 ? "" : "s"}</span></td></tr>`
-        : showDayHead ? `<div class="ph-apptls-day${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}"${dayAttrs(d)}>${esc(phDashShortDate(parseKey(d.key)))}<span class="sub">· ${appts.length} patient${appts.length === 1 ? "" : "s"}</span></div>` : "";
+        : showDayHead ? `<div class="ph-apptls-day${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}"${dayAttrs(d)}>${esc(phDashShortDate(parseKey(d.key)))}<span class="sub">· ${appts.length} patient${appts.length === 1 ? "" : "s"}${(n => n ? ` · ${n} pickup${n === 1 ? "" : "s"}` : "")(phSchedPickupsOn(d.key).length)}</span></div>` : "";
       let prevEnd = null, needNow = lean && !!d.today;
       const rows = appts.map(a => {
         const s = phApptListMin(a.time);
@@ -66287,7 +66306,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const gridHtml = `<div class="ph-apptcal-wrap${slide < 0 ? " slide-l" : slide > 0 ? " slide-r" : enter ? " rise" : ""}${lensAnim ? " lens-pop" : ""}${phApptCalMap ? " cmp" : ""}${c22In ? " c22-in" : ""}">
         <div class="ph-apptcal-head${one ? " one" : ""}" style="grid-template-columns:${colsTemplate}">
           ${one ? "" : `<div class="ph-apptcal-gutter"></div>`}
-          ${days.map(d => `<div class="ph-apptcal-daylabel${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}${d.c22 ? " c22day" : ""}"${c22 ? phTripDayAttr(d.key) : ""} role="button" tabindex="0" data-ph-apptcal-day="${d.key}" aria-label="Day summary · ${esc(phApptDayLabel(d.key))}"${phHubDayTitle(d.key)}><span>${esc(d.dow)}</span><b>${d.dnum}</b>${one || !c22 ? "" : phC22CdHtml(d.key)}</div>`).join("")}
+          ${days.map(d => `<div class="ph-apptcal-daylabel${d.today ? " today" : ""}${d.key === selKey ? " sel" : ""}${d.c22 ? " c22day" : ""}"${c22 ? phTripDayAttr(d.key) : ""} role="button" tabindex="0" data-ph-apptcal-day="${d.key}" aria-label="Day summary · ${esc(phApptDayLabel(d.key))}"${phHubDayTitle(d.key)}><span>${esc(d.dow)}</span><b>${d.dnum}</b>${one || !c22 ? "" : phC22CdHtml(d.key)}${(n => n ? `<i class="ph-apptcal-pk" title="${n} pickup${n === 1 ? "" : "s"} to hand over"><svg class="icn" aria-hidden="true"><use href="#i-car"/></svg>${n}</i>` : "")(phSchedPickupsOn(d.key).length)}</div>`).join("")}
           ${one ? `<div class="ph-apptcal-hd1">${c22 ? phC22FoldRowHtml("before", c22Fold.before, colsTemplate, c22Dim, true) : ""}${phFastHeadHtml(days[0].key)}${c22 ? phC22CdHtml(days[0].key) : ""}</div>` : ""}
         </div>
         ${c22 ? phTripRowHtml(days, colsTemplate, c22Dim) : ""}
@@ -68389,12 +68408,14 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     }
     return `<tr class="plan"><td colspan="${cols}"><div class="ph-dash-pl">${items}${c(`data-ph-dash-herb-edit="${h.id}"`, "Edit", " ed")}</div></td></tr>`;
   }
-  function phDashTOutHtml(s, cols) {
+  function phDashTOutHtml(s, cols, later) {
     const t = PRESC.items.find(x => x.id === s.prescriptionId);
     const patient = t ? presPatientFor(t) : s.mailing.name;
     const blocked = schedIsBlocked(s), prog = schedPrepProgress(s), started = prog.doneN > 0, pickup = s.method === "pickup";
     const gp = t ? (t.totalGrams || 0) : 0;
-    const ctx = blocked ? "Address needed" : started ? `${prog.weighedN} of ${prog.items.length} weighed` : pickup ? (s.pickupTime ? `Pickup ${s.pickupTime}` : "Pickup") : (s.mailing.address || "Post");
+    const ctx0 = blocked ? "Address needed" : started ? `${prog.weighedN} of ${prog.items.length} weighed` : pickup ? (s.pickupTime ? `Pickup ${s.pickupTime}` : "Pickup") : (s.mailing.address || "Post");
+    const ctx = later && schedDueDate(s) ? `${schedDateStr(schedDueDate(s))} · ${ctx0}` : ctx0;
+    const prepRow = !blocked && schedPrepOpenId === s.id ? `<tr class="plan"><td colspan="${cols}">${schedPrepPanelHtml(s)}</td></tr>` : "";
     const ph = cols === 3;
     const row = `<tr class="r out" ${blocked ? `data-ph-dash-fixaddr="${s.id}"` : `data-ph-dash-prep-open="${s.id}"`} tabindex="0">
       ${ph ? "" : `<td class="cd"><svg class="icn" aria-hidden="true"><use href="#${pickup ? "i-car" : "i-mail"}"/></svg></td>`}<td class="nm"><b>${esc(phTitle(patient || "—"))}</b></td>
@@ -68402,13 +68423,14 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const fix = schedFixAddrOpenId !== s.id ? "" : `<tr class="plan"><td colspan="${cols}"><div class="ph-dash-pl">
       <input type="text" id="phDashFixAddrInput" class="ph-dash-pf wide" value="${esc((s.mailing && s.mailing.address) || "")}" placeholder="street, suburb, postcode" aria-label="Postal address for ${esc(phTitle(patient || ""))}">
       <button type="button" class="ph-dash-pc main" data-ph-dash-fixaddr-save="${s.id}">Save</button><button type="button" class="ph-dash-pc" data-ph-dash-fixaddr-cancel="1">Cancel</button></div></td></tr>`;
-    return row + fix;
+    return row + fix + prepRow;
   }
   function phDashTHtml() {
     const ph = window.innerWidth <= 640, cols = ph ? 3 : 6;
     const q = phDashT.q.trim().toLowerCase();
     const list = phDashTRows().filter(r => (phDashT.f === "all" || (phDashT.f === "empty" ? r.empty : r.next === phDashT.f)) && (!q || r.key.includes(q)));
     const out = phDashT.f === "all" && !q ? phDashMustGoToday() : [];
+    const soon = phDashT.f === "all" && !q ? phDashUpcomingSched() : [];
     const shown = phDashT.all ? list : list.slice(0, PH_DASH_T_ROWS);
     const row = r => {
       const h = r.h, open = phDashT.plan === h.id;
@@ -68420,10 +68442,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const band = (label, n) => `<tr class="grp"><td colspan="${cols}">${label}<span class="c">${n}</span></td></tr>`;
     const cg = ph ? `<col class="c-pnm"><col class="c-plf"><col class="c-pnx">` : `<col class="c-cd"><col class="c-nm"><col class="c-kd"><col class="c-lf"><col class="c-dy"><col class="c-nx">`;
     const th = ph ? `<th>Herb</th><th>Left</th><th>Next</th>` : `<th>Code</th><th>Herb</th><th>Kind</th><th>Left</th><th class="r">Days</th><th>Next</th>`;
-    const body = (out.length ? band("Going out today", out.length) + out.map(s => phDashTOutHtml(s, cols)).join("") + (list.length ? band("Stock", list.length) : "") : "")
+    const goes = (out.length ? band("Going out today", out.length) + out.map(s => phDashTOutHtml(s, cols)).join("") : "")
+      + (soon.length ? band("Scheduled", soon.length) + soon.map(s => phDashTOutHtml(s, cols, true)).join("") : "");
+    const body = goes + (goes && list.length ? band("Stock", list.length) : "")
       + shown.map(row).join("")
       + (list.length > shown.length ? `<tr class="more"><td colspan="${cols}"><button type="button" class="ph-dash-pc" data-ph-dash-tall="1">Show all ${list.length}</button></td></tr>` : "")
-      + (!list.length && !out.length ? `<tr class="none"><td colspan="${cols}">${q || phDashT.f !== "all" ? "No match" : "All stocked"}</td></tr>` : "");
+      + (!list.length && !out.length && !soon.length ? `<tr class="none"><td colspan="${cols}">${q || phDashT.f !== "all" ? "No match" : "All stocked"}</td></tr>` : "");
     return `<table><colgroup>${cg}</colgroup><thead><tr>${th}</tr></thead><tbody>${body}</tbody></table>`;
   }
   function phDashToolsHtml() {
