@@ -33695,6 +33695,20 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   /* the Potts Point shelf (her 2026-11-21 picks): a low count's red dot, the dispense step's Take from line, the Move box's bar */
   #pharmacyPage .ph-pp-low { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--ph-zero); margin-right: 6px; vertical-align: middle; }
   #pharmacyPage .ph-dose-from { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-size: var(--fs-11-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-clin-row { display: flex; align-items: center; gap: 10px; padding: 6px 0 6px; background: color-mix(in srgb, var(--cl) 9%, transparent); border-radius: 8px; }
+  #pharmacyPage .ph-clin-bar .ph-clin-b { display: inline-flex; align-items: center; gap: 6px; }
+  #pharmacyPage .ph-clin-bar .ph-clin-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cl); flex: none; }
+  #pharmacyPage .ph-clin-bar .ph-clin-b.on { background: var(--cl); border-color: var(--cl); color: #fff; }
+  #pharmacyPage .ph-clin-bar .ph-clin-b.on .ph-clin-dot { background: #fff; }
+  #pharmacyPage .ph-clin-sheet { background: var(--ph-white); border-radius: 12px; overflow-x: auto; width: 100%; box-sizing: border-box; }
+  #pharmacyPage .ph-clin-sheet .ph-clin-tbl { width: 100%; table-layout: auto; }
+  #pharmacyPage .ph-clin-sheet .ph-clin-tbl td, #pharmacyPage .ph-clin-sheet .ph-clin-tbl th { padding: 8px 12px; text-align: left; }
+  #pharmacyPage .ph-clin-sheet .ph-clin-tbl .ph-num, #pharmacyPage .ph-clin-sheet .ph-clin-tbl th.num { text-align: right; }
+  #pharmacyPage .ph-clin-sheet thead th, #pharmacyPage .ph-clin-tbl thead th { background: color-mix(in srgb, var(--cl) 12%, white); }
+  #pharmacyPage .ph-clin-add { display: flex; align-items: center; gap: 8px; padding: 10px 12px; flex-wrap: wrap; background: color-mix(in srgb, var(--cl) 6%, white); }
+  #pharmacyPage .ph-clin-add select { flex: 1 1 220px; min-width: 0; }
+  #pharmacyPage .ph-clin-add input { width: 96px; }
+  #pharmacyPage #phInvWidget.ph-inv-solo .ph-mchips-wrap, #pharmacyPage #phInvWidget.ph-inv-solo #phInvFilterBtn { display: none !important; }
   #pharmacyPage .ph-clin-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: var(--cl); color: #fff; font: 700 var(--fs-11-5) var(--font-body); }
   #pharmacyPage .ph-pp-dir { display: flex; margin: 4px 0 8px; }
   #pharmacyPage .ph-sh-move { display: grid; gap: 6px; margin: 4px 0 8px; }
@@ -40656,10 +40670,23 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   function presDispShelfWhy() { if (presDispBooking()) return "booked here today"; const d = parseKey(keyOf(TODAY)); return d ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][d.getDay()] : ""; }
   // each clinic's own colour, so a count or a band is never read as another's
   const phShelfColour = s => s === "pp" ? PH_LOTUS_COLOUR : s === "ac" ? PH_ACUPREG_COLOUR : "var(--ph-green)";
+  // ---- ONE CLINIC AT A TIME (her 2026-11-23 approved plan): a CBD · Acupreg · Lotus · All clinics switch on every Herbs & stock page.
+  // CBD keeps the existing pages (CBD stock only); Acupreg and Lotus each get their own pages that read and write that shelf only
+  // (never CBD's); All clinics keeps the three columns side by side to compare. Opens on today's clinic (the dispense rule).
+  let phClinic = null;
+  const phClinicNow = () => phClinic || phDayShelf(keyOf(TODAY));
+  const phClinicSolo = () => { const c = phClinicNow(); return c === "ac" || c === "pp" ? c : ""; };
+  const phShelfHerbs = s => (PHARMACY.herbs || []).filter(h => phHasShelf(h, s));
+  const phShelfLowList = s => phShelfHerbs(s).filter(h => !h.stopped && +h[PH_SHELVES[s].f] <= phShelfLow(h, s)).sort(phByName);
+  function phClinicRowHtml() {
+    const cur = phClinicNow(), col = cur === "all" ? "var(--ph-ink)" : phShelfColour(cur);
+    const b = (k, l) => `<button type="button" class="ph-ltr-qual ph-clin-b${cur === k ? " on" : ""}" style="--cl:${k === "all" ? "var(--ph-ink)" : phShelfColour(k)}" data-ph-clinic="${k}" aria-pressed="${cur === k}"><i class="ph-clin-dot"></i>${l}</button>`;
+    return `<div class="ph-clin-row" style="--cl:${col}"><span class="ph-tng2-seg ph-clin-bar" role="group" aria-label="Clinic">${b("cbd", "CBD")}${b("ac", "Acupreg")}${b("pp", "Lotus")}${b("all", "All clinics")}</span></div>`;
+  }
   const phShelfOf = h => presDispShelf();
   const phShelfQty = h => { const s = presDispShelf(); return s === "cbd" ? h.qty : phHasShelf(h, s) ? +h[PH_SHELVES[s].f] : 0; };
   // a shelf's own low line: Potts Point 50 g, Acupreg its own (h.lowAC) else 50 g, CBD the herb's own
-  const phShelfLow = (h, s) => s === "pp" ? PH_PP_LOW : s === "ac" ? (+h.lowAC > 0 ? +h.lowAC : PH_AC_LOW) : (h.low != null && h.low > 0) ? h.low : null;
+  const phShelfLow = (h, s) => s === "pp" ? (+h.lowPP > 0 ? +h.lowPP : PH_PP_LOW) : s === "ac" ? (+h.lowAC > 0 ? +h.lowAC : PH_AC_LOW) : (h.low != null && h.low > 0) ? h.low : null;
   // grams back onto (or, negative, off) a shelf: a dispense's undo / roll-back puts them where they came from
   function phShelfAdd(h, grams, shelf) {
     const f = PH_SHELVES[shelf] ? PH_SHELVES[shelf].f : "qty";
@@ -40668,6 +40695,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
 
   function phPPBarHtml() {
+    return "";   // the clinic switch (phClinicRowHtml) replaced this bar
     const nA = phShelfCount("ac"), nP = phShelfCount("pp");
     if (!nA && !nP) return "";
     const b = (k, l) => `<button type="button" class="ph-ltr-qual${phInvPlace === k ? " on" : ""}" data-ph-inv-place="${k}" aria-pressed="${phInvPlace === k}">${l}</button>`;
@@ -40724,6 +40752,33 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     });
   }
 
+  // the Inventory sheet for one clinic (Acupreg / Lotus): the herbs kept there, that shelf's grams and low line only
+  function phClinicInvPaint() {
+    const s = phClinicSolo(), host = document.getElementById("phStock"), w = document.getElementById("phInvWidget");
+    if (!host || !s) return;
+    if (w) w.classList.add("ph-inv-solo");
+    const f = PH_SHELVES[s].f, lowF = s === "pp" ? "lowPP" : "lowAC", nm = PH_SHELVES[s].name, terms = phSearchTerms();
+    const lk = (h, field, shown, aria) => phCellEdit && phCellEdit.id === h.id && phCellEdit.field === field
+      ? `<input type="text" inputmode="decimal" class="ph-qty-input" data-ph-edit="${h.id}:${field}" value="${h[field] == null ? "" : esc(String(h[field]))}" placeholder="—" aria-label="${aria}">`
+      : `<button type="button" class="ph-qty-lock" data-ph-unlock="${h.id}:${field}" title="Click to edit">${shown}</button>`;
+    const rows = phShelfHerbs(s).filter(h => !terms.length || terms.some(q => phRowMatchesTerm(h, q))).sort(phByName).map(h => {
+      const a = phActiveSupplier(h), q = +h[f], low = phShelfLow(h, s), lowSet = +h[lowF] > 0;
+      return `<tr data-ph-row="${h.id}"><td class="ph-name">${phHerbCode(h) ? `<span class="ph-code">${esc(phHerbCode(h))}</span> ` : ""}<span class="ph-dash-name">${esc(phPinyinName(h))}</span></td><td>${a ? esc(a.name) : "—"}</td><td class="ph-num" data-col="${f}">${lk(h, f, `${q < low ? `<span class="ph-pp-low" title="Low at ${nm}"></span>` : ""}${phFmtG(q)}`, `${nm} stock of ${esc(h.name)}`)}</td><td>${phStockBarPct(q, low)}</td><td class="ph-num">${lk(h, lowF, `${phFmtG(low)}${lowSet ? "" : ' <span class="ph-sub">auto</span>'}`, `${nm} low line of ${esc(h.name)}`)}</td><td class="ph-act"><button type="button" class="ph-load-btn" data-ph-pp-move="${h.id}" title="Move stock between clinics">Move</button></td></tr>`;
+    }).join("");
+    const free = (PHARMACY.herbs || []).filter(h => !phHasShelf(h, s) && !h.stopped).sort(phByName);
+    const add = `<div class="ph-clin-add"><select id="phClinAddSel" aria-label="Add a herb to ${nm}"><option value="">Add a herb to ${nm}…</option>${free.map(h => `<option value="${esc(h.id)}">${esc(phPinyinName(h))}</option>`).join("")}</select><input type="number" min="0" step="10" id="phClinAddG" class="field-bare" placeholder="grams" aria-label="Grams at ${nm}"><button type="button" class="btn-save" data-ph-clin-add="${s}">Add</button></div>`;
+    host.innerHTML = `<div class="ph-clin-sheet" style="--cl:${phShelfColour(s)}">${add}<table class="ph-table ph-clin-tbl"><thead><tr><th>Name</th><th>Supplier</th><th class="num">${nm} (g)</th><th>Level</th><th class="num">Low at (g)</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="ph-ost-empty">Nothing is kept at ${nm} yet</td></tr>`}</tbody></table></div>`;
+    const inp = host.querySelector("[data-ph-edit]"); if (inp) { inp.focus(); inp.select(); }
+    const cnt = document.getElementById("phCount"); if (cnt) cnt.textContent = "";
+  }
+  function phClinicHeadFix() {
+    const s = phClinicSolo(); if (!s) return;
+    const f = PH_SHELVES[s].f, nm = PH_SHELVES[s].name, list = phShelfHerbs(s).filter(h => !h.stopped);
+    const zero = list.filter(h => +h[f] <= 0).length, low = list.filter(h => +h[f] > 0 && +h[f] <= phShelfLow(h, s)).length;
+    const head = document.getElementById("invShellHead");
+    if (head) head.innerHTML = phShellHead("Inventory", `${phShelfHerbs(s).length} herbs & formulas at ${nm}`, phShellStripHtml([{ n: zero, label: "Zero", icon: "x", attrs: "", on: false }, { n: low, label: "Low", icon: "warn", attrs: "", on: false }]));
+    const fr = document.getElementById("phFlagRow"); if (fr) fr.innerHTML = "";
+  }
   function phRowPasses(h) {
     const terms = phSearchTerms();
     if (terms.length && !terms.some(q => phRowMatchesTerm(h, q))) return false;
@@ -41857,6 +41912,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // the shell (sortable headers + filter row) and the body render separately, so
   // typing in a filter never rebuilds the very input it's happening in
   function renderPhStock() {
+    phInvPlace = phClinicNow();
+    { const w = document.getElementById("phInvWidget"); if (w) w.classList.toggle("ph-inv-solo", !!phClinicSolo()); }
+    if (phClinicSolo()) { phClinicInvPaint(); return; }
     phOriginMigrate();
     if (!PHARMACY.herbs.length) {
       document.getElementById("phStock").innerHTML = `<div class="fam-empty">Nothing in stock yet.<br>Add each herb once — code, name, cost per gram, and what's on the shelf.</div>`;
@@ -42458,6 +42516,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     </div>` : ""}</span>`;
   }
   function renderPhRows() {
+    if (phClinicSolo()) { phInvPlace = phClinicNow(); phClinicInvPaint(); return; }
     const tbody = document.querySelector("#phStock tbody");
     if (!tbody) { renderPhStock(); return; }
     const mobileCompact = window.innerWidth <= 900;
@@ -43049,6 +43108,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   };
 
   function renderPhFlags() {
+    if (phClinicSolo()) { phClinicHeadFix(); return; }
     const zero = phZeroHerbs().filter(phNotSnoozed).sort(phByName), low = phLowHerbs().filter(phNotSnoozed).sort(phByName);
     const stopped = phStoppedHerbs().sort(phByName), phaseout = phPhaseOutHerbs().sort(phByName), snoozed = phSnoozedHerbs().sort(phByName);
     const overstock = phOverstockList();   // threshold nudge + the year-idle "sitting too long" review (her pick 2026-09-07 pm)
@@ -44577,6 +44637,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     return P.gd ? { tab: "guide", gd: chip, chip } : { tab: chip, chip };
   }
   function phPlaceCount(id) {
+    const cs = phClinicSolo();
+    if (cs && id === "restock") { const n = phShelfLowList(cs).length; return n ? String(n) : ""; }
+    if (cs && id === "refill") return "";
     const b = PH_PLACE_BADGE[id] && document.getElementById(PH_PLACE_BADGE[id]);
     return b && !b.hidden && b.textContent && b.textContent !== "0" ? b.textContent : "";
   }
@@ -44595,7 +44658,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (sc) return `<h1 class="ph-place-h1">Settings</h1>${phSetBarHtml(sc)}`;   // stage 4: Settings, All templates and Relocation are one place
     const pc = phPlaceCurTab();
     if (!pc) return `<h1>${esc(title)}</h1>`;
-    return `<h1 class="ph-place-h1">${esc(pc.sub ? title : PH_PLACES[pc.place].label)}</h1>${phPlaceBarHtml(pc)}`;
+    return `<h1 class="ph-place-h1">${esc(pc.sub ? title : PH_PLACES[pc.place].label)}</h1>${phPlaceBarHtml(pc)}${pc.place === "stock" && !pc.sub ? phClinicRowHtml() : ""}`;
   }
   // a tap on a chip / More page / ⋯ row: the old row's own handler does the work (same state resets, same render)
   function phPlaceGo(id, place) {
@@ -79444,6 +79507,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
           phAfterQtyChange(h);   // a phase-out sold to 0 becomes a plain write-off
         } else if (field === "qtyPP") { if (v == null) delete h.qtyPP; else h.qtyPP = Math.floor(v); }
         else if (field === "qtyAC") { if (v == null) delete h.qtyAC; else h.qtyAC = Math.floor(v); }
+        else if (field === "lowPP") { if (v == null || !(v > 0)) delete h.lowPP; else h.lowPP = Math.floor(v); }
+        else if (field === "lowAC") { if (v == null || !(v > 0)) delete h.lowAC; else h.lowAC = Math.floor(v); }
         else if (field === "low") h.low = v;
         // her catch (2026-08-04): "$23 a bottle should be $0.23/g, not $0.30" --
         // $/g and $/g^ are two DIFFERENT numbers on purpose (exact cost, then
@@ -81504,29 +81569,48 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     }
   }
   // ---- the Acupreg shelf's own order list ----
-  const phAcLowList = () => (PHARMACY.herbs || []).filter(h => !h.stopped && phHasAC(h) && +h.qtyAC <= phShelfLow(h, "ac")).sort(phByName);
-  function phAcOrderCardHtml(hit, nm, sup) {
-    const list = phAcLowList().filter(hit);
-    const rows = list.map(h => `<tr><td>${nm(h)}</td><td>${sup(h)}</td><td class="num"><span class="ph-pp-low" title="Low at Acupreg"></span>${phFmtG(+h.qtyAC)}</td><td class="num"><input type="number" min="0" step="10" class="field-bare ph-ac-low" data-ac-low="${esc(h.id)}" value="${phShelfLow(h, "ac")}" aria-label="Low at, grams"></td><td><span class="ph-ac-arr"><input type="number" min="1" step="10" class="field-bare" aria-label="Grams arrived"><button type="button" class="btn-save" data-ac-arr="${esc(h.id)}">Add</button></span></td></tr>`).join("");
-    return `<div class="ph-ost-card"><div class="ph-ost-scroll"><table class="ph-ost-tbl acupreg"><thead><tr><th>Herb</th><th>Supplier</th><th class="num">Left (g)</th><th class="num">Low at (g)</th><th>Arrived (g)</th></tr></thead><tbody>${rows || `<tr><td class="ph-ost-empty" colspan="5">Nothing running low at Acupreg</td></tr>`}</tbody></table></div></div>`;
+  const phAcLowList = () => phShelfLowList("ac");
+  // a clinic's own order list (Acupreg, Lotus): what is low at THAT shelf, its low line, and the grams that arrived there
+  function phShelfOrderCardHtml(s, hit, nm, sup) {
+    const f = PH_SHELVES[s].f, name = PH_SHELVES[s].name, list = phShelfLowList(s).filter(hit);
+    const rows = list.map(h => `<tr><td>${nm(h)}</td><td>${sup(h)}</td><td class="num"><span class="ph-pp-low" title="Low at ${name}"></span>${phFmtG(+h[f])}</td><td class="num"><input type="number" min="0" step="10" class="field-bare ph-ac-low" data-shelf-low="${s}:${esc(h.id)}" value="${phShelfLow(h, s)}" aria-label="Low at, grams"></td><td><span class="ph-ac-arr"><input type="number" min="1" step="10" class="field-bare" aria-label="Grams arrived at ${name}"><button type="button" class="btn-save" data-shelf-arr="${s}:${esc(h.id)}">Add</button></span></td></tr>`).join("");
+    return `<div class="ph-ost-card" style="--cl:${phShelfColour(s)}"><div class="ph-ost-scroll"><table class="ph-ost-tbl acupreg ph-clin-tbl"><thead><tr><th>Herb</th><th>Supplier</th><th class="num">Left (g)</th><th class="num">Low at (g)</th><th>Arrived (g)</th></tr></thead><tbody>${rows || `<tr><td class="ph-ost-empty" colspan="5">Nothing running low at ${name}</td></tr>`}</tbody></table></div></div>`;
   }
   document.addEventListener("click", e => {
-    const b = e.target instanceof Element && e.target.closest("[data-ac-arr]");
+    const b = e.target instanceof Element && e.target.closest("[data-shelf-arr]");
     if (!b) return;
-    const h = PHARMACY.herbs.find(x => x.id === b.dataset.acArr), inp = b.parentElement.querySelector("input"), g = Math.floor(parseFloat(inp && inp.value));
-    if (!h || !(g > 0)) return;
-    phShelfAdd(h, g, "ac");
+    const [s, id] = b.dataset.shelfArr.split(":");
+    const h = PHARMACY.herbs.find(x => x.id === id), inp = b.parentElement.querySelector("input"), g = Math.floor(parseFloat(inp && inp.value));
+    if (!h || !PH_SHELVES[s] || !(g > 0)) return;
+    phShelfAdd(h, g, s);
     if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
-    presSavedToast(`+${phFmtG(g)} g at Acupreg`);
+    presSavedToast(`+${phFmtG(g)} g at ${PH_SHELVES[s].name}`);
     renderPhRestock();
   });
   document.addEventListener("change", e => {
-    const i = e.target instanceof Element && e.target.closest("[data-ac-low]");
+    const i = e.target instanceof Element && e.target.closest("[data-shelf-low]");
     if (!i) return;
-    const h = PHARMACY.herbs.find(x => x.id === i.dataset.acLow), v = Math.floor(parseFloat(i.value));
-    if (!h) return;
-    if (v > 0) h.lowAC = v; else delete h.lowAC;
+    const [s, id] = i.dataset.shelfLow.split(":");
+    const h = PHARMACY.herbs.find(x => x.id === id), v = Math.floor(parseFloat(i.value));
+    if (!h || !PH_SHELVES[s]) return;
+    const lf = s === "pp" ? "lowPP" : "lowAC";
+    if (v > 0) h[lf] = v; else delete h[lf];
     savePharmacy(); renderPhRestock();
+  });
+  // the clinic switch, and adding a herb to a clinic's shelf
+  document.addEventListener("click", e => {
+    const c = e.target instanceof Element && e.target.closest("[data-ph-clinic]");
+    if (c) { phClinic = c.dataset.phClinic; phInvPlace = phClinicNow(); phOsbSide = null; phCellEdit = null; renderPharmacy(); return; }
+    const a = e.target instanceof Element && e.target.closest("[data-ph-clin-add]");
+    if (!a) return;
+    const s = a.dataset.phClinAdd, sel = document.getElementById("phClinAddSel"), gi = document.getElementById("phClinAddG");
+    const h = sel && PHARMACY.herbs.find(x => x.id === sel.value), g = Math.floor(parseFloat(gi && gi.value));
+    if (!h || !PH_SHELVES[s] || !(g >= 0)) return;
+    h[PH_SHELVES[s].f] = g;
+    phAfterQtyChange(h);
+    if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
+    presSavedToast(`${phPinyinName(h)} now kept at ${PH_SHELVES[s].name}`);
+    renderPhRows();
   });
   function renderPhRestock() {
     const herbs = PHARMACY.herbs;
@@ -81638,7 +81722,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // an emptied Snoozed tab hands over to Running low, where its herbs went
     if (phOsbSide == null) phOsbSide = listN || !unflagged.length ? "toorder" : "low";
     if (phOsbSide === "snoozed" && !snoozed.length) phOsbSide = "low";
-    if (phOsbSide === "acupreg" && !phShelfCount("ac")) phOsbSide = "toorder";
+    { const cs = phClinicSolo(), cn = phClinicNow();
+      if (cs) phOsbSide = cs === "ac" ? "acupreg" : "lotus";
+      else if (cn !== "all" && (phOsbSide === "acupreg" || phOsbSide === "lotus")) phOsbSide = "toorder"; }
     const side = phOsbSide;
     // the stock cell: the level bar against the low mark, then the grams in the jar now
     const osStk = h => {
@@ -81829,17 +81915,22 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     }
     // the tabs: one joined bar, the open one filled, each with its count; a herb that just flew in lights its tab gold
     const litOn = Date.now() < phOsbTabLit ? phOstLitTab : "";
-    const osTabs = [["toorder", "To order", listN], ["low", "Running low", unflagged.length], ["arrived", "Arrived", recentlyArrived.length], ["snoozed", "Snoozed", snoozed.length], ["acupreg", "Acupreg", phAcLowList().length]]
-      .filter(([k, , n]) => (k !== "snoozed" || n) && (k !== "acupreg" || phShelfCount("ac")));
+    const osTabs = [["toorder", "To order", listN], ["low", "Running low", unflagged.length], ["arrived", "Arrived", recentlyArrived.length], ["snoozed", "Snoozed", snoozed.length], ["acupreg", "Acupreg", phShelfLowList("ac").length], ["lotus", "Lotus", phShelfLowList("pp").length]]
+      .filter(([k, , n]) => { const cn = phClinicNow();
+        if (cn === "ac") return k === "acupreg";
+        if (cn === "pp") return k === "lotus";
+        if (k === "acupreg") return cn === "all" && phShelfCount("ac") > 0;
+        if (k === "lotus") return cn === "all" && phShelfCount("pp") > 0;
+        return k !== "snoozed" || n; });
     const osTabsHtml = `<div class="ph-ost-tabs" role="tablist" aria-label="To order">${osTabs.map(([k, l, n]) => `<button type="button" role="tab" class="${side === k ? "on" : ""}${litOn === k ? " lit" : ""}" aria-selected="${side === k}" data-ph-osb-side="${k}">${l}<span class="k" data-ost-n="${k}">${n}</span></button>`).join("")}</div>`;
     // one fact beside the tabs: how many are ordered / how much of what is low is on the list (the gold bar) / Clear
     const osMeta = side === "toorder" ? (onTheWay.length ? `<span class="ph-ost-meta">${onTheWay.length} ordered</span>` : "")
       : side === "low" ? `<span class="ph-ost-meta" title="${covered} of ${covered + lowOpen} low herbs are on the order list"><span class="ph-os-gbar"><i style="width:${coverPct}%${osGbarFrom != null ? `;--from:${osGbarFrom}%` : ""}"${osGbarFrom != null ? ` class="ease"` : ""}></i></span>${covered} of ${covered + lowOpen} on the list</span>`
       : side === "arrived" ? `<span class="ph-ost-meta">${arrOlder.length && !phOsArrOlderOpen ? "last 14 days" : ""}${recentlyArrived.length ? `<button type="button" class="ph-ost-chip" data-ph-clear-arrived="1" title="Take every arrived row off the list">Clear</button>` : ""}</span>` : "";
-    const osEmpty = osQ ? "No match" : { toorder: "Nothing on the list", low: "Nothing running low", arrived: "Nothing arrived", snoozed: "Nothing snoozed", acupreg: "Nothing running low at Acupreg" }[side];
+    const osEmpty = osQ ? "No match" : { toorder: "Nothing on the list", low: "Nothing running low", arrived: "Nothing arrived", snoozed: "Nothing snoozed", acupreg: "Nothing running low at Acupreg", lotus: "Nothing running low at Lotus" }[side];
     const osFoot = side === "toorder" && osAny;
     const osOlder = side === "arrived" && !phOsArrOlderOpen && arrOlder.length ? `<button type="button" class="ph-ost-chip ph-ost-older" data-ph-os-arr-older="1">+ ${arrOlder.length} older</button>` : "";
-    const osCard = side === "acupreg" ? phAcOrderCardHtml(osHit, osNm, osSupTxt) : osTbl
+    const osCard = side === "acupreg" || side === "lotus" ? phShelfOrderCardHtml(side === "acupreg" ? "ac" : "pp", osHit, osNm, osSupTxt) : osTbl
       ? `<div class="ph-ost-card"><div class="ph-ost-scroll"><table class="ph-ost-tbl ${side}"><thead><tr>${cols.map(k => `<th class="${osCls(k)}">${OS_COL[k][0]}</th>`).join("")}</tr></thead><tbody>${osAny ? osRows : `<tr><td class="ph-ost-empty" colspan="${cols.length}">${osEmpty}</td></tr>`}</tbody>${osFoot ? `<tfoot><tr><td colspan="4">Total</td><td class="c-cost num"><b data-ost-money="total">${phMoney(needsTotal)}</b></td><td colspan="2"></td></tr></tfoot>` : ""}</table></div></div>`
       : `<div class="ph-ost-card">${osAny ? osRows : `<div class="ph-ost-empty">${osEmpty}</div>`}${osFoot ? `<div class="ph-ost-foot"><span>Total</span><b data-ost-money="total">${phMoney(needsTotal)}</b></div>` : ""}</div>`;
     const osSideEl = osSideHtml();
