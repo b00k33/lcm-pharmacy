@@ -18142,3 +18142,7 @@ Her "these icons are not consistent and look busy" + the mock `mock-own-blocks-i
 - `phClinicInvPaint`: Formulas first, then Herbs under CBD's pale label rows (`.ph-inv-grp`); a row at or under its low line takes the light red (`.ph-row-short`, no red dot inside the stock cell); the stock number is the one outlined chip; the table head is the pale band (it was the clinic colour, so Lotus's red read as short).
 - Stocktake: "What am I counting today?" is "Count today" on CBD's and the clinics' pages.
 - Checked at 1280 with made-up herbs (screenshot). Not on her real Lotus Inventory. Dashboard at the clinics is next.
+
+## 2026-11-25 — Acupreg / Lotus Dashboard wears CBD's table (her "go, dashboard next")
+- `phClinicDashHtml(sc)`: filters as CBD's joined bar (All · Low · Empty, `phClinDashF`, view state), then one white table (Herb · Kind · Left (g) · Level · Next) of this clinic's herbs at or under their low line, empty first then the least left, each row the light red; Next = an Order chip that puts the herb on the clinic's own order list (`h.ordS[shelf]`, the To order tab's list) or "On order list". Under it, "Going out · n": the clinic's pickups from `phNxRows()` (rows `sp:` with `sh` = the clinic, same buttons as Do next). CBD's order / make / count rows are not shown at a clinic (they are CBD stock).
+- Checked with made-up herbs in a scratch copy (screenshot, 1280). The Going out block and the click handlers (filters, Order) not driven; not on her real Lotus page.
