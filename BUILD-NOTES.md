@@ -18103,3 +18103,7 @@ Her "i cant add herbs to order for acupreg", with a screenshot of the Acupreg ta
 - Mock `mock-fbr-triangle-keysigns.html`, her answer "2". The patient page no longer carries the Triangle card or its chip (the bars rank). The Triangle stays in the Guide as its own tab (`phFtgGuideHtml`, unchanged); `phFtgHostHtml` is no longer called from the patient page, every `phFtg*` reader is null-guarded.
 - The Fang check card (`phFbrCheckHtml`) is now: formula name, "N of M key signs", only the ticked signs, and "Rules out" when something applies. Gone from it: fit % and bar, the unticked key signs, the "Only here" group, the case count (they stay on the formula's own card).
 - Checked: page boots clean in a scratch copy. NOT driven on a real patient page (sandbox cannot mount it).
+
+## 2026-11-24 — one shared low line per herb (synth22 batch 2, her "one shared low line")
+- `phShelfLow(h, s)` now answers `h.low` at every clinic (CBD, Acupreg, Lotus). `h.lowAC` / `h.lowPP` are only read while `h.low` is empty (then Acupreg / Lotus fall back to 50 g, CBD to none). Nothing writes them any more: the Acupreg / Lotus "Low at" cell, the To order "Low at" box and the generic cell edit all write `h.low` and delete the older two.
+- Checked (function level, sandbox): `phShelfLow` for h.low set / only lowAC / empty at each clinic. NOT driven on the real pages.

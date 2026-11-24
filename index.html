@@ -40984,8 +40984,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   const phShelfOf = h => presDispShelf();
   const phShelfQty = h => { const s = presDispShelf(); return s === "cbd" ? h.qty : phHasShelf(h, s) ? +h[PH_SHELVES[s].f] : 0; };
-  // a shelf's own low line: Potts Point 50 g, Acupreg its own (h.lowAC) else 50 g, CBD the herb's own
-  const phShelfLow = (h, s) => s === "pp" ? (+h.lowPP > 0 ? +h.lowPP : PH_PP_LOW) : s === "ac" ? (+h.lowAC > 0 ? +h.lowAC : PH_AC_LOW) : (h.low != null && h.low > 0) ? h.low : null;
+  // a herb's low line, the same at every clinic (h.low); with none set Acupreg and Lotus use 50 g, CBD none
+  const phShelfLow = (h, s) => (h.low != null && h.low > 0) ? +h.low : s === "pp" ? (+h.lowPP > 0 ? +h.lowPP : PH_PP_LOW) : s === "ac" ? (+h.lowAC > 0 ? +h.lowAC : PH_AC_LOW) : null;   // ONE low line per herb for every clinic (her 2026-11-24 "one shared low line"): the herb's own h.low; lowAC / lowPP are only the older per-clinic numbers, read while h.low is empty, never written now
   // grams back onto (or, negative, off) a shelf: a dispense's undo / roll-back puts them where they came from
   function phShelfAdd(h, grams, shelf) {
     const f = PH_SHELVES[shelf] ? PH_SHELVES[shelf].f : "qty";
@@ -41056,12 +41056,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const s = phClinicSolo(), host = document.getElementById("phStock"), w = document.getElementById("phInvWidget");
     if (!host || !s) return;
     if (w) w.classList.add("ph-inv-solo");
-    const f = PH_SHELVES[s].f, lowF = s === "pp" ? "lowPP" : "lowAC", nm = PH_SHELVES[s].name, terms = phSearchTerms();
+    const f = PH_SHELVES[s].f, lowF = "low", nm = PH_SHELVES[s].name, terms = phSearchTerms();
     const lk = (h, field, shown, aria) => phCellEdit && phCellEdit.id === h.id && phCellEdit.field === field
       ? `<input type="text" inputmode="decimal" class="ph-qty-input" data-ph-edit="${h.id}:${field}" value="${h[field] == null ? "" : esc(String(h[field]))}" placeholder="—" aria-label="${aria}">`
       : `<button type="button" class="ph-qty-lock" data-ph-unlock="${h.id}:${field}" title="Click to edit">${shown}</button>`;
     const rows = phShelfHerbs(s).filter(h => !terms.length || terms.some(q => phRowMatchesTerm(h, q))).sort(phByName).map(h => {
-      const a = phActiveSupplier(h), q = +h[f], low = phShelfLow(h, s), lowSet = +h[lowF] > 0;
+      const a = phActiveSupplier(h), q = +h[f], low = phShelfLow(h, s), lowSet = +h.low > 0;
       return `<tr data-ph-row="${h.id}"><td class="ph-name">${phHerbCode(h) ? `<span class="ph-code">${esc(phHerbCode(h))}</span> ` : ""}<span class="ph-dash-name">${esc(phPinyinName(h))}</span></td><td data-label="Supplier">${a ? esc(a.name) : "—"}</td><td class="ph-num" data-col="${f}" data-label="${nm} (g)">${lk(h, f, `${q < low ? `<span class="ph-pp-low" title="Low at ${nm}"></span>` : ""}${phFmtG(q)}`, `${nm} stock of ${esc(h.name)}`)}</td><td data-label="Level">${phStockBarPct(q, low)}</td><td class="ph-num" data-label="Low at (g)">${lk(h, lowF, `${phFmtG(low)}${lowSet ? "" : ' <span class="ph-sub">auto</span>'}`, `${nm} low line of ${esc(h.name)}`)}</td><td class="ph-act"><button type="button" class="ph-load-btn" data-ph-pp-move="${h.id}" title="Move stock between clinics">Move</button></td></tr>`;
     }).join("");
     const free = (PHARMACY.herbs || []).filter(h => !phHasShelf(h, s) && !h.stopped).sort(phByName);
@@ -80054,9 +80054,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
           phAfterQtyChange(h);   // a phase-out sold to 0 becomes a plain write-off
         } else if (field === "qtyPP") { if (v == null) delete h.qtyPP; else h.qtyPP = Math.floor(v); }
         else if (field === "qtyAC") { if (v == null) delete h.qtyAC; else h.qtyAC = Math.floor(v); }
-        else if (field === "lowPP") { if (v == null || !(v > 0)) delete h.lowPP; else h.lowPP = Math.floor(v); }
-        else if (field === "lowAC") { if (v == null || !(v > 0)) delete h.lowAC; else h.lowAC = Math.floor(v); }
-        else if (field === "low") h.low = v;
+        else if (field === "lowPP" || field === "lowAC") { h.low = v == null || !(v > 0) ? null : Math.floor(v); delete h.lowAC; delete h.lowPP; }
+        else if (field === "low") { h.low = v; delete h.lowAC; delete h.lowPP; }   // one shared low line: the older per-clinic numbers go when it is set
         // her catch (2026-08-04): "$23 a bottle should be $0.23/g, not $0.30" --
         // $/g and $/g^ are two DIFFERENT numbers on purpose (exact cost, then
         // that same cost rounded up to the nearest 10c for quoting), but every
@@ -82142,8 +82141,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const [s, id] = i.dataset.shelfLow.split(":");
     const h = PHARMACY.herbs.find(x => x.id === id), v = Math.floor(parseFloat(i.value));
     if (!h || !PH_SHELVES[s]) return;
-    const lf = s === "pp" ? "lowPP" : "lowAC";
-    if (v > 0) h[lf] = v; else delete h[lf];
+    if (v > 0) h.low = v; else h.low = null;   // the herb's one shared low line, the same at every clinic
+    delete h.lowAC; delete h.lowPP;
     savePharmacy(); renderPhRestock();
   });
   // the clinic switch, and adding a herb to a clinic's shelf
