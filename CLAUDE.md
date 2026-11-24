@@ -505,9 +505,9 @@ Pulse, Abdomen, Cycle (a cycle-tracked patient: the day and phase), Pain (the pa
 normal (a plain normal pulse box, a medium abdomen, "no …" marks are left out). "plain" = her patient's words (the pulse is
 `phVsPulseWords`, "tight below the right ribs"); "short" = one clinical line ("Pulse R Chi blocked; L Chi weak", Cun / Guan / Chi
 positions, never the organ-zone dump). Acupuncture's Findings line is the short read (`phVisitFndLineHtml`; an exam done with nothing off
-reads "Tongue normal"; Change is a 32px chip). Summary for her: What you came in for is SHORT ("complaint · how long, with a, b and c +n",
-`phVsWithShort`: the first three grouped symptoms in plain lower-case words); What I found = the plain read, a line an exam, scans after
-it; What it means = the Diagnosis (her own Diagnosis words, else its agreed / Likely patterns, the main one first; Possible only when
+reads "Tongue normal"; Change is a 32px chip). Summary for her: What you came in for lists ALL the grouped symptoms ("complaint · how long, with a, b, c and d",
+`phVsWithShort`, plain lower-case words; her 2026-11-24 "summary doesnt include all signs symptoms" replaced the first three and "+n"); What I found = the plain read, a line an exam, scans after
+it, then ONE "Signs:" line with every sign ticked for him that the complaint's symptoms do not already name (`phFbrTickRows`, "dislikes wind (cold & heat)", A–Z); What it means = the Diagnosis (her own Diagnosis words, else its agreed / Likely patterns, the main one first; Possible only when
 nothing is Likely); The plan = the Care Plan's four parts (`phTpKeyFour`: "Acupuncture and herbs, weekly for 3 months", "Review on 19
 December", "Goal: …"), then the Came in for goals (`phCcGoalLines`), one line a goal word (never twice). With no Care Plan it says what
 it said before. Never a second findings reader on a page; a new page that lists findings calls this one.
