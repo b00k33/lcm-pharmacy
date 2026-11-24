@@ -40964,6 +40964,10 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   const phClinicSolo = () => { const c = phClinicNow(); return c === "ac" || c === "pp" ? c : ""; };
   const phShelfHerbs = s => (PHARMACY.herbs || []).filter(h => phHasShelf(h, s));
   const phShelfLowList = s => phShelfHerbs(s).filter(h => !h.stopped && +h[PH_SHELVES[s].f] <= phShelfLow(h, s)).sort(phByName);
+  // her 2026-11-24 "i cant add herbs to order for acupreg": a clinic's To order = what is low at its shelf + the herbs she added to it by hand (h.ordS[s] = the day it was added;
+  // Arrived clears it), a herb that is not kept there yet included (its arrival puts the grams on that shelf)
+  const phShelfOrderList = s => { const low = phShelfLowList(s), ids = new Set(low.map(h => h.id)); return [...low, ...(PHARMACY.herbs || []).filter(h => !h.stopped && h.ordS && h.ordS[s] && !ids.has(h.id))].sort(phByName); };
+  const phOsShelfSide = () => { const cn = phClinicNow(); return cn === "ac" || cn === "pp" ? cn : phOsbSide === "acupreg" ? "ac" : phOsbSide === "lotus" ? "pp" : ""; };
   let phMkCtx = "";   // the clinic a refill batch is being made for, while its stock check runs
   const phMkShelf = () => { const c = phClinicNow(); return c === "all" ? "" : c; };
   const phMkQ = (h, s) => s === "cbd" ? h.qty : phHasShelf(h, s) ? +h[PH_SHELVES[s].f] : 0;
@@ -45015,7 +45019,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   function phPlaceCount(id) {
     const cs = phClinicSolo();
-    if (cs && id === "restock") { const n = phShelfLowList(cs).length; return n ? String(n) : ""; }
+    if (cs && id === "restock") { const n = phShelfOrderList(cs).length; return n ? String(n) : ""; }
     if (cs && id === "refill") return "";
     const b = PH_PLACE_BADGE[id] && document.getElementById(PH_PLACE_BADGE[id]);
     return b && !b.hidden && b.textContent && b.textContent !== "0" ? b.textContent : "";
@@ -82116,8 +82120,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   const phAcLowList = () => phShelfLowList("ac");
   // a clinic's own order list (Acupreg, Lotus): what is low at THAT shelf, its low line, and the grams that arrived there
   function phShelfOrderCardHtml(s, hit, nm, sup) {
-    const f = PH_SHELVES[s].f, name = PH_SHELVES[s].name, list = phShelfLowList(s).filter(hit);
-    const rows = list.map(h => `<tr><td>${nm(h)}</td><td>${sup(h)}</td><td class="num"><span class="ph-pp-low" title="Low at ${name}"></span>${phFmtG(+h[f])}</td><td class="num"><input type="number" min="0" step="10" class="field-bare ph-ac-low" data-shelf-low="${s}:${esc(h.id)}" value="${phShelfLow(h, s)}" aria-label="Low at, grams"></td><td><span class="ph-ac-arr"><input type="number" min="1" step="10" class="field-bare" aria-label="Grams arrived at ${name}"><button type="button" class="btn-save" data-shelf-arr="${s}:${esc(h.id)}">Add</button></span></td></tr>`).join("");
+    const f = PH_SHELVES[s].f, name = PH_SHELVES[s].name, list = phShelfOrderList(s).filter(hit);
+    const rows = list.map(h => `<tr><td>${nm(h)}</td><td>${sup(h)}</td><td class="num"><span class="ph-pp-low" title="Low at ${name}"></span>${phFmtG(+h[f] || 0)}</td><td class="num"><input type="number" min="0" step="10" class="field-bare ph-ac-low" data-shelf-low="${s}:${esc(h.id)}" value="${phShelfLow(h, s)}" aria-label="Low at, grams"></td><td><span class="ph-ac-arr"><input type="number" min="1" step="10" class="field-bare" aria-label="Grams arrived at ${name}"><button type="button" class="btn-save" data-shelf-arr="${s}:${esc(h.id)}">Add</button></span></td></tr>`).join("");
     return `<div class="ph-ost-card" style="--cl:${phShelfColour(s)}"><div class="ph-ost-scroll"><table class="ph-ost-tbl acupreg ph-clin-tbl"><thead><tr><th>Herb</th><th>Supplier</th><th class="num">Left (g)</th><th class="num">Low at (g)</th><th>Arrived (g)</th></tr></thead><tbody>${rows || `<tr><td class="ph-ost-empty" colspan="5">Nothing running low at ${name}</td></tr>`}</tbody></table></div></div>`;
   }
   document.addEventListener("click", e => {
@@ -82127,6 +82131,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const h = PHARMACY.herbs.find(x => x.id === id), inp = b.parentElement.querySelector("input"), g = Math.floor(parseFloat(inp && inp.value));
     if (!h || !PH_SHELVES[s] || !(g > 0)) return;
     phShelfAdd(h, g, s);
+    if (h.ordS) delete h.ordS[s];
     if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
     presSavedToast(`+${phFmtG(g)} g at ${PH_SHELVES[s].name}`);
     renderPhRestock();
@@ -82253,7 +82258,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       return { pack, qty, bottleAuto, bottleEditVal, lineTotal, packIsCustom, qtyIsCustom };
     };
     // the supplier in words (Koda and GMP wear their own chips)
-    const osSupTxt = h => h.supplier ? (osBrand(h.supplier) ? osSupName(h.supplier) : esc(phSupDisplayName(h.supplier))) : "no supplier";
+    const osSupTxt = h => h.supplier ? (osBrand(h.supplier) ? osSupName(h.supplier) : phSupDisplayName(h.supplier)) : "no supplier";   // phSupDisplayName escapes the name itself: an esc() here printed the In house markup as text
     // plain text since 2026-10-29: the row opens its details, the ⋮ opens the edit form
     const osNm = h => { const code = phHerbCode(h); return `<span class="ph-osb-nm" title="${esc(phPinyinFullLabel(h))}">${code ? `<b>${esc(code)}</b>` : ""}${esc(phPinyinName(h))}</span>`; };
     // ---- her Cliniko "Products" picks (2026-11-02, mocks/to-order-cliniko-mock-2026-11-02.html; all 8 = the
@@ -82473,7 +82478,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     }
     // the tabs: one joined bar, the open one filled, each with its count; a herb that just flew in lights its tab gold
     const litOn = Date.now() < phOsbTabLit ? phOstLitTab : "";
-    const osTabs = [["toorder", "To order", listN], ["low", "Running low", unflagged.length], ["arrived", "Arrived", recentlyArrived.length], ["snoozed", "Snoozed", snoozed.length], ["acupreg", "Acupreg", phShelfLowList("ac").length], ["lotus", "Lotus", phShelfLowList("pp").length]]
+    const osTabs = [["toorder", "To order", listN], ["low", "Running low", unflagged.length], ["arrived", "Arrived", recentlyArrived.length], ["snoozed", "Snoozed", snoozed.length], ["acupreg", "Acupreg", phShelfOrderList("ac").length], ["lotus", "Lotus", phShelfOrderList("pp").length]]
       .filter(([k, , n]) => { const cn = phClinicNow();
         if (cn === "ac") return k === "acupreg";
         if (cn === "pp") return k === "lotus";
@@ -82541,7 +82546,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   function phOsAddOptions(q) {
     q = String(q || "").trim().toLowerCase();
     if (!q) return [];
-    return PHARMACY.herbs.filter(h => !h.order && !h.stopped && !phIsInHouseSup((phActiveSupplier(h) || {}).name) && phHerbLabel(h).toLowerCase().includes(q))
+    const sh = phOsShelfSide();
+    return PHARMACY.herbs.filter(h => (sh ? !(h.ordS && h.ordS[sh]) : !h.order && !phIsInHouseSup((phActiveSupplier(h) || {}).name)) && !h.stopped && phHerbLabel(h).toLowerCase().includes(q))
       // A–Z by name, not by code (her 2026-11-02 A–Z rule); a name or code starting with what she typed first, so the cut of 8 keeps it
       .sort((a, b) => (phHerbLabel(b).toLowerCase().startsWith(q) || String(b.name || "").toLowerCase().startsWith(q)) - (phHerbLabel(a).toLowerCase().startsWith(q) || String(a.name || "").toLowerCase().startsWith(q)) || phByName(a, b))
       .slice(0, 8);
@@ -82563,7 +82569,14 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   function phOsAddMenuClose() { const m = document.getElementById("phOsAddMenu"); if (m) m.remove(); }
   function phOsAddPick(id) {
     phOsAddMenuClose();
-    const h = PHARMACY.herbs.find(x => x.id === id);
+    const h = PHARMACY.herbs.find(x => x.id === id), sh = phOsShelfSide();
+    if (h && sh) {   // a clinic's tab: the herb joins THAT clinic's order list, not CBD's
+      const snap = JSON.stringify(h);
+      h.ordS = h.ordS || {}; h.ordS[sh] = keyOf(TODAY);
+      if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
+      presSavedToast(`✓ ${phHerbLabel(h)} added to ${PH_SHELVES[sh].name}'s order list`, { undo: () => { Object.keys(h).forEach(k => { delete h[k]; }); Object.assign(h, JSON.parse(snap)); savePharmacy(); renderPharmacy(); } });
+      phOsAddHl = 0; renderPharmacy(); return;
+    }
     if (!h || h.order) return;
     const snap = JSON.stringify(h);   // for the toast's Undo (her 2026-10-20 pick: one toast with Undo)
     h.order = true; h.orderOn = keyOf(TODAY); delete h.orderSnoozedUntil; delete h.snoozedUntil;
