@@ -33896,6 +33896,17 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   #pharmacyPage .ph-sh-move { display: grid; gap: 6px; margin: 4px 0 8px; }
   #pharmacyPage .ph-sh-row { display: flex; align-items: center; gap: 8px; }
   #pharmacyPage .ph-ac-arr { display: inline-flex; align-items: center; gap: 6px; }
+  /* the Acupreg / Lotus To order card reads as the CBD one (her 2026-11-24 "same across the board"): the Herb column wraps, nothing scrolls sideways, one solid Add per row */
+  #pharmacyPage .ph-ost-card:has(.ph-clin-tbl) .ph-ost-scroll { overflow-x: visible; }
+  #pharmacyPage .ph-ost-tbl.ph-clin-tbl td { white-space: normal; }
+  #pharmacyPage .ph-ost-tbl.ph-clin-tbl :is(td.num, td.c-act) { white-space: nowrap; }
+  #pharmacyPage .ph-ost-tbl.ph-clin-tbl :is(.ph-ac-arr input, input.ph-ac-low) { height: 32px; box-sizing: border-box; }
+  @media (max-width: 900px) {
+    #pharmacyPage .ph-ost-tbl.ph-clin-tbl thead { display: none; }
+    #pharmacyPage .ph-ost-tbl.ph-clin-tbl tbody tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 12px; padding: 10px 12px; border-top: 1px solid var(--ph-line); }
+    #pharmacyPage .ph-ost-tbl.ph-clin-tbl td { display: block; padding: 0; border: 0; }
+    #pharmacyPage .ph-ost-tbl.ph-clin-tbl :is(td.c-herb, td.c-act) { grid-column: 1 / -1; }
+  }
   #pharmacyPage .ph-ac-arr input, #pharmacyPage input.ph-ac-low { width: 72px; text-align: right; border: 1px solid var(--ph-line); border-radius: 6px; }
   #pharmacyPage .ph-ac-card { width: min(560px, 100%); }
   #pharmacyPage .ph-ac-scr { max-height: 60vh; overflow: auto; border-radius: 10px; }
@@ -40963,6 +40974,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   const phClinicNow = () => phClinic || phDayShelf(keyOf(TODAY));
   const phClinicSolo = () => { const c = phClinicNow(); return c === "ac" || c === "pp" ? c : ""; };
   const phShelfHerbs = s => (PHARMACY.herbs || []).filter(h => phHasShelf(h, s));
+  // the clinic a log entry belongs to: its own shelf tag, else the shelf its dispensed herbs came off, else CBD (older entries carry none)
+  const phLogShelf = e => e.shelf || ((e.deducted || []).find(d => d && d.shelf) || {}).shelf || "cbd";
+  const phLogOfClinic = () => { const c = phClinicNow(); return c === "all" ? PHARMACY.log : PHARMACY.log.filter(e => phLogShelf(e) === c); };
   const phShelfLowList = s => phShelfHerbs(s).filter(h => !h.stopped && +h[PH_SHELVES[s].f] <= phShelfLow(h, s)).sort(phByName);
   // her 2026-11-24 "i cant add herbs to order for acupreg": a clinic's To order = what is low at its shelf + the herbs she added to it by hand (h.ordS[s] = the day it was added;
   // Arrived clears it), a herb that is not kept there yet included (its arrival puts the grams on that shelf)
@@ -43887,7 +43901,15 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       </svg>
     </div>`;
   }
+  // Stock statistics for ONE clinic (Acupreg, Lotus): its own shelf only, never CBD's numbers
+  function phClinicStatsHtml(sc) {
+    const f = PH_SHELVES[sc].f, list = phShelfHerbs(sc).filter(h => !h.stopped);
+    const zero = list.filter(h => !(+h[f] > 0)).length, low = list.filter(h => +h[f] > 0 && +h[f] <= phShelfLow(h, sc)).length;
+    const grams = phRound2(list.reduce((a, h) => a + (+h[f] > 0 ? +h[f] : 0), 0)), val = phRound2(list.reduce((a, h) => a + (+h[f] > 0 && h.cost ? +h[f] * h.cost : 0), 0));
+    return phShellHead("Stock statistics", "", phShellStripHtml([{ n: list.length, label: "Kept here" }, { n: zero, label: "At zero" }, { n: low, label: "Low" }, { n: phFmtG(grams) + " g", label: "On the shelf" }, { n: phMoney(val), label: "Value at cost" }]));
+  }
   function renderPhStats() {
+    if (phClinicSolo()) { const w = document.getElementById("phStatsWrap"); if (w) { w.innerHTML = phClinicStatsHtml(phClinicSolo()); return; } }
     const { herbs, log } = PHARMACY;
     const singles = herbs.filter(h => !phIsFormula(h));
     const inHouse = herbs.filter(h => phIsFormula(h) && phMadeInHouse(h));
@@ -45039,7 +45061,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (sc) return `<h1 class="ph-place-h1">Settings</h1>${phSetBarHtml(sc)}`;   // stage 4: Settings, All templates and Relocation are one place
     const pc = phPlaceCurTab();
     if (!pc) return `<h1>${esc(title)}</h1>`;
-    return `<h1 class="ph-place-h1">${esc(pc.sub ? title : PH_PLACES[pc.place].label)}</h1>${phPlaceBarHtml(pc)}${pc.place === "stock" && !pc.sub && !["stats", "dispenses", "log", "suppliers"].includes(pc.chip) ? phClinicRowHtml() : ""}`;
+    return `<h1 class="ph-place-h1">${esc(pc.sub ? title : PH_PLACES[pc.place].label)}</h1>${phPlaceBarHtml(pc)}${pc.place === "stock" && !pc.sub && !["suppliers"].includes(pc.chip) ? phClinicRowHtml() : ""}`;
   }
   // a tap on a chip / More page / ⋯ row: the old row's own handler does the work (same state resets, same render)
   function phPlaceGo(id, place) {
@@ -68781,8 +68803,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       const prog = schedPrepProgress(x), due = schedDueDate(x) || "", empty = !prog.items.length;
       const gram = prog.items.reduce((a, i) => a + (i.grams || 0), 0), when = [due ? schedDateStr(due) : "", x.method === "pickup" ? (x.pickupTime || "") : ""].filter(Boolean).join(" ");
       prog.items.forEach(i => { const nm = i.herb || i.name, h = nm ? findHerbByName(nm) : null; if (h && phIsFormula(h) && !h.stopped && (+h.qty || 0) < (+i.grams || 0) && !need.has(h.id)) need.set(h.id, { h, d: due }); });
-      rows.push({ key: "sp:" + x.id, d: due || "9990", o: 0, sid: x.id, title: `${x.method === "pickup" ? "Pickup" : "Postage"}${when ? " " + when : ""} · ${pat}`,
-        sub: empty ? "Prescription has no herbs. Open it to finish before you prepare." : `${prog.items.length} herb${prog.items.length === 1 ? "" : "s"} · ${phFmtG(gram)} g · ${prog.items.length - prog.weighedN} to weigh, ${prog.finalN - prog.checksN} checks`,
+      const psh = x.method === "pickup" && due ? phDayShelf(due) : "";   // a pickup's clinic comes from its day (booking override, else weekday), as Dispense does
+      rows.push({ key: "sp:" + x.id, d: due || "9990", o: 0, sid: x.id, sh: psh, title: `${x.method === "pickup" ? "Pickup" : "Postage"}${when ? " " + when : ""} · ${pat}`,
+        sub: (psh ? PH_SHELVES[psh].name + " · " : "") + (empty ? "Prescription has no herbs. Open it to finish before you prepare." : `${prog.items.length} herb${prog.items.length === 1 ? "" : "s"} · ${phFmtG(gram)} g · ${prog.items.length - prog.weighedN} to weigh, ${prog.finalN - prog.checksN} checks`),
         btns: [["Patient", `data-sched-prep-patient="${esc(t ? (presPatientFor(t) || t.name) : "")}"`], ["Edit prescription", t ? `data-sched-prep-presc="${t.id}"` : "disabled"]].concat(empty ? [] : [[prog.weighedN || prog.checksN ? "Resume" : "Prepare", `data-ph-dash-prep-open="${x.id}"`]]) });
     });
     const trows = phDashTRows();
@@ -68799,6 +68822,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (jarsN && phDaysSince(fLast) >= PH_COUNT_DUE_DAYS) rows.push({ key: "cf", d: "9993", o: 4, title: "Count formulas", sub: `${jarsN} jars${fLast ? " · last " + phShortDate(fLast) : ""}`, btns: [["Count", `data-ph-cnt-open="1"`]] });
     if (phDaysSince(hLast) >= PH_HERB_COUNT_DUE_DAYS) rows.push({ key: "ch", d: "9994", o: 5, title: "Count herbs", sub: hLast ? "Last " + phShortDate(hLast) : "Never counted", btns: [["Count", `data-ph-tab="stocktake"`]] });
     rows.sort((a, b) => a.d.localeCompare(b.d) || a.o - b.o);
+    { const cn = phClinicNow(); if (cn !== "all") for (let i = rows.length - 1; i >= 0; i--) if (rows[i].sh && rows[i].sh !== cn) rows.splice(i, 1); }
     const live = new Set(rows.map(r => r.key)), dn = [];
     all.filter(x => x.dispensedAt && phNxDayOf(x.dispensedAt) === today && !live.has("sp:" + x.id)).forEach(x => {
       const t = PRESC.items.find(p => p.id === x.prescriptionId);
@@ -82120,8 +82144,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // a clinic's own order list (Acupreg, Lotus): what is low at THAT shelf, its low line, and the grams that arrived there
   function phShelfOrderCardHtml(s, hit, nm, sup) {
     const f = PH_SHELVES[s].f, name = PH_SHELVES[s].name, list = phShelfOrderList(s).filter(hit);
-    const rows = list.map(h => `<tr><td>${nm(h)}</td><td>${sup(h)}</td><td class="num"><span class="ph-pp-low" title="Low at ${name}"></span>${phFmtG(+h[f] || 0)}</td><td class="num"><input type="number" min="0" step="10" class="field-bare ph-ac-low" data-shelf-low="${s}:${esc(h.id)}" value="${phShelfLow(h, s)}" aria-label="Low at, grams"></td><td><span class="ph-ac-arr"><input type="number" min="1" step="10" class="field-bare" aria-label="Grams arrived at ${name}"><button type="button" class="btn-save" data-shelf-arr="${s}:${esc(h.id)}">Add</button></span></td></tr>`).join("");
-    return `<div class="ph-ost-card" style="--cl:${phShelfColour(s)}"><div class="ph-ost-scroll"><table class="ph-ost-tbl acupreg ph-clin-tbl"><thead><tr><th>Herb</th><th>Supplier</th><th class="num">Left (g)</th><th class="num">Low at (g)</th><th>Arrived (g)</th></tr></thead><tbody>${rows || `<tr><td class="ph-ost-empty" colspan="5">Nothing running low at ${name}</td></tr>`}</tbody></table></div></div>`;
+    const rows = list.map(h => `<tr><td class="c-herb">${nm(h)}</td><td class="c-sup" data-label="Supplier">${sup(h)}</td><td class="num" data-label="Left (g)"><span class="ph-pp-low" title="Low at ${name}"></span>${phFmtG(+h[f] || 0)}</td><td class="num" data-label="Low at (g)"><input type="number" min="0" step="10" class="field-bare ph-ac-low" data-shelf-low="${s}:${esc(h.id)}" value="${phShelfLow(h, s)}" aria-label="Low at, grams"></td><td class="c-act" data-label="Arrived (g)"><span class="ph-ac-arr"><input type="number" min="1" step="10" class="field-bare" aria-label="Grams arrived at ${name}"><button type="button" class="btn-save" data-shelf-arr="${s}:${esc(h.id)}">Add</button></span></td></tr>`).join("");
+    return `<div class="ph-ost-card" style="--cl:${phShelfColour(s)}"><div class="ph-ost-scroll"><table class="ph-ost-tbl acupreg ph-clin-tbl"><thead><tr><th class="c-herb">Herb</th><th class="c-sup">Supplier</th><th class="num">Left (g)</th><th class="num">Low at (g)</th><th class="c-act">Arrived (g)</th></tr></thead><tbody>${rows || `<tr><td class="ph-ost-empty" colspan="5">Nothing running low at ${name}</td></tr>`}</tbody></table></div></div>`;
   }
   document.addEventListener("click", e => {
     const b = e.target instanceof Element && e.target.closest("[data-shelf-arr]");
@@ -83078,7 +83102,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // supplier-change entries (2026-08-16 spec: "every change writes a log
     // entry ... so it's traceable") are the same story -- no grams to show,
     // no dedicated screen asked for, just traceable in the data.
-    return PHARMACY.log.filter(e => (phLogKind === "all" ? (e.kind !== "price-review" && e.kind !== "supplier-change" && e.kind !== "patient-merge" && e.kind !== "herb-merge")
+    return phLogOfClinic().filter(e => (phLogKind === "all" ? (e.kind !== "price-review" && e.kind !== "supplier-change" && e.kind !== "patient-merge" && e.kind !== "herb-merge")
       : phLogKind === "dispense" ? (!e.kind || e.kind === "dispense") : e.kind === phLogKind)
       && (!cutoff || e.date >= cutoff) && hit(e))
       .sort((a, b) => b.date > a.date ? 1 : b.date < a.date ? -1 : 0);
@@ -83195,7 +83219,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // her call 2026-08-24: the page only ever had ONE number ("N movements");
     // these four are new, computed fresh here the same way every other
     // dispensed-count on the app already is (kind === "dispense", by date)
-    const dispensed = PHARMACY.log.filter(e => e.kind === "dispense");
+    const dispensed = phLogOfClinic().filter(e => e.kind === "dispense");
     const todayKey = keyOf(TODAY);
     const weekAgo = new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - 6);   // today + the 6 days before it
     const monthStart = new Date(TODAY.getFullYear(), TODAY.getMonth(), 1);
@@ -83213,7 +83237,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       logHeadEl.classList.toggle("ph-ds-polish", sheet);
       // her 2026-11-08 ask ("merge these lines into one"): the search/kind/range toolbar used to be its own plain row under the dark header --
       // it now rides on the title line itself (actionHtml), the stat tiles stay their own row (stripHtml) right below it, same dark block.
-      logHeadEl.innerHTML = phShellHead("Stock movements", `${PHARMACY.log.length} movements`, phShellStripHtml([
+      logHeadEl.innerHTML = phShellHead("Stock movements", `${phLogOfClinic().length} movements`, phShellStripHtml([
         tile(dispensed.filter(e => e.date === todayKey).length, "Today", "today", "clock"),
         tile(inRangeSince(weekAgo), "This week", "week", "cal"),
         tile(inRangeSince(monthStart), "This month", "month", "cal"),
@@ -83264,7 +83288,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
           <div id="presLog"></div>
         </section>`;
     }
-    const all = PHARMACY.log.filter(e => !e.kind || e.kind === "dispense");
+    const all = phLogOfClinic().filter(e => !e.kind || e.kind === "dispense");
     const todayKey = keyOf(TODAY);
     const weekKey = keyOf(new Date(TODAY.getFullYear(), TODAY.getMonth(), TODAY.getDate() - 6));
     const monthKey = todayKey.slice(0, 7) + "-01";
@@ -85133,7 +85157,7 @@ or changing anything in Cliniko.
     // before that page has ever been opened
     if (!document.getElementById("presLog")) return;
     const q = presLogQ.trim().toLowerCase();
-    const all = PHARMACY.log.filter(e => !e.kind || e.kind === "dispense").sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0));
+    const all = phLogOfClinic().filter(e => !e.kind || e.kind === "dispense").sort((a, b) => (b.date || "").localeCompare(a.date || "") || (b.at || 0) - (a.at || 0));
     const rows = q ? all.filter(e => (e.patient || "").toLowerCase().includes(q)
       || (e.what || "").toLowerCase().includes(q) || (e.date || "").startsWith(q)
       || (e.items || []).some(x => (x.name || "").toLowerCase().includes(q))) : all;

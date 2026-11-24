@@ -18107,3 +18107,10 @@ Her "i cant add herbs to order for acupreg", with a screenshot of the Acupreg ta
 ## 2026-11-24 — one shared low line per herb (synth22 batch 2, her "one shared low line")
 - `phShelfLow(h, s)` now answers `h.low` at every clinic (CBD, Acupreg, Lotus). `h.lowAC` / `h.lowPP` are only read while `h.low` is empty (then Acupreg / Lotus fall back to 50 g, CBD to none). Nothing writes them any more: the Acupreg / Lotus "Low at" cell, the To order "Low at" box and the generic cell edit all write `h.low` and delete the older two.
 - Checked (function level, sandbox): `phShelfLow` for h.low set / only lowAC / empty at each clinic. NOT driven on the real pages.
+
+## 2026-11-24 — synth22 batch 2: the three clinics seen the same way (CBD / Acupreg / Lotus)
+- **Clinic row on Stock statistics, Stock movements, Dispense history** (Suppliers stays without one, `phPlaceHeadHtml`). The pages follow the clinic picked: `phLogOfClinic()` filters the log by `phLogShelf(e)` (entry `.shelf`, else the shelf its `deducted` herbs came off, else CBD: older entries carry none). Acupreg / Lotus Stock statistics is its own short sheet (`phClinicStatsHtml`: kept here, at zero, low, grams, value at cost) from that shelf only.
+- **Dashboard Do next:** a pickup's clinic comes from its day (`phDayShelf(due)`, as Dispense does); the row's sub-line starts with the clinic name and a clinic picked hides other clinics' pickups (postage and the rest stay).
+- **Acupreg / Lotus To order card** reads as CBD's: Herb column wraps, no sideways scroll at 1220 or 360 (phone: one block per herb), one solid Add. Checked scroll width = client width at 700 and 328 wide with made-up rows; not on her real To order page.
+- Checked at function level in the sandbox: `phLogShelf`, `phClinicStatsHtml`, `phNxRows`, `phLogOfClinic`. NOT driven on the real pages; audits (tap / style / titlebar / voice) not run.
+- Not done: Stocktake / Inventory / Formula refill "same across the board" beyond the shared low line (already one clinic row; a closer look needs her real screens); Suppliers left as is.
