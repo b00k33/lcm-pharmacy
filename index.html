@@ -88229,7 +88229,7 @@ or changing anything in Cliniko.
     const col = name => head.indexOf(name.toLowerCase());
     const iFirst = col("First Name"), iLast = col("Last Name"), iPref = col("Preferred First Name"), iEmail = col("Email"),
       iMob = col("Mobile Phones"), iHome = col("Home Phones"), iWork = col("Work Phones"), iNext = col("Next Appointment"),
-      iDob = col("Date of Birth"), iSex = col("Sex");
+      iDob = col("Date of Birth"), iSex = col("Sex"), iTitle = col("Title"), iOcc = col("Occupation"), iEmg = head.map((h, i) => /^emergency/.test(h) ? i : -1).filter(i => i >= 0);
     if (iFirst < 0 || iLast < 0) return { error: "That doesn't look like a Cliniko patient export — no First Name / Last Name columns." };
     const known = phClinikoKnownKeys();
     const todayKey = keyOf(TODAY);
@@ -88257,9 +88257,13 @@ or changing anything in Cliniko.
       const dob = /^\d{4}-\d{2}-\d{2}/.test(dobRaw) ? dobRaw.slice(0, 10) : "";
       const sexRaw = iSex >= 0 ? (r[iSex] || "").trim().toLowerCase() : "";
       const sex = /^f/.test(sexRaw) ? "F" : /^m/.test(sexRaw) ? "M" : "";
-      if (phone || email || dob || sex) {
+      const titleV = iTitle >= 0 ? (r[iTitle] || "").trim() : "", occV = iOcc >= 0 ? (r[iOcc] || "").trim() : "", emgV = iEmg.map(i => (r[i] || "").trim()).filter(Boolean).join(" · ");
+      if (phone || email || dob || sex || titleV || occV || emgV) {
         const pr = phPatientRec(name);
         if (pr) {
+          if (titleV && !pr.title) pr.title = titleV;
+          if (occV && !pr.occupation) pr.occupation = occV;
+          if (emgV && !pr.emergency) pr.emergency = emgV;
           if (phone) { if (pr.phone !== phone) { pr.phone = phone; pr.phoneFrom = exportDate; pr.phoneSrc = "export"; } st.phones++; }
           if (email) { pr.email = email; st.emails++; }
           if (dob && !pr.dob) { pr.dob = dob; st.dobs++; }
@@ -88567,13 +88571,14 @@ or changing anything in Cliniko.
   // Profile tab's Phone / Email (presContactFieldsHtml, 2026-09-16): saved on
   // change, never re-rendered -- same rule as the check-in card's fields.
   document.addEventListener("change", e => {
-    const el = e.target && e.target.closest ? e.target.closest("[data-pres-phone], [data-pres-email]") : null;
+    const el = e.target && e.target.closest ? e.target.closest("[data-pres-phone], [data-pres-email], [data-pres-cinfo]") : null;
     if (!el) return;
     const t = (PRESC.items || []).find(x => x.id === presOpenId);
     const rec = t ? phPatientRec(presPatientFor(t) || t.name) : null;
     if (!rec) return;
     const v = el.value.trim();
     if (el.matches("[data-pres-phone]")) { rec.phone = v || undefined; rec.phoneFrom = ""; rec.phoneSrc = ""; }
+    else if (el.matches("[data-pres-cinfo]")) { const ck = el.dataset.presCinfo; if (ck === "title" || ck === "occupation" || ck === "emergency") rec[ck] = v || undefined; }   // her 2026-11-24 "add all three": Title, Occupation, Emergency contact
     else rec.email = v || undefined;
     savePharmacy();
     if (el.closest("[data-today-ask]")) phTodayAskRefresh();   // the Today's visit ask line redraws itself (her 2026-11-01 data-check pick)
@@ -111104,6 +111109,9 @@ Difficult to sweat|no_sweat_tend:r`;
         ${f("Phone", "presEditPhone", `<input type="tel" id="presEditPhone" class="field-bare" data-pres-phone="1" value="${esc(rec.phone || "")}" placeholder="Add" autocomplete="off" inputmode="tel">`, phoneChanged ? "changed" : "")}
         ${f("Email", "presEditEmail", `<input type="email" id="presEditEmail" class="field-bare" data-pres-email="1" value="${esc(rec.email || "")}" placeholder="Add" autocomplete="off" inputmode="email">`, emailChanged ? "changed" : "")}
         ${f("DOB", "presEditDob", phDobHtml('data-pres-dob="1"', rec.dob, "presEditDob"), dobChanged ? "changed" : "")}
+        ${f("Title", "presEditTitle", `<input type="text" id="presEditTitle" class="field-bare" data-pres-cinfo="title" value="${esc(rec.title || "")}" placeholder="Add" autocomplete="off" maxlength="20">`)}
+        ${f("Occupation", "presEditOcc", `<input type="text" id="presEditOcc" class="field-bare" data-pres-cinfo="occupation" value="${esc(rec.occupation || "")}" placeholder="Add" autocomplete="off" maxlength="80">`)}
+        ${f("Emergency contact", "presEditEmg", `<input type="text" id="presEditEmg" class="field-bare" data-pres-cinfo="emergency" value="${esc(rec.emergency || "")}" placeholder="Add" autocomplete="off" maxlength="120">`)}
       </section>`;
     const b = phBodyLatest(rec) || {};
     const binp = (k, lab, unit) => f(`${lab} <span class="faint">${unit}</span>`, `presBody_${k}`, `<input type="text" inputmode="decimal" id="presBody_${k}" class="field-bare" data-pres-body="${k}" value="${b[k] != null ? b[k] : ""}" autocomplete="off" placeholder="Add">`);
@@ -175777,7 +175785,7 @@ Dosage: {dosage}
   const PH_CCARD_EMAIL_SHAPE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/;
   function phContactCardParse(text) {
     const raw0 = String(text || "");
-    if (!raw0.trim()) return { ok: false, name: null, phone: null, email: null, address: null };
+    if (!raw0.trim()) return { ok: false, name: null, phone: null, email: null, address: null, title: null, occupation: null, emergency: null };
     // Parens dropped up front, not just spaces/dashes/dots -- a landline
     // written "(02) 0000 0000" put a ")" directly after the area code, which
     // broke the phone pattern below (found testing: it matched NOTHING and
@@ -175786,8 +175794,19 @@ Dosage: {dosage}
     // bare paren pair in practice, and a "(Mobile)"/"(Home)" label still
     // matches isLabelOnly below with the parens gone.
     const raw = raw0.replace(PH_CCARD_NOISE, " ").replace(/[()]/g, " ");
-    const lines = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
-    const emailM = raw.match(PH_CCARD_EMAIL_SHAPE);
+    const linesAll = raw.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    // her 2026-11-24 "add all three": Title, Occupation and Emergency contact are read from a "Label" line with its words on the same line or the next one (an
+    // emergency contact keeps a name and a phone, up to two lines); those lines are taken out first, so an emergency phone or a job is never the patient's own phone or name
+    const CC_LBL = /^(title|occupation|emergency contact( details?)?|address(es)?|phone( number)?|email|mobile|home|work|contact information|date of birth|dob|sex|gender|privacy policy)\b/i;
+    const taken = new Set(), lab = (re, more) => {
+      const i = linesAll.findIndex((l, ix) => !taken.has(ix) && re.test(l)); if (i < 0) return null;
+      const parts = [linesAll[i].replace(re, "").replace(/^\s*:?\s*/, "").trim()].filter(Boolean); taken.add(i);
+      for (let j = i + 1; j < linesAll.length && j <= i + (more || 1) && (more || !parts.length) && !CC_LBL.test(linesAll[j]); j++) { parts.push(linesAll[j]); taken.add(j); if (!more) break; }
+      return parts.join(" · ").replace(/\s{2,}/g, " ").replace(/\s*\b(?:mobile|home|work)\b\s*$/i, "").trim().slice(0, 120) || null;
+    };
+    const title = lab(/^title\b/i), occupation = lab(/^occupation\b/i), emergency = lab(/^emergency contact( details?)?\b/i, 2);
+    const lines = linesAll.filter((_, i) => !taken.has(i)), rawM = lines.join("\n");
+    const emailM = rawM.match(PH_CCARD_EMAIL_SHAPE);
     const email = emailM ? emailM[0] : null;
     // AU phone shapes: a mobile (04...) or a landline (02/03/07/08...),
     // optionally +61, with spaces/dashes/dots anywhere between digits -- her
@@ -175797,7 +175816,7 @@ Dosage: {dosage}
     // separator char) missed that -- found testing, it matched nothing and
     // the number fell through to the name guess instead. FIRST match only
     // (her call 6, above).
-    const phoneM = raw.match(PH_CCARD_PHONE_SHAPE);
+    const phoneM = rawM.match(PH_CCARD_PHONE_SHAPE);
     let phone = phoneM ? phoneM[0].replace(/[^\d+]/g, "") : null;
     if (phone) {
       if (/^0?4\d{8}$/.test(phone)) phone = ("0" + phone.replace(/^0?/, "")).replace(/(\d{4})(\d{3})(\d{3})$/, "$1 $2 $3");
@@ -175848,7 +175867,7 @@ Dosage: {dosage}
       if (PH_CCARD_EMAIL_SHAPE.test(l) || PH_CCARD_PHONE_SHAPE.test(l)) return false;
       return l.length > 1 && l.length < 40;
     }) || null;
-    return { ok: !!(phone || email || address), name, phone, email, address };
+    return { ok: !!(phone || email || address || title || occupation || emergency), name, phone, email, address, title, occupation, emergency };
   }
   // Same {key,label,display} / {key,label,current,value} shape
   // phIntakeComputeDiff already uses, so the box below can share its exact
@@ -175873,6 +175892,12 @@ Dosage: {dosage}
     // rule the manual "+ Add" flow already follows (phPatientSaveAddress
     // de-dupes an exact repeat on its own)
     if (parsed.address) newItems.push({ key: "address", label: "Address", display: `Address: ${parsed.address}` });
+    [["title", "Title"], ["occupation", "Occupation"], ["emergency", "Emergency contact"]].forEach(([k, lb]) => {
+      const v = parsed[k]; if (!v) return;
+      const cur = rec && rec[k];
+      if (!cur) newItems.push({ key: k, label: lb, display: `${lb}: ${v}` });
+      else if (cur !== v) conflicts.push({ key: k, label: lb, current: cur, value: v });
+    });
     return { newItems, conflicts };
   }
   // Writes whatever her choices settled on. Phone/email only ever replace
@@ -175899,12 +175924,14 @@ Dosage: {dosage}
     diff.newItems.forEach(n => {
       if (n.key === "phone" && rec) { rec.phone = parsed.phone; rec.phoneFrom = ""; rec.phoneSrc = "paste"; }
       else if (n.key === "email" && rec) rec.email = parsed.email;
+      else if ((n.key === "title" || n.key === "occupation" || n.key === "emergency") && rec) rec[n.key] = parsed[n.key];
       else if (n.key === "address" && nameForWrite) phPatientSaveAddress(nameForWrite, parsed.address, addrLabel);
     });
     diff.conflicts.forEach(c => {
       if (!winner(c)) return;
       if (c.key === "phone" && rec) { rec.phone = parsed.phone; rec.phoneFrom = ""; rec.phoneSrc = "paste"; }
       else if (c.key === "email" && rec) rec.email = parsed.email;
+      else if ((c.key === "title" || c.key === "occupation" || c.key === "emergency") && rec) rec[c.key] = parsed[c.key];
     });
     if (rec) savePharmacy();
     return resolvedName;
