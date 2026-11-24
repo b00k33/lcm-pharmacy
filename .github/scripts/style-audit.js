@@ -53,6 +53,7 @@
     const phone = W.innerWidth <= 640, scale = phone ? SCALE_PH : SCALE_PC, allow = opts.palette === "app" ? ["neutral", "teal", "red", "gold"] : ["neutral", "teal", "red"];
     const cs = el => W.getComputedStyle(el), sizes = {}, offS = new Map(), offC = new Map(), side = new Map(), offW = new Map(), chipL = new Map(), looks = new Set();
     const WEIGHTS = ["400", "600", "700"];
+    const DATA_MARK = ".ph-fbr-bar";   // a formula's own colour on the Fang Bing Ren Table view (a data mark by THE LOOK: "formula / pattern family colours"; her 2026-11-24 "A bars")
     const NOT_CHIP = "[class*='fold'], [class*='head'], [class*='hd'], .ph-flow-rail *, tr, td, th, .ph-tl-row, .ph-tb-i, .ph-appt-block, .ph-cal-day, .ph-cp-day, .ph-pulse-cell, .gf-row, .sg, .gf-pr, .tcd-pg, .gf-t, .ph-inv-compact-tap, .ph-hx-qrow, .ph-cx-row, .ph-fbr-row, .ph-diet-cell, .ph-rx-card, .ph-fu-summary, .ph-dose-step-main, button.item[class*='cat-'], .ph-fbr-t, .ph-shell-cell, .zl, .ph-pat-lg, .gf-ani-th, .ph-log-row, .ph-pat-cl, .ph-dash-srow, .ph-tgz-zl, .ph-cx-gl, .ph-rfc-wt, .ph-apptcal-daylabel, .ph-dp-row, .ph-sec-toggle, .ph-band-name, .ph-mc-grp > .gl, .ph-vsum-ln, .ph-sg-row";   // + the 2026-11-19 sweep: sign rows, log rows, day labels, the name band
     const TAPS = "button, select, summary, a[href], [role=button], input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]):not([type=color]):not([type=file])";
     const hexRgb = h => { h = String(h || "").trim(); const m = /^#([0-9a-f]{6})$/i.exec(h); return m ? { r: parseInt(m[1].slice(0, 2), 16), g: parseInt(m[1].slice(2, 4), 16), b: parseInt(m[1].slice(4, 6), 16) } : rgb(h); };
@@ -71,13 +72,13 @@
         if (!WEIGHTS.includes(st.fontWeight)) note(offW, "weight " + st.fontWeight, el);
         const f = family(rgb(st.color)); if (f && !allow.includes(f)) note(offC, "text " + f, el);
       }
-      const bg = family(rgb(st.backgroundColor)); if (bg && !allow.includes(bg)) note(offC, "fill " + bg, el);
+      const bg = family(rgb(st.backgroundColor)); if (bg && !allow.includes(bg) && !el.matches(DATA_MARK)) note(offC, "fill " + bg, el);
       // one chip look: a tappable 18-52px tall that is not a row, a head or the rail
       if (el.matches(TAPS) && r.height >= 18 && r.height <= 52 && !el.matches(NOT_CHIP)) {
         const typed = /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName), words = (el.innerText || "").trim(), bw = parseFloat(st.borderTopWidth) || 0;
         if (bw > 1.05 && st.borderTopStyle !== "none") note(chipL, "line " + st.borderTopWidth + " (want 1px)", el);
         const fc = rgb(st.backgroundColor), herb = hexRgb(st.getPropertyValue("--ph-herb"));
-        if (fc && fc.a > 0.9 && family(fc) === "teal" && herb && Math.abs(fc.r - herb.r) + Math.abs(fc.g - herb.g) + Math.abs(fc.b - herb.b) > 24 && (fc.r + fc.g + fc.b) / 3 < 140) note(chipL, "solid fill " + st.backgroundColor + " (want the page colour)", el);
+        if (fc && fc.a > 0.9 && family(fc) === "teal" && !el.matches(DATA_MARK) && herb && Math.abs(fc.r - herb.r) + Math.abs(fc.g - herb.g) + Math.abs(fc.b - herb.b) > 24 && (fc.r + fc.g + fc.b) / 3 < 140) note(chipL, "solid fill " + st.backgroundColor + " (want the page colour)", el);
         if (!typed && words && /\w/.test(words) && st.fontWeight !== "600") note(chipL, "words " + st.fontWeight + " (want 600)", el);
         looks.add([Math.round(r.height), st.borderTopLeftRadius, bw ? "1line" : "noline", st.fontSize, st.fontWeight].join(" "));
       }
