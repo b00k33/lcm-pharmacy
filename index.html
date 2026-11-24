@@ -33899,6 +33899,10 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   #pharmacyPage .ph-clin-add { display: flex; align-items: center; gap: 8px; padding: 10px 12px; flex-wrap: wrap; background: color-mix(in srgb, var(--cl) 6%, white); }
   #pharmacyPage#pharmacyPage .ph-clin-add select { flex: 1 1 220px; min-width: 0; height: 32px; border-radius: 6px !important; font-size: var(--fs-13); }
   #pharmacyPage .ph-clin-add input { width: 96px; }
+  /* the clinic Stocktake wears CBD's look (her 2026-11-25): pale table head, the 32px chip box for a count, no clinic-colour wash behind Save (Lotus's red would read as short) */
+  #pharmacyPage#pharmacyPage #phStocktakeWrap .ph-clin-tbl thead th { height: 32px; padding: 0 12px; background: var(--ph-herb-tint); color: var(--ph-deep); font: 700 var(--fs-10-5)/1 var(--font-body); letter-spacing: .08em; text-transform: uppercase; border: 0; }
+  #pharmacyPage#pharmacyPage #phStocktakeWrap .ph-clin-tbl input[data-clin-count] { width: 96px; height: 32px; box-sizing: border-box; padding: 0 10px; border: 1px solid var(--ph-line); border-radius: 6px; background: #fff; font: 400 var(--fs-13) var(--font-body); text-align: right; }
+  #pharmacyPage#pharmacyPage #phStocktakeWrap .ph-clin-sheet .ph-clin-add { background: transparent; padding: 10px 0 0; }
   #pharmacyPage .ph-clin-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 10px; max-height: 220px; overflow-y: auto; background: color-mix(in srgb, var(--cl) 6%, white); }
   #pharmacyPage .ph-clin-chip { height: 32px; padding: 0 12px; border: 1px solid var(--ph-line); border-radius: 6px; background: #fff; color: var(--ph-ink); font: 600 var(--fs-13) var(--font-body); cursor: pointer; }
   #pharmacyPage .ph-clin-chip.on { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
@@ -41960,6 +41964,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   function phClinicStocktakeHtml(sc) {
     const f = PH_SHELVES[sc].f, nm = PH_SHELVES[sc].name;
     const rows = phShelfHerbs(sc).filter(h => !h.stopped).sort(phByName).map(h => `<tr><td class="ph-name">${phHerbCode(h) ? `<span class="ph-code">${esc(phHerbCode(h))}</span> ` : ""}<span class="ph-dash-name">${esc(phPinyinName(h))}</span></td><td class="ph-num" data-label="Was">${phFmtG(+h[f])} g</td><td class="ph-num" data-label="Counted (g)"><input type="number" min="0" step="1" class="field-bare" data-clin-count="${esc(h.id)}" placeholder="${phFmtG(+h[f])}" aria-label="Counted at ${nm}, grams"></td></tr>`).join("");
+    const nRows = phShelfHerbs(sc).filter(h => !h.stopped).length, hist = (PHARMACY.clinStocktakes || []).filter(r => r.shelf === sc);
+    // the same two cards as CBD's Stocktake page (her 2026-11-25 "why does the Lotus stocktake page look different"): What am I counting today? on the left (the herbs to check, then the counts), the clinic's own history on the right
+    const histHtml = hist.length ? `<div class="ph-stocktake-hist-list">${hist.map(r => { const d = parseKey(r.date); return `<div class="ph-stocktake-hist-row"><div class="ph-stocktake-hist-main"><div class="nm">Herbs</div><div class="sub">${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()} · ${r.checked} checked</div></div><div class="ph-stocktake-hist-adj">${r.adjusted} adjusted</div></div>`; }).join("")}</div>` : `<div class="fam-empty">No stocktakes</div>`;
+    return `<div class="ph-stocktake-page" style="--cl:${phShelfColour(sc)}"><section class="ph-widget ph-stocktake-page-main"><div class="section-head"><h2>What am I counting today?</h2><span class="rule"></span></div><div class="ph-stocktake-scope"><span>Herbs<span class="s">to check</span></span><span class="n">${nRows}</span></div>` + phClinicStocktakeTbl(sc, nm, rows) + `</section><section class="ph-widget ph-stocktake-page-history"><div class="section-head"><h2>Stocktake history</h2><span class="rule"></span></div>${histHtml}</section></div>`;
+  }
+  function phClinicStocktakeTbl(sc, nm, rows) {
     return `<div class="ph-clin-sheet" style="--cl:${phShelfColour(sc)}"><table class="ph-table ph-clin-tbl"><thead><tr><th>${nm} stocktake</th><th class="num">Was</th><th class="num">Counted (g)</th></tr></thead><tbody>${rows || `<tr><td colspan="3" class="ph-ost-empty">Nothing is kept at ${nm} yet</td></tr>`}</tbody></table><div class="ph-clin-add"><button type="button" class="btn-save" data-clin-count-save="${sc}">Save counts</button></div></div>`;
   }
   // a clinic page keeps the page title bar (with the clinic switch) and swaps only what is under it
@@ -42030,7 +42040,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (sc) {
       phClinicPageBody(wrap, phClinicStocktakeHtml(sc));
       // the past stocktakes and the print are CBD's: not shown under another clinic
-      const meta = wrap.querySelector(".ph-shell-titlebar-meta"); if (meta) meta.textContent = "";
+      const meta = wrap.querySelector(".ph-shell-titlebar-meta"); if (meta) { const hn = (PHARMACY.clinStocktakes || []).filter(r => r.shelf === sc).length; meta.textContent = `${hn} past stocktake${hn === 1 ? "" : "s"}`; }
       wrap.querySelectorAll(".ph-shell-topblock button, .ph-tbm-bar button").forEach(b => { if (/print last stocktake/i.test(b.textContent)) b.remove(); });
     }
     const ln = phStkLineHtml();
@@ -82227,13 +82237,15 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const sv = e.target instanceof Element && e.target.closest("[data-clin-count-save]");
     if (sv) {
       const sc = sv.dataset.clinCountSave, f = PH_SHELVES[sc] && PH_SHELVES[sc].f; if (!f) return;
-      let n = 0;
+      let n = 0, chk = 0;
       sv.closest(".ph-clin-sheet").querySelectorAll("[data-clin-count]").forEach(i => {
         if (i.value === "") return;
+        chk++;
         const h = PHARMACY.herbs.find(x => x.id === i.dataset.clinCount), v = Math.max(0, Math.floor(parseFloat(i.value)));
         if (h && Number.isFinite(v) && v !== +h[f]) { h[f] = v; phAfterQtyChange(h); n++; }
       });
-      if (n && savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
+      if (chk) (PHARMACY.clinStocktakes = PHARMACY.clinStocktakes || []).unshift({ id: uid(), shelf: sc, date: keyOf(TODAY), checked: chk, adjusted: n });   // the clinic's own history, never CBD's (CBD's last-count dates and print read PHARMACY.stocktakes)
+      if ((n || chk) && savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
       presSavedToast(n ? `${n} count${n === 1 ? "" : "s"} saved at ${PH_SHELVES[sc].name}` : "Nothing changed");
       renderPhStocktakePage();
       return;
