@@ -22068,6 +22068,15 @@
   #pharmacyPage .ph-hbs em { font: 400 var(--fs-11-5) var(--font-body); font-style: normal; color: var(--ph-soft); }
   #pharmacyPage .ph-hbs em.out::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--ph-zero); vertical-align: middle; }
   #pharmacyPage .ph-hbs .ph-meal-bar { margin-left: auto; }
+  /* her 2026-11-24 synth22 (d): the Phase card + the Herbs row, ONE quiet line; a tap opens both */
+  #pharmacyPage .ph-tvq { margin: 0 0 10px; }
+  #pharmacyPage .ph-tvq > summary { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 6px; background: var(--ph-herb-tint); font: 600 var(--fs-13) var(--font-body); color: var(--ph-ink); cursor: pointer; list-style: none; }
+  #pharmacyPage .ph-tvq > summary::-webkit-details-marker { display: none; }
+  #pharmacyPage .ph-tvq > summary .l { flex: 1 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  #pharmacyPage .ph-tvq > summary::after { content: "▾"; flex: none; color: var(--ph-soft); }
+  #pharmacyPage .ph-tvq[open] > summary { margin-bottom: 8px; }
+  #pharmacyPage .ph-tvq[open] > summary::after { content: "▴"; }
+  #pharmacyPage .ph-tvq .ph-hbs { margin: 0 0 8px; }
   #pharmacyPage .ph-today-nudges .cap { font-size: var(--fs-10-5); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--ph-ink); margin: 0 0 2px; }
   #pharmacyPage .ph-today-nudge { display: flex; align-items: center; gap: 8px; padding: 6px 0; transition: opacity .2s ease; }
   #pharmacyPage .ph-today-nudge.gone { opacity: 0; pointer-events: none; }
@@ -109923,9 +109932,33 @@ Difficult to sweat|no_sweat_tend:r`;
   // in place: the line(s), the rail (its chip, the Herbs step, Next) and the Treatment page's Still taking
   function phHbsPaint(name) {
     document.querySelectorAll("#pharmacyPage [data-hbs-line]").forEach(n => { if (n.dataset.hbsLine === name) n.outerHTML = phHbsLineHtml(name); });
+    phTvqPaint(name);
     presFlowRailRefresh();
     try { if (document.querySelector("#pharmacyPage [data-pres-acu-herbinstruct]")) presAcuOpenRefresh(); } catch (e) { /* the Treatment page is not open */ }
   }
+  // her 2026-11-24 synth22 pick (d): the Phase card and the Herbs row fold into ONE quiet line on the visit page (phase, medicines, history, last visit, the herbs answer);
+  // a tap opens both as they were. The line is read from the two blocks' own words (never a second reader) and repaints whenever either block does.
+  let phTvqOpen = false;   // view state: stays open across a repaint
+  function phTvqWords(root, name) {
+    const w = [], ph = root.querySelector(".ph-vsum-c.ph"); if (ph) w.push(ph.textContent.trim());
+    const pick = lb => { const l = [...root.querySelectorAll(".ph-vsum-ln")].find(x => { const b = x.querySelector(".lb"); return b && b.textContent === lb; }); const v = l && l.querySelector(".v"); return v ? v.textContent.trim() : ""; };
+    const cut = t => t.length > 36 ? t.slice(0, 35) + "…" : t;
+    const med = pick("Medicines"); if (med) w.push(cut(med));
+    const hx = pick("History"); if (hx) w.push(cut(hx));
+    const lv = pick("Last visit"); if (lv) w.push("Last " + lv);
+    const h = name ? phHbsOf(name) : null; if (h) w.push("Herbs " + (h.v ? PH_HBS_LBL[h.v] : "to answer"));
+    return w.join(" · ") || "Visit";
+  }
+  function phTvqHtml(name, vsum, hbs) {
+    if (!vsum && !hbs) return "";
+    const t = document.createElement("div"); t.innerHTML = vsum + hbs;
+    return `<details class="ph-tvq" data-tvq="${esc(name)}"${phTvqOpen ? " open" : ""}><summary><span class="l">${esc(phTvqWords(t, name))}</span></summary>${vsum}${hbs}</details>`;
+  }
+  function phTvqPaint(name) {
+    const d = document.querySelector("#pharmacyPage [data-tvq]"), l = d && d.querySelector("summary .l");
+    if (l) l.textContent = phTvqWords(d, name);
+  }
+  document.addEventListener("toggle", e => { const d = e.target; if (d && d.matches && d.matches("details.ph-tvq")) phTvqOpen = d.open; }, true);
   document.addEventListener("click", e => {
     const T = e.target; if (!T || !T.closest) return;
     if (T.closest("#pharmacyPage [data-hbs-open]")) { presHbsMenu = !presHbsMenu; presFlowRailRefresh(); return; }
@@ -132531,6 +132564,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const el = document.querySelector("#pharmacyPage [data-vsum]"), rec = phPatientPeek(name);
     if (!el || !rec) return;
     try { el.outerHTML = phVsumHtml(name, rec, phCxPlanOf((PRESC.items || []).find(x => x.id === presOpenId) || {}, name)) || "<span data-vsum hidden></span>"; } catch (e) { /* next full render */ }
+    try { phTvqPaint(name); } catch (e) { /* the line repaints on the next full draw */ }
   }
   // the care team (her 2026-11-20 mock 3: "typed once, on Patient details"): rec.care = { clinic, doctor, gp, midwife }, one write door
   // ([data-pres-care]); the visit summary and a transfer's Doctor box read it
@@ -132554,13 +132588,13 @@ Difficult to sweat|no_sweat_tend:r`;
     // table for a pain patient whose compass has no pain rows yet (her 2026-10-19 ask, phPfPainBlockHtml)
     const cx = phCxCardHtml(t, plan);
     const ren = phTvRenHtml(name, cx);   // the steps card (her 2026-11-19 two columns) holds Came in for as step 1, empty or not
-    const ask = phHbsLineHtml(name) + (ren.indexOf('class="ph-tvs') >= 0 ? "" : cx) + ren + phTodayNudgesHtml(name, rec) + phLvHtml(name, rec) + phMskWarnHtml(rec) + (phMskApplies(rec) && cx.indexOf('data-cx-pain="1"') < 0 ? phPfPainBlockHtml(name) : "");
+    const hbsLine = phHbsLineHtml(name), ask = (ren.indexOf('class="ph-tvs') >= 0 ? "" : cx) + ren + phTodayNudgesHtml(name, rec) + phLvHtml(name, rec) + phMskWarnHtml(rec) + (phMskApplies(rec) && cx.indexOf('data-cx-pain="1"') < 0 ? phPfPainBlockHtml(name) : "");
     // Treat: Fang Bing Ren's quick assess (return visits) above the three steps; the phase review on a phase's last visit (part 2)
     const treat = plan ? phTodayCarePlanEssentialsHtml(name, plan) : "";   // + the cycle review (part 3, step 5)
     setTimeout(phTodayStickyTop, 0);
     let vsum = "";
     try { vsum = phVsumHtml(name, rec, plan); } catch (e) { vsum = ""; }   // the summary never breaks the visit
-    return `<div class="ph-today ph-tv simple" data-today-host="1">${vsum}${ask}${treat}</div>`;
+    return `<div class="ph-today ph-tv simple" data-today-host="1">${phTvqHtml(name, vsum, hbsLine)}${ask}${treat}</div>`;
   }
   // her 2026-11-01 data-check pick (86 active patients: 18 no sex, 27 no birth date, 7 no phone; the Cliniko export carries
   // neither): Today's visit asks once for what is missing, one line in Worth a look, each a field. The fields are the Patient

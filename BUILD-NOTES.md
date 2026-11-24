@@ -17991,3 +17991,10 @@ Her synth22 item 1 ("give a range for the rating, like the 2-8 in More info"), h
 - The Today box and the First / Last cells show `2–8` as typed (`rgTx` in `phCxTblHtml`); `phCxHist` carries `rg`.
 - **Not covered:** a pain row (`p:` keys, `phCxPainScoreWrite`) takes the midpoint only (its score is the pain map's); Energy is unchanged. The box is 44px wide: `2–8` fits, a long range such as `2.5–7.5` scrolls inside it. No CSS change, so the tap, style and title-bar audits are not needed.
 - **Checked** in the sandbox with made-up data: the history keeps `rg`, 3 then 5 reads "worse 2" (midpoint), the typed forms parse as listed. The table drawing itself (Today box showing `2–8`) was not driven in the page: the patient page does not mount in the sandbox, so say so before relying on it.
+
+## Today's visit: the Phase card and the Herbs row are one quiet line (2026-11-24)
+Her synth22 item 5 pick (d): the follow-up page stacked a context card (phase, medicines, history, last visit) and the Herbs row above Came in for.
+- They now fold into ONE 32px line, `details.ph-tvq` (`phTvqHtml`): "Phase 1 · medicines · history · Last 17 Nov · Herbs Continuing". A tap opens the card and the Herbs Finished / Continuing / Stopping bar exactly as they were; the open state is kept across a repaint (`phTvqOpen`).
+- The line is read from the two blocks' own words (`phTvqWords`, never a second reader of the same facts) and repaints when either block does (`phHbsPaint`, `phVsumRefresh` call `phTvqPaint`). An unanswered herbs answer reads "Herbs to answer".
+- The Came in for table is unchanged: it is already one list (score, Change, and Gone / Better / Same / Worse in one table).
+- **Checked** in the sandbox with made-up blocks: the line is 32px, 13px / 600, opens to both blocks; tap-audit, style-audit `offSizes` and `sideLines` empty at 1220 and 360 (the old `.ph-vsum-ln` rows inside keep their older 0-corner look: not new). **Not driven:** a real patient's Today's visit page (it does not mount in the sandbox), so the herbs word in the line and its repaint after a Finished tap are checked by reading the code only.
