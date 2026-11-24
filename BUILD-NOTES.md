@@ -18098,3 +18098,8 @@ Her "i cant add herbs to order for acupreg", with a screenshot of the Acupreg ta
 - **The raw markup:** `osSupTxt` ran `esc()` over `phSupDisplayName()`, which already escapes and returns the In house chip's markup (the same double escape noted at `phSupDisplayName`'s other uses); the esc is gone.
 - **Left:** a hand-added herb that is not low can only leave by Arrived or the toast's Undo (no ✕ on the row). The Herb column the screenshot lacked is in the table's head and rows in the current code (the screenshot may be an older build: press Update).
 - **Checked** in the sandbox with her data copy: side `ac`, the search finds the herb, one pick adds one row to Acupreg's list and sets `ordS.ac`, removing the flag empties it again; the card markup has no escaped span. **Not driven:** the click path on the real page.
+
+## 2026-11-24 — Fang Bing Ren: Triangle gone from the patient page, simpler key signs (her pick "2")
+- Mock `mock-fbr-triangle-keysigns.html`, her answer "2". The patient page no longer carries the Triangle card or its chip (the bars rank). The Triangle stays in the Guide as its own tab (`phFtgGuideHtml`, unchanged); `phFtgHostHtml` is no longer called from the patient page, every `phFtg*` reader is null-guarded.
+- The Fang check card (`phFbrCheckHtml`) is now: formula name, "N of M key signs", only the ticked signs, and "Rules out" when something applies. Gone from it: fit % and bar, the unticked key signs, the "Only here" group, the case count (they stay on the formula's own card).
+- Checked: page boots clean in a scratch copy. NOT driven on a real patient page (sandbox cannot mount it).
