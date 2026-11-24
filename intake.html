@@ -87,6 +87,13 @@
   .cn-info ul { margin: 0 0 6px; padding-left: 18px; font-size: 13px; line-height: 1.55; }
   .cn-read { display: flex; align-items: flex-start; gap: 10px; font-size: 13.5px; line-height: 1.5; padding: 10px 2px; border-top: 1px solid var(--ph-line); margin-top: 10px; }
   .cn-read input { width: 20px; height: 20px; margin: 1px 0 0; flex: none; }
+  /* her 2026-11-24 "for future, require patient to sign it by finger to the consent": the signature is drawn on a canvas and travels as a short path (history.consent.sig) */
+  .sig-box { position: relative; width: 100%; aspect-ratio: 320 / 150; border: 1px solid var(--ph-line); border-radius: 12px; background: var(--ph-white); overflow: hidden; }
+  .sig-box canvas { position: absolute; left: 0; top: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; -webkit-user-select: none; user-select: none; }
+  .sig-box .sig-line { position: absolute; left: 14px; right: 14px; bottom: 26%; border-bottom: 1px solid var(--ph-line); pointer-events: none; }
+  .sig-box .sig-ph { position: absolute; left: 0; right: 0; top: 36%; text-align: center; font-size: 13px; color: var(--ph-soft); pointer-events: none; }
+  .sig-box.on .sig-ph { display: none; }
+  .sig-clear { margin-top: 8px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--ph-line); background: var(--ph-white); font: inherit; font-size: 12.5px; font-weight: 600; color: var(--ph-soft); cursor: pointer; }
 
   .checkrow input { width: auto; }
   .chips { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 4px; }
@@ -349,12 +356,90 @@
         '<label class="cn-read"><input type="checkbox" id="fConsentRead"> I have read and understood this information, I have been able to ask questions, and I know I can change my mind at any time.</label>' +
         '<div class="field" style="margin:6px 0 0"><label class="q" for="fConsentName">Your full name <span style="font-weight:400;color:var(--ph-soft)">(a parent or guardian signs for anyone under 18)</span></label><input type="text" id="fConsentName" autocomplete="name" maxlength="120"></div>' +
         '<div class="field" style="margin:10px 0 0"><label class="checkrow"><input type="checkbox" id="fConsentGuardian"> I am signing as the parent or guardian</label></div>' +
+        '<div class="field" style="margin:14px 0 0"><span class="q">Your signature <span style="font-weight:400;color:var(--ph-soft)">(sign with your finger or mouse)</span></span>' +
+          '<div class="sig-box" id="sigBox"><div class="sig-line"></div><canvas id="sigCanvas" aria-label="Signature"></canvas><span class="sig-ph" id="sigPh">Sign here</span></div>' +
+          '<button type="button" class="sig-clear" id="sigClear">Clear</button></div>' +
       '</div>';
   }
   function consentCollect() {
     var c = { v: CONSENT_V, read: !!document.getElementById("fConsentRead").checked, name: document.getElementById("fConsentName").value.trim().slice(0, 120), guardian: !!document.getElementById("fConsentGuardian").checked, on: localToday() };
     CONSENT_TX.forEach(function (t) { var on = document.querySelector('[data-cn-item="' + t[0] + '"] .hx-btn.on'); c[t[0]] = on ? on.dataset.cnVal : ""; });
+    if (sigSigned()) c.sig = { w: SIG_W, h: SIG_H, d: sigPath() };
     return c;
+  }
+  // her 2026-11-24 "for future, require patient to sign it by finger to the consent". She draws it on a canvas (a finger, a pen or a mouse). Kept as strokes on a
+  // fixed 320 x 150 grid, so it redraws at any width, and sent as one short SVG path: history.consent.sig = { w, h, d }, d = "M12,40L13,41 15,44M20,30L21,31"
+  // (one M per stroke, whole numbers). The app checks that string before it draws it. No SQL change (history is a jsonb blob). The form cannot be sent without it.
+  var SIG_W = 320, SIG_H = 150, SIG_MAX_PTS = 2500, SIG_MIN_LEN = 60;
+  var sigStrokes = [], sigCur = null, sigPts = 0, sigWired = false;
+  function sigLength() {
+    var n = 0;
+    sigStrokes.forEach(function (s) { for (var i = 2; i < s.length; i += 2) n += Math.sqrt(Math.pow(s[i] - s[i - 2], 2) + Math.pow(s[i + 1] - s[i - 1], 2)); });
+    return n;
+  }
+  // a tap or a dot is not a signature: it needs a line of about a fifth of the box's width
+  function sigSigned() { return sigLength() >= SIG_MIN_LEN; }
+  function sigPath() {
+    return sigStrokes.map(function (s) {
+      var pts = [];
+      for (var i = 2; i < s.length; i += 2) pts.push(s[i] + "," + s[i + 1]);
+      return "M" + s[0] + "," + s[1] + "L" + (pts.length ? pts.join(" ") : s[0] + "," + s[1]);
+    }).join("");
+  }
+  function sigRedraw() {
+    var cv = document.getElementById("sigCanvas"); if (!cv) return;
+    var ctx = cv.getContext("2d"), k = cv.width / SIG_W;
+    ctx.clearRect(0, 0, cv.width, cv.height);
+    ctx.lineCap = "round"; ctx.lineJoin = "round"; ctx.strokeStyle = "#0B3B4B"; ctx.fillStyle = "#0B3B4B"; ctx.lineWidth = Math.max(2, 2.4 * (cv.width / (cv.getBoundingClientRect().width || cv.width)));
+    sigStrokes.forEach(function (s) {
+      if (s.length === 2) { ctx.beginPath(); ctx.arc(s[0] * k, s[1] * k, ctx.lineWidth / 2, 0, 6.2832); ctx.fill(); return; }
+      ctx.beginPath(); ctx.moveTo(s[0] * k, s[1] * k);
+      for (var i = 2; i < s.length; i += 2) ctx.lineTo(s[i] * k, s[i + 1] * k);
+      ctx.stroke();
+    });
+    var box = document.getElementById("sigBox"); if (box) box.classList.toggle("on", sigStrokes.length > 0);
+  }
+  function sigFit() {
+    var cv = document.getElementById("sigCanvas"); if (!cv) return;
+    var r = cv.getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 3);
+    if (!r.width) return;
+    cv.width = Math.round(r.width * dpr); cv.height = Math.round(r.width * dpr * SIG_H / SIG_W);
+    sigRedraw();
+  }
+  function sigPos(e, cv) {
+    var r = cv.getBoundingClientRect();
+    return [Math.max(0, Math.min(SIG_W, Math.round((e.clientX - r.left) / r.width * SIG_W))), Math.max(0, Math.min(SIG_H, Math.round((e.clientY - r.top) / r.height * SIG_H)))];
+  }
+  function sigInit() {
+    var cv = document.getElementById("sigCanvas"); if (!cv) return;
+    sigStrokes = []; sigCur = null; sigPts = 0;
+    cv.addEventListener("pointerdown", function (e) {
+      if (e.button > 0) return;
+      e.preventDefault();
+      try { cv.setPointerCapture(e.pointerId); } catch (x) {}
+      if (sigPts >= SIG_MAX_PTS) return;
+      var p = sigPos(e, cv); sigCur = [p[0], p[1]]; sigStrokes.push(sigCur); sigPts++;
+      sigRedraw();
+    });
+    cv.addEventListener("pointermove", function (e) {
+      if (!sigCur) return;
+      e.preventDefault();
+      var evs = e.getCoalescedEvents ? e.getCoalescedEvents() : [];
+      if (!evs.length) evs = [e];
+      evs.forEach(function (ev) {
+        if (sigPts >= SIG_MAX_PTS) return;
+        var p = sigPos(ev, cv), n = sigCur.length;
+        if (Math.abs(p[0] - sigCur[n - 2]) + Math.abs(p[1] - sigCur[n - 1]) < 2) return;
+        sigCur.push(p[0], p[1]); sigPts++;
+      });
+      sigRedraw();
+    });
+    function end() { if (!sigCur) return; sigCur = null; sigRedraw(); gateChanged(); }
+    ["pointerup", "pointercancel", "lostpointercapture"].forEach(function (t) { cv.addEventListener(t, end); });
+    document.getElementById("sigClear").addEventListener("click", function () { sigStrokes = []; sigCur = null; sigPts = 0; sigRedraw(); gateChanged(); });
+    if (window.ResizeObserver) new ResizeObserver(sigFit).observe(cv);
+    else if (!sigWired) { sigWired = true; window.addEventListener("resize", sigFit); }
+    sigFit();
   }
   function renderForm(name, prefill, again, createdAt) {
 
@@ -477,6 +562,7 @@
     intakeForm.addEventListener("input", gateChanged);
     intakeForm.addEventListener("change", gateChanged);
     intakeForm.addEventListener("click", function () { setTimeout(gateChanged, 0); });
+    sigInit();
     applyPrefill(prefill);
     if (again) document.getElementById("pfNote").hidden = true;
     document.querySelectorAll("[data-hx-item]").forEach(hxRowSync);
@@ -661,6 +747,7 @@
     });
     if (!document.getElementById("fConsentRead").checked) miss.push({ label: "Consent: I have read this", el: document.querySelector(".cn-read") });
     if (blank("fConsentName")) miss.push({ label: "Consent: your full name", el: document.getElementById("fConsentName") });
+    if (!sigSigned()) miss.push({ label: "Consent: your signature", el: document.getElementById("sigBox") });
     // medical history rows in a hidden group (e.g. female-only for a man) don't count
 
     document.querySelectorAll("[data-hx-item]").forEach(function (row) {
