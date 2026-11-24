@@ -18088,3 +18088,6 @@ The ranked bars themselves (`phFbrBarsHtml`, her "A bars, FIT only") landed in f
 - The Fang check's small labels ("Key signs", "Only here") were 10.5px on a phone (the phone scale is 11): now `var(--fs-10-5)`.
 - Driven: tap on a bar filters (ring), a second tap clears; Columns still draws its 8 tiles; tap, style and voice audits EMPTY at 1240 and 360, no sideways scroll. **Not driven:** the avoid mark on a bar, the Steps view with a filter.
 - Still hers to answer: the Key signs cards (as they are or only the ticked signs) and the Triangle card (stays or the bars replace it). Nothing changed there.
+
+## Ranked bars: a class of their own (2026-11-24)
+A collision found by PA Coder's pass: `.ph-fbr-bar` was already the 8px family dot of the Fang Bing Ren sign rows (the Ren board, the Energy rows), and the ranked bars' rules, later in the sheet, turned those dots into 32px bars. The ranked bar is now `.ph-fbr-rbar` (markup in `phFbrBarsHtml`, its four CSS lines, the phone's half-row rule), `.ph-fbr-bar` is the dot only again, and `style-audit.js` `DATA_MARK` and CLAUDE.md's Table line name the new class. Checked in the sandbox: a `.ph-fbr-bar` in a sign row measures 8x8, a ranked bar 32px tall. Lesson: grep a new class name before using it.
