@@ -2639,7 +2639,7 @@
   /* her 2026-11-20 "colour the row as faded green for koda herbs, and white for formulas made in house, faded green (lighter than
      koda) for gmp, and faded yellow for kpc. faded orange for evergreen": the row takes its active supplier's wash (phInvSupRowCls),
      over the stripes and the pale phasing-out / HH wash; any other supplier, or none, keeps the old look; the hover still shows */
-  #pharmacyPage { --ph-sup-koda: #E2F1E6; --ph-sup-gmp: #F1F8F2; --ph-sup-kpc: #FBF4D6; --ph-sup-evergreen: #FCE9D9; }
+  #pharmacyPage { --ph-sup-koda: #fff; --ph-sup-gmp: #fff; --ph-sup-kpc: #fff; --ph-sup-evergreen: #fff; }   /* her 2026-11-24 "inconsistent colours": every Inventory row is white now; the supplier is plain text, a red wash marks only a row that is low or empty */
   #pharmacyPage #phStock .ph-table tbody tr.ph-sup-koda:not(:hover) > td { background: var(--ph-sup-koda); }
   #pharmacyPage #phStock .ph-table tbody tr.ph-sup-gmp:not(:hover) > td { background: var(--ph-sup-gmp); }
   #pharmacyPage #phStock .ph-table tbody tr.ph-sup-kpc:not(:hover) > td { background: var(--ph-sup-kpc); }
@@ -2647,6 +2647,11 @@
   #pharmacyPage #phStock .ph-table tbody tr.ph-sup-house:not(:hover) > td { background: var(--ph-white); }
   /* the row's edit boxes (supplier, code, Bottle $, stock) a lighter shade of its wash, not pale-blue stripes across it */
   #pharmacyPage #phStock .ph-table tbody tr:is(.ph-sup-koda, .ph-sup-gmp, .ph-sup-kpc, .ph-sup-evergreen) :is(.ph-qty-lock, .ph-sup-code-input):not(:hover):not(:focus) { background: rgba(255, 255, 255, .6); }
+  /* her 2026-11-24 picks B + C (mock-inventory-colours.html): a row that is low, empty or below zero takes the light red; the Formulas and Herbs groups each get a pale label row; the code is quiet text; the stock number is the one outlined chip */
+  #pharmacyPage #phStock .ph-table tbody tr.ph-row-short:not(:hover) > td { background: var(--ph-zero-tint); }
+  #pharmacyPage #phInvWidget.ph-inv-sheet .ph-table tbody tr.ph-inv-grp > td, #pharmacyPage #phStock .ph-table tbody tr.ph-inv-grp > td { height: 28px; padding: 0 12px; background: var(--ph-herb-tint); color: var(--ph-ink); font: 700 var(--fs-10-5)/1 var(--font-body); letter-spacing: .08em; text-transform: uppercase; box-shadow: none; cursor: default; }
+  #pharmacyPage #phStock .ph-sup-code-input:not(:hover):not(:focus) { background: transparent; border-color: transparent; color: var(--ph-soft); }
+  #pharmacyPage #phStock .ph-table td[data-col="qty"] .ph-qty-lock { border: 1px solid var(--ph-line); background: #fff; padding: 2px 10px; min-width: 48px; text-align: center; }
   #pharmacyPage #phInvWidget.ph-inv-sheet .ph-name .ph-name-link { font-size: var(--fs-13-5); font-weight: 700; color: var(--ph-ink); padding: 0; }
   #pharmacyPage #phInvWidget.ph-inv-sheet .ph-name .ph-pres-abbr { color: var(--ph-faint); font-weight: 600; font-size: var(--fs-12); margin-left: 8px; }
   #pharmacyPage #phInvWidget.ph-inv-sheet .ph-qty-lock { border: none; background: none; padding: 2px 4px; margin: 0 -4px; border-radius: 6px; font-size: var(--fs-13); color: var(--ph-ink); border-bottom: 1px dotted transparent; min-height: 0; }
@@ -42978,7 +42983,11 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // pinned first (matching the header), Actions stays pinned last
     const colOrder = phColOrder("inv");
     const rcpOf = phRecipeJarMap();   // her 2026-10-31 pick: a formula she makes is priced by its recipe
-    tbody.innerHTML = pageRows.map(h => {
+    // Formulas first, then Herbs, each under its pale label row (her pick B); the sort inside each group is the page's own
+    const invCols = (tbody.closest("table") && tbody.closest("table").tHead && tbody.closest("table").tHead.rows[0]) ? tbody.closest("table").tHead.rows[0].cells.length : 8;
+    const invGrouped = mobileCompact ? pageRows : (() => { const out = []; let last = ""; [...pageRows.filter(phIsFormula), ...pageRows.filter(x => !phIsFormula(x))].forEach(x => { const kd = phIsFormula(x) ? "Formulas" : "Herbs"; if (kd !== last) { out.push({ __grp: kd }); last = kd; } out.push(x); }); return out; })();
+    tbody.innerHTML = invGrouped.map(h => {
+      if (h.__grp) return `<tr class="ph-inv-grp"><td colspan="${invCols}">${h.__grp}</td></tr>`;
       const k = phHerbStatusKey(h);
       // STEP 5 (her ask 2026-08-11): HH is independent of stock status --
       // a row can be phaseout AND HH-used at once, so it's a second class,
@@ -42987,6 +42996,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         k === "stopped" ? "ph-row-stopped" : k === "phaseout" ? "ph-row-phaseout" : "",
         h.usedByHH ? "ph-row-hh" : "",
         phInvSupRowCls(h),
+        k === "zero" || k === "low" || k === "negative" ? "ph-row-short" : "",
       ].filter(Boolean).join(" ");
       if (mobileCompact) return phInvCompactRowHtml(h, rowCls);
       // every editable number (and the note) is locked until clicked —

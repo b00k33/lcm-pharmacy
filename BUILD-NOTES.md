@@ -18118,3 +18118,8 @@ Her "i cant add herbs to order for acupreg", with a screenshot of the Acupreg ta
 ## 2026-11-24 — Add several from the master list (her "1, 2")
 - Acupreg / Lotus Inventory sheet: an "Add several" chip beside the single add opens a search + tick chips of every herb not kept at that clinic (master list = all non-stopped herbs); "Add N herbs" puts each on the shelf at 0 g, no grams needed. The single add also starts at 0 when no grams are typed. State `phClinPick` (view only); search narrows the chips without rebuilding the box.
 - Checked at function level (chips, search, count); NOT tapped on her real Acupreg / Lotus page.
+
+## 2026-11-24 — Inventory colours: white rows, light red when short, Formulas / Herbs groups (her picks B + C of mock-inventory-colours.html)
+- Her 2026-11-20 supplier row washes (Koda green, KPC yellow, Evergreen orange) are retired by her newer word ("inconsistent colours"): the four `--ph-sup-*` tokens are white, so every Inventory row is white and the supplier is plain text. A row that is low, empty or below zero (`phHerbStatusKey` zero / low / negative) takes `--ph-zero-tint` (`.ph-row-short`), the only colour on the table.
+- Formulas first, then Herbs, each under a pale label row (`.ph-inv-grp`, a `colspan` of the head's cells, computer only; the phone's compact list has none); the page's own sort runs inside each group. The code input is quiet grey text until hovered / focused; the Stock number is the one outlined chip.
+- Checked at 1280 wide with four made-up herbs: group rows, the red wash on short rows, white on Koda rows, no console errors. Not checked on her real Inventory; audits not run. Not done: the Level bar still reads "—" for a herb with no low line.
