@@ -18029,3 +18029,6 @@ Her synth22 item 4 ("how do i see symptoms only ticked for him"). The list was b
 - **NOT tested:** her real records, a real phone, the intake apply flow end to end (the chip reads `rec.consent`, which the apply already writes).
 
 - **Same test as the Visit record (2026-11-24, Executive PA's check against f3db5f04):** the chip counts consent as on file only when `rec.consent && rec.consent.on`, the test the Visit record uses (`phVrCompose`), so a consent object with no date reads "No consent" in both places and the two never disagree. Checked in the scratch copy: all agreed, one declined, all declined, none, and an object with no date.
+
+## Fang Bing Ren Ticked list: one row for a sign ticked on both sides (2026-11-24)
+Her review of the Ticked list: the same words ticked at Bing (today) and Ren (usually) showed twice. `phFbrTickRows` now merges rows with the same body area and the same label (case ignored) into ONE row whose tag reads "BING · REN"; the chip's count and each area's count are of distinct signs. Checked in the sandbox with made-up answers: three signs ticked on both sides gave three rows, each tagged "Bing · Ren". No CSS change.
