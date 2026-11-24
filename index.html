@@ -23557,6 +23557,15 @@
   #pharmacyPage .ph-pd-sub { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
   #pharmacyPage .ph-pd-tag { display: inline-flex; align-items: center; height: 22px; padding: 0 10px; border-radius: 999px; background: var(--ph-herb-tint); color: var(--ph-ink); font: 600 12px/1 var(--font-body); font-variant-numeric: tabular-nums; }
   #pharmacyPage .ph-pd-tag[hidden] { display: none; }
+  /* her 2026-11-24 "make the consent more visible on the patient page": it was the age tag's twin, a pale 22px pill whose words showed on hover only.
+     On file = a chip (the app's chip look) with a tick and the date, then a red-dot tag for what she declined; a tap says the whole line, a phone has no hover.
+     None on file = the same red-dot tag, "No consent" (red = empty). */
+  #pharmacyPage .ph-pd-sub .ph-pd-cn { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); color: var(--ph-ink); font: 600 var(--fs-13) var(--font-body); font-variant-numeric: tabular-nums; white-space: nowrap; cursor: pointer; transition: background .15s; }
+  #pharmacyPage .ph-pd-sub .ph-pd-cn:hover { background: var(--ph-herb-tint); }
+  #pharmacyPage .ph-pd-sub .ph-pd-cn .icn { width: 14px; height: 14px; flex: none; color: var(--ph-herb); }
+  #pharmacyPage .ph-pd-sub .ph-pd-cn.no .icn { color: var(--ph-low); }
+  #pharmacyPage .ph-pd-sub .ph-pd-tag.cn-none { gap: 6px; }
+  #pharmacyPage .ph-pd-sub .ph-pd-tag.cn-none::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ph-low); flex: none; }
   #pharmacyPage .ph-pd-seg { display: inline-flex; max-width: 100%; border: 1px solid var(--ph-line); border-radius: 999px; overflow: hidden; background: var(--ph-white); }
   #pharmacyPage .ph-pd-seg button { border: 0; border-right: 1px solid var(--ph-line); border-radius: 0; background: transparent; height: 26px; min-width: 0; flex: 1 1 auto; padding: 0 7px; font: 600 13px var(--font-body); color: var(--ph-soft); cursor: pointer; transition: background .15s, color .15s; }
   #pharmacyPage .ph-pd-seg button:last-child { border-right: 0; }
@@ -71885,6 +71894,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       if (e.target.closest("[data-hx-sendintake]")) { phIntakeOpen(presHxScreenName); return; }
       const pfSend = e.target.closest("[data-pf-sendintake]");
       if (pfSend) { phIntakeOpen(pfSend.dataset.pfSendintake); return; }
+      const pdCn = e.target.closest("[data-pd-cn]");   // Patient details: the consent chip says its whole line (her 2026-11-24; a phone has no hover)
+      if (pdCn) { const cr = phPatientPeek(pdCn.dataset.pdCn); if (cr && cr.consent) presSavedToast(phConsentLine(cr.consent), { ms: 6500 }); return; }
       // the Patient details avatar's own camera badge: a patient with nothing on file yet still
       // goes straight to the file/camera picker (pre-tagged "full" + profile, unchanged -- her
       // earlier "nothing happens" complaint about an extra tap for no reason); once something IS
@@ -111017,10 +111028,18 @@ Difficult to sweat|no_sweat_tend:r`;
   function phPdCopyChipHtml(kind, lab, val) {
     return `<button type="button" class="ph-pd-chip" data-pd-cp="${kind}" data-band-copy="${esc(val || "")}" data-band-copy-kind="${kind === "email" ? "email" : "phone"}"${val ? "" : " hidden"}>${lab}</button>`;
   }
-  function phPdAgeTagHtml(rec) {
+  function phPdAgeTagHtml(rec, name) {
     const age = phAgeOf(rec.dob);
-    const cn = rec.consent;   // her 2026-11-20 consent: on file from the intake form
-    return `<span class="ph-pd-tag" data-pd-age${age == null ? " hidden" : ""}>${age == null ? "" : age + " yrs"}</span>${cn ? `<span class="ph-pd-tag" title="${esc(phConsentLine(cn))}">Consent ${esc(phShortDate(cn.on))}</span>` : ""}`;
+    return `<span class="ph-pd-tag" data-pd-age${age == null ? " hidden" : ""}>${age == null ? "" : age + " yrs"}</span>${phPdConsentHtml(rec, name)}`;
+  }
+  // her 2026-11-20 consent (from the intake form, rec.consent) shown as her 2026-11-24 "more visible" chip: a tick, the date and only what she declined
+  // ("Consent 20 Nov 2026" and a tag "No Cupping"); a tap says the whole line (phConsentLine, a toast). None on file: the tag "No consent" with a red dot (not on her own file)
+  function phPdConsentHtml(rec, name) {
+    const cn = rec.consent;
+    if (!cn) return name && phFastIsMe(name) ? "" : `<span class="ph-pd-tag cn-none">No consent</span>`;
+    const SH = { acu: "Acupuncture", herb: "Herbs", cup: "Cupping" }, keys = ["acu", "herb", "cup"];
+    const no = keys.filter(k => cn[k] === "no").map(k => SH[k]), anyYes = keys.some(k => cn[k] === "yes");
+    return `<button type="button" class="ph-pd-cn${anyYes ? "" : " no"}" data-pd-cn="${esc(name || "")}" title="${esc(phConsentLine(cn))}"><svg class="icn" aria-hidden="true"><use href="#${anyYes ? "i-check" : "i-warn"}"/></svg>Consent ${esc(phShortDate(cn.on))}</button>${no.length ? `<span class="ph-pd-tag cn-none">No ${esc(no.join(", "))}</span>` : ""}`;
   }
   // her 2026-10-30 pick (mock details-extras-mock-2026-10-30.html, option A "where they are read"): the partner, the
   // addresses and the health fund are entered on the page that reads them -- IVF history's head, a booking's Delivery
@@ -111062,7 +111081,7 @@ Difficult to sweat|no_sweat_tend:r`;
         ${phPfAvatarHtml(hxName)}
         <div class="ph-pd-id">
           <div class="ph-pd-name"><input type="text" id="presEditName" class="field-bare" list="presEditNameList" value="${esc(t.name)}" autocomplete="off" placeholder="Name" aria-label="Name"${presNameOpen || !t.name ? "" : " hidden"}><datalist id="presEditNameList">${phIntakeNameOptionsHtml()}</datalist></div>
-          <div class="ph-pd-sub">${phPdAgeTagHtml(rec)}<span class="ph-pd-seg${sexChanged ? " changed" : ""}" role="radiogroup" aria-label="Patient sex">${sexSeg}</span>${ivfSeg}${phBandAlertHtml(hxName)}${mineFile ? "" : cpasteShowing ? "" : `<button type="button" class="ph-pd-chip" data-cpaste-open="opening"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-clipboard"/></svg>Paste contact</button>`}${mineFile ? phFileMoreHtml((cpasteShowing ? "" : `<button type="button" class="ph-pd-chip" data-cpaste-open="opening"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-clipboard"/></svg>Paste contact</button>`) + presPfSendBtnHtml(hxName)) : presPfSendBtnHtml(hxName)}</div>
+          <div class="ph-pd-sub">${phPdAgeTagHtml(rec, hxName)}<span class="ph-pd-seg${sexChanged ? " changed" : ""}" role="radiogroup" aria-label="Patient sex">${sexSeg}</span>${ivfSeg}${phBandAlertHtml(hxName)}${mineFile ? "" : cpasteShowing ? "" : `<button type="button" class="ph-pd-chip" data-cpaste-open="opening"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-clipboard"/></svg>Paste contact</button>`}${mineFile ? phFileMoreHtml((cpasteShowing ? "" : `<button type="button" class="ph-pd-chip" data-cpaste-open="opening"><svg class="ph-cc-svgic" aria-hidden="true" focusable="false"><use href="#i-clipboard"/></svg>Paste contact</button>`) + presPfSendBtnHtml(hxName)) : presPfSendBtnHtml(hxName)}</div>
         </div>
         ${mineFile ? "" : `<div class="ph-pd-acts">${phPdCopyChipHtml("phone", "Call", rec.phone)}${phPdCopyChipHtml("email", "Email", rec.email)}</div>`}
         ${phPdRingHtml(hxName)}

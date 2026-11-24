@@ -873,7 +873,7 @@ groups, the question cards (`.ph-pfw-card`), IVF history's fold, the Log and Blo
 pale-blue head + stripes.
 **Patient details** (`phPdPageHtml`) = a hero + 2 cards, Contact and Body (her 2026-10-30 pick; 3 cards from 2026-10-19), every
 control 32px Zanda-style (6px boxes, joined 6px bars, white value boxes, the send-the-form circle): tap to edit in place, age from
-DOB, BMI bar, a filled-in ring (n of 7: name, sex, DOB, phone, email, height, weight), Call / Text / Email chips [Patient details =
+DOB, BMI bar, a filled-in ring (n of 7: name, sex, DOB, phone, email, height, weight), Call / Text / Email chips and, in the hero beside the age, **the consent mark** (`phPdConsentHtml`, her 2026-11-24 "make the consent more visible on the patient page"): consent on file = a 32px chip, a tick and its date (`rec.consent`, from the intake form; a tap says the whole line in a toast, `data-pd-cn`); what she declined = a red-dot tag after it ("No Cupping"); none on file = a red-dot "No consent" tag (not on her own record) [Patient details =
 hero + 2 cards]. **On her own record the Body card carries her body photos** (her 2026-11-19 picks B + C of
 `mocks/body-card-photos-mock-2026-11-19.html`; BUILD-NOTES "Body card photos"; `phBpc*`, `.ph-bpc`): a view bar (Front · Back · Left ·
 Right · Arms, Side only while she holds one) and Show / Cover; the first photo of that view beside the newest, with the kg and fat change
