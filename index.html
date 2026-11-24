@@ -33909,6 +33909,8 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   #pharmacyPage .ph-clin-dash-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
   #pharmacyPage #phDashboardWrap .ph-ost-tbl.ph-clin-tbl tr.ph-row-short:not(:hover) > td { background: var(--ph-zero-tint); }
   #pharmacyPage .ph-clin-go-r { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 8px 12px; border-top: 1px solid var(--ph-line); }
+  #pharmacyPage#pharmacyPage#pharmacyPage .ph-ost-tbl tr.ph-ost-r.short:not(:hover) > td { background: var(--ph-zero-tint); }   /* a low or empty row, as on Inventory (pick B) */
+  #pharmacyPage .ph-ost-tbl .ph-ost-stage { display: inline-flex; vertical-align: middle; }
   #pharmacyPage .ph-clin-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 10px; max-height: 220px; overflow-y: auto; background: color-mix(in srgb, var(--cl) 6%, white); }
   #pharmacyPage .ph-clin-chip { height: 32px; padding: 0 12px; border: 1px solid var(--ph-line); border-radius: 6px; background: #fff; color: var(--ph-ink); font: 600 var(--fs-13) var(--font-body); cursor: pointer; }
   #pharmacyPage .ph-clin-chip.on { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
@@ -41005,6 +41007,60 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   const phShelfLowList = s => phShelfHerbs(s).filter(h => !h.stopped && +h[PH_SHELVES[s].f] <= phShelfLow(h, s)).sort(phByName);
   // her 2026-11-24 "i cant add herbs to order for acupreg": a clinic's To order = what is low at its shelf + the herbs she added to it by hand (h.ordS[s] = the day it was added;
   // Arrived clears it), a herb that is not kept there yet included (its arrival puts the grams on that shelf)
+  // ONE To order display at every clinic (her 2026-11-25 "use one display for all locations ... use cbd as the standard", pick B of
+  // mock-to-order-one-display.html): at Acupreg / Lotus, renderPhRestock reads each herb through a view of that clinic's shelf: the
+  // shelf's grams as qty, the one shared low line, and the clinic's own order state (h.ordS[s] on the list since, h.ordSd[s] ordered on,
+  // h.ordSq[s] bottles, h.arrS[s] = {d, g} its last arrival). CBD's own fields (h.qty, h.order, h.ordered, h.arrivedDate ...) are never read or written there.
+  function phOsShelfViews(s) {
+    const f = PH_SHELVES[s].f;
+    return (PHARMACY.herbs || []).filter(h => phHasShelf(h, s) || (h.ordS && h.ordS[s]) || (h.arrS && h.arrS[s])).map(h => {
+      const v = Object.create(h), a = h.arrS && h.arrS[s];
+      v.qty = phHasShelf(h, s) ? (+h[f] || 0) : null; v.low = phShelfLow(h, s);
+      v.order = !!(h.ordS && h.ordS[s]); v.ordered = !!(h.ordSd && h.ordSd[s]); v.orderedDate = (h.ordSd && h.ordSd[s]) || null;
+      v.orderQty = (h.ordSq && h.ordSq[s]) || 1; v.arrivedDate = a ? a.d : null; v.arrivedGrams = a ? a.g : null; v.snoozedUntil = null;
+      return v;
+    });
+  }
+  // a clinic's bottles arrive: the grams go on THAT clinic's shelf, the herb leaves its list, the arrival is kept for Undo
+  function phOsClinArrive(h, s) {
+    const g = phOrderPackFor(h) * ((h.ordSq && h.ordSq[s]) || 1);
+    phShelfAdd(h, g, s); (h.arrS = h.arrS || {})[s] = { d: keyOf(TODAY), g };
+    [h.ordS, h.ordSd, h.ordSq].forEach(o => { if (o) delete o[s]; });
+    return g;
+  }
+  // the same taps as CBD's page, done on the clinic's own order state (caught before CBD's handlers, which write CBD's fields)
+  document.addEventListener("click", e => {
+    const s = phClinicSolo(), t = e.target instanceof Element ? e.target : null;
+    if (!s || !t || !t.closest("#phRestockWrap")) return;
+    const el = t.closest("[data-ph-stage-set], [data-ph-order-add], [data-ph-order], [data-ph-os-step], [data-ph-copy-sup], [data-ph-arrived-sup], [data-ph-clear-arrived], [data-clin-arr-undo]");
+    if (!el || el.disabled) return;
+    e.preventDefault(); e.stopPropagation();
+    const now = keyOf(TODAY), nm = PH_SHELVES[s].name, find = id => PHARMACY.herbs.find(x => x.id === id), mp = (h, k) => (h[k] = h[k] || {});
+    const off = h => [h.ordS, h.ordSd, h.ordSq].forEach(o => { if (o) delete o[s]; });
+    const arrive = h => phOsClinArrive(h, s);
+    const onSup = sup => PHARMACY.herbs.filter(h => h.ordS && h.ordS[s] && (h.supplier || "") === sup).sort(phByName);
+    let msg = "";
+    if (el.dataset.phStageSet) {
+      const [id, st] = el.dataset.phStageSet.split(":"), h = find(id); if (!h) return;
+      if (st === "arrived") msg = `+${phFmtG(arrive(h))} g at ${nm}`;
+      else { mp(h, "ordS")[s] = (h.ordS && h.ordS[s]) || now; if (st === "ordered") mp(h, "ordSd")[s] = now; else if (h.ordSd) delete h.ordSd[s]; }
+      phOsMenu = null;
+    } else if (el.dataset.phOrderAdd) { const h = find(el.dataset.phOrderAdd); if (!h) return; mp(h, "ordS")[s] = now; msg = `${phPinyinName(h)} on the ${nm} order list`; }
+    else if (el.dataset.phOrder) { const h = find(el.dataset.phOrder); if (!h) return; off(h); phOsMenu = null; }
+    else if (el.dataset.phOsStep) { const [id, d] = el.dataset.phOsStep.split(":"), h = find(id); if (!h) return; mp(h, "ordSq")[s] = Math.max(1, ((h.ordSq && h.ordSq[s]) || 1) + (+d || 0)); }
+    else if (el.hasAttribute("data-ph-copy-sup")) {
+      const list = onSup(el.dataset.phCopySup || "");
+      const txt = list.map(h => `${phHerbCode(h) ? phHerbCode(h) + " " : ""}${phPinyinName(h)} — ${(h.ordSq && h.ordSq[s]) || 1} × ${phFmtG(phOrderPackFor(h))}g`).join("\n");
+      try { navigator.clipboard.writeText(txt); } catch (x) { /* the list is still marked */ }
+      list.forEach(h => { mp(h, "ordSd")[s] = (h.ordSd && h.ordSd[s]) || now; });
+      msg = `Copied ${list.length} · marked ordered`;
+    } else if (el.hasAttribute("data-ph-arrived-sup")) { const list = onSup(el.dataset.phArrivedSup || ""); list.forEach(arrive); msg = `${list.length} arrived at ${nm}`; }
+    else if (el.hasAttribute("data-ph-clear-arrived")) PHARMACY.herbs.forEach(h => { if (h.arrS) delete h.arrS[s]; });
+    else if (el.dataset.clinArrUndo) { const h = find(el.dataset.clinArrUndo), a = h && h.arrS && h.arrS[s]; if (!a) return; phShelfAdd(h, -a.g, s); delete h.arrS[s]; phOsMenu = null; msg = `Arrival undone at ${nm}`; }
+    if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
+    if (msg) presSavedToast(msg);
+    renderPharmacy();   // the page and the top bar's To order count
+  }, true);
   const phShelfOrderList = s => { const low = phShelfLowList(s), ids = new Set(low.map(h => h.id)); return [...low, ...(PHARMACY.herbs || []).filter(h => !h.stopped && h.ordS && h.ordS[s] && !ids.has(h.id))].sort(phByName); };
   const phOsShelfSide = () => { const cn = phClinicNow(); return cn === "ac" || cn === "pp" ? cn : phOsbSide === "acupreg" ? "ac" : phOsbSide === "lotus" ? "pp" : ""; };
   let phMkCtx = "";   // the clinic a refill batch is being made for, while its stock check runs
@@ -44601,7 +44657,15 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     restock: [
       // her Cliniko Products pick 2 (2026-11-02): + Add to order is the head's main (solid) step, Mark all arrived beside it
       { icon: "i-plus", label: "Add to order", run: () => { phOsAddOpen = true; renderPhRestock(); } },
-      { icon: "i-check", label: "Mark all arrived", run: () => phOsbMove(PHARMACY.herbs.filter(phOnOrderList).map(h => h.id), "arrived", []) },
+      { icon: "i-check", label: "Mark all arrived", run: () => {
+        const s = phClinicSolo();
+        if (s) {   // Acupreg / Lotus: that clinic's list arrives on that clinic's shelf (never CBD's)
+          const list = PHARMACY.herbs.filter(h => !h.stopped && h.ordS && h.ordS[s]); if (!list.length) return;
+          list.forEach(h => phOsClinArrive(h, s));
+          if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
+          presSavedToast(`${list.length} arrived at ${PH_SHELVES[s].name}`); renderPharmacy(); return;
+        }
+        phOsbMove(PHARMACY.herbs.filter(phOnOrderList).map(h => h.id), "arrived", []); } },
     ],
     // her ask (2026-08-16, "when i press stocktake, nothing happens"): she
     // has never finished a stocktake yet, so the button quietly did the
@@ -45093,7 +45157,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   function phPlaceCount(id) {
     const cs = phClinicSolo();
-    if (cs && id === "restock") { const n = phShelfOrderList(cs).length; return n ? String(n) : ""; }
+    if (cs && id === "restock") { const n = (PHARMACY.herbs || []).filter(h => !h.stopped && h.ordS && h.ordS[cs]).length; return n ? String(n) : ""; }
     if (cs && id === "refill") return "";
     const b = PH_PLACE_BADGE[id] && document.getElementById(PH_PLACE_BADGE[id]);
     return b && !b.hidden && b.textContent && b.textContent !== "0" ? b.textContent : "";
@@ -82296,8 +82360,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     renderPhRows();
   });
   function renderPhRestock() {
-    const herbs = PHARMACY.herbs;
-    const toOrder = herbs.filter(phOnOrderList);
+    const osSh = phClinicSolo();   // Acupreg / Lotus: CBD's page through that clinic's shelf (phOsShelfViews)
+    const herbs = osSh ? phOsShelfViews(osSh) : PHARMACY.herbs;
+    const toOrder = osSh ? herbs.filter(h => h.order) : herbs.filter(phOnOrderList);
     // her ask (2026-08-04): "To order" should count what's STILL to be ordered,
     // not everything flagged regardless of stage -- that was double-counting
     // against "On the way"
@@ -82312,7 +82377,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       && !phIsInHouseSup((phActiveSupplier(h) || {}).name)
       && phNotSnoozed(h))
       .sort(phByName);
-    const snoozed = phSnoozedHerbs().sort(phByName);
+    const snoozed = osSh ? [] : phSnoozedHerbs().sort(phByName);
     if (!snoozed.length) { phRestockSnoozeOpen = false; phOsSnzOpen = false; }
     if (!phOsMenu) phOsMenuPlan = null;   // the ⋮'s Plan the refill fold closes with the ⋮
     // Recently arrived: self-cleaning (her ask 2026-08-04) -- stays here, greyed,
@@ -82326,7 +82391,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // and never sits in both On the way and Arrived at the same time (her report
     // 2026-10-20: "the bai shao was already ordered and arrived"). Its delivery
     // stays in restockHistory + the log; un-ordering it brings it back here.
-    const recentlyArrived = herbs.filter(h => h.arrivedDate && !phArrivalSettled(h) && !herbNeedsOrder(h))
+    const recentlyArrived = herbs.filter(h => h.arrivedDate && (osSh ? !h.order : !phArrivalSettled(h) && !herbNeedsOrder(h)))
       .sort((a, b) => (b.arrivedDate || "").localeCompare(a.arrivedDate || "") || ((phOsMoved[b.id] || 0) - (phOsMoved[a.id] || 0)));
     // (the To order / On the way supplier maps of 2026-08-10 became one list in 2026-10-29's two steps: bySupList below)
     // what is low and not yet on the list, against what is: the gold bar beside the Running low tab
@@ -82406,7 +82471,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     if (phOsbSide == null) phOsbSide = listN || !unflagged.length ? "toorder" : "low";
     if (phOsbSide === "snoozed" && !snoozed.length) phOsbSide = "low";
     { const cs = phClinicSolo(), cn = phClinicNow();
-      if (cs) phOsbSide = cs === "ac" ? "acupreg" : "lotus";
+      if (cs && (phOsbSide === "acupreg" || phOsbSide === "lotus" || phOsbSide === "snoozed")) phOsbSide = "toorder";
       else if (cn !== "all" && (phOsbSide === "acupreg" || phOsbSide === "lotus")) phOsbSide = "toorder"; }
     const side = phOsbSide;
     // the stock cell: the level bar against the low mark, then the grams in the jar now
@@ -82464,7 +82529,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       const btn = `<button type="button" class="ph-os-dots${menuOpen ? " on" : ""}" data-ph-os-menu="${h.id}" aria-haspopup="true" aria-expanded="${menuOpen}" aria-label="More for ${esc(h.name)}">⋮</button>`;
       if (!menuOpen) return `<span class="ph-rp-menuwrap ph-os-menuwrap">${btn}</span>`;
       let items;
-      if (stage === "arrived") items = `<button type="button" class="ph-rp-mi" data-ph-arr-edit="${h.id}">Fix the grams or date, or undo</button>
+      if (stage === "arrived") items = `<button type="button" class="ph-rp-mi" ${osSh ? "data-clin-arr-undo" : "data-ph-arr-edit"}="${h.id}">${osSh ? "Undo arrival" : "Fix the grams or date, or undo"}</button>
           <button type="button" class="ph-rp-mi" data-ph-herb-edit="${h.id}">Open in the edit form</button>`;
       else if (stage === "ordered") items = `${osSupPick(h)}
           <button type="button" class="ph-rp-mi" data-ph-stage-set="${h.id}:toorder">Back to To order</button>
@@ -82472,7 +82537,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
           <button type="button" class="ph-rp-mi" data-ph-order="${h.id}">Take off the order list</button>`;
       else {
         let refill = "";
-        if (phIsFormula(h) && !h.stopped) {
+        if (!osSh && phIsFormula(h) && !h.stopped) {
           const rSnz = phRefillIsSnoozed(h), flagged = h.refill && !rSnz;
           const wk = flagged && h.refillOn && /^\d{4}-\d{2}-\d{2}$/.test(h.refillOn) ? phRefillWeekInfo(h.refillOn).wk : 0;
           const planOpen = phOsMenuPlan === h.id;
@@ -82490,7 +82555,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         // two steps since 2026-10-29 (To order → Arrived): Copy for email marks a supplier's list ordered; an order
         // placed by phone is marked here
         items = `${refill}${osSupPick(h)}${stage === "toorder" ? `<button type="button" class="ph-rp-mi" data-ph-ost-packask="${h.id}">Other bottle size…</button>${isDesk ? "" : `<button type="button" class="ph-rp-mi" data-ph-ost-priceask="${h.id}">Bottle price…</button>`}` : ""}
-          <button type="button" class="ph-rp-mi" data-ph-snooze="${h.id}" title="Snooze 1 week — stock and status stay exactly as they are">Snooze 1 week</button>
+          ${osSh ? "" : `<button type="button" class="ph-rp-mi" data-ph-snooze="${h.id}" title="Snooze 1 week — stock and status stay exactly as they are">Snooze 1 week</button>`}
           <button type="button" class="ph-rp-mi" data-ph-herb-edit="${h.id}">Open in the edit form</button>
           ${stage === "toorder" ? `<button type="button" class="ph-rp-mi" data-ph-order="${h.id}">Take off the order list</button>` : ""}`;
       }
@@ -82516,6 +82581,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const osOrdB = h => `<button type="button" class="ph-ost-btn ph-ost-ordb" data-ph-stage-set="${h.id}:ordered" title="Ordered today (an order by phone or online; Copy for email marks the whole list)">Ordered</button>`;
     const osActs = (h, stage, noOrd) => {
       if (stage === "toorder" || stage === "ordered") {
+        if (!noOrd) return osCardDots(h, stage);   // the table's Stage column carries Ordered / Arrived (her pick B); the phone keeps its buttons
         const { pack, qty } = osCalc(h);
         return `${stage === "toorder" && !noOrd ? osOrdB(h) : ""}<button type="button" class="ph-ost-btn" data-ph-stage-set="${h.id}:arrived" title="It arrived (adds +${phFmtG(pack * qty)}g)">Arrived</button>${osCardDots(h, stage)}`;
       }
@@ -82532,12 +82598,15 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // the order as one line (the stepper and the price live in the panel): "2 x 100g · $16.50"
     const osOrdLn = h => { const { qty, bottleAuto, lineTotal } = osCalc(h); const ln = lineTotal != null ? lineTotal : (bottleAuto != null ? phRound2(bottleAuto * qty) : null); return ln != null ? `<span class="ph-ost-qt ph-ost-ln">${phMoney(ln)}</span>` : ""; };
     const osOrdTxt = (h, stage) => { const { pack, qty, bottleAuto, lineTotal } = osCalc(h); const ln = lineTotal != null ? lineTotal : (bottleAuto != null ? phRound2(bottleAuto * qty) : null); return `<span class="ph-ost-qt" title="${phFmtG(pack * qty)}g is added to stock when it arrives">${qty} × ${phFmtG(pack)}g${ln != null ? ` · ${phMoney(ln)}` : ""}</span>`; };
-    const OS_COL = { herb: ["Herb"], sup: ["Supplier"], stock: ["Stock", "num"], low: ["Low at", "num"], order: ["Order"], cost: ["Cost", "num"], status: ["Status"], act: ["", "act"], ad: ["Arrived"], add: ["Added", "num"], now: ["Now", "num"] };
-    const OS_TAB_COLS = { toorder: ["herb", "stock", "order", "status", "act"], low: ["herb", "sup", "stock", "low", "status", "act"], arrived: ["herb", "sup", "ad", "add", "now", "act"], snoozed: ["herb", "sup", "stock", "status", "act"] };
+    const osStageBar = (h, stage) => `<span class="ph-tng2-seg ph-ost-stage" role="group" aria-label="Stage">${[["toorder", "To order"], ["ordered", "Ordered"], ["arrived", "Arrived"]].map(([k, l]) => `<button type="button" class="ph-ltr-qual${stage === k ? " on" : ""}"${stage === k ? ' aria-pressed="true"' : ` data-ph-stage-set="${h.id}:${k}"`}${k === "ordered" && h.orderedDate ? ` title="Ordered ${osDay(h.orderedDate)}"` : ""}>${l}</button>`).join("")}</span>`;   // her pick B: the stage is ONE joined bar a row, so the band's All arrived is the one solid button
+    const OS_COL = { herb: ["Herb"], sup: ["Supplier"], stock: ["Left (g)", "num"], level: ["Level"], stage: ["Stage", "num"], low: ["Low at", "num"], order: ["Order"], cost: ["Cost", "num"], status: ["Status"], act: ["", "act"], ad: ["Arrived"], add: ["Added", "num"], now: ["Now", "num"] };
+    const OS_TAB_COLS = { toorder: ["herb", "stock", "level", "order", "stage", "act"], low: ["herb", "sup", "stock", "level", "low", "act"], arrived: ["herb", "sup", "ad", "add", "now", "act"], snoozed: ["herb", "sup", "stock", "status", "act"] };
     const osCls = k => `c-${k}${OS_COL[k][1] ? " " + OS_COL[k][1] : ""}`;
     const osCell = (h, k, stage) => k === "herb" ? osHb(h)
       : k === "sup" ? osSupTxt(h)
-      : k === "stock" ? osStk(h)
+      : k === "stock" ? (h.qty == null ? "—" : phFmtG(h.qty))
+      : k === "level" ? phStockBarPct(h.qty, h.low)
+      : k === "stage" ? osStageBar(h, stage)
       : k === "low" ? (h.low != null ? `${phFmtG(h.low)}g` : "—")
       : k === "order" ? (stage === "ordered" ? osOrderCell(h, stage) + osOrdLn(h) : osOrdTxt(h, stage))
       : k === "cost" ? osCostCell(h)
@@ -82546,7 +82615,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       : k === "ad" ? osDay(h.arrivedDate)
       : k === "add" ? `<span class="plus">+${phFmtG(h.arrivedGrams || 0)}g</span>`
       : k === "now" ? `${phFmtG(h.qty || 0)}g` : "";
-    const osTr = (h, stage, cols, i) => `<tr class="ph-ost-r${i % 2 ? " st" : ""}${phOsSide === h.id ? " open" : ""}${osGlow(h)}" data-ph-os-row="${h.id}">${cols.map(k => `<td class="${osCls(k)}">${osCell(h, k, stage)}</td>`).join("")}</tr>${stage === "arrived" && phArrEditId === h.id ? `<tr class="ph-ost-sub"><td colspan="${cols.length}">${osArrEdit(h)}</td></tr>` : ""}`;
+    const osTr = (h, stage, cols, i) => `<tr class="ph-ost-r${i % 2 ? " st" : ""}${stage !== "arrived" && h.qty != null && (h.qty <= 0 || (h.low > 0 && h.qty <= h.low)) ? " short" : ""}${phOsSide === h.id ? " open" : ""}${osGlow(h)}" data-ph-os-row="${h.id}">${cols.map(k => `<td class="${osCls(k)}">${osCell(h, k, stage)}</td>`).join("")}</tr>${stage === "arrived" && phArrEditId === h.id ? `<tr class="ph-ost-sub"><td colspan="${cols.length}">${osArrEdit(h)}</td></tr>` : ""}`;
     // the phone (her pick 7): two lines per herb -- jar, code + name, the Button and ⋮; then its facts
     const osLi = (h, stage, i) => {
       const f = stage === "toorder" ? `${osStk(h)}${osOrdTxt(h, stage)}${osOrdB(h)}`
@@ -82568,7 +82637,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     };
     // the side panel (Formula refill's, her 2026-11-18 mock): 1 Stock · 2 Used by · 3 Order, beside the list
     const osSideHtml = () => {
-      const h = phOsSide ? PHARMACY.herbs.find(x => x.id === phOsSide) : null;
+      const h = phOsSide ? herbs.find(x => x.id === phOsSide) : null;
       if (!h) return "";
       const stg = side === "toorder" ? (h.ordered ? "ordered" : "toorder") : side;
       const used = phIsFormula(h) ? [] : phRefillCandidates().map(fm => { const rc = phRefillRecipe(fm); const hit = rc && (rc.ingredients || []).find(i => { const src = presFindHerb(i); return src && src.id === h.id; }); return hit ? { name: typeof phRfcTitle === "function" ? phRfcTitle(fm.name) : String(fm.name), g: hit.grams } : null; }).filter(Boolean).sort((a, b) => phAz(a.name, b.name));
@@ -82600,8 +82669,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const litOn = Date.now() < phOsbTabLit ? phOstLitTab : "";
     const osTabs = [["toorder", "To order", listN], ["low", "Running low", unflagged.length], ["arrived", "Arrived", recentlyArrived.length], ["snoozed", "Snoozed", snoozed.length], ["acupreg", "Acupreg", phShelfOrderList("ac").length], ["lotus", "Lotus", phShelfOrderList("pp").length]]
       .filter(([k, , n]) => { const cn = phClinicNow();
-        if (cn === "ac") return k === "acupreg";
-        if (cn === "pp") return k === "lotus";
+        if (cn === "ac" || cn === "pp") return k === "toorder" || k === "low" || k === "arrived";
         if (k === "acupreg") return cn === "all" && phShelfCount("ac") > 0;
         if (k === "lotus") return cn === "all" && phShelfCount("pp") > 0;
         return k !== "snoozed" || n; });
@@ -82614,7 +82682,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const osFoot = side === "toorder" && osAny;
     const osOlder = side === "arrived" && !phOsArrOlderOpen && arrOlder.length ? `<button type="button" class="ph-ost-chip ph-ost-older" data-ph-os-arr-older="1">+ ${arrOlder.length} older</button>` : "";
     const osCard = side === "acupreg" || side === "lotus" ? phShelfOrderCardHtml(side === "acupreg" ? "ac" : "pp", osHit, osNm, osSupTxt) : osTbl
-      ? `<div class="ph-ost-card"><div class="ph-ost-scroll"><table class="ph-ost-tbl ${side}"><thead><tr>${cols.map(k => `<th class="${osCls(k)}">${OS_COL[k][0]}</th>`).join("")}</tr></thead><tbody>${osAny ? osRows : `<tr><td class="ph-ost-empty" colspan="${cols.length}">${osEmpty}</td></tr>`}</tbody>${osFoot ? `<tfoot><tr><td colspan="4">Total</td><td class="c-cost num"><b data-ost-money="total">${phMoney(needsTotal)}</b></td><td colspan="2"></td></tr></tfoot>` : ""}</table></div></div>`
+      ? `<div class="ph-ost-card"><div class="ph-ost-scroll"><table class="ph-ost-tbl ${side}"><thead><tr>${cols.map(k => `<th class="${osCls(k)}">${OS_COL[k][0]}</th>`).join("")}</tr></thead><tbody>${osAny ? osRows : `<tr><td class="ph-ost-empty" colspan="${cols.length}">${osEmpty}</td></tr>`}</tbody>${osFoot ? `<tfoot><tr><td colspan="3">Total</td><td class="c-order"><b data-ost-money="total">${phMoney(needsTotal)}</b></td><td colspan="2"></td></tr></tfoot>` : ""}</table></div></div>`
       : `<div class="ph-ost-card">${osAny ? osRows : `<div class="ph-ost-empty">${osEmpty}</div>`}${osFoot ? `<div class="ph-ost-foot"><span>Total</span><b data-ost-money="total">${phMoney(needsTotal)}</b></div>` : ""}</div>`;
     const osSideEl = osSideHtml();
     const osBodyHtml = `<div class="ph-ost-body"><div class="ph-ost-tabrow">${osTabsHtml}${osMeta}</div>${osSideEl ? `<div class="ph-ost-split"><div class="ph-ost-main">${osCard}${osOlder}</div>${osSideEl}</div>` : `${osCard}${osOlder}`}</div>`;
