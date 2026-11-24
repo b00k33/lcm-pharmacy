@@ -35,7 +35,7 @@ in `shots/`, price lists and recordings in `refs/`. All four folders are local o
 
 **Never:** a 1.5px or 2px chip line; a deep-teal, navy or gold-deep fill on a picked chip; a pill or 10px-corner chip; bold (700) chip words; words in 500 / 800 / 900; plain text that taps; a size off the scale; a second font.
 
-**How a build follows it:** write new CSS with the tokens (`--fs-*` sizes, `--ph-herb`, `--ph-line`, `--ph-ink`) and the weights above; never a one-off. **Done** = `.github/scripts/tap-audit.js` and `.github/scripts/style-audit.js` (plus `titlebar-audit.js` when the top bar changes) run at 1220–1280px and at 360px on every page the build touches, its panels and menus open: tap-audit's `off`, style-audit's `offSizes`, `offWeights`, `chipLooks`, `sideLines` and `rowAlign` are empty, or each line left is named in the build note with why (her word, a data colour, a locked page). The 2026-11-18 sweep (BUILD-NOTES "One chip look") names what it left.
+**How a build follows it:** write new CSS with the tokens (`--fs-*` sizes, `--ph-herb`, `--ph-line`, `--ph-ink`) and the weights above; never a one-off. **Done** = `.github/scripts/tap-audit.js` and `.github/scripts/style-audit.js` (plus `titlebar-audit.js` when the top bar changes) run at 1220–1280px and at 360px on every page the build touches, its panels and menus open: tap-audit's `off`, style-audit's `offSizes`, `offWeights`, `chipLooks`, `sideLines` and `rowAlign` are empty, or each line left is named in the build note with why (her word, a data colour, a locked page). The 2026-11-18 sweep (BUILD-NOTES "One chip look") names what it left. **A look is set at every width:** a rule written inside one `@media` leaves the other width on the old look (2026-11-24: pill boxes, 24px titles, deep-teal picked chips and 28px chips survived on a computer or a phone that way, found only by opening every page); a change to a shared token, class or look is checked with `.github/scripts/app-sweep.js` (every sidebar page and every patient page, three kinds of visit, at 1240 and at 360: its `left` list is empty or named, its `looks` list has one dominant look). The 2026-11-24 sweep (BUILD-NOTES "Whole-app audit") names what it left.
 
 **The rule files on disk lag behind:** sessions commit with `git hash-object` / `update-index` and never touch the working copies, so the CLAUDE.md a new session loads can be days old (on 2026-11-18 it was 2026-11-06's). Read the rules with `git show session-a:CLAUDE.md` (and STYLE-LCM.md) before a UI change, and after committing either file write the committed copy back to disk (`git show HEAD:CLAUDE.md > CLAUDE.md`), so the next session starts from today's rules.
 
@@ -976,9 +976,9 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   **999px** pill; 2px for hairline bars. Set 2026-10-13 (audit finding 3, her pick
   "apply the three steps"; 620 radius settings moved, plus `--field-radius-sm`
   11 to 10px and `--field-radius-area` 14 to 16px; about 15 near-pill 18/20/99px
-  shapes were left as they are). Text boxes still read `--field-radius` (999px
-  pill) in the code; a value she taps to edit follows TAPPABLE THINGS' Field
-  shape (6px, tinted), and TAPPABLE wins where the two disagree. One type scale
+  shapes were left as they are). Text boxes read `--field-radius`, `--field-radius-sm` and `--field-radius-area`, which are
+  all 6px since 2026-11-24 (they were a pill, 10px and 16px, so a computer drew pill boxes beside 6px ones); a value she
+  taps to edit follows TAPPABLE THINGS' Field shape (6px, tinted), and TAPPABLE wins where the two disagree. One type scale
   and three weights: THE LOOK at the top.
 - **Dead space is a standing preference, desktop included** (her 2026-09-16):
   start a scrollable grid or timeline where real data starts (not hours of
