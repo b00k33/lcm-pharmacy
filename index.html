@@ -128360,7 +128360,7 @@ Difficult to sweat|no_sweat_tend:r`;
   // every scored day for one complaint, oldest first: [{ day, v, sc, n }]
   function phCxHist(rec, key) {
     const days = phCxDays(rec);
-    const out = Object.keys(days).sort().map(d => { const e = phCxEntry(days[d], key); return e && e.v != null ? { day: d, v: +e.v, sc: e.sc === "pct" ? "pct" : "ten", n: e.n || "" } : null; }).filter(Boolean);
+    const out = Object.keys(days).sort().map(d => { const e = phCxEntry(days[d], key); return e && e.v != null ? { day: d, v: +e.v, sc: e.sc === "pct" ? "pct" : "ten", n: e.n || "", rg: Array.isArray(e.rg) && e.rg.length === 2 ? e.rg : null } : null; }).filter(Boolean);   // rg = the range she typed ("2-8"); v is its midpoint, so Change and the chart read one number (her 2026-11-24 pick)
     // a chief complaint that is a pain is scored on the pain map (the Musculoskeletal pain score, the highest of the pains): on a day with no
     // score of its own, that is its score (2026-10-22, the Baseline Compass), so the Re-check, the Log and the Treatment tab keep reading it
     if (key === "main" && phCxMainIsPain(rec)) {
@@ -130002,7 +130002,8 @@ Difficult to sweat|no_sweat_tend:r`;
       if (S.energy) return enRow();
       const sc = S.pain && !S.pctOk ? "ten" : M.scale, inSc = h => sc === "pct" && h.pct != null ? h.pct : phCxVal(h, S.hist, sc);
       const scored = S.hist.filter(h => h.v != null), before = scored.filter(h => h.day < M.today), prev = before[before.length - 1], cur = scored.find(h => h.day === M.today);
-      const v = x => { if (!x) return "–"; const n = inSc(x); return n == null ? "–" : phCxR1(n) + (sc === "ten" ? "" : "%"); };
+      const rgTx = x => x && x.rg && x.sc === sc && !(sc === "pct" && x.pct != null) ? phCxR1(x.rg[0]) + "–" + phCxR1(x.rg[1]) : null;   // the range as she typed it
+      const v = x => { if (!x) return "–"; const n = inSc(x); return n == null ? "–" : (rgTx(x) || phCxR1(n)) + (sc === "ten" ? "" : "%"); };
       const tv = cur ? inSc(cur) : null, pv = prev ? inSc(prev) : null;
       const d = tv != null && pv != null ? (sc === "ten" ? Math.round((pv - tv) * 10) / 10 : Math.round(tv - pv)) : null;
       const num = !d ? "" : sc === "ten" ? (d > 0 ? "−" : "+") + phCxR1(Math.abs(d)) : (d > 0 ? "+" : "−") + Math.abs(d) + "%";
@@ -130014,7 +130015,7 @@ Difficult to sweat|no_sweat_tend:r`;
       let mi = "";
       if (S.pain && M.pain) mi = `<input type="text" class="ph-cxt-in" data-pm-detail="${esc(M.pain.pid)}|${S.pain.idx}" value="${esc(S.pain.p.d || "")}" maxlength="200" placeholder="More info" autocomplete="off" spellcheck="false" aria-label="More about ${esc(S.text)}">`;
       else if (/^(main$|s:)/.test(key) && key !== "s:pain-auto") { const c = rec.complaint || {}, own = S.main ? c : (Array.isArray(c.secondary) ? c.secondary : []).find(x => x && x.id === S.id) || {}; mi = `<input type="text" class="ph-cxt-in" data-cx-ccnote="${esc(key)}" value="${esc(own.note || "")}" maxlength="140" placeholder="More info" autocomplete="off" aria-label="More about ${esc(S.text)}">`; }
-      const tbox = `${box(`data-cx-n="${esc(key)}"`, tv == null ? null : phCxR1(tv), sc === "ten" ? 10 : 100, S.text + ", today")}<span class="of">${sc === "ten" ? "/ 10" : "%"}</span>`;
+      const tbox = `${box(`data-cx-n="${esc(key)}"`, tv == null ? null : (rgTx(cur) || phCxR1(tv)), sc === "ten" ? 10 : 100, S.text + ", today")}<span class="of">${sc === "ten" ? "/ 10" : "%"}</span>`;
       const fbk = key === "main" ? (rec.complaint || {}).mainFbrKey : S.fbrKey, fbm = fbk ? phCxFbmHtml(rec, [fbk], key) : "";
       const gto = phCxGoalToLineHtml(phCxGoalToGet(rec, key, S), S), gtr = gto ? `<tr class="gl${pt === "main" ? " main" : ""}"><td colspan="${nC}">${gto}</td></tr>` : "";
       return `<tr class="r${pt === "main" ? " main" : ""}${edOn ? " edon" : ""}${gto ? " hasgl" : ""}" data-cx-row="${esc(key)}"><td class="nm"><span class="nm" data-cx-rn="${esc(key)}" title="${esc(S.text)}">${dot(g)}<span class="t">${esc(phSymCase(S.text))}${fbm ? " " + fbm : ""}</span>${edb}</span></td><td class="hl">${S.since ? esc(phCcRelAc(S.since)) : ""}</td>${back ? `<td class="n">${v(before[0])}</td><td class="n">${v(prev)}</td>` : ""}<td class="td">${tbox}</td>${back ? `<td class="ch">${phCxtChg(d, num)}</td>` : ""}<td class="mi">${mi}</td></tr>${gtr}${edOn ? `<tr class="ed"><td colspan="${nC}">${phCxEdRowHtml(r, M, name)}</td></tr>` : ""}`;
@@ -130070,15 +130071,18 @@ Difficult to sweat|no_sweat_tend:r`;
     const el = e.target;
     if (!el || !el.matches || !el.matches("#pharmacyPage .ph-cxt .sc, #pharmacyPage .ph-cxt .en")) return;
     const name = phCxNameOf(el); if (!name) return;
-    const raw = el.value.trim().replace(",", "."), max = +el.dataset.max || 10, num = parseFloat(raw);
+    const raw = el.value.trim().replace(",", "."), max = +el.dataset.max || 10;
+    const rgm = !el.dataset.cxEn && /^(\d+(?:\.\d+)?)\s*(?:-|–|—|to)\s*(\d+(?:\.\d+)?)$/i.exec(raw);   // a range: 2-8
+    const rgv = rgm ? [Math.max(0, Math.min(max, Math.min(+rgm[1], +rgm[2]))), Math.max(0, Math.min(max, Math.max(+rgm[1], +rgm[2])))] : null;
+    const num = rgv ? (rgv[0] + rgv[1]) / 2 : parseFloat(raw);
     if (raw && isNaN(num)) { el.value = ""; return; }
-    const n = raw ? Math.max(0, Math.min(max, Math.round(num * 10) / 10)) : null;
+    const n = raw ? Math.max(0, Math.min(max, Math.round(num * 10) / 10)) : null, rg = rgv && rgv[0] !== rgv[1] ? rgv : null;
     setTimeout(() => {
       const sel = phCxtSel(document.activeElement);
       if (el.dataset.cxEn) { const k = el.dataset.cxEn; if (phEnWrite(name, d => { if (n == null) delete d[k]; else d[k] = Math.max(1, Math.round(n)); })) phEnRefresh(name); }
       else {
         const key = el.dataset.cxN;
-        if (n != null) phCxScoreWrite(name, key, n, false);
+        if (n != null) phCxScoreWrite(name, key, n, false, rg);
         else if (key.indexOf("p:") !== 0) { const rec = phPatientPeek(name) || {}, was = phCxEntry(phCxDays(rec)[phCxDayOf(name)], key); if (was && was.v != null) phCxScoreWrite(name, key, was.v, true); }
       }
       const b = sel ? document.querySelector("#pharmacyPage [data-cx-host] " + sel) : null;
@@ -130339,11 +130343,11 @@ Difficult to sweat|no_sweat_tend:r`;
     if (!phCxPnlSrc) { phCxNoteBox = ""; phCxDet = ""; }
   }
   // a score written from the slider, the % box or a number key: today's entry in the card's scale; the same value again clears it
-  function phCxScoreWrite(name, key, n, clear) {
+  function phCxScoreWrite(name, key, n, clear, rg) {
     if (key.indexOf("p:") === 0) return phCxPainScoreWrite(name, key, n);
     const rec0 = phPatientPeek(name) || {}, scale = phCxScale(rec0), today = phCxDayOf(name);   // today, or the earlier visit on the Scoring bar
     const was = phCxEntry(phCxDays(rec0)[today], key), same = !!(clear && was && was.v === n && (was.sc || "ten") === scale);
-    if (!phCxWrite(name, tr => { const d = tr.days[today] || (tr.days[today] = {}); const en = phCxEntryMake(d, key); if (same) en.v = null; else { en.v = n; en.sc = scale; } })) return false;
+    if (!phCxWrite(name, tr => { const d = tr.days[today] || (tr.days[today] = {}); const en = phCxEntryMake(d, key); if (same) { en.v = null; delete en.rg; } else { en.v = n; en.sc = scale; if (rg) en.rg = rg; else delete en.rg; } })) return false;
     phCxFx = same ? null : { key };
     phCxFocAfter(name, key);
     phCxRefresh(name);
