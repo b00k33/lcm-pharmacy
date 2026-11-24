@@ -39,6 +39,7 @@
     ".ph-hx-qrow", ".ph-cx-row", ".ph-fbr-row", ".ph-diet-cell", ".ph-rx-card", ".ph-fu-summary", ".ph-tp-fm", ".ph-dose-step-main",   // question rows, tiles and cards that tap
     ".ph-cx.b .pills.w .ph-cx-pill",                 // Today's visit: a sign's four answer cells, a 56x32 target with its dot drawn inside (her 2026-11-18 "i like b")
     ".ph-cx .nm[data-cx-rn]",                      // Better / worse on a phone: a complaint's name is a title row that wraps whole and opens its details (her 2026-11-19 "a long name still wraps whole, never cut"; found 2026-11-24)
+    ".ph-pick-row",                                // a herb / formula search result in the add box: a row that may wrap to two lines and picks (a result list, not a chip; found 2026-11-24 on the Herbs page)
     ".ph-vsum-ln",                                  // the visit summary card's fact lines: a row that opens its page (her 2026-11-20 "build all three")
     ".ph-sg-row",                                   // a surgery: the row opens its form to change it (her 2026-11-21 "how to edit the surgeries?")
     "[data-keep-size]"                              // a control she agreed to keep at its own size: say which in the build note
