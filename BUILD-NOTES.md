@@ -18114,3 +18114,7 @@ Her "i cant add herbs to order for acupreg", with a screenshot of the Acupreg ta
 - **Acupreg / Lotus To order card** reads as CBD's: Herb column wraps, no sideways scroll at 1220 or 360 (phone: one block per herb), one solid Add. Checked scroll width = client width at 700 and 328 wide with made-up rows; not on her real To order page.
 - Checked at function level in the sandbox: `phLogShelf`, `phClinicStatsHtml`, `phNxRows`, `phLogOfClinic`. NOT driven on the real pages; audits (tap / style / titlebar / voice) not run.
 - Not done: Stocktake / Inventory / Formula refill "same across the board" beyond the shared low line (already one clinic row; a closer look needs her real screens); Suppliers left as is.
+
+## 2026-11-24 — Add several from the master list (her "1, 2")
+- Acupreg / Lotus Inventory sheet: an "Add several" chip beside the single add opens a search + tick chips of every herb not kept at that clinic (master list = all non-stopped herbs); "Add N herbs" puts each on the shelf at 0 g, no grams needed. The single add also starts at 0 when no grams are typed. State `phClinPick` (view only); search narrows the chips without rebuilding the box.
+- Checked at function level (chips, search, count); NOT tapped on her real Acupreg / Lotus page.

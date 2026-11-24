@@ -33887,6 +33887,9 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   #pharmacyPage .ph-clin-add { display: flex; align-items: center; gap: 8px; padding: 10px 12px; flex-wrap: wrap; background: color-mix(in srgb, var(--cl) 6%, white); }
   #pharmacyPage#pharmacyPage .ph-clin-add select { flex: 1 1 220px; min-width: 0; height: 32px; border-radius: 6px !important; font-size: var(--fs-13); }
   #pharmacyPage .ph-clin-add input { width: 96px; }
+  #pharmacyPage .ph-clin-chips { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px 10px; max-height: 220px; overflow-y: auto; background: color-mix(in srgb, var(--cl) 6%, white); }
+  #pharmacyPage .ph-clin-chip { height: 32px; padding: 0 12px; border: 1px solid var(--ph-line); border-radius: 6px; background: #fff; color: var(--ph-ink); font: 600 var(--fs-13) var(--font-body); cursor: pointer; }
+  #pharmacyPage .ph-clin-chip.on { background: var(--ph-herb); border-color: var(--ph-herb); color: #fff; }
   #pharmacyPage #phInvWidget.ph-inv-solo .ph-mchips-wrap, #pharmacyPage #phInvWidget.ph-inv-solo #phInvFilterBtn { display: none !important; }
   @media (max-width: 900px) { #pharmacyPage .ph-clin-tbl td[data-label]::before { content: attr(data-label); display: block; font: 600 var(--fs-10-5) var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-faint); } }
   #pharmacyPage#pharmacyPage :is(.ph-clin-sheet, .ph-ost-tbl.acupreg) .btn-save { font-size: var(--fs-13); height: 32px; min-height: 0; padding: 0 12px; border-radius: 6px; }
@@ -41066,6 +41069,21 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
 
   // the Inventory sheet for one clinic (Acupreg / Lotus): the herbs kept there, that shelf's grams and low line only
+  // ADD SEVERAL FROM THE MASTER LIST (her 2026-11-24 "1, 2"): tick any herbs the clinic does not keep yet; each starts at 0 g, no grams to type
+  let phClinPick = null;   // { s: shelf, set: Set of herb ids, q: search } while the panel is open (view state)
+  function phClinMultiChips(free) {
+    const q = phClinPick.q.trim().toLowerCase(), list = free.filter(h => !q || (phPinyinName(h) + " " + (phHerbCode(h) || "")).toLowerCase().includes(q));
+    return list.slice(0, 120).map(h => `<button type="button" class="ph-clin-chip${phClinPick.set.has(h.id) ? " on" : ""}" data-ph-clin-pick="${esc(h.id)}" aria-pressed="${phClinPick.set.has(h.id) ? "true" : "false"}">${esc(phPinyinName(h))}</button>`).join("") + (list.length > 120 ? `<span class="ph-sub">+${list.length - 120} more, search to narrow</span>` : "") + (list.length ? "" : `<span class="ph-sub">Nothing to add</span>`);
+  }
+  function phClinMultiHtml(s, free, nm) {
+    if (!phClinPick || phClinPick.s !== s) return "";
+    return `<div class="ph-clin-multi"><div class="ph-clin-add"><input type="search" id="phClinMultiQ" class="field-bare" style="flex:1 1 220px;width:auto" placeholder="Search herbs to add to ${nm}" value="${esc(phClinPick.q)}" aria-label="Search herbs"><button type="button" class="btn-save" data-ph-clin-multi-add="${s}"${phClinPick.set.size ? "" : " disabled"}>Add ${phClinPick.set.size || ""} ${phClinPick.set.size === 1 ? "herb" : "herbs"}</button></div><div class="ph-clin-chips" id="phClinMultiChips">${phClinMultiChips(free)}</div></div>`;
+  }
+  document.addEventListener("input", e => {   // the search narrows the chips only, so the box keeps its focus
+    if (!(e.target && e.target.id === "phClinMultiQ") || !phClinPick) return;
+    phClinPick.q = e.target.value; const c = document.getElementById("phClinMultiChips");
+    if (c) c.innerHTML = phClinMultiChips((PHARMACY.herbs || []).filter(h => !phHasShelf(h, phClinPick.s) && !h.stopped).sort(phByName));
+  });
   function phClinicInvPaint() {
     const s = phClinicSolo(), host = document.getElementById("phStock"), w = document.getElementById("phInvWidget");
     if (!host || !s) return;
@@ -41079,8 +41097,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       return `<tr data-ph-row="${h.id}"><td class="ph-name">${phHerbCode(h) ? `<span class="ph-code">${esc(phHerbCode(h))}</span> ` : ""}<span class="ph-dash-name">${esc(phPinyinName(h))}</span></td><td data-label="Supplier">${a ? esc(a.name) : "—"}</td><td class="ph-num" data-col="${f}" data-label="${nm} (g)">${lk(h, f, `${q < low ? `<span class="ph-pp-low" title="Low at ${nm}"></span>` : ""}${phFmtG(q)}`, `${nm} stock of ${esc(h.name)}`)}</td><td data-label="Level">${phStockBarPct(q, low)}</td><td class="ph-num" data-label="Low at (g)">${lk(h, lowF, `${phFmtG(low)}${lowSet ? "" : ' <span class="ph-sub">auto</span>'}`, `${nm} low line of ${esc(h.name)}`)}</td><td class="ph-act"><button type="button" class="ph-load-btn" data-ph-pp-move="${h.id}" title="Move stock between clinics">Move</button></td></tr>`;
     }).join("");
     const free = (PHARMACY.herbs || []).filter(h => !phHasShelf(h, s) && !h.stopped).sort(phByName);
-    const add = `<div class="ph-clin-add"><select id="phClinAddSel" aria-label="Add a herb to ${nm}"><option value="">Add a herb to ${nm}…</option>${free.map(h => `<option value="${esc(h.id)}">${esc(phPinyinName(h))}</option>`).join("")}</select><input type="number" min="0" step="10" id="phClinAddG" class="field-bare" placeholder="grams" aria-label="Grams at ${nm}"><button type="button" class="btn-save" data-ph-clin-add="${s}">Add</button></div>`;
-    host.innerHTML = `<div class="ph-clin-sheet" style="--cl:${phShelfColour(s)}">${add}<table class="ph-table ph-clin-tbl"><thead><tr><th>Name</th><th>Supplier</th><th class="num">${nm} (g)</th><th>Level</th><th class="num">Low at (g)</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="ph-ost-empty">Nothing is kept at ${nm} yet</td></tr>`}</tbody></table></div>`;
+    const add = `<div class="ph-clin-add"><select id="phClinAddSel" aria-label="Add a herb to ${nm}"><option value="">Add a herb to ${nm}…</option>${free.map(h => `<option value="${esc(h.id)}">${esc(phPinyinName(h))}</option>`).join("")}</select><input type="number" min="0" step="10" id="phClinAddG" class="field-bare" placeholder="grams" aria-label="Grams at ${nm}"><button type="button" class="btn-save" data-ph-clin-add="${s}">Add</button><button type="button" class="ph-clin-chip${phClinPick && phClinPick.s === s ? " on" : ""}" data-ph-clin-multi="${s}" aria-pressed="${phClinPick && phClinPick.s === s ? "true" : "false"}">Add several</button></div>`;
+    host.innerHTML = `<div class="ph-clin-sheet" style="--cl:${phShelfColour(s)}">${add}${phClinMultiHtml(s, free, nm)}<table class="ph-table ph-clin-tbl"><thead><tr><th>Name</th><th>Supplier</th><th class="num">${nm} (g)</th><th>Level</th><th class="num">Low at (g)</th><th></th></tr></thead><tbody>${rows || `<tr><td colspan="6" class="ph-ost-empty">Nothing is kept at ${nm} yet</td></tr>`}</tbody></table></div>`;
     const inp = host.querySelector("[data-ph-edit]"); if (inp) { inp.focus(); inp.select(); }
     const cnt = document.getElementById("phCount"); if (cnt) cnt.textContent = "";
   }
@@ -82187,10 +82205,24 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     }
     const c = e.target instanceof Element && e.target.closest("[data-ph-clinic]");
     if (c) { phClinic = c.dataset.phClinic; phInvPlace = phClinicNow(); phOsbSide = null; phCellEdit = null; { const rw = document.getElementById("phRestockWrap"); if (rw) rw.innerHTML = ""; } renderPharmacy(); return; }
+    const mt = e.target instanceof Element && e.target.closest("[data-ph-clin-multi]");
+    if (mt) { const sh = mt.dataset.phClinMulti; phClinPick = phClinPick && phClinPick.s === sh ? null : { s: sh, set: new Set(), q: "" }; phClinicInvPaint(); return; }
+    const mp = e.target instanceof Element && e.target.closest("[data-ph-clin-pick]");
+    if (mp && phClinPick) { const id = mp.dataset.phClinPick; if (phClinPick.set.has(id)) phClinPick.set.delete(id); else phClinPick.set.add(id); phClinicInvPaint(); return; }
+    const ma = e.target instanceof Element && e.target.closest("[data-ph-clin-multi-add]");
+    if (ma && phClinPick && phClinPick.set.size) {
+      const sh = ma.dataset.phClinMultiAdd; let n = 0;
+      phClinPick.set.forEach(id => { const h = PHARMACY.herbs.find(x => x.id === id); if (h && !phHasShelf(h, sh)) { h[PH_SHELVES[sh].f] = 0; phAfterQtyChange(h); n++; } });
+      phClinPick = null;
+      if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
+      presSavedToast(`${n} herb${n === 1 ? "" : "s"} now kept at ${PH_SHELVES[sh].name}`);
+      renderPhRows();
+      return;
+    }
     const a = e.target instanceof Element && e.target.closest("[data-ph-clin-add]");
     if (!a) return;
     const s = a.dataset.phClinAdd, sel = document.getElementById("phClinAddSel"), gi = document.getElementById("phClinAddG");
-    const h = sel && PHARMACY.herbs.find(x => x.id === sel.value), g = Math.floor(parseFloat(gi && gi.value));
+    const h = sel && PHARMACY.herbs.find(x => x.id === sel.value), g0 = parseFloat(gi && gi.value), g = Number.isFinite(g0) ? Math.floor(g0) : 0;   // no grams typed = starts at 0
     if (!h || !PH_SHELVES[s] || !(g >= 0)) return;
     h[PH_SHELVES[s].f] = g;
     phAfterQtyChange(h);
