@@ -18137,3 +18137,8 @@ Her "these icons are not consistent and look busy" + the mock `mock-own-blocks-i
 - `phClinicStocktakeHtml` is now the same two cards as CBD's page (`.ph-stocktake-page`): "What am I counting today?" (a Herbs · N to check row, then the count table) and "Stocktake history" for that clinic. History is its own list, `PHARMACY.clinStocktakes` ({id, shelf, date, checked, adjusted}), written by Save counts; CBD's `PHARMACY.stocktakes` (last-count dates, the print) is untouched. The table head is the pale band, a count is the 32px chip box, no clinic-colour wash behind Save.
 - Checked with made-up herbs in a scratch copy (screenshot); not on her real Lotus page. The counting flow itself (queue, resume, restart) is still CBD's only; a clinic count is one table.
 - Still to bring to CBD's look at Acupreg / Lotus (next): the Inventory sheet and the Dashboard.
+
+## 2026-11-25 — Acupreg / Lotus Inventory wears CBD's look; "Count today" (her "lotus and acupreg ui needs to be updated to cbd", "make the language terse")
+- `phClinicInvPaint`: Formulas first, then Herbs under CBD's pale label rows (`.ph-inv-grp`); a row at or under its low line takes the light red (`.ph-row-short`, no red dot inside the stock cell); the stock number is the one outlined chip; the table head is the pale band (it was the clinic colour, so Lotus's red read as short).
+- Stocktake: "What am I counting today?" is "Count today" on CBD's and the clinics' pages.
+- Checked at 1280 with made-up herbs (screenshot). Not on her real Lotus Inventory. Dashboard at the clinics is next.
