@@ -22068,6 +22068,13 @@
   #pharmacyPage .ph-hbs em { font: 400 var(--fs-11-5) var(--font-body); font-style: normal; color: var(--ph-soft); }
   #pharmacyPage .ph-hbs em.out::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 5px; border-radius: 50%; background: var(--ph-zero); vertical-align: middle; }
   #pharmacyPage .ph-hbs .ph-meal-bar { margin-left: auto; }
+  /* her 2026-11-24 synth22: the Ticked list on Fang Bing Ren (what is ticked Yes for him, by body area, Bing or Ren) */
+  #pharmacyPage .ph-fbr-tkd { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px 16px; margin: 0 0 10px; padding: 8px 12px; border-radius: 12px; background: #fff; box-shadow: 0 8px 24px rgba(11, 59, 75, .08); }
+  #pharmacyPage .ph-fbr-tkd .e { font: 400 var(--fs-13) var(--font-body); color: var(--ph-soft); }
+  #pharmacyPage .ph-fbr-tkd h4 { margin: 0; padding: 0 0 2px; font: 700 var(--fs-10-5) var(--font-body); letter-spacing: .08em; text-transform: uppercase; color: var(--ph-herb); }
+  #pharmacyPage .ph-fbr-tkd .r { display: flex; align-items: baseline; gap: 8px; min-height: 24px; font: 400 var(--fs-13) var(--font-body); color: var(--ph-ink); }
+  #pharmacyPage .ph-fbr-tkd .r .t { flex: 1 1 auto; min-width: 0; }
+  #pharmacyPage .ph-fbr-tkd .r i { flex: none; font: 700 var(--fs-10-5) var(--font-body); font-style: normal; letter-spacing: .08em; text-transform: uppercase; color: var(--ph-soft); }
   /* her 2026-11-24 synth22 (d): the Phase card + the Herbs row, ONE quiet line; a tap opens both */
   #pharmacyPage .ph-tvq { margin: 0 0 10px; }
   #pharmacyPage .ph-tvq > summary { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 6px; background: var(--ph-herb-tint); font: 600 var(--fs-13) var(--font-body); color: var(--ph-ink); cursor: pointer; list-style: none; }
@@ -138931,6 +138938,22 @@ Difficult to sweat|no_sweat_tend:r`;
   var phTriFilt = new Map();          // patient key -> list of family ids filtering Bing/Ren (view state, never saved; her 2026-10-12 ask: several at once)
   var phTriMulti = new Set();         // patient keys with "Pick several" on: a tile tap adds/removes instead of switching (view state)
   var phFbrRailFold = new Set();      // her 2026-11-08 "formulas and scores as a column on the left side": patient keys with the formula rail folded away; view state, never saved
+  var phFbrTick = new Set();          // patient keys with the Ticked list open on Fang Bing Ren (view state; her 2026-11-24 "how do i see symptoms only ticked for him")
+  // the signs ticked Yes for him (the effective answers: her taps and what the record fills in), Bing and Ren, with their body area; the ONE read for this list
+  function phFbrTickRows(effD, effP) {
+    const rows = [];
+    [["d", effD, "Bing"], ["p", effP, "Ren"]].forEach(([kind, eff, tag]) => Object.keys(eff || {}).forEach(k => {
+      if (eff[k] !== true) return;
+      const lab = phSignLabel(k); if (!lab || lab === k) return;
+      rows.push({ ix: phFbrAreaOf(kind, [k, lab]), tag, lab });
+    }));
+    return rows;
+  }
+  function phFbrTickedHtml(rows) {
+    if (!rows.length) return `<div class="ph-fbr-tkd"><span class="e">Nothing ticked</span></div>`;
+    const by = new Map(); rows.forEach(r => { if (!by.has(r.ix)) by.set(r.ix, []); by.get(r.ix).push(r); });
+    return `<div class="ph-fbr-tkd">${[...by.keys()].sort((a, b) => a - b).map(ix => `<section><h4>${esc(PH_FBR_AREAS[ix].lab)} · ${by.get(ix).length}</h4>${by.get(ix).sort((a, b) => phAz(a.lab, b.lab)).map(r => `<div class="r"><span class="t">${esc(r.lab)}</span><i>${r.tag}</i></div>`).join("")}</section>`).join("")}</div>`;
+  }
   var phTriMenu = new Set();          // patient keys with the card's ⋯ menu open (view state; her 2026-10-13 sleek card)
   const phTriFiltIds = k => (phTriFilt.get(k) || []).filter(id => PH_FORMULAS[id]);
   function phTriFam(name) { const c = phCcOf(name); return c ? phCcMainId(c) : "general"; }
@@ -141739,7 +141762,7 @@ Difficult to sweat|no_sweat_tend:r`;
     // Quick assess bars add the question model's chance ("47% likely").
     // her 2026-10-13 audit fix 2 ("ren and bing work together"): the verdict gives the fit and each side's share, and says in plain words whether Bing and Ren
     // agree (same family best on both sides) or lean different ways.
-    const pkM = phPatientKey(name), audOpen = phLkAudOpen.has(pkM), menuOpen = phTriMenu.has(pkM);
+    const pkM = phPatientKey(name), audOpen = phLkAudOpen.has(pkM), menuOpen = phTriMenu.has(pkM), tickRows = phFbrTickRows(effD, effP);
     // her 2026-10-15 "mock 2" pick (fbr-compact-mocks-2026-10-15.html): the verdict (family, %, track,
     // Bing/Ren split, agree line) no longer renders as its own block here -- it merges into Quick
     // assess's own header (phQaHtml), one dark bar. phFbrLeadOf(ranked) is recomputed there.
@@ -141763,9 +141786,10 @@ Difficult to sweat|no_sweat_tend:r`;
     // else, same spirit as the Guide Families rail -- a fold button collapses it (phFbrRailFold, view state, never saved).
     const railOpen = !phFbrRailFold.has(pkM);
     return `<div class="ph-pfw-card ph-tri" data-tri-host="1">
-      <div class="ph-pfw-hd ph-fbr-hd"><h3>Fang Bing Ren (方病人)</h3><div class="ph-fbr-tools"><button type="button" class="ph-fbr-pick${phFtgFolded() ? "" : " on"}" aria-pressed="${phFtgFolded() ? "false" : "true"}" data-ftg-fold="1">Triangle</button><button type="button" class="ph-fbr-pick${multiOn ? " on" : ""}" aria-pressed="${multiOn ? "true" : "false"}" data-tri-multi="1">Pick several</button><span class="ph-fbr-menuwrap"><button type="button" class="ph-fbr-more" data-tri-menu="1" aria-expanded="${menuOpen ? "true" : "false"}" aria-label="More" title="More">⋯</button>${menuOpen ? `<div class="ph-fbr-menu" role="menu"><button type="button" role="menuitem" data-tri-aud="1">${audOpen ? "Hide who answered what" : "Who answered what"}</button><button type="button" role="menuitem" data-tri-links="1">Linked symptoms</button><button type="button" role="menuitem" data-far-open="1">All formulas &amp; criteria</button></div>` : ""}</span></div></div>
+      <div class="ph-pfw-hd ph-fbr-hd"><h3>Fang Bing Ren (方病人)</h3><div class="ph-fbr-tools"><button type="button" class="ph-fbr-pick${phFtgFolded() ? "" : " on"}" aria-pressed="${phFtgFolded() ? "false" : "true"}" data-ftg-fold="1">Triangle</button><button type="button" class="ph-fbr-pick${multiOn ? " on" : ""}" aria-pressed="${multiOn ? "true" : "false"}" data-tri-multi="1">Pick several</button><button type="button" class="ph-fbr-pick${phFbrTick.has(pkM) ? " on" : ""}" aria-pressed="${phFbrTick.has(pkM) ? "true" : "false"}" data-fbr-tick="1">Ticked · ${tickRows.length}</button><span class="ph-fbr-menuwrap"><button type="button" class="ph-fbr-more" data-tri-menu="1" aria-expanded="${menuOpen ? "true" : "false"}" aria-label="More" title="More">⋯</button>${menuOpen ? `<div class="ph-fbr-menu" role="menu"><button type="button" role="menuitem" data-tri-aud="1">${audOpen ? "Hide who answered what" : "Who answered what"}</button><button type="button" role="menuitem" data-tri-links="1">Linked symptoms</button><button type="button" role="menuitem" data-far-open="1">All formulas &amp; criteria</button></div>` : ""}</span></div></div>
       ${audOpen ? phLinkAuditHtml(name) : ""}
       ${phLinkStripHtml(name)}
+      ${phFbrTick.has(pkM) ? phFbrTickedHtml(tickRows) : ""}
       <div class="ph-fbr-funnel v-${view}">
         <div class="ph-fbr-top">${phFbrLookHtml(name, Object.assign({ n: bingS.all.length + renS.all.length, fq: { hits: fqHits, only: !csOn }, cl: true }, forCtx))}${viewBar}</div>
         ${phFbrFunnelHtml(name, rec, { view, focus, effD, effP, d, p, boardOn, checkHtml, shortHtml, tableHtml, othersHtml })}
@@ -142385,6 +142409,7 @@ Difficult to sweat|no_sweat_tend:r`;
       if (phTriMulti.has(k)) { phTriMulti.delete(k); const cur = phTriFiltIds(k); if (cur.length > 1) phTriFilt.set(k, [cur[0]]); } else phTriMulti.add(k);
       phTriRefresh(name); return true;
     }
+    if (T.closest("[data-fbr-tick]")) { const k = phPatientKey(name); if (phFbrTick.has(k)) phFbrTick.delete(k); else phFbrTick.add(k); phTriRefresh(name); return true; }
     if (T.closest("[data-tri-filt-clear]")) { const k = phPatientKey(name); phTriFilt.delete(k); if (phFbrFocus.get(k) === "fam") phFbrFocus.delete(k); phTriRefresh(name); return true; }
     // her 2026-10-13 sleek card: the ⋯ menu in the heading holds Who answered what and Linked symptoms (view state only). Choosing an item closes the menu and does what the
     // two outlined buttons used to: the audit panel toggles in place, the Linked symptoms sheet opens.
