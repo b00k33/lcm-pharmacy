@@ -18178,3 +18178,11 @@ Her "gmp lids are also white but the lid shape is slightly different" (her photo
 - Grey stays the lid for any supplier she has not described (In house, ...). `.ph-lid` was already a style-audit data mark (443fa6cc), so GMP needed no audit change.
 - **Audits** (made-up herbs, GMP lids incl. a GMP formula, Shelf view): style (all six lists), tap and voice EMPTY at 1220 and 360; titlebar empty at 360; no GMP name overflows its lid.
 - **App sweep at 360** (this build and 443fa6cc): Inventory clean; left = the End of day prompt text (known false flag) and Messages' "Running out" chip (`button.ph-mc-chip`) with 0 corners, neither from these builds.
+
+## Phasing out = Low at 0, never low (2026-11-25, her rule)
+Her "all phasing out herbs minimum is 0, so it is never low - set this rule".
+- **Setting Phase out** (the drawer, the status menu, bulk) sets Low at to 0; the old line is kept in `prevLow` and comes back when she sets the herb back to Current (`phSetStatus`). Stopped keeps the 0.
+- **Herbs already phasing out** get Low at 0 the next time the herb list loads (`phOriginMigrate`, now also run at the start of every `renderPharmacy`, so a cloud load is covered, not only Inventory).
+- **Every clinic:** `phShelfLow` reads 0 for a phasing-out herb (Acupreg / Lotus fall-backs included), so it never shows Low, a red row, a red dot or a Running low entry; an empty jar can still show empty.
+- Fits her earlier "Low at 0 = never order again": a phasing-out jar that sells down to nothing still becomes a plain stopped jar (`phAfterQtyChange`).
+- **Driven** (sandbox, made-up herbs): a fresh herb list with two phasing-out herbs (low 60 and none) -> both 0, statuses phaseout; back to Current -> 60 again; Phase out twice keeps prevLow 60; Lotus rows: the phasing-out herb not red. **Not run:** the audits (no visible change).

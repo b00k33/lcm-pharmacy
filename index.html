@@ -38676,6 +38676,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     phOriginFor = PHARMACY.herbs;
     let n = 0;
     PHARMACY.herbs.forEach(h => {
+      // her rule 2026-11-25 ("all phasing out herbs minimum is 0, so it is never low"): a herb already phasing out gets Low at 0 (old line in prevLow)
+      if (h.phaseOut && +h.low !== 0) { if (h.low != null) h.prevLow = +h.low; h.low = 0; n++; }
       const rows = Array.isArray(h.suppliers) ? h.suppliers : [];
       const named = rows.filter(s => s && PH_NAMED_INHOUSE_SUPS.includes(s.name));
       const supNamed = PH_NAMED_INHOUSE_SUPS.includes(h.supplier);
@@ -39372,6 +39374,11 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // stopping writes stock off (stashed), phase-out keeps/restores it to sell down
   function phSetStatus(h, status) {
     delete h.autoStop;   // her own word replaces the automatic stop
+    // her rule 2026-11-25: "all phasing out herbs minimum is 0, so it is never low" -- phase out sets Low at to 0 (the old line kept in
+    // prevLow), back to current brings it back; phShelfLow reads 0 for a phasing-out herb at every clinic
+    if (status === "active" && h.phaseOut && +h.low === 0 && h.prevLow != null) h.low = h.prevLow;
+    if (status !== "phaseout") delete h.prevLow;
+    if (status === "phaseout") { if (h.low != null && +h.low !== 0) h.prevLow = +h.low; h.low = 0; }
     if (status === "active") {
       h.stopped = false; h.phaseOut = false;
       if (h.qty === 0 && h.prevQty != null) h.qty = h.prevQty;
@@ -41110,7 +41117,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   const phShelfOf = h => presDispShelf();
   const phShelfQty = h => { const s = presDispShelf(); return s === "cbd" ? h.qty : phHasShelf(h, s) ? +h[PH_SHELVES[s].f] : 0; };
   // a herb's low line, the same at every clinic (h.low); with none set Acupreg and Lotus use 50 g, CBD none
-  const phShelfLow = (h, s) => (h.low != null && h.low > 0) ? +h.low : s === "pp" ? (+h.lowPP > 0 ? +h.lowPP : PH_PP_LOW) : s === "ac" ? (+h.lowAC > 0 ? +h.lowAC : PH_AC_LOW) : null;   // ONE low line per herb for every clinic (her 2026-11-24 "one shared low line"): the herb's own h.low; lowAC / lowPP are only the older per-clinic numbers, read while h.low is empty, never written now
+  const phShelfLow = (h, s) => h.phaseOut ? 0 : (h.low != null && h.low > 0) ? +h.low : s === "pp" ? (+h.lowPP > 0 ? +h.lowPP : PH_PP_LOW) : s === "ac" ? (+h.lowAC > 0 ? +h.lowAC : PH_AC_LOW) : null;   // ONE low line per herb for every clinic (her 2026-11-24 "one shared low line"): the herb's own h.low; lowAC / lowPP are only the older per-clinic numbers, read while h.low is empty, never written now
   // grams back onto (or, negative, off) a shelf: a dispense's undo / roll-back puts them where they came from
   function phShelfAdd(h, grams, shelf) {
     const f = PH_SHELVES[shelf] ? PH_SHELVES[shelf].f : "qty";
@@ -70560,6 +70567,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   function renderPharmacy() {
     phFbrEditsSync();   // her Guide edits to the Fang Bing Ren tables follow every replace of PHARMACY (boot, cloud merge, other tab, restore)
+    phOriginMigrate();  // the herb list's load fix-ups (in-house names; phasing-out Low at 0) after every replace of PHARMACY, not only on Inventory
     const { herbs, formulas, log, suppliers } = PHARMACY;
     phAbbrMap = null; phHerbById = null; phInHouseSet = null; phBlendNames = null; phRecipeCache = null; phIsFormulaCache = null;   // abbrs / jar links / herbs may have changed — rebuild lazily
     phTripSync();   // ‹ Back to the patient after a door on a patient page (2026-11-18)
