@@ -17,6 +17,7 @@
   const D = W.document;
   // the agreed exceptions (CLAUDE.md TAPPABLE THINGS "Kept", BUILD-NOTES "Chip audit sweep"): data marks, pictures, rows, cells
   const KEEP = [
+    ".apo-d", ".apo-selw select",                  // the apothecary band's drawers (50px), specimen jars (58px), moss Add button and brass knob (38px): her 2026-11-26 "make it more realistic with animated interactive elements", Herbs & stock from 641px only
     ".ph-apo-vt",                                   // a stock filter tile on Inventory with its plant in a test tube (her 2026-11-26 apothecary): a stat tile, 76px, 10px corners
     "#phGuideWrap > .ph-shell-topblock .ph-place-bar button", ".ph-gd-room .gd-tabs button",   // the Guide's folder index tabs (her 2026-11-25 "library inspired" tabs, pick A of mock-guide-tabs.html): a tab keeps its top corners and its two heights, closed / open: 34 / 42 on the top bar, 30 / 34 on the sheet, 26 / 29 above a table
     ".gf-dots button", ".gf-dots i",                 // importance dots (the Guide, Compare)

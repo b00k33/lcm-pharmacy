@@ -17,7 +17,7 @@
 (function (W) {
   const D = W.document;
   const CTRL = "button, select, a[href], input:not([type=hidden]), textarea, [role=button], [role=tab], .ph-gdf-prog, [data-bar-item]";
-  const SKIP = ".ph-gd-tabdrop, .ph-tbm-menu, .ph-rp-menu, [hidden]";   // open menus hang below the bar: not part of its row
+  const SKIP = ".ph-gd-tabdrop, .ph-tbm-menu, .ph-rp-menu, [hidden], .apo-d, .apo-selw";   // open menus hang below the bar: not part of its row; .apo-d / .apo-selw = the apothecary band's drawers and jars (her 2026-11-26): the open drawer slides 9px and the picked jar lifts 5px on purpose
   const r1 = n => Math.round(n * 10) / 10;
   W.lcmTitlebarAudit = function (opts) {
     // every page keeps its own (hidden) wrapper: take the one on screen
