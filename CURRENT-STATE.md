@@ -687,7 +687,7 @@ lid colour on a plain bottle), the herb's name on the label, the granules fillin
 red line under the herb's low line; Koda's green is the photo's #2E8452); the next herb lifted with a teal plank; the scale on a bench top
 with the next herb's name and grams beside it and "Jar a → b g" once; Weighed (or Enter, `phRfcWeighNext`) = the lid lifts, the bottle
 tips and pours (0.9 s, once), then lies down with its lid facing her (`phBtLieSvg`, her pick); the level is the open bottle (grams − 100 × (N − 1))
-with ×N from 2 bottles; red only at or under the shelf's low line, never while phasing out; the Shelf view's Koda lid is the same #2E8452; the CBD Shelf view also has a Pills row (Black Pearl pills, `PHARMACY.pills`, counted in pills, a box = 200; a box opens its prescription sheet with Dispense); Finish, Order short and Tick all at the foot.
+with ×N from 2 bottles; red only at or under the shelf's low line, never while phasing out; the Shelf view's Koda lid is the same #2E8452; the CBD Shelf view ends with a Pills row (Black Pearl pills, `PHARMACY.pills`, counted in pills, sold by the box of 200, red under one box; a box opens its prescription sheet; from a patient's prescription the boxes sit under the herbs and a Dispense is one entry on that patient's record, `products` on the log entry); Finish, Order short and Tick all at the foot.
 The ring, the counts line, the jar/bowl strip, the Weigh next box and the herb table are gone (the shelf is the list). While weighing the
 panel takes the wider share (`min(540px, 58%)`) and the list's rows stay one line; the short-herbs note is one chip in the head
 ("Zhi Shi · Order"); the week tiles are gone (the week groups say it).
