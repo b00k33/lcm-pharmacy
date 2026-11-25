@@ -680,6 +680,16 @@ multiple of the recipe splits into whole grams adding up to exactly the batch (`
 log, the plans and the bookings (`phFormulaUse`, 12 weeks, Break bookings left out, "(X)" name tags merged); nothing new is
 stored. Motion off under reduced motion. Dispense's In stock cell says "To make · Wk N" for a planned formula jar
 (`presIngToMakeHtml`).
+**The bench, 2026-11-25 (her "build and push live" on `mock-formula-refill-2026-11-25.html`, with PA TCM's supplier bottles from her photos):**
+the weighing panel is her dispensing space: the formula's name with its grams and batches fields and Not now on one line; ONE wall shelf of
+the formula's own bottles (`phBtSvg`: her supplier's real bottle by `phBtKind` (Koda, GMP, Jingshen, Evergreen; KPC and the rest keep their
+lid colour on a plain bottle), the herb's name on the label, the granules filling it to the shelf grams of a 100 g bottle, "×N" past 100 g, a
+red line under the herb's low line; Koda's green is the photo's #2E8452); the next herb lifted with a teal plank; the scale on a bench top
+with the next herb's name and grams beside it and "Jar a → b g" once; Weighed (or Enter, `phRfcWeighNext`) = the lid lifts, the bottle
+tips and pours, stands back and the lid closes (0.9 s, once), then it stays faded with a ✓; Finish, Order short and Tick all at the foot.
+The ring, the counts line, the jar/bowl strip, the Weigh next box and the herb table are gone (the shelf is the list). While weighing the
+panel takes the wider share (`min(540px, 58%)`) and the list's rows stay one line; the short-herbs note is one chip in the head
+("Zhi Shi · Order"); the week tiles are gone (the week groups say it).
 **Recipes:** New formula recipe sits in ⋯ and opens as a side sheet (#refPresPanel), never inside the card; there the editor
 always stacks (Make refill, then the ingredients at full width; her "i cant edit the formula at all": two columns split inside the
 640px sheet). Every row with a recipe ends in a "Recipe" button (pencil icon, `phRfcRecipeBtn`, `data-pres-open`) opening that
