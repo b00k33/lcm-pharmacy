@@ -18170,3 +18170,11 @@ Her approved mock `mock-herb-bottle-shelf-2026-11-25.html` and her "ok, build an
 - **A lid tap** opens the herb's own edit drawer (`data-ph-herb-edit`, the app's one opener).
 - **Motion:** one 0.18 s fade-and-rise of the whole shelf when she switches to Shelf (not on a search repaint, no per-lid stagger), a 1.06 hover lift; both off under reduced motion.
 - **Audits** (made-up herbs, Inventory in Shelf view): style (offSizes, offWeights, chipLooks, sideLines, rowAlign, offColours), tap and voice EMPTY at 1220 and 360; titlebar empty at 360. App sweep at 1240: Inventory clean; left = Communications "More ▾" summary corners and the End of day prompt text (both earlier, not this build). **Not run:** the app sweep at 360.
+
+## Shelf view: GMP gets its own lid (2026-11-25)
+Her "gmp lids are also white but the lid shape is slightly different" (her photo of the Fang Ji jar) and her yes to `mock-herb-bottle-shelf-gmp-lid-2026-11-25.html`, relayed by PA TCM.
+- **The lid:** cool white (#F3F5F6, Evergreen stays warm #F4F1E8), a raised rim ring of fine ridges (a repeating conic gradient masked to a 3px ring on formula lids, 2.5px on herb lids), a shallow dish inside (inset 1.8x the ring, 1px line, soft inner shadow). Static pseudo-elements, no motion.
+- **The name** is written straight on the lid in capitals (700, no white label), as her marker is; one letter fewer a line (7 formulas, 6 herbs) so it wraps or falls to initials first. Sizes stay on THE LOOK scale (10.5px, 11px on the phone), not the mock's 9.5 / 8px. The other suppliers keep their white label.
+- Grey stays the lid for any supplier she has not described (In house, ...). `.ph-lid` was already a style-audit data mark (443fa6cc), so GMP needed no audit change.
+- **Audits** (made-up herbs, GMP lids incl. a GMP formula, Shelf view): style (all six lists), tap and voice EMPTY at 1220 and 360; titlebar empty at 360; no GMP name overflows its lid.
+- **App sweep at 360** (this build and 443fa6cc): Inventory clean; left = the End of day prompt text (known false flag) and Messages' "Running out" chip (`button.ph-mc-chip`) with 0 corners, neither from these builds.
