@@ -18343,3 +18343,10 @@ Her "i love book spines", "make it more cohesive with lcm", "yes that looks grea
 
 ## Guide books, a little 3D (2026-11-25)
 Her "add some 3d elements so it looks more like books". CSS only (one block before the main `</style>`, after "THE GUIDE AS HER BOOKS"): each `.gf-bk` has a rounded spine (light from above, darker at the foot), two raised bands at its left (`.cap` + its shadow), the cover boards' edges (a light top line, a dark foot line), the page block at its right end (`::after`, cream page lines), a shadow on the book under it; the stack tilts a hair (`rotate` ±0.2-0.35deg by position; the picked book sits square) and stands on a shelf edge; the open card shows two page edges under it and a deeper fold. Audits at 1220 and 360: every list empty. No script change.
+
+## Clinic logo: the sidebar (2026-11-25)
+Her "wrong column" then, with a picture of the sidebar, "this column": "the left left column" was the dark sidebar, not the calendar's hours column. The calendar carries no logo now (the head, day-column and hours-column versions are all gone).
+- **Now:** a tile under the five pages (`#phSbLoc`, `.ph-sb-loc`, inside the nav so it sits right under Me, above the teapot): the current day's clinic, `phLocId(keyOf(new Date()))` from `phApptPlaceOf`; the full logo on white at 58px (220px wide: the wordmarks read), Lotus on its own red. `phSbLocPaint()` runs with `phPlacePaint` and every 60 s; it only touches the DOM when the clinic changes.
+- **Minimised sidebar:** a 38px tile of the clinic's emblem (the crops of the last build). **Drawer (900px and under):** the full tile. **Find a page filtering:** hidden.
+- **Checked** 1240: CBD today (a Wednesday), the other two by swapping the class (both drawn well), the minimised emblem, tap / style / voice audits only the known calendar-tile lines, tile edges line up with the rows (10 to 238); 360: the drawer's tile is 232 wide, no sideways scroll. **Not driven:** a real Friday or Saturday, the drawer open on a phone, the Acupreg login, midnight changing the day.
+- **Kept:** both pictures sets inline (full 16 / 13 / 12 KB, emblems 9 / 12 / 1 KB), no file to cache.
