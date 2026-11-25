@@ -38889,6 +38889,53 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // cloud (a storage event, heard before the app's own handlers); a different PHARMACY / PRESC object or a new day also counts.
   var phDataRev = 0;
   window.addEventListener("storage", () => { phDataRev = (phDataRev || 0) + 1; }, true);
+  // her 2026-11-25 "Fix every list" (via PA TCM, after 10 imported cases vanished when another device saved in the same few seconds): a record
+  // that leaves any id list (herbs, suppliers, cases, sources, bookings, the log ...) gets a dated marker, PHARMACY.syncDel[list][id], so the
+  // item-by-item sync merge never brings it back from a device that has not caught up; an id that comes back (an Undo) is marked revived,
+  // PHARMACY.syncRev[list][id]. Worked out on every save from what the last load or save held, so EVERY delete path writes it, never one
+  // button at a time. More than 25 leaving one list in one save is a bulk replace (an import, a clear), not her deleting: no markers.
+  // Markers keep 90 days, at most 400 a list. The sync merge itself: "every list merges item by item" in the sync code.
+  let phIdSnap = null;
+  const phIdLists = o => {
+    const out = {};
+    Object.keys(o || {}).forEach(k => {
+      if (k === "patients" || k === "syncDel" || k === "syncRev") return;
+      const v = o[k]; if (!Array.isArray(v) || !v.length) return;
+      const s = new Set();
+      for (const x of v) { if (!x || typeof x !== "object" || x.id == null || x.id === "") return; const id = String(x.id); if (s.has(id)) return; s.add(id); }
+      out[k] = s;
+    });
+    return out;
+  };
+  function phIdSnapTake() { try { phIdSnap = phIdLists(PHARMACY); } catch (e) { phIdSnap = null; } }
+  function phIdTomb() {
+    if (!phIdSnap) return;
+    const now = Date.now(), cut = now - 90 * 864e5, cur = phIdLists(PHARMACY);
+    Object.keys(phIdSnap).forEach(k => {
+      const was = phIdSnap[k], is = cur[k];
+      if (!is && Array.isArray(PHARMACY[k]) && PHARMACY[k].length) return;   // no longer a clean id list: leave it alone
+      const gone = [...was].filter(id => !is || !is.has(id));
+      if (!gone.length || gone.length > 25) return;
+      const d = PHARMACY.syncDel || (PHARMACY.syncDel = {}), m = d[k] || (d[k] = {});
+      gone.forEach(id => { m[id] = now; });
+    });
+    const trim = map => {
+      if (!map) return;
+      Object.keys(map).forEach(k => {
+        const m = map[k]; if (!m || typeof m !== "object") { delete map[k]; return; }
+        let ids = Object.keys(m).filter(id => +m[id] >= cut);
+        if (ids.length > 400) ids = ids.sort((a, b) => m[b] - m[a]).slice(0, 400);
+        const keep = {}; ids.forEach(id => { keep[id] = m[id]; });
+        if (ids.length) map[k] = keep; else delete map[k];
+      });
+    };
+    const d = PHARMACY.syncDel;
+    if (d) Object.keys(d).forEach(k => {
+      const is = cur[k], m = d[k] || {};
+      if (is) Object.keys(m).forEach(id => { if (is.has(id)) { const r = PHARMACY.syncRev || (PHARMACY.syncRev = {}), rm = r[k] || (r[k] = {}); if (!(+rm[id] > +m[id])) rm[id] = now; } });
+    });
+    trim(PHARMACY.syncDel); trim(PHARMACY.syncRev);
+  }
   function savePharmacy() {
     phDataRev = (phDataRev || 0) + 1;
     phUsageCache = null;   // stock/log just changed -- recompute usage on next ask
@@ -38906,8 +38953,10 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         " log entries with " + PHARMACY.herbs.length + " / " + PHARMACY.log.length + ". Nothing was saved — reload this page to get the good copy back, and tell Claude this happened.");
       return false;
     }
+    try { phIdTomb(); } catch (e) {}
     try {
       localStorage.setItem(PHARMACY_KEY, JSON.stringify(PHARMACY));
+      phIdSnapTake();
       phSavedCounts.herbs = PHARMACY.herbs.length; phSavedCounts.log = PHARMACY.log.length;
       phMaybeBackup();
       phRecipePriceSoon();   // a herb's price may have moved a made formula's (her 2026-10-31 pick)
@@ -38919,6 +38968,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     }
   }
   let PHARMACY = loadPharmacy();
+  phIdSnapTake();
   // declared here, ahead of every one-time boot migration below, on purpose --
   // savePharmacy() resets this on every call (see above), but its own
   // definition sits far below (near phUsageAll()). On a brand-new browser
@@ -45155,7 +45205,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   window.addEventListener("storage", e => {
     if (e.key === PHARMACY_KEY) {
       const tab = PHARMACY.activeTab, dc = PHARMACY.apptCalDayCount, cv = PHARMACY.apptCalView;
-      PHARMACY = loadPharmacy(); PHARMACY.activeTab = tab; PHARMACY.apptCalDayCount = dc; PHARMACY.apptCalView = cv;
+      PHARMACY = loadPharmacy(); PHARMACY.activeTab = tab; PHARMACY.apptCalDayCount = dc; PHARMACY.apptCalView = cv; phIdSnapTake();
     } else if (e.key === PRESC_KEY) { PRESC = loadPresc(); phPresPendingRehydrate(); }
     else return;
     phAbbrMap = null; phHerbById = null; phInHouseSet = null; phBlendNames = null; phRecipeCache = null; phIsFormulaCache = null;
@@ -182127,6 +182177,103 @@ Dosage: {dosage}
     return JSON.stringify(out);
   }
 
+  /* ---- every list merges item by item (her 2026-11-25 "Fix every list", via PA TCM) ----
+     The 10 cases that vanished: pharmacy_core merged as ONE blob, so when this device and another both saved since they last
+     agreed, one side's whole core won and the other's new cases, sources, herbs or supplier rows were dropped. Now, when BOTH sides
+     changed pharmacy_core (or pharmacy_log), every top-level list whose items all carry a unique id merges record by record, a
+     three-way merge against the base: a record on both sides takes the side that changed it since base (both changed, or no base
+     yet: this device, the prescriptions rule); a record on one side only is the other side's delete when base had it (unless this
+     side edited it since: an edit beats a delete) and a new record when base did not (kept, unless a delete marker says she removed
+     it: PHARMACY.syncDel / syncRev, written by savePharmacy). Base keeps a hash per record in its own key (lcm-sync-base-recs; a
+     failed write there only means the next merge keeps everything). Not touched: the owner guard, the location field, the
+     per-record repairs after (patients, templates, Guide edits), the empty-guard (a guarded side never merges item by item) and a
+     restore's shrink window. A list with a duplicate or missing id falls back to the whole-side rule. Only when both sides changed:
+     one side alone still wins whole, so a restore on another device is adopted as it was. ---- */
+  var REC_KEY = "lcm-sync-base-recs", LIST_SKIP = { patients: 1, syncDel: 1, syncRev: 1, log: 1 };
+  function idSet(v) {
+    if (!Array.isArray(v)) return null;
+    var seen = {};
+    for (var i = 0; i < v.length; i++) {
+      var x = v[i];
+      if (!x || typeof x !== "object" || x.id == null || x.id === "") return null;
+      var k = String(x.id); if (seen[k]) return null; seen[k] = 1;
+    }
+    return seen;
+  }
+  function coreIdKeys(a, b) {
+    var ks = {}, out = [];
+    [a, b].forEach(function (o) { if (o && typeof o === "object") Object.keys(o).forEach(function (k) { if (!LIST_SKIP[k] && Array.isArray(o[k])) ks[k] = 1; }); });
+    Object.keys(ks).forEach(function (k) {
+      var ok = true, any = false;
+      [a, b].forEach(function (o) { if (!o || o[k] == null) return; if (!idSet(o[k])) ok = false; else if (o[k].length) any = true; });
+      if (ok && any) out.push(k);
+    });
+    return out;
+  }
+  function recHashes(arr) { var m = {}; (arr || []).forEach(function (x) { m[String(x.id)] = hashStr(JSON.stringify(x)); }); return m; }
+  function loadRecs() { try { var r = JSON.parse(localStorage.getItem(REC_KEY)); return r && typeof r === "object" ? r : {}; } catch (e) { return {}; } }
+  function saveRecs(sections) {
+    var r = {};
+    try { var core = JSON.parse(sections.pharmacy_core); coreIdKeys(core, null).forEach(function (k) { r[k] = recHashes(core[k]); }); } catch (e) {}
+    try { var log = JSON.parse(sections.pharmacy_log); if (idSet(log)) r.__log = recHashes(log); } catch (e) {}
+    try { _setItem.call(localStorage, REC_KEY, JSON.stringify(r)); } catch (e) { try { localStorage.removeItem(REC_KEY); } catch (e2) {} }
+  }
+  function tombsOf(lo, co, field, list) {
+    return mergePrescTombs(lo && lo[field] && lo[field][list], co && co[field] && co[field][list]);
+  }
+  // A = the side the section rule picked (its order is kept); B = the other side. Returns the merged array.
+  function mergeIdArray(A, B, aIsLocal, baseH, del, rev) {
+    var am = {}, bm = {}, res = [];
+    A.forEach(function (x) { am[String(x.id)] = x; });
+    B.forEach(function (x) { bm[String(x.id)] = x; });
+    function gone(id) { return !!del[id] && !((+rev[id] || 0) > +del[id]); }
+    function decide(id, a, b) {
+      var bh = baseH ? baseH[id] : undefined;
+      if (a && b) {
+        var ha = hashStr(JSON.stringify(a)), hb = hashStr(JSON.stringify(b));
+        if (ha === hb) return a;
+        var loc = aIsLocal ? a : b, cl = aIsLocal ? b : a, locCh = (aIsLocal ? ha : hb) !== bh, clCh = (aIsLocal ? hb : ha) !== bh;
+        if (bh !== undefined && !locCh && clCh) return cl;
+        return loc;
+      }
+      var x = a || b;
+      if (bh !== undefined) return hashStr(JSON.stringify(x)) !== bh ? x : null;
+      return gone(id) ? null : x;
+    }
+    A.forEach(function (a) { var id = String(a.id), r = decide(id, a, bm[id]); if (r) res.push(r); });
+    B.forEach(function (b) { var id = String(b.id); if (am[id]) return; var r = decide(id, null, b); if (r) res.push(r); });
+    return res;
+  }
+  function mergeCoreLists(pickStr, lStr, cStr, pickIsLocal, recs) {
+    var pick, l, c;
+    try { pick = JSON.parse(pickStr); l = JSON.parse(lStr); c = JSON.parse(cStr); } catch (e) { return pickStr; }
+    if (!pick || !l || !c || typeof pick !== "object" || typeof l !== "object" || typeof c !== "object") return pickStr;
+    var changed = false;
+    ["syncDel", "syncRev"].forEach(function (f) {
+      var lists = {}, m = {};
+      [l, c].forEach(function (o) { if (o[f] && typeof o[f] === "object") Object.keys(o[f]).forEach(function (k) { lists[k] = 1; }); });
+      Object.keys(lists).forEach(function (k) { var t = tombsOf(l, c, f, k); if (Object.keys(t).length) m[k] = t; });
+      if (JSON.stringify(m) !== JSON.stringify(pick[f] || {})) { if (Object.keys(m).length) pick[f] = m; else delete pick[f]; changed = true; }
+    });
+    coreIdKeys(l, c).forEach(function (k) {
+      var A = (pickIsLocal ? l[k] : c[k]) || [], B = (pickIsLocal ? c[k] : l[k]) || [];
+      var del = (pick.syncDel && pick.syncDel[k]) || {}, rev = (pick.syncRev && pick.syncRev[k]) || {};
+      var merged = mergeIdArray(A, B, pickIsLocal, recs[k], del, rev);
+      if (JSON.stringify(merged) !== JSON.stringify(pick[k] || [])) { pick[k] = merged; changed = true; }
+    });
+    return changed ? JSON.stringify(pick) : pickStr;
+  }
+  function mergeLogLists(pickStr, lStr, cStr, pickIsLocal, recs, coreL, coreC) {
+    var l, c;
+    try { l = JSON.parse(lStr); c = JSON.parse(cStr); } catch (e) { return pickStr; }
+    if (!idSet(l) || !idSet(c)) return pickStr;
+    var lo, co; try { lo = JSON.parse(coreL); co = JSON.parse(coreC); } catch (e) { lo = co = null; }
+    var del = tombsOf(lo, co, "syncDel", "log"), rev = tombsOf(lo, co, "syncRev", "log");
+    var merged = mergeIdArray(pickIsLocal ? l : c, pickIsLocal ? c : l, pickIsLocal, recs.__log, del, rev);
+    var s = JSON.stringify(merged);
+    return s === (pickIsLocal ? lStr : cStr) ? pickStr : s;
+  }
+
   // the 3-way merge itself. localData/cloudData are {daybook-pharmacy,
   // daybook-prescriptions} string pairs (same shape gather() produces).
   function mergeSections(localData, cloudData) {
@@ -182188,6 +182335,11 @@ Dosage: {dosage}
         conflicts.push(name);
         eg = !allowShrink && sectionLooksEmptier(name, c, l);
         if (eg) { pick = c; emptyGuarded.push({ name: name, from: eg.from, to: eg.to, unit: eg.unit }); } else pick = l;
+        // every list item by item (see "every list merges item by item" above); never for a guarded side or a restore
+        if (!eg && !allowShrink) {
+          if (name === "pharmacy_core") pick = mergeCoreLists(pick, l, c, true, loadRecs());
+          else if (name === "pharmacy_log") pick = mergeLogLists(pick, l, c, true, loadRecs(), L.pharmacy_core, C.pharmacy_core);
+        }
       }
       if (name === "pharmacy_core") {
         pick = preserveLocationField(pick, l, c);
@@ -182221,6 +182373,7 @@ Dosage: {dosage}
   function setBaseFrom(sections) {
     var b = {}; SECTIONS.forEach(function (name) { b[name] = hashStr(sections[name]); });
     saveBase(b);
+    saveRecs(sections);   // a hash per record, for the item-by-item merge
   }
   // batch 18: turns emptyGuarded's {name,from,to,unit} entries into the real
   // numbers that tripped the guard -- "pharmacy core (12 → 3 patients)"
