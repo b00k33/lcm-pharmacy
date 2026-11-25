@@ -37889,6 +37889,14 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   #pharmacyPage .ph-lp-big img { display: block; width: 100%; height: auto; max-height: 100%; object-fit: contain; }
   #pharmacyPage .ph-px-t img { display: block; width: 100%; height: 100%; object-fit: cover; }
   @media (max-width: 640px) { #pharmacyPage .ph-gdf .gf-pc .ph .n { font-size: 11px; } }
+  /* the Guide on the PC only (her 2026-11-26 "Same, and hide Guide on phone"): a phone shows no Guide place or Guide line in the sidebar */
+  html.lcm-no-guide #phSidebar [data-ph-tab="guide"] { display: none !important; }
+  /* her MTD Tongue Summary in Diagnostic tools: the page whole in a frame that fills the room's sheet; empty = one Import chip */
+  #pharmacyPage .ph-gd-mtd { display: flex; flex-direction: column; gap: 8px; padding: 12px 16px 16px; }
+  #pharmacyPage .ph-gd-mtd.e { align-items: flex-start; min-height: 80px; font: 400 var(--fs-13) var(--font-body); color: var(--ph-soft); }
+  #pharmacyPage .ph-gd-mtd-f { display: block; width: 100%; height: calc(100vh - 190px); min-height: 480px; border: 0; border-radius: 10px; background: var(--ph-white); box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+  #pharmacyPage .ph-gd-mtd-ft { display: flex; justify-content: flex-end; }
+  #pharmacyPage .ph-gd-mtd-b { display: inline-flex; align-items: center; height: 32px; padding: 0 12px; border: 1px solid var(--ph-line); border-radius: 6px; background: var(--ph-white); color: var(--ph-ink); font: 600 var(--fs-13) var(--font-body); cursor: pointer; }
 </style>
 </head>
 <body>
@@ -39139,7 +39147,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     }
     try { phIdTomb(); } catch (e) {}
     try {
-      localStorage.setItem(PHARMACY_KEY, JSON.stringify(PHARMACY));
+      localStorage.setItem(PHARMACY_KEY, phGuideSaveStr());
       phIdSnapTake();
       phSavedCounts.herbs = PHARMACY.herbs.length; phSavedCounts.log = PHARMACY.log.length;
       phMaybeBackup();
@@ -39151,7 +39159,82 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       return false;
     }
   }
+  // ---- The Guide on the PC only (her 2026-11-26 picks: "keep the whole guide section offline to save space", "Same, and hide Guide on phone",
+  // her "Yes, PC only" to PA Case Study Manager). Her Guide data (loaded cases, their sources, Guide notes, Learned marks, case groups) moves
+  // out of the synced store into this PC's IndexedDB (phIDB, key "guide:<login>"). The move is one way and checked: it runs on a PC
+  // (wider than 640px at load) once this device has caught up with the cloud, writes a kept "guide-premove:<login>" copy and the live
+  // copy, reads the live copy back and only when it matches word for word marks the store guideOnPc. From then on a save leaves those
+  // keys out (phGuideSaveStr), the sync drops them from both sides whenever either side carries the mark (mergeSections), and every
+  // reload of PHARMACY puts this PC's copy back (the loadPharmacy wrapper). A phone never keeps them once the mark is there, and
+  // the Guide place is hidden on it. Formulas, signs and Fang Bing Ren are the app's own code and stay on every device. Back up
+  // carries the Guide (a "guide" key beside the data), Restore puts it back. Nothing is deleted: the cloud's history keeps the old row. ----
+  var PH_GUIDE_KEYS = ["tourCases", "tourSources", "gdNoteEdits", "gdNoteEditsAt", "gdLearned", "tcGrp"];
+  window.__lcmGuideKeys = PH_GUIDE_KEYS;
+  var phGuidePc = !(window.matchMedia && window.matchMedia("(max-width: 640px)").matches);
+  var phGuideMem = null, phGuideReady = false, phGuideLast = "", phGuideTimer = 0;
+  function phGuideIdbKey(pre) { return (pre || "guide:") + (localStorage.getItem("lcm-data-owner") || "main"); }
+  function phGuidePick(o) { const d = {}; PH_GUIDE_KEYS.forEach(k => { if (o && o[k] != null) d[k] = o[k]; }); return d; }
+  function phGuideAttach(p) {
+    if (!p || !p.guideOnPc) return;
+    if (!phGuidePc) { PH_GUIDE_KEYS.forEach(k => { delete p[k]; }); return; }
+    if (phGuideMem) Object.assign(p, phGuideMem);
+  }
+  const phLoadPharmacyBase = loadPharmacy;
+  loadPharmacy = function () { const p = phLoadPharmacyBase(); try { phGuideAttach(p); } catch (e) { } return p; };
+  function phGuideSaveStr() {
+    if (!PHARMACY.guideOnPc) return JSON.stringify(PHARMACY);
+    const o = Object.assign({}, PHARMACY); PH_GUIDE_KEYS.forEach(k => { delete o[k]; });
+    if (phGuidePc && phGuideReady) { phGuideMem = phGuidePick(PHARMACY); clearTimeout(phGuideTimer); phGuideTimer = setTimeout(phGuideKeep, 300); }
+    return JSON.stringify(o);
+  }
+  function phGuideKeep() {
+    if (!phGuidePc || !phGuideReady || !phGuideMem) return;
+    const j = JSON.stringify(phGuideMem); if (j === phGuideLast) return;
+    phIDB.set(phGuideIdbKey(), { at: new Date().toISOString(), data: JSON.parse(j) }).then(ok => { if (ok) phGuideLast = j; });
+  }
+  function phGuideRepaint() { try { if (PHARMACY.activeTab === "guide" && typeof renderPhGuidePage === "function") renderPhGuidePage(); } catch (e) { } }
+  function phGuideSay(t) { try { if (typeof phFlashShow === "function") phFlashShow(t); } catch (e) { } }
+  async function phGuideBoot() {
+    if (!phGuidePc || !phIDB.available) { phGuideReady = !phGuidePc; return; }
+    let adopt = null; try { adopt = sessionStorage.getItem("lcm-guide-adopt"); sessionStorage.removeItem("lcm-guide-adopt"); } catch (e) { }
+    let raw = {}; try { raw = JSON.parse(localStorage.getItem(PHARMACY_KEY)) || {}; } catch (e) { raw = {}; }   // read before any wait: a sync landing later cannot change what is moved
+    const rec = await phIDB.get(phGuideIdbKey());
+    const blob = phGuidePick(raw), blobHas = Object.keys(blob).length > 0;
+    if (rec && rec.data && !(adopt && blobHas)) {   // moved before: this PC's copy is the Guide
+      phGuideMem = rec.data; phGuideLast = JSON.stringify(rec.data); Object.assign(PHARMACY, rec.data); phGuideReady = true;
+      if (!PHARMACY.guideOnPc || blobHas) { if (!PHARMACY.guideOnPc) PHARMACY.guideOnPc = String(rec.at || new Date().toISOString()).slice(0, 10); savePharmacy(); }
+      phGuideRepaint(); return;
+    }
+    if (!blobHas) {   // nothing here to move (another PC holds it, or a new login): an empty Guide of this PC's own
+      if (PHARMACY.guideOnPc) { phGuideMem = phGuidePick(PHARMACY); phGuideReady = true; }
+      return;
+    }
+    // the first move (or a restore's Guide): only from this device's own saved copy, and only once it has caught up with the cloud
+    if (!adopt && !window.__lcmSyncFresh) {
+      await new Promise(r => { let done = false; const go = () => { if (!done) { done = true; r(); } }; window.addEventListener("lcm-sync-caught-up", go, { once: true }); setTimeout(go, 45000); });
+      if (!window.__lcmSyncFresh) return;   // still not caught up: the move waits for the next visit, nothing changed
+      try { raw = JSON.parse(localStorage.getItem(PHARMACY_KEY)) || {}; } catch (e) { return; }
+    }
+    // a restore's Guide lands on top of this PC's: a part the file does not hold stays as it was
+    const data = Object.assign({}, adopt && rec && rec.data ? rec.data : {}, phGuidePick(raw)), j = JSON.stringify(data);
+    if (!Object.keys(data).length) return;
+    // the copy from before the first move is kept for good (written once, never replaced); a restore keeps the copy it replaced
+    if (!(await phIDB.get(phGuideIdbKey("guide-premove:")))) await phIDB.set(phGuideIdbKey("guide-premove:"), { at: new Date().toISOString(), data });
+    if (adopt && rec && rec.data) await phIDB.set(phGuideIdbKey("guide-prerestore:"), rec);
+    const ok = await phIDB.set(phGuideIdbKey(), { at: new Date().toISOString(), data });
+    const back = ok ? await phIDB.get(phGuideIdbKey()) : null;
+    if (!back || JSON.stringify(back.data) !== j) { phGuideSay("The Guide could not be moved to this PC. Nothing was changed."); return; }
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { }
+    Object.assign(PHARMACY, JSON.parse(j)); phGuideMem = phGuidePick(PHARMACY); phGuideLast = j; phGuideReady = true;
+    PHARMACY.guideOnPc = new Date().toISOString().slice(0, 10);
+    savePharmacy();
+    const n = (data.tourCases || []).length;
+    phGuideSay(adopt ? "The Guide is back from the backup." : `The Guide now lives on this PC: ${n} case${n === 1 ? "" : "s"} moved.`);
+    phGuideRepaint();
+  }
   let PHARMACY = loadPharmacy();
+  setTimeout(() => { phGuideBoot().catch(() => { }); }, 0);
+  if (!phGuidePc) document.documentElement.classList.add("lcm-no-guide");
   phIdSnapTake();
   // declared here, ahead of every one-time boot migration below, on purpose --
   // savePharmacy() resets this on every call (see above), but its own
@@ -46263,7 +46346,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   // her 2026-11-18 sidebar (three sections): the Guide's four lines each open one of its tabs (data-gd-go); the one lit follows the
   // Guide's open tab: Cases, Compare, Diagnostic tools (the Guide's own group: Tongue map, Pulse, Abdomen, Blood tests), Fang Bing Ren for every other tab
-  const PH_SB_GD_OF = { tourcases: "tourcases", compare: "compare", tongue: "tongue", pulse: "tongue", abdomen: "tongue", bloods: "tongue" };
+  const PH_SB_GD_OF = { tourcases: "tourcases", compare: "compare", tongue: "tongue", pulse: "tongue", abdomen: "tongue", bloods: "tongue", mtd: "tongue" };
   function phSbGdKey() { return PH_SB_GD_OF[phGdTab] || "families"; }
   function phSbGdPaint() {
     const on = PHARMACY.activeTab === "guide", k = phSbGdKey();
@@ -108535,6 +108618,7 @@ Difficult to sweat|no_sweat_tend:r`;
     if (phGdTab === "tongue") return phGdTongueHtml();
     if (phGdTab === "abdomen") return phGdAbdHtml();
     if (phGdTab === "bloods") return phGdBloodsHtml();
+    if (phGdTab === "mtd") return phGdMtdHtml();
     if (phGdTab === "herbs") return phGdHerbsHtml();
     if (phGdTab === "compare") return phCmpHtml();
     if (phGdTab === "iron") return phIrHtml();
@@ -109494,11 +109578,11 @@ Difficult to sweat|no_sweat_tend:r`;
     const el = document.getElementById("phGuideWrap");
     if (!el) return;
     phSbGdPaint();   // the sidebar's Guide line follows the tab (her 2026-11-18 sidebar)
-    const tabs = [["families", "Families"], ["sources", "Sources"], ["tourcases", "Cases"], ["triangle", "Triangle"], ["compare", "Compare"], ["tongue", "Tongue map"], ["pulse", "Pulse"], ["abdomen", "Abdomen"], ["herbs", "Herbs"], ["bloods", "Blood tests"], ["iron", "Iron"], ["eggs", "Eggs"], ["eating", "Eating eggs"]];   // Abdomen = the belly signs + the record's chart (2026-11-03)   // Compare = formulas side by side (2026-11-02)   // Body types / Formulas / Formula notes folded into Families (2026-10-21); Herbs = how a herb is used (2026-11-02); Sources = her own citable library (2026-11-09)   // Tour Cases = her clinical-observation case studies, correlated to Fang Bing Ren and integrated into it (2026-11-09)
+    const tabs = [["families", "Families"], ["sources", "Sources"], ["tourcases", "Cases"], ["triangle", "Triangle"], ["compare", "Compare"], ["tongue", "Tongue map"], ["pulse", "Pulse"], ["abdomen", "Abdomen"], ["herbs", "Herbs"], ["bloods", "Blood tests"], ["mtd", "MTD tongue"], ["iron", "Iron"], ["eggs", "Eggs"], ["eating", "Eating eggs"]];   // Abdomen = the belly signs + the record's chart (2026-11-03)   // Compare = formulas side by side (2026-11-02)   // Body types / Formulas / Formula notes folded into Families (2026-10-21); Herbs = how a herb is used (2026-11-02); Sources = her own citable library (2026-11-09)   // Tour Cases = her clinical-observation case studies, correlated to Fang Bing Ren and integrated into it (2026-11-09)
     // her 2026-11-10 ask ("help organise this into categories"): the flat A-Z dropdown grouped into what each tab actually is --
     // Fang Bing Ren (reads or writes its tables), Diagnostic tools (what she reads a patient against), Lifestyle (teaching pages).
     // A-Z still orders each group (her A-Z lists rule); only the grouping itself is her judgement call, mock shown and picked.
-    const TAB_GROUPS = [["Fang Bing Ren", ["families", "herbs", "compare", "tourcases", "triangle", "sources"]], ["Diagnostic tools", ["tongue", "pulse", "abdomen", "bloods"]], ["Lifestyle", ["iron", "eggs", "eating"]]];
+    const TAB_GROUPS = [["Fang Bing Ren", ["families", "herbs", "compare", "tourcases", "triangle", "sources"]], ["Diagnostic tools", ["tongue", "pulse", "abdomen", "bloods", "mtd"]], ["Lifestyle", ["iron", "eggs", "eating"]]];
     // her 2026-11-08 ask ("merge these lines into one"): the tab picker, search box and Learned progress pill used to sit in their own row
     // below the dark title bar -- they now ride inside it, as phShellHead's actionHtml (the same slot Dashboard's own quick actions use).
     el.innerHTML = `
@@ -109507,7 +109591,7 @@ Difficult to sweat|no_sweat_tend:r`;
           <button type="button" class="ph-gd-tabddl" data-gd-tabs-toggle="1" aria-expanded="${phGdTabsOpen}">${esc((tabs.find(x => x[0] === phGdTab) || tabs[0])[1])} ▾</button>
           ${phGdTabsOpen ? `<div class="ph-gd-tabdrop">${TAB_GROUPS.map(([gl, keys]) => `<div class="ph-gd-tabgrp">${esc(gl)}</div>` + keys.map(k => tabs.find(t => t[0] === k)).filter(Boolean).sort((a, b) => phAz(a[1], b[1])).map(([k, l]) => `<button type="button" class="ph-gd-tabbtn${phGdTab === k ? " on" : ""}" data-gd-tab="${k}">${l}</button>`).join("")).join("")}</div>` : ""}
         </div>
-        ${phGdTab !== "tongue" && phGdTab !== "bloods" && phGdTab !== "iron" && phGdTab !== "eggs" && phGdTab !== "eating" && phGdTab !== "triangle" && phGdTab !== "sources" ? `<input type="search" id="phGdSearch" class="ph-gd-search" value="${esc(phGdSearch)}" placeholder="${phGdTab === "pulse" ? "Search pulse notes" : phGdTab === "abdomen" ? "Search belly signs" : phGdTab === "herbs" ? "Search a herb" : phGdTab === "compare" ? "Search a sign or herb" : "Search a sign or formula"}" autocomplete="off">` : ""}
+        ${phGdTab !== "tongue" && phGdTab !== "bloods" && phGdTab !== "mtd" && phGdTab !== "iron" && phGdTab !== "eggs" && phGdTab !== "eating" && phGdTab !== "triangle" && phGdTab !== "sources" ? `<input type="search" id="phGdSearch" class="ph-gd-search" value="${esc(phGdSearch)}" placeholder="${phGdTab === "pulse" ? "Search pulse notes" : phGdTab === "abdomen" ? "Search belly signs" : phGdTab === "herbs" ? "Search a herb" : phGdTab === "compare" ? "Search a sign or herb" : "Search a sign or formula"}" autocomplete="off">` : ""}
         ${phGdTab === "families" ? `<span class="ph-gdf-prog" id="phGdfProg">${phGdfProgHtml()}</span>` : ""}
       </div>`)}
       <section class="ph-widget ph-gd-shell ph-gd-room">
@@ -109519,6 +109603,35 @@ Difficult to sweat|no_sweat_tend:r`;
     phGdAfterPaint();
   }
   // the Guide's Blood tests tab (her 2026-10-29 pick): Results that count (her rules, every patient) and the typical ranges
+  // her MTD Tongue Summary (2026-11-26, "add to lcm but keep this tab offline, only available on pc"): her own seminar file, imported once on
+  // this PC and kept in its IndexedDB (key "mtd:<login>"), never in the code, the synced store or the cloud. It shows whole in a closed frame
+  // (scripts run inside it for its own search; it can reach nothing of the app). Empty = one Import chip.
+  let phMtd;   // undefined = not read yet, null = none, { html, name, at }
+  function phMtdLoad() { phIDB.get(phGuideIdbKey("mtd:")).then(r => { phMtd = r && r.html ? r : null; if (phGdTab === "mtd") phGuideRepaint(); }); }
+  function phGdMtdHtml() {
+    const imp = (w) => `<button type="button" class="ph-gd-mtd-b" data-mtd-import="1">${w}</button><input type="file" accept=".html,.htm,text/html" data-mtd-file="1" hidden>`;
+    if (!phGuidePc) return `<div class="ph-gd-mtd e">PC only</div>`;
+    if (phMtd === undefined) { phMtdLoad(); return `<div class="ph-gd-mtd e"></div>`; }
+    if (!phMtd) return `<div class="ph-gd-mtd e">${imp("Import")}</div>`;
+    return `<div class="ph-gd-mtd"><iframe class="ph-gd-mtd-f" sandbox="allow-scripts" title="${esc(phMtd.name || "MTD Tongue Summary")}" srcdoc="${esc(phMtd.html)}"></iframe><div class="ph-gd-mtd-ft">${imp("Replace")}</div></div>`;
+  }
+  document.addEventListener("click", e => {
+    const b = e.target && e.target.closest ? e.target.closest("[data-mtd-import]") : null; if (!b) return;
+    const f = b.parentElement.querySelector("[data-mtd-file]"); if (f) f.click();
+  });
+  document.addEventListener("change", e => {
+    const el = e.target && e.target.closest ? e.target.closest("[data-mtd-file]") : null; if (!el || !el.files || !el.files[0]) return;
+    const file = el.files[0]; el.value = "";
+    file.text().then(html => {
+      if (!/<html|<body|<div/i.test(html)) { phGuideSay("That file is not a page."); return; }
+      const rec = { html, name: file.name.replace(/\.html?$/i, ""), at: new Date().toISOString() };
+      phIDB.set(phGuideIdbKey("mtd:"), rec).then(ok => {
+        if (!ok) { phGuideSay("Not saved: this PC's storage refused it."); return; }
+        try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { }
+        phMtd = rec; phGuideRepaint(); phGuideSay("MTD tongue added on this PC.");
+      });
+    });
+  });
   function phGdBloodsHtml() {
     const rg = t => t.lo != null && t.hi != null ? `${t.lo}–${t.hi}` : t.lo != null ? `≥ ${t.lo}` : t.hi != null ? `≤ ${t.hi}` : "—";
     const rows = PH_BLD_GROUPS.map((g, gi) => {
@@ -180551,7 +180664,10 @@ Dosage: {dosage}
     // rev / who / dirty. Left out when there is nothing in it, it cannot be read, or this login is not one of hers (phMeOk)
     let me = null;
     try { if (phMeOk() && phMeAhead(phMeD(), phMeBlank())) me = phMeD(); } catch (e) {}
-    const json = JSON.stringify({ app: "LCM - Linh Chinese Medicine", exported: new Date().toISOString(), data, renPhotos, ...(me ? { me } : {}) }, null, 1);
+    // the Guide on the PC only (2026-11-26): this PC's Guide rides along as a sibling key, like the photos
+    let guide = null;
+    try { if (PHARMACY.guideOnPc && phGuidePc && phGuideReady) guide = phGuidePick(PHARMACY); } catch (e) { }
+    const json = JSON.stringify({ app: "LCM - Linh Chinese Medicine", exported: new Date().toISOString(), data, renPhotos, ...(me ? { me } : {}), ...(guide ? { guide } : {}) }, null, 1);
     const fname = `LCM-pharmacy-${keyOf(new Date())}${suffix ? "-" + suffix : ""}.json`;
     try { localStorage.setItem(PH_EXPORT_AT_KEY, new Date().toISOString()); } catch (e) {}
     const dl = window.claude && window.claude.downloads;
@@ -180647,13 +180763,13 @@ Dosage: {dosage}
     if (!phMeWrite({ d: phMeMerge(S.d, me), rev: S.rev, who: S.who, dirty: Date.now() })) { const er = new Error("quota: lcm-me"); er.name = "QuotaExceededError"; throw er; }
     return S;
   }
-  function phApplyRestoredData(data, sourceLabel, photos, me) {
+  function phApplyRestoredData(data, sourceLabel, photos, me, guide) {
     // no more one-shot full overwrite behind a confirm() -- stage it, and let
     // the panel show WHAT changes per section before anything is touched
     const norm = {};
     Object.keys(data).forEach(k => { const v = data[k]; if (v != null) norm[k] = typeof v === "string" ? v : JSON.stringify(v); });
     // me = her own things from a backup file, every part given its maps (phMeNormData); an on-device backup carries none
-    phPendingRestore = { norm, label: sourceLabel, photos: Array.isArray(photos) ? photos : [], me: me && typeof me === "object" && !Array.isArray(me) ? phMeNormData(me) : null };
+    phPendingRestore = { guide: guide && typeof guide === "object" && !Array.isArray(guide) ? guide : null, norm, label: sourceLabel, photos: Array.isArray(photos) ? photos : [], me: me && typeof me === "object" && !Array.isArray(me) ? phMeNormData(me) : null };
     phRenderRestorePanel();
   }
   function phRestoreChooserHtml() {
@@ -180744,6 +180860,17 @@ Dosage: {dosage}
       // honour the shrink too, or it reverts the restore before the flush
       // even runs. See the long note in mergeSections.
       window.__lcmAllowShrinkUntil = Date.now() + 20000;
+      // the Guide on the PC only (2026-11-26): a file's Guide (its "guide" key, or an older file's Guide inside the data) is taken in by this PC after the reload
+      if (ch.inventory && phGuidePc && PHARMACY.guideOnPc) {
+        try {
+          let g = pending.guide;
+          if (!g) { const d = phGuidePick(JSON.parse(pending.norm[PHARMACY_KEY] || "{}")); if (Object.keys(d).length) g = d; }
+          if (g && pending.norm[PHARMACY_KEY] != null) {
+            pending.norm[PHARMACY_KEY] = JSON.stringify(Object.assign(JSON.parse(pending.norm[PHARMACY_KEY]), phGuidePick(g)));
+            sessionStorage.setItem("lcm-guide-adopt", "1");
+          }
+        } catch (e) { }
+      }
       let meWas = null;   // her own things as they were: put back if a write below fails, so "Nothing was changed" stays true
       try {
         // her own things go first (phRestMeWrite above). A write this device could not keep stops the whole restore, loudly
@@ -180905,7 +181032,7 @@ Dosage: {dosage}
       if (!data || typeof data !== "object" || !Object.keys(data).some(k => k.startsWith("daybook"))) {
         return phFlashShow("That doesn't look like an LCM - Linh Chinese Medicine backup file.");
       }
-      phApplyRestoredData(data, `the file "${f.name}"`, Array.isArray(backup.renPhotos) ? backup.renPhotos : [], backup.me);
+      phApplyRestoredData(data, `the file "${f.name}"`, Array.isArray(backup.renPhotos) ? backup.renPhotos : [], backup.me, backup.guide);
     });
   });
 
@@ -182670,6 +182797,17 @@ Dosage: {dosage}
   // daybook-prescriptions} string pairs (same shape gather() produces).
   function mergeSections(localData, cloudData) {
     var L = sectionsFrom(localData), C = sectionsFrom(cloudData), base = loadBase();
+    // the Guide on the PC only (2026-11-26): once either side carries guideOnPc, its own keys sync nowhere (the PC keeps them in IndexedDB)
+    try {
+      var gk = window.__lcmGuideKeys || [], lc = JSON.parse(L.pharmacy_core), cc = JSON.parse(C.pharmacy_core);
+      if (lc && cc && (lc.guideOnPc || cc.guideOnPc)) {
+        var cut = false;
+        gk.forEach(function (k) { if (k in lc) { delete lc[k]; cut = true; } if (k in cc) { delete cc[k]; cut = true; } });
+        var mk = !lc.guideOnPc || !cc.guideOnPc;
+        if (!lc.guideOnPc) lc.guideOnPc = cc.guideOnPc; if (!cc.guideOnPc) cc.guideOnPc = lc.guideOnPc;
+        if (cut || mk) { L.pharmacy_core = JSON.stringify(lc); C.pharmacy_core = JSON.stringify(cc); }
+      }
+    } catch (e) { }
     var out = {}, changed = false, cloudStale = false, conflicts = [], emptyGuarded = [];
     // item 11's loose end (her data-safety spec 2026-08-13): a deliberate
     // section-restore (e.g. "inventory only") can legitimately make a section
