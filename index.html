@@ -34601,6 +34601,7 @@ svg.icn { width: 1em; height: 1em; flex: 0 0 auto; vertical-align: -0.15em; disp
   #pharmacyPage .ph-vs-ul { margin: 0; padding: 0 0 0 18px; list-style: disc; }
   #pharmacyPage .ph-vs-ul li { margin: 0 0 3px; font: 400 var(--fs-13)/1.5 var(--font-body); color: var(--ph-ink); }
   #pharmacyPage .ph-vs-ul li::marker { color: var(--ph-herb); }
+  #pharmacyPage .ph-vs-view [data-vs-more] { margin-top: 4px; }
   #pharmacyPage .ph-vs-add { display: inline-flex; align-items: center; height: 24px; font-size: var(--fs-13); font-weight: 600; color: var(--ph-herb); }
   #pharmacyPage .ph-vs-sheet .sub { margin-bottom: 18px; }
   #pharmacyPage#pharmacyPage .ph-vs-part textarea { border-radius: 6px; }
@@ -113970,16 +113971,22 @@ Difficult to sweat|no_sweat_tend:r`;
     if (!found.length && phTodayDonePart(rec, "pulse") && phVsPulseWords(rec)) found.push(phVsPulseWords(rec));   // a pulse normal at every position still says so
     phScnList(rec).filter(s => (s.kind || s.res) && phBldAgeDays(s.date) <= 365).slice(0, 3).forEach(s => found.push(`${s.kind || "Scan"}, ${presBandDay(s.date)}${s.res ? `: ${s.res}` : ""}`));
     // her 2026-11-24 "summary doesnt include all signs symptoms": every sign ticked for him that the complaint's own symptoms do not already name, one line in plain words ("dislikes wind (cold & heat)"), A-Z
+    // her 2026-11-25 "b and c" on the Signs line: by body area, one line an area ("Head, mind & sleep: light sleep, wakes at 3 am"), A-Z inside it; tongue and
+    // pulse signs are the exam lines above, and Sex / Age facts read oddly in her letter, so neither is listed. The screen shows the first five signs and a "+ n more" chip (phVsViewHtml); the text, print, Copy and Email carry all.
     try {
       const td = phTriToday(rec), rows = phFbrTickRows(phTriEffective(rec, name, "d", td.d, td.prevD), phTriEffective(rec, name, "p", td.p));
-      const said = Object.keys(W).map(k => W[k]).join(" ").toLowerCase(), sg = [];
+      const said = Object.keys(W).map(k => W[k]).join(" ").toLowerCase(), by = new Map();
       rows.forEach(r => {
-        const m = /^([^:]+):\s*(.+)$/.exec(r.lab), d = (m ? m[2] : r.lab).trim().toLowerCase().replace(/\s*\([^)]*\)/g, "").trim();
+        if (r.ix === PH_FBR_TP_IX) return;
+        const m = /^([^:]+):\s*(.+)$/.exec(r.lab), sj = m ? m[1].trim() : "", w = (m ? m[2] : r.lab).trim();
+        if (sj === "Sex" || sj === "Age") return;
+        const d = w.toLowerCase().replace(/\s*\([^)]*\)/g, "").trim();
         if (d && said.includes(d)) return;
-        const p = m ? `${m[2].trim()} (${m[1].trim()})` : r.lab, q = p.charAt(0).toLowerCase() + p.slice(1);
-        if (!sg.includes(q)) sg.push(q);
+        const p = sj ? `${w} (${sj})` : w, q = p.charAt(0).toLowerCase() + p.slice(1);
+        if (!by.has(r.ix)) by.set(r.ix, []);
+        if (!by.get(r.ix).includes(q)) by.get(r.ix).push(q);
       });
-      if (sg.length) found.push("Signs: " + sg.sort(phAz).join("; "));
+      [...by.keys()].sort((a, b) => a - b).forEach(ix => found.push(PH_FBR_AREAS[ix].lab + ": " + by.get(ix).sort(phAz).join(", ")));
     } catch (e) { /* the Ticked list on Fang Bing Ren says it */ }
     // the plan this summary speaks for: the open Care Plan, else the one today's visit is for
     let P = plan; if (!P) { try { P = phTpPlanForToday(name); } catch (e) { P = null; } }
@@ -114053,9 +114060,15 @@ Difficult to sweat|no_sweat_tend:r`;
   }
   // a part's lines as the letter shows them: one bullet a line
   const phVsLines = text => String(text || "").split("\n").map(s => s.replace(/^\s*[•·*-]\s*/, "").trim()).filter(Boolean);
+  // What I found on screen: the first five signs by area, the rest behind "+ n more" (her 2026-11-25 "b and c"); the text itself, and so print / Copy / Email, always holds every sign
+  var phVsAllOpen = new Set();
+  const phVsAreaN = l => { const i = l.indexOf(": "); return i > 0 && PH_FBR_AREAS.some(a => a.lab === l.slice(0, i)) ? l.slice(i + 2).split(", ").length : 0; };
   function phVsViewHtml(k, text) {
     const ls = phVsLines(text);
-    return ls.length ? `<ul class="ph-vs-ul">${ls.map(l => `<li>${esc(l)}</li>`).join("")}</ul>` : `<span class="ph-vs-add">＋ Add</span>`;
+    if (!ls.length) return `<span class="ph-vs-add">＋ Add</span>`;
+    let seen = 0, hid = 0;
+    const hide = ls.map(l => { if (k !== "found" || phVsAllOpen.has(k)) return false; const n = phVsAreaN(l); if (!n) return false; if (seen >= 5) { hid += n; return true; } seen += n; return false; });
+    return `<ul class="ph-vs-ul">${ls.filter((l, i) => !hide[i]).map(l => `<li>${esc(l)}</li>`).join("")}</ul>` + (hid ? `<button type="button" class="ph-bld-btn" data-vs-more="${k}">+ ${hid} more</button>` : "");
   }
   function phVsModel(name, plan) {
     const rec = phPatientPeek(name) || {}, F = phVsFilled(name, plan), own = rec.visitSum && rec.visitSum.day === keyOf(TODAY) ? rec.visitSum : {}, it = phCcRibItems(name);
@@ -114080,6 +114093,7 @@ Difficult to sweat|no_sweat_tend:r`;
   }
   const phVsMailHref = (name, plan, V) => `mailto:${encodeURIComponent(V.email)}?subject=${encodeURIComponent(V.title)}&body=${encodeURIComponent(phVsText(name, plan))}`;
   function phVsPageHtml(name, plan) {
+    phVsAllOpen.clear();
     const V = phVsModel(name, plan);
     const mail = V.email ? `<a class="ph-load-btn" data-vs-mail="1" href="${esc(phVsMailHref(name, plan, V))}"><svg class="icn" aria-hidden="true"><use href="#i-gmail"></use></svg> Email</a>`
       : `<button type="button" class="ph-load-btn" disabled><svg class="icn" aria-hidden="true"><use href="#i-mail"></use></svg> No email on file</button>`;
@@ -114123,7 +114137,7 @@ Difficult to sweat|no_sweat_tend:r`;
   document.addEventListener("input", e => { const ta = e.target && e.target.closest ? e.target.closest("#pharmacyPage [data-vs-f]") : null; if (ta) phVsGrow(ta); });
   document.addEventListener("keydown", e => {
     const vw = e.target && e.target.closest ? e.target.closest("#pharmacyPage [data-vs-edit]") : null;
-    if (vw && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); phVsEditOpen(vw); }
+    if (vw && e.target === vw && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); phVsEditOpen(vw); }
   });
   document.addEventListener("focusout", e => {   // leaving the box: back to the letter's lines (its change has already saved)
     const ta = e.target && e.target.closest ? e.target.closest("#pharmacyPage [data-vs-f]") : null; if (!ta) return;
@@ -114147,6 +114161,11 @@ Difficult to sweat|no_sweat_tend:r`;
       const ta = document.querySelector(`#pharmacyPage [data-vs-f="${k}"]`); if (ta) ta.value = phVsFilled(C.name, C.plan)[k] || "";
       const vw = document.querySelector(`#pharmacyPage [data-vs-edit="${k}"]`); if (vw && ta) vw.innerHTML = phVsViewHtml(k, ta.value);
       phVsPaintPart(C, k);
+      return;
+    }
+    if ((el = T.closest("[data-vs-more]"))) {
+      const k = el.dataset.vsMore, vw = el.closest("[data-vs-edit]"), ta = document.querySelector(`#pharmacyPage [data-vs-f="${k}"]`);
+      phVsAllOpen.add(k); if (vw && ta) vw.innerHTML = phVsViewHtml(k, ta.value);
       return;
     }
     if ((el = T.closest("[data-vs-edit]"))) { phVsEditOpen(el); return; }
