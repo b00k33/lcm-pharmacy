@@ -50,7 +50,7 @@
     opts = opts || {};
     const root = typeof opts.root === "string" ? D.querySelector(opts.root) : (opts.root || D.getElementById("pharmacyPage") || D.body);
     if (!root) return { error: "no root" };
-    const phone = W.innerWidth <= 640, scale = phone ? SCALE_PH : SCALE_PC, allow = opts.palette === "app" ? ["neutral", "teal", "red", "gold"] : ["neutral", "teal", "red"];
+    const phone = W.innerWidth <= 640, scale = phone ? SCALE_PH : SCALE_PC, allow = (opts.palette === "app" ? ["neutral", "teal", "red", "gold"] : ["neutral", "teal", "red"]).concat(D.body.classList.contains("ph-apoth") ? ["gold", "other:90", "other:140", "other:150"] : []);   // her 2026-11-26 apothecary (Herbs & stock only): walnut, brass and parchment (gold), moss and its tint
     const cs = el => W.getComputedStyle(el), sizes = {}, offS = new Map(), offC = new Map(), side = new Map(), offW = new Map(), chipL = new Map(), looks = new Set();
     const WEIGHTS = ["400", "600", "700"];
     // the Guide's Reading room (her 2026-11-25 pick, CLAUDE.md THE LOOK "the room's colours are data marks"): the walnut room, the parchment sheet, the brass plates,
