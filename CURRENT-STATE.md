@@ -626,6 +626,17 @@ by themselves while it has no date); **The 6–7 wk scan** (her 8 picks, 2026-11
 symbols. No "+ transfer from these eggs": Use ▸ and "+ Transfer" stay.
 
 ## Dispense, Refill & To Order
+- **synth22 2026-11-25 (her picks; mocks `mock-herb-label-2026-11-25.html`, `mock-label-printer-2026-11-25.html`):** **whole grams** on a
+  patient's prescription: `presCalcNumbers` rounds each herb (a half up, never under 1 g; a formula's recipe keeps its grams) and returns
+  the rounded sum as `gp`; the bag, Lasts, price, stock taken, the herb table's In stock column (`presBagG`), the label, Log and Copy for
+  Cliniko all read it. **The label** is her 62 mm label (`presLabelSheetHtml`, a Label | Text bar): box 2 = from "Patient:" (patient to
+  dosage), box 1 = the lines before it (date, price, Use Before), split from the one Settings template (`presLabelBoxes`); a tap on a
+  box or its chip (Copy date · Copy prescription) copies that box alone. Her heading and warnings are her own words in Settings › Label
+  text (`PHARMACY.labelHead` / `labelWarn`), never in the code; the screen shows the heading, only the printed label carries the
+  warnings. **Dispense** copies box 2, plays her label printer (`presPrintAnim`, 0.6 s, her pick; off under reduced motion), then
+  prints the whole label on a 100 x 62 mm page in Arial through the browser's Print (`presLabelPrint`, her "Label Printer"; each half
+  shrinks its words to fit, never under 5 pt). Today's steps are picture tiles (`.ph-dose-today.pic`, `phDosePic`): Calculate ·
+  Dispense · Log · More, until logged.
 - **Schedule on the band (2026-11-21):** `presSchedBtnHtml(t)` before the + (phone: `.ph-pres-menu-sch` in the band's ⋯). `presSchedStart(rxId, forceForm)`
   opens `#phSchedSheet` (`schedSheet` = { rx, view: "form" | "list" }), painted by `schedSheetPaint()` at the top of every
   `renderPharmacy()` (the form's own taps all re-render through it); a form error (`phFlash`) shows inside the sheet, a save closes it
