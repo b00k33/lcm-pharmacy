@@ -18303,3 +18303,11 @@ Her "on a sydney acupuncture day, use the logo in column as a location indicator
 - **Phone:** hidden (640px and under; the day strip has no room). Her word would be needed to show anything there.
 - **Checked** on a made-up week (CBD Mon-Thu, Acupreg Fri, Lotus Sat, Sun empty) at 1240: the right logo on the right day, tap / style / voice audits show only the known calendar-tile lines; 360: all hidden, no sideways scroll. **Not driven:** the 3-day and Day views, the Acupreg login's own calendar, a custom clinic name, the logos at the largest column (a 1920 screen), Me's calendar (it uses the same head).
 - **Seen:** the Sydney logo's small print (est. 1986) is unreadable at 17-26px; the leaf and colour carry it. Say if she would rather have a crop of the leaf alone.
+
+## Clinic logo moves from the day head to the day column (2026-11-25)
+Her "no, i dont like it. put it in the column base on the current day" (after the head version and a mock of three head layouts, `mock-day-head-logos.html`).
+- **Now:** each day's COLUMN has the clinic's logo at its top (`.ph-apptcal-wm`, `phLocLogoHtml`): 55% opacity, 34px tall, 8px in from each side, `position: sticky; top: 0` in a zero-height wrapper so it stays at the top of what is on screen while the grid scrolls, behind the blocks, no pointer events. The head (day name, number, CD chip, pickups) is as before the logos.
+- **Which clinic:** `phApptPlaceOf({ date })` as before (CBD / Acupreg / Lotus); a custom clinic and an unbooked Sunday show none.
+- **Phone:** the week's 40px columns hide it (`.ph-apptcal-grid:has(> .ph-apptcal-daycol:nth-child(2)) .ph-apptcal-wm`); the computer's Day (773px wide) and 3-day (246px) views show it.
+- **Checked** 1240: logos in the right columns, stuck at 10px under the top at scrollTop 300, tap / style / voice audits only the known calendar-tile lines; 360: hidden, no sideways scroll; Day and 3-day views draw one each. **Not driven:** the Acupreg login's own calendar, Me's calendar with its busy day (its blocks cover the logo: it is behind them by design), a 1920 screen.
+- **Seen:** a busy Me day hides it behind blocks at the column's top; say if she would rather have it lower, or in front.
