@@ -686,7 +686,8 @@ the formula's own bottles (`phBtSvg`: her supplier's real bottle by `phBtKind` (
 lid colour on a plain bottle), the herb's name on the label, the granules filling it to the shelf grams of a 100 g bottle, "×N" past 100 g, a
 red line under the herb's low line; Koda's green is the photo's #2E8452); the next herb lifted with a teal plank; the scale on a bench top
 with the next herb's name and grams beside it and "Jar a → b g" once; Weighed (or Enter, `phRfcWeighNext`) = the lid lifts, the bottle
-tips and pours, stands back and the lid closes (0.9 s, once), then it stays faded with a ✓; Finish, Order short and Tick all at the foot.
+tips and pours (0.9 s, once), then lies down with its lid facing her (`phBtLieSvg`, her pick); the level is the open bottle (grams − 100 × (N − 1))
+with ×N from 2 bottles; red only at or under the shelf's low line, never while phasing out; the Shelf view's Koda lid is the same #2E8452; Finish, Order short and Tick all at the foot.
 The ring, the counts line, the jar/bowl strip, the Weigh next box and the herb table are gone (the shelf is the list). While weighing the
 panel takes the wider share (`min(540px, 58%)`) and the list's rows stay one line; the short-herbs note is one chip in the head
 ("Zhi Shi · Order"); the week tiles are gone (the week groups say it).
