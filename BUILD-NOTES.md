@@ -18325,3 +18325,10 @@ Her "no you dont understand. i want it on the left left column, not calendar col
 - **Which clinic:** `phApptPlaceOf({ date })` as before (CBD / Acupreg / Lotus; a custom clinic and an unbooked Sunday show none).
 - **Checked** on a made-up week at 1240: the logo in the corner (Sydney on a CBD day), none in a head or column, Week and Day views draw it; tap / style / voice audits only the known calendar-tile lines. **Not driven:** 360 (the corner cell is the phone's hours column; the logo scales to it), today being a Friday or Saturday (the other two logos in that corner), the Acupreg login, 3-day.
 - **Seen:** the column is 52px wide, so the Sydney wordmark draws about 12px tall: the leaf and its green carry it, the words are unreadable (the other two logos are taller but small too). Her options: a crop of each emblem (leaf, lotus, curl), or a wider hours column.
+
+## Clinic emblems in the far-left column (2026-11-25)
+Her "1" (a crop of each emblem, over a wider hours column) after the 52px corner drew the Sydney wordmark about 12px tall.
+- **Now:** the corner cell shows each clinic's emblem at 48px: Sydney Acupuncture CBD's green leaf (crop 84x84 of her logo), Lotus Healing Arts' gold lotus on its red tile (88x76), the Acupuncture Pregnancy Clinic's curl. The curl alone is a pale thin stroke (read at 12px beside the others), so it is drawn in white on a rounded tile in Acupreg's sage #4E7A63, the colour its calendar blocks use, the way Lotus' logo is already a red tile. 96px-tall PNGs as data URIs (8.9, 11.6 and 0.9 KB).
+- Everything else as the last note (current day's clinic, week / 3-day / Day, none in a head or day column).
+- **Checked** on a made-up week at 1240: all three emblems drawn in the corner (the two other clinics by swapping the class, since today is a Wednesday), audits only the known calendar-tile lines. **Not driven:** a real Friday or Saturday, 360, 3-day view.
+- **Seen:** the Acupreg tile is my reading of its emblem (the logo has no mark but the curl); say if she would rather have its words.
