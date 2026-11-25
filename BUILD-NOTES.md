@@ -18350,3 +18350,7 @@ Her "wrong column" then, with a picture of the sidebar, "this column": "the left
 - **Minimised sidebar:** a 38px tile of the clinic's emblem (the crops of the last build). **Drawer (900px and under):** the full tile. **Find a page filtering:** hidden.
 - **Checked** 1240: CBD today (a Wednesday), the other two by swapping the class (both drawn well), the minimised emblem, tap / style / voice audits only the known calendar-tile lines, tile edges line up with the rows (10 to 238); 360: the drawer's tile is 232 wide, no sideways scroll. **Not driven:** a real Friday or Saturday, the drawer open on a phone, the Acupreg login, midnight changing the day.
 - **Kept:** both pictures sets inline (full 16 / 13 / 12 KB, emblems 9 / 12 / 1 KB), no file to cache.
+
+## Clinic logo tile: under the clinic's name (2026-11-25)
+Her "better but put it under linh chinese medicine": the sidebar tile moves from under the five pages to right under the brand (The clinic / Linh Chinese Medicine), above Find a page. Same tile (228px wide, aligned with the rows, 8px under it); the minimised sidebar's emblem tile sits under the expand button the same way. The pages move down 66px.
+- **Checked** 1240: tile 10-238 wide under the brand, Find a page under it; audits only the known calendar-tile lines; minimised emblem drawn under the button. **Not driven:** 360 with the drawer open, a short window (the pages are 66px lower, the teapot already hides under 720px tall), Lotus / Acupreg in the new place (the same tile).
