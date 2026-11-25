@@ -18186,3 +18186,11 @@ Her "all phasing out herbs minimum is 0, so it is never low - set this rule".
 - **Every clinic:** `phShelfLow` reads 0 for a phasing-out herb (Acupreg / Lotus fall-backs included), so it never shows Low, a red row, a red dot or a Running low entry; an empty jar can still show empty.
 - Fits her earlier "Low at 0 = never order again": a phasing-out jar that sells down to nothing still becomes a plain stopped jar (`phAfterQtyChange`).
 - **Driven** (sandbox, made-up herbs): a fresh herb list with two phasing-out herbs (low 60 and none) -> both 0, statuses phaseout; back to Current -> 60 again; Phase out twice keeps prevLow 60; Lotus rows: the phasing-out herb not red. **Not run:** the audits (no visible change).
+
+## Shelf lids: red jar = low, orange dot = phasing out (2026-11-25)
+Her "that jar symbol looks better as low bottle. make the phaseing out a dot colour top as orange", "i want the red jar as low stock", "im talking about on the visual inventory", and her yes to `mock-herb-phaseout-symbol-2026-11-25.html` (relayed by PA TCM). Shelf lids only.
+- **Low** = a red empty-jar badge at the lid's bottom-right (white circle, 1px `--ph-low` ring, the app's `#i-jar-empty` in red); a low lid has no top dot. Sized 19px with a 12px jar and set 6px out (the mock's 21px at 3px touched a two-line name on 6 lids at 1240 and 3 at 360); the trays' gap went 4 -> 6px so a badge never sits on the next lid.
+- **Top dot:** teal = stocked, orange (`--ph-phaseout`) = phasing out. A phasing-out herb is never low (her "minimum is 0"): orange dot, never the jar.
+- **On the shelf:** a phasing-out jar with grams left (at that clinic) now shows; before, `!h.stopped` dropped it. A plain stopped herb, or a phase-out at 0 g, stays off.
+- Labels: ", low" for the jar, ", phasing out" for the orange dot. No motion added. `.ph-lid-dot.po` added to style-audit's DATA_MARK.
+- **Audits** (made-up herbs: 10 low incl. GMP, 1 phasing out, a phase-out at 0 g and a stopped one off): style (six lists), tap and voice EMPTY at 1240 and 360; titlebar empty at 360; no jar on a name or a neighbour at either width. App sweep at 1240 and 360: Inventory clean; left = Communications "More ▾" corners (1240), Messages' "Running out" chip corners (360), the End of day prompt (both) -- none from these builds.
