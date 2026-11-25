@@ -18,6 +18,7 @@
   // the agreed exceptions (CLAUDE.md TAPPABLE THINGS "Kept", BUILD-NOTES "Chip audit sweep"): data marks, pictures, rows, cells
   const KEEP = [
     ".gf-dots button", ".gf-dots i",                 // importance dots (the Guide, Compare)
+    ".gf-bk",                                       // a book on the Guide's stack: a picture of her real books, spine 32px, the family's colour, capitals (her 2026-11-25 "as if the books stack on each other")
     ".gf-mcell",                                    // a value in the Guide's table (its number is data; a tap opens its box)
     ".gf-row", ".sg", ".gf-pr",                     // list rows, sign rows, search results (a row may wrap to two lines)
     ".tcd-pg",                                      // a case row (Guide > Cases list, Timetable): its picture beside the name and formula, two lines (her 2026-11-13 vertical space audit)
