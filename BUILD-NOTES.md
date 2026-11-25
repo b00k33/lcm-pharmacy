@@ -18375,3 +18375,6 @@ Her "make these bottles a bit more 3d like they are sitting on my shelf with a d
 
 ## Shelf view: brighter bottles, warm stars (2026-11-25)
 Her "make the white brighter and the glowing dim lighting switch it to glowing warm stars". The bottle bodies are a clean bright white (`.ph-bt-body`, centre #FFFFFF, edges #E4E3DD); the dim lamp and its glow are gone (`.ph-shelf-lamp`, `.ph-shelf-glow`, `phShelfLamp` removed). Warm stars sit on the black board (`.ph-shelf-stars`, behind the bottles): five four-point sparkles in a 32px strip over the top row (`::before`, an inline SVG) and fourteen soft warm dots across the board, seen in the gaps and the empty end (`::after`). They twinkle on opacity only (`phStarTw`, 5 s and 7 s, alternate, out of step); still under reduced motion. Her newest word: the shelf's one loop is now the stars. Style-audit DATA_MARK swaps the lamp for `.ph-shelf-stars`. Audits at 1220 and 360: every list empty.
+
+## Shelf view: fewer stars (2026-11-25)
+Her "i like the stars, use less": three sparkles over the top row (were five) and six warm dots across the board (were fourteen). CSS values only.
