@@ -18601,3 +18601,8 @@ Her synth22 (CBD in the Sydney Acupuncture green / stone / timber, Lotus in its 
 ## Lotus motion (2026-11-26)
 
 Her "add more animations to the lotus view too". CSS block "LOTUS MOTION" after "A PHARMACY PER CLINIC" (from 641px): a gold lotus on the signboard blooms when Lotus is picked and turns on hover; the gold letters catch the light on hover and once when Lotus is picked; gold petals drift down the band once on the pick (`.ph-shell-topblock::after`); bottles lift on hover; a shelf plaque glints on hover; the abacus tips on hover. `phThSync` keeps `ph-th-swap` 1.8 s (was 0.7) so the petals finish. No loops added; none under reduced motion. Audits at 1220 on Lotus Dashboard, Inventory, Formula refill: empty but the older 29px All / Low / Empty bar. The phone is untouched.
+
+## Bottom back chip removed (2026-11-26)
+Her words, after the Open patient block: "push live, and remove the bottom button".
+- Gone: the floating "‹ name" chip (`#phTripBack`, from her 2026-11-18 pick), its CSS, `phTripSync` / `phTripGo` and the capture listener, and Esc reopening the file. The Open patient block is now the one way back; it returns to the page, not the scroll position. On the phone that is ☰ then the name.
+- The block itself (note above) had already gone out in build 20261126-172300 with the Herbs & stock publish.
