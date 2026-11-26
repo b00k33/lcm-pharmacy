@@ -18560,3 +18560,6 @@ Her words: "change it to so the dob doesnt block the file anymore - replace it w
 - Left on DOB on purpose (they need an age to draw): the tongue / constitution charts' "Add sex and date of birth first" notes, and the question-set choice.
 - Tested on the test copy with a made-up patient: F, no DOB, no consent = locked, card with Consent + Send intake link; consent on file, still no DOB = open, card gone, the step done. The card was not seen drawn on a patient page (the test copy opens on its sign-in and has no patients).
 - CLAUDE.md still says "sex + DOB" in its law (§3 Patient details, the Start-here lock lines): to be changed on her word.
+
+## Label print in red (2026-11-26)
+Her words, on the print preview showing the red lines grey: "my label printer can print red". The printed label's red (heading, Patient, Dosage, Date, Use Before) is pure #FF0000 (was #E01B1B) and the page asks for exact colours (print-color-adjust: exact). Grey in the preview is the print dialog / printer set to black and white: More settings › Colour, and the printer's own 2-colour (black / red) setting with the black and red roll, are hers to set; the app cannot set them. The screen drawing is unchanged.
