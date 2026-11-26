@@ -48,6 +48,7 @@
     ".ph-pick-row",                                // a herb / formula search result in the add box: a row that may wrap to two lines and picks (a result list, not a chip; found 2026-11-24 on the Herbs page)
     ".ph-vsum-ln",                                  // the visit summary card's fact lines: a row that opens its page (her 2026-11-20 "build all three")
     ".ph-sg-row",                                   // a surgery: the row opens its form to change it (her 2026-11-21 "how to edit the surgeries?")
+    ".ph-vly .mk",                                  // My valley's round pins on the painting (the next thing's picture, or the count still to go): picture markers, not chips (her 2026-11-27 "build it" on the full-screen valley mock)
     "[data-keep-size]"                              // a control she agreed to keep at its own size: say which in the build note
   ].join(", ");
   const TAP = "button, select, a[href], input:not([type=hidden]), textarea, [role=button], [role=tab], [role=option]";
