@@ -38242,6 +38242,23 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   #pharmacyPage#pharmacyPage .ph-shelf.cab .ph-lid.kpc .ph-lid-t { background: none; box-shadow: none; padding: 0; color: #B3261E; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
   #pharmacyPage#pharmacyPage .ph-bt .ph-lid-dot.uw { background: #FFFFFF; box-shadow: 0 0 0 1px #8C969A; }   /* Not weighed: a hollow dot */
 
+  /* EMPTY BOTTLES on To order (her 2026-11-26): one line under the filters: the bottle, the count as a joined − n + bar, her low line, and when low the
+     herbs to combine as chips. Red only when low (THE LOOK: red = short). */
+  #pharmacyPage .ph-ebt { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin: 0 0 12px; padding: 8px 12px; border-radius: 12px; background: #FFFFFF; border: 1px solid var(--ph-line); font: 400 var(--fs-13) var(--font-body); color: var(--ph-ink); }
+  #pharmacyPage .ph-ebt.low { border-color: var(--ph-zero, #C62828); }
+  #pharmacyPage .ph-ebt .ph-ebt-ic { width: 18px; height: 22px; flex: none; }
+  #pharmacyPage .ph-ebt .ph-ebt-t { font-weight: 600; }
+  #pharmacyPage .ph-ebt.low .ph-ebt-t::after { content: ""; display: inline-block; width: 6px; height: 6px; margin-left: 6px; border-radius: 50%; background: var(--ph-zero, #C62828); vertical-align: middle; }
+  #pharmacyPage .ph-ebt .ph-ebt-n .v { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; height: 30px; box-sizing: border-box; padding: 0 8px; border-left: 1px solid var(--ph-line); border-right: 1px solid var(--ph-line); background: #FFFFFF; font: 700 var(--fs-13) var(--font-body); }
+  #pharmacyPage .ph-ebt .ph-ebt-n .ph-ltr-qual { min-width: 32px; }
+  #pharmacyPage .ph-ebt .ph-ebt-low { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-11-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-ebt .ph-ebt-low input { width: 56px; height: 32px; box-sizing: border-box; padding: 0 8px; border: 1px solid var(--ph-line); border-radius: 6px; background: #FFFFFF; font: 400 var(--fs-13) var(--font-body); color: var(--ph-ink); text-align: right; }
+  #pharmacyPage .ph-ebt .ph-ebt-cb { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+  #pharmacyPage .ph-ebt .ph-ebt-cbl { font-size: var(--fs-11-5); color: var(--ph-soft); }
+  #pharmacyPage .ph-ebt .ph-ebt-chip { height: 32px; padding: 0 10px; border: 1px solid var(--ph-line); border-radius: 6px; background: #FFFFFF; font: 600 var(--fs-13) var(--font-body); color: var(--ph-ink); cursor: pointer; }
+  #pharmacyPage .ph-ebt .ph-ebt-chip span { font-weight: 400; color: var(--ph-soft); }
+  #pharmacyPage .ph-ebt .ph-ebt-chip:hover { border-color: var(--ph-herb); }
+
 </style>
 </head>
 <body>
@@ -38789,6 +38806,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
           <div class="ph-hf-section ph-hf-history" id="phHerbHistorySection" hidden>
             <div class="ph-hf-label-row">
               <div class="ph-hf-label">Stock history</div>
+              <button type="button" class="tab-link" id="phHerbCombineBtn" title="Tipped one bottle into another: one more empty bottle at this clinic">Combine bottles</button>
               <button type="button" class="tab-link" id="phHerbAdjustBtn">+ Adjust stock</button>
             </div>
             <div class="ph-hist-list" id="phHerbHistoryList"></div>
@@ -42192,6 +42210,44 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // clinic Inventory cell) takes the mark off. A dispense or a batch made there still moves the number; the mark stays until she weighs it.
   const phShelfUnw = (h, s) => s !== "cbd" && !!h && !!PH_SHELVES[s] && !!h[PH_SHELVES[s].f + "Unw"];
   const phShelfWeighed = (h, s) => { if (h && s !== "cbd" && PH_SHELVES[s]) delete h[PH_SHELVES[s].f + "Unw"]; };
+  // EMPTY BOTTLES (her 2026-11-26 "add option to count empty herbal bottles because sometimes i need to order them or if i transfer 20g from da zao
+  // koda bottle to a new 100g da zao koda bottle, my shelf bottle has 120 and i have an empty bottle to use"; her picks: each clinic, 1 per dispense,
+  // a Combine button, show on To order; then "give me a prompt to tell me to transfer herbs into new herb bottles to make more empty bottles"):
+  // PHARMACY.emptyBt[s] = { n bottles, low her line (5 until she sets it), up }. A patient's dispense uses one at its clinic (entry.btl; Undo gives it
+  // back); Combine adds one, the grams unchanged.
+  const phEbtRead = s => (PHARMACY.emptyBt && PHARMACY.emptyBt[s]) || { n: 0, low: 5 };
+  function phEbt(s) { PHARMACY.emptyBt = PHARMACY.emptyBt || {}; return PHARMACY.emptyBt[s] = PHARMACY.emptyBt[s] || { n: 0, low: 5 }; }
+  function phEbtAdd(s, d) { const b = phEbt(s); b.n = Math.max(0, (+b.n || 0) + d); b.up = Date.now(); return b.n; }
+  // a herb whose grams are one bottle and a part one that tips into it (the part 30% of a bottle or less: her 100 g bottle took 20 g): A-Z, six at most
+  function phEbtCombineList(s) {
+    const list = s === "cbd" ? (PHARMACY.herbs || []).filter(h => !h.stopped && h.qty != null) : phShelfHerbs(s).filter(h => !phShelfUnw(h, s));
+    return list.filter(h => { const q = s === "cbd" ? +h.qty : +h[PH_SHELVES[s].f], p = phPackFor(h) || 100, r = q - p * Math.floor(q / p); const was = h.ebtC && h.ebtC[s]; return q > p && r > 0 && r <= p * .3 && !(was != null && q <= was); }).sort(phByName).slice(0, 6);   // one she combined stays off until new grams arrive
+  }
+  function phEbtHtml(s) {
+    if (!PH_SHELVES[s]) return "";
+    const b = phEbtRead(s), low = (+b.n || 0) <= (+b.low || 0), comb = low ? phEbtCombineList(s) : [], qOf = h => s === "cbd" ? +h.qty : +h[PH_SHELVES[s].f];
+    return `<div class="ph-ebt${low ? " low" : ""}"><svg class="ph-ebt-ic" viewBox="0 0 20 24" aria-hidden="true"><rect x="5.5" y="1.5" width="9" height="4" rx="1" fill="#2E8452"/><path d="M4 8q0-2 2-2h8q2 0 2 2v12q0 2.5-2.5 2.5h-7Q4 22.5 4 20z" fill="#FFFFFF" stroke="#8C969A"/></svg>`
+      + `<span class="ph-ebt-t">Empty bottles</span><span class="ph-tng2-seg ph-ebt-n"><button type="button" class="ph-ltr-qual" data-ebt-step="${s}:-1" aria-label="One fewer empty bottle at ${PH_SHELVES[s].name}">−</button><span class="v" aria-live="polite">${+b.n || 0}</span><button type="button" class="ph-ltr-qual" data-ebt-step="${s}:1" aria-label="One more empty bottle at ${PH_SHELVES[s].name}">+</button></span>`
+      + `<label class="ph-ebt-low">Low at <input type="number" min="0" step="1" data-ebt-low="${s}" value="${+b.low || 0}" aria-label="Empty bottles low at"></label>`
+      + (comb.length ? `<span class="ph-ebt-cb"><span class="ph-ebt-cbl">Combine</span>${comb.map(h => `<button type="button" class="ph-ebt-chip" data-ebt-comb="${s}:${h.id}" title="Tip the part bottle into the full one: one more empty bottle">${esc(phPinyinName(h))} <span>${phFmtG(qOf(h))} g</span></button>`).join("")}</span>` : "")
+      + `</div>`;
+  }
+  document.addEventListener("click", e => {
+    const t = e.target instanceof Element ? e.target : null; if (!t) return;
+    const st = t.closest("[data-ebt-step]");
+    if (st) { const [s, d] = st.dataset.ebtStep.split(":"); phEbtAdd(s, +d); savePharmacy(); renderPhRestock(); return; }
+    const cb = t.closest("[data-ebt-comb]");
+    if (cb) {
+      const [s, id] = cb.dataset.ebtComb.split(":"), h = (PHARMACY.herbs || []).find(x => x.id === id); if (!h) return;
+      (h.ebtC = h.ebtC || {})[s] = s === "cbd" ? +h.qty : +h[PH_SHELVES[s].f];
+      const n = phEbtAdd(s, 1); savePharmacy(); renderPhRestock();
+      presSavedToast(`${esc(phPinyinName(h))} combined · ${PH_SHELVES[s].name}: ${n} empty bottle${n === 1 ? "" : "s"}`, 3200);
+    }
+  });
+  document.addEventListener("change", e => {
+    const i = e.target instanceof Element && e.target.closest("[data-ebt-low]"); if (!i) return;
+    const b = phEbt(i.dataset.ebtLow); b.low = Math.max(0, Math.round(+i.value || 0)); b.up = Date.now(); savePharmacy(); renderPhRestock();
+  });
   // her 2026-11-26 "ok add those herbs to lotus inventory" (her Lotus shelf, read from her photos): once, on the CBD login, after this device has caught
   // up with the cloud, each bottle goes on the Lotus shelf as Not weighed (one that is already there is left as it is). A bottle is found by its Koda
   // code, else by its name; one not in the list is added as a new herb (her word for Da Huang (Shu)). What was done is kept in PHARMACY.lotusShelf1126.
@@ -45941,6 +45997,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   function phReverseEntry(id) {
     const entry = PHARMACY.log.find(x => x.id === id);
     if (!entry) return false;
+    if (entry.btl) phEbtAdd(entry.btl, 1);   // the empty bottle it went out in is back
     // the dispense this follow-up was ABOUT no longer exists -- remove it
     // rather than leave a dated reminder for an event that never happened
     if (PHARMACY.followups) PHARMACY.followups = PHARMACY.followups.filter(r => r.logId !== id);
@@ -80988,6 +81045,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     // "+ Adjust stock" -- the quickest path to the real fix is the In stock
     // field already sitting in Essentials above; this doesn't restructure
     // the form (her explicit ask), it just brings that field to her
+    document.getElementById("phHerbCombineBtn").addEventListener("click", () => {
+      const h = PHARMACY.herbs.find(x => x.id === phHerbEditId); if (!h) return;
+      const s = phHerbFormShelf || "cbd"; (h.ebtC = h.ebtC || {})[s] = s === "cbd" ? +h.qty : +h[PH_SHELVES[s].f];
+      const n = phEbtAdd(s, 1); savePharmacy();
+      presSavedToast(`${esc(phPinyinName(h))} combined · ${PH_SHELVES[s].name}: ${n} empty bottle${n === 1 ? "" : "s"}`, 3200);
+    });
     document.getElementById("phHerbAdjustBtn").addEventListener("click", () => {
       const qty = document.getElementById("phHerbQty");
       qty.scrollIntoView({ block: "center" });
@@ -84394,9 +84457,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       const meta = oldTop.querySelector(".ph-shell-titlebar-meta"), metaTxt = "";
       if (meta && meta.textContent !== metaTxt) meta.textContent = metaTxt;
       const tmp = document.createElement("div");
-      tmp.innerHTML = `<div class="ph-ost">${osFilterHtml}${osAddHtml}${osBodyHtml}</div>`;
+      tmp.innerHTML = `<div class="ph-ost">${osFilterHtml}${phClinicNow() === "all" ? "" : phEbtHtml(osSh || "cbd")}${osAddHtml}${osBodyHtml}</div>`;
       oldOst.replaceWith(tmp.firstElementChild);
-    } else wrapEl.innerHTML = `${shellHtml}<div class="ph-ost">${osFilterHtml}${osAddHtml}${osBodyHtml}</div>`;
+    } else wrapEl.innerHTML = `${shellHtml}<div class="ph-ost">${osFilterHtml}${phClinicNow() === "all" ? "" : phEbtHtml(osSh || "cbd")}${osAddHtml}${osBodyHtml}</div>`;
     // a table wider than its card (a longer name or total than phOstNeed allowed) learns its width and draws the two lines
     const osT = osTbl && wrapEl.clientWidth ? wrapEl.querySelector(".ph-ost-tbl") : null;
     if (osT && osT.scrollWidth > osT.parentElement.clientWidth + 1) {
@@ -177450,6 +177513,8 @@ Dosage: {dosage}
       return;
     }
     if (!presIsFormula(t)) phFuCreateFromDispense(t, entry, gp);   // her §2: created at Save & log, never while drafting
+    // her 2026-11-26 pick "1 per dispense": the bag goes out in one of that clinic's empty bottles (once she keeps a count there)
+    if (!presIsFormula(t) && (entry.deducted || []).length) { const bs = ((entry.deducted.find(x => x && x.shelf) || {}).shelf) || presDispShelf(); if (PH_SHELVES[bs] && (+phEbtRead(bs).n || 0) > 0) { phEbtAdd(bs, -1); entry.btl = bs; savePharmacy(); } }
     // her 2026-09-16 pick: the dispensed formula becomes the plan phase's
     // formula, right here, after the record is safely down. Both stores are
     // touched (script link + plan phase) so save both again -- the atomic
