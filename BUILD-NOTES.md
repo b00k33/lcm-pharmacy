@@ -18646,3 +18646,17 @@ Her "add more animations to the acupreg view too" (after Lotus and CBD). CSS "AC
 - A filter card's picture grows.
 - The main action's icon nods.
 None of it runs under reduced motion. Checked at 1220: the clinic-pick and page-change animations fire, and 11 rules parse. Audits: Inventory is empty; on Dashboard the only item left is the older 29px Acupreg bar. Not watched: the shelf, bottle and filter moves, because the sandbox's Acupreg shelf is empty. The phone is untouched.
+
+## My valley (2026-11-26, LIVE on her "push live")
+Her design, built from her approved mock (mocks are not in the repo): a view that thrives and fades with her health habits (relayed by PA Coder 3D after her "Both"). Her picks here: its **own page** in My day; birds stay on a day with **more than half** its habits done; the water drops on an **empty clinic day**.
+- What it does, what each part reads, the private file and where the code lives: CURRENT-STATE "My valley". The painting code is the mock's own; the days, the page and the import are new.
+- Judgment calls: day one = the first tracked day (habits, a workout, a meal marked Had or steps), at most a year back; bouldering / stretching / class or cardio / gym pick the tree; a past day opened after dark shows mid-afternoon; the picture slows itself on a slower device.
+- The drawn scene (cliffs, creek, rail, pots) is in the app. The bird pictures, the place and the facing direction are only in her imported file.
+- Tested on the test copy with a made-up person (80 days and a year; 20 habits, 8,000 bookings: the page opens in about 0.1 s): day one, all kept, one and two missed days, Replay, every Time / Season / Weather button, a forecast day, Pause, leaving the page (drawing stops), a brand-new record, a wrong file refused, the right file kept after a reload. Tap, style and voice audits at 1280, 1220 and 360: empty. NOT tested: on her own computer or phone, with her own days, offline forecast.
+
+## Home (2026-11-26, LIVE on her "push live")
+Her words: "i want to do something similar for my home as well", "I like it", "Yes, send it" (relayed by PA Game 33). A doorway only: the app holds the page that loads a room; the room file is hers and is never in the repo.
+- What it does, where it is kept and where the code lives: CURRENT-STATE "Home". Built the Diagnostics chapters' way, with two differences: ticks are kept, and the phone can import.
+- Where the chip sits: Life (Work · Money · Home · People · Review · Code · Numbers & Stars), the place that already holds the life pages.
+- Rename changes the name under the room in place; the room is not reloaded.
+- Tested with a made-up two-job room: a file that is not a page refused; import; a tick saved with no reload; messages from the page itself, from another frame, of another shape, with no data or over the size ignored; a saved text that tries to close the script tag stays text; ticks back after a repaint, leaving the page, a reload and a replaced file; nothing in the synced store. Her room file was opened in the test copy only: it draws and keeps a tick after a reload. Tap, style, voice and title-bar audits at 1240 and 360: empty. Applies together with "My valley" in either order. NOT tested: on her own computer or phone.

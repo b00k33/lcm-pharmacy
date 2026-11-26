@@ -289,7 +289,7 @@ dropdowns: A–Z. A new list is A–Z from its first build.
   regroups `presFlowSteps`' answer; `presFlowSteps` itself is unchanged). A **jump search** (`#presJs`, 32px, under the name) lists the parts of THIS
   patient by name or word (pulse · goals · tongue · herbs), A–Z, one tap opens that step + part, Esc clears; the content search in the head (phPs*)
   stays. The Fang Bing Ren page's own three-way switch hides (`.ph-fbr-switch`): the Diagnosis bar says the same. Her own record uses the SAME rail rows, bar, jump search and Next dot (stage 3, her 2026-11-21 pick 3): **four places, ONE page each** (`presNavBuildMe`):
-  **My day** (Week · Meals · Fitness · Habits · Routines; Me opens on Week, her 2026-11-23, over her 2026-11-03 Meals pick) · **Check myself** (Cycle · Tongue · Pulse · Abdomen · Fang Bing Ren · Diagnosis · Herbs;
+  **My day** (Week · Meals · Fitness · Habits · My valley · Routines; Me opens on Week, her 2026-11-23, over her 2026-11-03 Meals pick) · **Check myself** (Cycle · Tongue · Pulse · Abdomen · Fang Bing Ren · Diagnosis · Herbs;
   Tongue / Pulse / Abdomen tick when charted today; Next walks Abdomen → Fang Bing Ren → Diagnosis → Herbs) · **Life** (Work · Money · Birthdays · Code · Numbers & Stars · a
   trip each; Money, Code and a trip she has not used are quiet chips, never a "More" row) · **My file** (Details · Medical history · Ren · Log · Tests · Medicines · Photos ·
   Messages · Appointments · IVF history). Rail rows are icon rows with no number (they are places, not a sequence); the old "Treat myself" 1-2-3 walk, the group
