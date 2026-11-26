@@ -18668,3 +18668,14 @@ Her "show me a mini version of my heath fitness balcony view" (mock `mocks/mock-
 - **When it shows:** her own record only (`phHubOn`; another login shows nothing), a computer's sidebar only. Hidden when minimised, while Find a page filters, under 601px tall and in the 900px drawer. `phSbVlyPaint` runs with the sidebar's place paint and every minute, and a ResizeObserver starts it again the moment it shows.
 - **Private:** nothing new is stored. Her birds, place and facing still come only from her imported file on each device.
 - **Tested in the test copy with a made-up Me record:** it draws and moves; a tap opens My valley; the small view mirrors the page while it is open and keeps moving after leaving; minimise hides it and reopening restarts it at once. At 1220 x 700 it shows (the teapot hides itself under 721px tall, as before); at 360 it is hidden, with no sideways scroll. About 3 ms a picture. Sidebar tap and style audits: nothing new (the six lines tap-audit lists are the sidebar's older buttons, untouched here). NOT tested: her own computer, her own days or her bird file.
+
+## Tea session (2026-11-26)
+
+Her words: "make it so the teapot animates and requires me to click on it to light it up and choose tea type eg. osmanthus red tea or Bo Hemian blue or xiao rain tea"; popup picks: Xiao rain = pale gold-green; the candle goes out at day's end; last tea first. Then "build it and push".
+
+- `#phSbTea` starts `off cold`: no flame, no glow, tea level down (`.ph-tea-lvl.pot` 70px, `.cup` 32px; the spout and leaves fade). The old always-on loop and `.tea-paused` / `lcm-tea-paused` are gone.
+- A tap opens `#phTeaTin` (role menu, fixed above the teapot, white, 32px rows, arrow keys, Escape and an outside click close it). Pick = `brew(t)`: `.lit.strike` once, the level rises (2.4s), `.steam` after 2.4s. Swapping tea goes `cold`, waits 1.3s, refills in the new colour.
+- Colours come through CSS `stop-color` on the SVG gradients (`#phTeaGlowTea`, `#phTeaGlowSurf`, `#phTeaTea`, `#phTeaSurf`) plus `--ph-tea-lf` / `--ph-tea-rp`.
+- `lcm-tea` = {d, t, lit, last}; a 60s check repaints on a new day (unlit, empty). A reload while lit stays lit with no strike.
+- Checked in the sandbox at 1280x900: start unlit, pick, swap, blow out, reload, next day; tin tap + style audits empty. At 360 the teapot is hidden (sidebar drawer). Note: in a background tab the fill transition pauses until the tab shows.
+
