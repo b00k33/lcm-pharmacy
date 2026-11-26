@@ -80649,6 +80649,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         // tab out from under her every time she opened a herb from Restock/the
         // low list/anywhere but Inventory. Removed; same "stays put" behaviour
         // as the Dashboard path now, everywhere.
+        phHerbFormShelfNext = herbEdit.closest("#phInvWidget, #phDashboardWrap") ? phClinicSolo() : "";
         phOpenHerbEditDrawer(h);
         return;
       }
@@ -80865,6 +80866,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     var phHerbBackdrop = document.getElementById("phHerbBackdrop");
     var phSupplierForm = document.getElementById("phSupplierForm");
     var phHerbEditId = null, phSupEditId = null;
+    // her 2026-11-26 "when i change my stock in lotus, it should only apply to lotus": a herb opened from a clinic's Inventory or Dashboard (Lotus,
+    // Acupreg) shows and saves THAT shelf's grams in its stock box; CBD's h.qty is left alone. Set by the click, read once by the drawer.
+    var phHerbFormShelfNext = "", phHerbFormShelf = "";
     // read-only window for phHerbSupplierRowsRecalc(), which sits outside this
     // function and could never see phHerbEditId (audit 2026-10-13, finding 1)
     window.__phHerbEditIdNow = function () { return phHerbEditId; };
@@ -80899,7 +80903,13 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       phHerbForm.hidden = false; phHerbBackdrop.hidden = false;
       document.getElementById("phHerbName").value = h.name;
       document.getElementById("phHerbCost").value = h.cost || "";
-      document.getElementById("phHerbQty").value = h.qty == null ? "" : h.qty;
+      phHerbFormShelf = phHerbFormShelfNext; phHerbFormShelfNext = "";
+      {
+        const s = phHerbFormShelf, el = document.getElementById("phHerbQty"), lab = document.querySelector('label[for="phHerbQty"]');
+        if (s) { const uw = phShelfUnw(h, s), v = h[PH_SHELVES[s].f]; el.value = uw || v == null ? "" : v; el.placeholder = uw ? "Not weighed" : "not kept here"; }
+        else { el.value = h.qty == null ? "" : h.qty; el.placeholder = "not tracked"; }
+        if (lab) lab.textContent = s ? `${PH_SHELVES[s].name} stock (g)` : "In stock (g)";
+      }
       document.getElementById("phHerbLow").value = h.low == null ? "" : h.low;
       document.getElementById("phHerbOverstockAt").value = h.overstockAt == null ? "" : h.overstockAt;
       document.getElementById("phHerbStatus").value = h.stopped ? (h.phaseOut ? "phaseout" : "stopped") : "current";
@@ -81146,8 +81156,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       vals.bottleCost = supplierDefault && supplierDefault.bottleCost != null ? supplierDefault.bottleCost : null;
       // current | stopped | phaseout — phSetStatus owns the qty side-effects
       const status = document.getElementById("phHerbStatus").value;
+      // opened from a clinic (Lotus, Acupreg): the stock box is that shelf's grams, never CBD's
+      const shelfS = phHerbEditId ? phHerbFormShelf : "", shelfQ = vals.qty;
+      if (shelfS) delete vals.qty;
       if (phHerbEditId) {
         const h = PHARMACY.herbs.find(x => x.id === phHerbEditId);
+        if (h && shelfS) { if (shelfQ != null && (phShelfUnw(h, shelfS) || shelfQ !== +h[PH_SHELVES[shelfS].f])) { h[PH_SHELVES[shelfS].f] = shelfQ; phShelfWeighed(h, shelfS); } }
         if (h) {
           // topping the qty up = the order arrived — clear the order flags
           if (vals.qty != null && (h.qty == null || vals.qty > h.qty)) { h.order = false; h.ordered = false; }
