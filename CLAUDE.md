@@ -273,7 +273,7 @@ dropdowns: A–Z. A new list is A–Z from its first build.
   tabs, things in one place", the mock `lcm_simpler_navigation_direction_mock`, every pick the recommended one; memory
   project_lcm_simpler_navigation_2026_11_21, stage 1 of 4; BUILD-NOTES "Simpler navigation, stage 1"):** a patient's rail is **4 numbered
   steps and File ›**: 1 Came in for (a return visit: Better / worse) · 2 Exam · 3 Diagnosis · 4 Treat, then **File ›** (no number) at the foot
-  (at the TOP on a first visit and while sex + DOB are missing, with the Start-here lock as today). **A step is ONE page.** Steps 2-4 and File
+  (at the TOP on a first visit and while sex or consent is missing, with the Start-here lock as today). **A step is ONE page.** Steps 2-4 and File
   carry a **joined bar of their parts** at the top of the page (`#presPartBar`, the app's wrapping joined bar `.ph-tng2-seg.wrap`, 32px chips,
   THE LOOK) and show the picked part's own page below it (every page body is unchanged). The parts: **Exam** = the kind's Exam order
   (`PH_VK_ORDER`: Tongue · Pulse · Abdomen · Cycle if tracked · Pain (Musculoskeletal) · Tests (Tests & scans) · History (Medical history) · Photos
@@ -457,7 +457,7 @@ This overrides the lines below where they say Care Plan step / "Fang Bing Ren fi
 all A; it replaced the no-plan gate, decision 3 of 2026-09-11):** "i dont want
 picking condition to be picking a treatment plan. i want treatment plan to be
 only after picking condition and collecting fang bing ren history". **No gate:**
-a patient with no plan opens on Today's visit like everyone with sex + DOB in
+a patient with no plan opens on Today's visit like everyone with sex + consent in
 (new or returning; Start here stays the one lock), Came in for on top. Every
 visit page, Fang Bing Ren and Treatment work with no plan
 (`presTpMainSections(name, null)`); Treatment logs with none, and starting the
@@ -518,7 +518,7 @@ it said before. Never a second findings reader on a page; a new page that lists 
 ## 3 · How often each page repeats
 | Page | Rule |
 |---|---|
-| Patient details | Once. Sex + DOB gate the rest (existing Start-here card stays). **The page holds what every patient has** (her 2026-10-30 pick): name, sex, DOB, phone, email, body; the partner, the addresses and the health fund are entered where they are read (IVF history's head, a booking's Delivery step, Compose's rebate list) and the page only says what is on file, one grey line, each part a door. The ring counts seven. **The IVF | Off switch** (her 2026-11-21 "toggle off for ivf related questions", picks A; `phIvfOn`, `rec.ivfOn`) sits beside F / M: Off hides the IVF history page, the IVF clinic row, the visit summary's IVF lines and the intake link's IVF / trying-to-conceive questions; nothing saved goes, On brings it back. Unset = worked out: on with an IVF round, an IVF plan or a Fertility complaint (a man: a partner link or a semen analysis); a woman 55 and over off; a man off. Her tap always wins. Never back to IVF history for every woman without her word. |
+| Patient details | Once. **Sex + consent on file gate the rest** (her 2026-11-26 "change it to so the dob doesnt block the file anymore - replace it with consent", then "yes change to sex and consent": `phPfGate`, consent = the intake form's `rec.consent.on`, her own file needs none; the Start-here card asks Sex, Date of birth (never a lock) and shows Consent: On file, or No consent + Send intake link). A date of birth still feeds what needs an age. **The page holds what every patient has** (her 2026-10-30 pick): name, sex, DOB, phone, email, body; the partner, the addresses and the health fund are entered where they are read (IVF history's head, a booking's Delivery step, Compose's rebate list) and the page only says what is on file, one grey line, each part a door. The ring counts seven. **The IVF | Off switch** (her 2026-11-21 "toggle off for ivf related questions", picks A; `phIvfOn`, `rec.ivfOn`) sits beside F / M: Off hides the IVF history page, the IVF clinic row, the visit summary's IVF lines and the intake link's IVF / trying-to-conceive questions; nothing saved goes, On brings it back. Unset = worked out: on with an IVF round, an IVF plan or a Fertility complaint (a man: a partner link or a semen analysis); a woman 55 and over off; a man off. Her tap always wins. Never back to IVF history for every woman without her word. |
 | Ren | Once. (She skipped the "photos ~3 months old" nudge in Phase 4: none.) **The Ren page is Find the Ren + one search row** (her 2026-10-29 audit picks): the 319-sign board stays folded until she types, picks an area or taps Signs ›; open = the lead family first, Open signs, 32 px rows; the panel on this tab = the figure alone; no photo = a "+ Face" chip, never an empty tile. CURRENT-STATE "The Ren page board". |
 | Medical history | Once. One tap "Anything new since <date>?" on Today's visit EVERY return visit (Phase 4). |
 | Stress & sleep | **No page any more (her pick A, 2026-10-13, `stress-sleep-audit-2026-10-13.html`).** It was "asked once for EVERY patient"; it now lives on **Ask her** (every visit, Usually and Right now): the Sleep topic gained *Hard to fall asleep* and *Wakes in the night or very early*, the Mood topic gained *Low, flat or tearful* and is now always shown. Each answer ticks a new Fang Bing Ren sign (`sleep_onset_hard`, `sleep_wakes`, `mood_low` + `_tend` twins) that makes the Patterns clue `sl_hard` / `sl_wake` / `low_mood`; tapping "hard to fall asleep" or "wakes" also shows the broad sleep sign pre-ticked (`PH_TRI_IMPLIED_BY`). The Energy grid and throat lump were not carried over (Energy is on Today's visit and Fang Bing Ren; throat lump is already a Fang Bing Ren sign). Answers saved before still count and still pre-tick (`PH_PFW_RETIRED`). The mood question on the men's page and the Change of life "Sleep and mood" question went with it. |
@@ -564,7 +564,7 @@ other, so the same findings were typed twice.) Old data is never deleted.
 ## 6 · Skipped steps
 **Gentle gold nudge only, never a block** ("no tongue or pulse yet · Do it
 now ›" on Fang Bing Ren; it still opens). The only hard gate is the existing
-sex + DOB Start-here lock (with its "Later, open it anyway" override).
+sex + consent Start-here lock (with its "Later, open it anyway" override).
 
 ## 7 · Naming
 "Plan" becomes **Treatment Care Plan** everywhere in the app (rail, tab,
@@ -576,7 +576,7 @@ Never call it "Treatment plan", "Plan tab" or bare "Plan" in new UI text.
 ## 8 · Build phases — all built and LIVE
 Phases 0-6 were built on 2026-10-10 and confirmed on `origin/main` 2026-10-18 (the phase table was folded on
 2026-10-25; its detail is in git history). What they left that still holds:
-- **Landing:** a return patient (a visit within 12 months, sex + DOB, one plan or a booked one:
+- **Landing:** a return patient (a visit within 12 months, sex + consent, one plan or a booked one:
   `presStagePlanAutoOpen`) opens on Today's visit; anyone else opens on the profile.
 - **Next walk** (`presVisitNext`): first visit = file gaps → exam → Fang Bing Ren → Care Plan → Treatment →
   Dispense; return visit = exam first, file gaps after. **Since 2026-11-18 (her "yes", Fang Bing Ren her highest priority) Fang Bing
