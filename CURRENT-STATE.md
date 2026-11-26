@@ -636,7 +636,7 @@ symbols. No "+ transfer from these eggs": Use ▸ and "+ Transfer" stay.
   text (`PHARMACY.labelHead` / `labelWarn`), never in the code; the screen shows the heading, only the printed label carries the
   warnings. **Dispense** copies box 2, plays her label printer (`presPrintAnim`, 0.6 s, her pick; off under reduced motion), then
   prints the whole label on a 100 x 62 mm page in Arial through the browser's Print (`presLabelPrint`, her "Label Printer"; each half
-  shrinks its words to fit, never under 5 pt). Today's steps are picture tiles (`.ph-dose-today.pic`, `phDosePic`): Calculate ·
+  shrinks its words to fit, never under 5 pt). **Print label** (2026-11-26, `data-pres-print`, beside Copy date / Copy prescription) prints the label on screen the same way and changes nothing: no stock, log or pending state; its Date and Use Before are the screen's (now). Today's steps are picture tiles (`.ph-dose-today.pic`, `phDosePic`): Calculate ·
   Dispense · Log · More, until logged.
 - **Schedule on the band (2026-11-21):** `presSchedBtnHtml(t)` before the + (phone: `.ph-pres-menu-sch` in the band's ⋯). `presSchedStart(rxId, forceForm)`
   opens `#phSchedSheet` (`schedSheet` = { rx, view: "form" | "list" }), painted by `schedSheetPaint()` at the top of every

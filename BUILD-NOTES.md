@@ -18563,3 +18563,11 @@ Her words: "change it to so the dob doesnt block the file anymore - replace it w
 
 ## Label print in red (2026-11-26)
 Her words, on the print preview showing the red lines grey: "my label printer can print red". The printed label's red (heading, Patient, Dosage, Date, Use Before) is pure #FF0000 (was #E01B1B) and the page asks for exact colours (print-color-adjust: exact). Grey in the preview is the print dialog / printer set to black and white: More settings › Colour, and the printer's own 2-colour (black / red) setting with the black and red roll, are hers to set; the app cannot set them. The screen drawing is unchanged.
+
+## Print label, without touching stock (2026-11-26)
+Her words, on a prescription's Herbs page: "where can i press print for the label?" (only Dispense printed, and it takes the stock again), then "yes" to a button that reprints without touching stock.
+- **Print label** beside Copy date / Copy prescription on the label block (`data-pres-print`, in the label's click listener): the label on screen (`presLabelText` with the Grams box) through `presPrintAnim` -> `presLabelPrint`, the page Dispense prints. No stock, log, pending stamp, empty-bottle or clipboard change; not a Dispense step (still three). No grams = "Enter the grams first". A formula has no label block, so no button.
+- The Date and Use Before it prints are the screen's: now, not the day of the first dispense.
+- The same page's audit finds, fixed: More's rows 32px, 6px corners, 600; View's corners 6px.
+- Left (older, not from this build): Undo deduct 23.5px / 11.5px solid, Prepare solid, "Dispensed & logged" 16px, the green stock bar and "✓ dispensed" colour; at 360px the Lotus chip of "Dispensing for" is cut off and the gram $ box spills out of Price.
+- Tested on the test copy with a made-up patient (1220 and 360): one print per tap (two quick taps = one), printed sheet = screen; stock, log and pending unchanged before dispense, after dispense and after Log; the label follows a grams change; no grams = no print; formula = no button; reduced motion prints at once; Dispense still takes stock once and prints once. Tap, style and voice audits show only the older items above. NOT tested: the real Print dialog, her Label Printer, the red roll.
