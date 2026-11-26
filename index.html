@@ -112278,13 +112278,13 @@ Difficult to sweat|no_sweat_tend:r`;
     const rec = phPatientPeek(name);
     const hx = phHxProgress(name);
     const today = keyOf(TODAY);
-    if (presStage === "plan" || (!phFastIsMe(name) && !presIsFormula(t) && rec && rec.sex && rec.dob)) presStagePlanAutoOpen(t); // the plan stage's own landing rule, and (stage 1 navigation) every stage of a patient with sex + DOB: Exam, Diagnosis and Treat are steps wherever she is, run first so step 2/3 read the plan she is landing on
+    if (presStage === "plan" || (!phFastIsMe(name) && !presIsFormula(t) && phPfGate(rec, name))) presStagePlanAutoOpen(t); // the plan stage's own landing rule, and (stage 1 navigation) every stage of a patient with sex + DOB: Exam, Diagnosis and Treat are steps wherever she is, run first so step 2/3 read the plan she is landing on
     const plan = name && presTpInlinePlanId ? phTpFindPlan(name, presTpInlinePlanId) : null;
     const plans = name ? (phTpPlans(name) || []) : [];
     const np = !plans.length && !!name && !presIsFormula(t);   // no Care Plan yet: its visit pages are still steps (her 2026-11-17 picks)
     // profile-first (2026-10-04): step 1 is done once sex AND date of birth are in,
     // for every patient (it used to be "any of sex / DOB / history touched")
-    const profileDone = !!(rec && rec.sex && rec.dob);
+    const profileDone = phPfGate(rec, name);
     const planDone = plans.some(p => p.status === "active" && (p.phases || []).some(ph => ph.status === "current") && (p.phases || []).some(ph => phTpSessionsOf(ph) > 0));
     const treatDone = !!(rec && (rec.acuSessions || []).some(s => s.date === today));
     const hbsV = phHbsNow(name);   // her answer at the start of the visit (2026-11-19): Continuing or Stopping = no herbs to give today
@@ -112937,7 +112937,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const name = presPatientFor(t) || "";
     if (!name || presIsFormula(t)) return null;
     const rec = phPatientPeek(name);
-    if (!rec || !(rec.sex && rec.dob)) return null;   // the Start-here card leads until then
+    if (!phPfGate(rec, name)) return null;   // the Start-here card leads until then
     f = f || presFlowSteps(t);
     const back = !!phLastVisitKey(rec);
     const step = id => f.steps.find(s => s.id === id) || {};
@@ -129446,7 +129446,10 @@ Difficult to sweat|no_sweat_tend:r`;
   let phPfwFed = [];                 // the last clues she sent, shown as gold tags
   let phPfwMoveT = null;
   const phPfwName = () => { const t = (PRESC.items || []).find(x => x.id === presOpenId); return t ? (presPatientFor(t) || "") : ""; };
-  const phPfBasicsOk = name => { const r = name ? phPatientPeek(name) : null; return !!(r && r.sex && r.dob); };
+  // her 2026-11-26 "change it to so the dob doesnt block the file anymore - replace it with consent": the one lock is sex + consent on file (rec.consent.on,
+  // the intake form's, the same test as the consent chip and the Visit record); her own file needs no consent. A date of birth is still asked, never a lock.
+  const phPfGate = (rec, name) => !!(rec && rec.sex && ((rec.consent && rec.consent.on) || (name && phFastIsMe(name))));
+  const phPfBasicsOk = name => { const r = name ? phPatientPeek(name) : null; return phPfGate(r, name); };
   const phPfwLocked = (name, id) => PH_PFW_LOCKED.includes(id) && !!name && !phPfBasicsOk(name) && !phPfwLater.has(phPatientKey(name));
   function phPfSetFor(rec) {
     if (!rec || !rec.sex) return null;
@@ -130280,8 +130283,8 @@ Difficult to sweat|no_sweat_tend:r`;
     const name = presPatientFor(t) || "";
     if (!name || presIsFormula(t)) return "";
     const rec = phPatientPeek(name) || {}, key = phPatientKey(name);
-    // Start here comes first: sex + DOB decide which questions follow
-    if (!(rec.sex && rec.dob) && !phPfwLater.has(key)) return "";
+    // Start here comes first: sex + consent (sex decides which questions follow)
+    if (!phPfGate(rec, name) && !phPfwLater.has(key)) return "";
     const c0 = phCcOf(name), au = (!c0 || !c0.main) ? phCcAuto(name) : null;
     // nothing typed: the chief complaint row shows what is already on file (phCcAuto), editable in place
     const c = au ? Object.assign({ secondary: [] }, c0 || {}, { main: au.fam.id, mainText: (c0 && c0.mainText) || au.text, auto: au.src, since: (c0 && c0.since) || au.since || "" }) : c0;
@@ -132348,7 +132351,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const name = presPatientFor(t) || t.name || "";
     if (!name || presIsFormula(t)) return "";
     const rec = phPatientPeek(name) || {};
-    if (!(rec.sex && rec.dob)) return "";
+    if (!phPfGate(rec, name)) return "";
     if (!w) {
       const sb = document.querySelector("#pharmacyPage .ph-pres-stage-body"), pp = document.getElementById("presPanel");
       w = sb && sb.clientWidth ? sb.clientWidth - 32
@@ -135069,7 +135072,7 @@ Difficult to sweat|no_sweat_tend:r`;
     if (!name || presIsFormula(t)) return "";
     const rec = phPatientPeek(name) || {};
     // no sex or birth date yet: the page opens on the ask instead of drawing nothing (her 2026-11-01 data-check pick)
-    if (!(rec.sex && rec.dob)) { const ask = phTodayAskHtml(rec); return ask ? `<div class="ph-today ph-tv" data-today-host="1">${phTodayAskWrap(ask)}</div>` : ""; }
+    if (!phPfGate(rec, name)) { const ask = phTodayAskHtml(rec); return ask ? `<div class="ph-today ph-tv" data-today-host="1">${phTodayAskWrap(ask)}</div>` : ""; }
     try { phIvfDaySync(name, plan); } catch (e) { /* the visit never breaks on it */ }   // part 3, step 6
     // plans close themselves: a booking pasted while her file is open reopens a self-closed plan; the visit draws again once
     try { if (phTpSelfCloseSweep(name)) { savePharmacy(); setTimeout(renderPresPanel, 0); } } catch (e) { /* the visit never breaks on it */ }
@@ -135444,7 +135447,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const name = presPatientFor(t) || t.name || "";
     if (!name || presIsFormula(t)) return "";
     const rec = phPatientPeek(name) || {};
-    if (!(rec.sex && rec.dob) || phTodayDispSkip.has(phPatientKey(name))) return "";
+    if (!phPfGate(rec, name) || phTodayDispSkip.has(phPatientKey(name))) return "";
     const parts = phVkParts(rec, name);   // a "sometimes" page never counts (her 2026-11-18 pick 3)
     const doneN = parts.filter(p => phTodayPartOk(rec, p.id)).length;
     if (doneN === parts.length) return "";
@@ -135459,7 +135462,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const name = presPatientFor(t) || "";
     if (!name || presIsFormula(t)) return "";
     const rec = phPatientPeek(name) || {}, key = phPatientKey(name);
-    if ((rec.sex && rec.dob) || phPfwLater.has(key)) return "";
+    if (phPfGate(rec, name) || phPfwLater.has(key)) return "";
     phPfwStartShown.add(key);
     const legacy = rec.historyUpdatedAt || rec.cycle || (rec.treatmentPlans || []).length || (rec.acuSessions || []).length;
     const old = legacy && !rec.sex ? `<div class="ph-pfw-old">Sex not set: cycle questions hidden</div>` : "";
@@ -135474,6 +135477,8 @@ Difficult to sweat|no_sweat_tend:r`;
         </span>
         <span class="ph-pfw-k">Date of birth</span>
         ${phDobHtml('data-pres-dob="1"', rec.dob, "presStartDob")}
+        <span class="ph-pfw-k">Consent</span>
+        ${rec.consent && rec.consent.on ? `<span class="ph-pd-tag">On file</span>` : `<span class="ph-pd-tag cn-none">No consent</span>${presPfSendBtnHtml(name)}`}
         <span class="ph-pfw-sp"></span>
         <button type="button" class="ph-pfw-link" data-pfw-later="1">Later</button>
       </div>
@@ -135506,13 +135511,13 @@ Difficult to sweat|no_sweat_tend:r`;
   // during a render.
   function phProfileStamp(rec) {
     if (!rec) return;
-    if (rec.sex && rec.dob) { if (!rec.basicsAt) rec.basicsAt = Date.now(); }
+    if (rec.sex && rec.consent && rec.consent.on) { if (!rec.basicsAt) rec.basicsAt = Date.now(); }
     else if (rec.basicsAt) delete rec.basicsAt;
   }
   function presSecDone(name, id) {
     const rec = phPatientPeek(name);
     if (!rec) return { done: false, at: 0 };
-    if (id === "patient") return { done: !!(rec.sex && rec.dob), at: rec.basicsAt || 0 };
+    if (id === "patient") return { done: phPfGate(rec, name), at: rec.basicsAt || 0 };
     if (id === "abdomen") { const a = rec.abdomen || {}; return { done: phAbdPicks(rec).length > 0 || !!a.normal, at: a.at || 0 }; }
     if (id === "medhx") { const p = phHxProgress(name); return { done: p.notNeeded || (p.total > 0 && p.answeredN >= p.total), at: p.updatedAt || 0 }; }
     if (id === "ren") return { done: !!(phFbrRenLead(rec, name) || rec.bodyConstitutionBt), at: (rec.tri && rec.tri.at) || 0 };
@@ -149723,7 +149728,7 @@ Difficult to sweat|no_sweat_tend:r`;
   // ci: which concern the door starts a plan for -- "main" (or none), or a second condition's row id (phTpOpenConcerns, her pick 8)
   function phTpDoorStartHtml(name, ci) {
     const rec = phPatientPeek(name) || {};
-    if (!(rec.sex && rec.dob) && !phPfwLater.has(phPatientKey(name))) return "";   // Start here first, as Came in for waits
+    if (!phPfGate(rec, name) && !phPfwLater.has(phPatientKey(name))) return "";   // Start here first, as Came in for waits
     const it = phCcRibItems(name); if (!it) return "";
     const main = !ci || ci === "main", cc = main ? { ci: "main", text: it.main.text, since: it.main.since, fam: it.main.id || null } : phTpOpenConcerns(name).find(x => x.ci === ci);
     if (!cc) return "";
@@ -158264,9 +158269,9 @@ Difficult to sweat|no_sweat_tend:r`;
     // Treatment Care Plan -> Treatment -> Log -> Notes. Review is retired
     // (its strip + pain map + pain intake live on Today's visit). The exam
     // pages need sex + DOB, same gate Today's visit always had.
-    const examOn = !!(name && openT && !presIsFormula(openT) && rec && rec.sex && rec.dob);
+    const examOn = !!(name && openT && !presIsFormula(openT) && phPfGate(rec, name));
     // no sex or birth date yet: Today's visit still opens, on the ask alone (her 2026-11-01 data-check pick); the exam pages wait
-    const todayAsk = !!(name && openT && !presIsFormula(openT) && rec && !(rec.sex && rec.dob));
+    const todayAsk = !!(name && openT && !presIsFormula(openT) && rec && !phPfGate(rec, name));
     const cycleOn = examOn && phCycleTracked(rec) && !phFastIsMe(name);   // hers is a page in Body on her own record (ONE ME)
     const todayParts = examOn ? phVkParts(rec, name) : [];   // a "sometimes" page never counts (her 2026-11-18 pick 3)
     const todayN = todayParts.filter(p => phTodayPartOk(rec, p.id)).length;
@@ -174024,7 +174029,7 @@ Please let me know if you have any questions.`;
       if (T.closest("[data-np-next]")) {
         const rec = phPatientPeek(S.name) || {};
         if (!S.text) { presSavedToast("Pick the chief complaint first"); return; }
-        if (!rec.sex || !rec.dob) { presSavedToast("Add sex and date of birth first"); return; }
+        if (!rec.sex) { presSavedToast("Add sex first"); return; }   // a date of birth is no lock (her 2026-11-26)
         S.step = 2; phNpPaint(); return;
       }
       if (T.closest("[data-np-back]")) { S.step = 1; phNpPaint(); return; }
