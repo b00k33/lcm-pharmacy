@@ -176123,9 +176123,18 @@ Dosage: {dosage}
   // here is passed straight through from whatever presCalcNumbers (or the
   // scheduled entry's own stored totals) already computed -- her rule: if
   // the label and the record ever disagree, the label is wrong.
+  // her 2026-11-26 "can i just get the pin yin with the colloquial name in brackets? i just want to fit the herb name and dosage on same line": a herb's
+  // label line is its pinyin, then its common name in brackets ("Bai Shao (Shao Yao)/ White Peony Root" = "Bai Shao (White Peony Root)"); a second
+  // pinyin name in brackets goes, a one-word preparation stays ("Ban Xia (Zhi) (Pinellia Prepared)"), the * marks go
+  function presLabelHerbName(name) {
+    const s = String(name || "").replace(/\*/g, ""), i = s.indexOf("/");
+    if (i < 0) return phDispName(s.trim(), false);
+    const pin = s.slice(0, i).replace(/\s*\(\s*\S+(\s+\S+)+\s*\)/g, "").replace(/\s+/g, " ").trim(), eng = s.slice(i + 1).replace(/\s+/g, " ").trim();
+    return eng ? `${phDispName(pin, false)} (${eng})` : phDispName(pin, false);
+  }
   function presLabelValuesCore({ name, formulaLine, objective, items, gp, price, dosage, instr, now }) {
     const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
-    const ingredients = items.map(x => `${phDispName(x.name, x.h ? phIsFormula(x.h) : null)} ${(x.grams || 0).toFixed(2)}g`).join("\n");
+    const ingredients = items.map(x => `${x.h && phIsFormula(x.h) ? phDispName(x.name, true) : presLabelHerbName(x.name)} ${(x.grams || 0).toFixed(2)}g`).join("\n");
     return {
       date: dateStr, time: presTimeStr(now), price: `${phMoney(price)} (incl. GST)`,
       useBefore: presUseBeforeStr(now), patient: name, formula: formulaLine, objective,
@@ -176730,6 +176739,12 @@ Dosage: {dosage}
     const t = presOpenId && PRESC.items.find(x => x.id === presOpenId);
     return t && !presIsFormula(t) && raw > 0 ? Math.max(1, Math.round(raw)) : raw;
   }
+  // her 2026-11-26 "use this for the label but change location based on cbd or lotus": her heading's clinic line (CBD's name, as she typed it in
+  // Settings › Label text) reads the clinic this dispense is for (presDispShelf: her pick on the prescription, else a booking, else the day)
+  function presLabelHeadFor() {
+    const head = String(PHARMACY.labelHead || "").trim(), s = presDispShelf(), to = s === "pp" ? PH_LOC_LOGOS.lotus : s === "ac" ? PH_LOC_LOGOS.acupreg : "";
+    return to ? head.replace(new RegExp(PH_LOC_LOGOS.cbd.split(" ").join(" +"), "gi"), to) : head;
+  }
   function presLabelBoxes(text) {
     const s = String(text || ""), m = /\|?(?=Patient:)/.exec(s);
     return { b1: (m ? s.slice(0, m.index) : "").replace(/\s+$/, ""), b2: (m ? s.slice(m.index + m[0].length) : s).replace(/^\s+/, "") };
@@ -176738,7 +176753,7 @@ Dosage: {dosage}
     const { b1, b2 } = presLabelBoxes(text), red = l => /^(Patient|Dosage|Date|Use Before)\b/.test(l.trim());
     const ln = l => l.trim() ? `<div${red(l) ? ` class="rd"` : ""}>${esc(l)}</div>` : `<div class="gp"></div>`;
     const lines = x => x.split("\n").map(ln).join(""), br = x => esc(x).replace(/\n/g, "<br>");
-    const head = String(PHARMACY.labelHead || "").trim(), warn = String(PHARMACY.labelWarn || "").trim();
+    const head = presLabelHeadFor(), warn = String(PHARMACY.labelWarn || "").trim();
     const box = (k, x) => print ? `<div class="b${k}">${lines(x)}</div>` : `<button type="button" class="ph-lbl-box b${k}" data-pres-lbox="${k}" title="Copy box ${k}"><i class="n" aria-hidden="true">${k}</i>${lines(x)}</button>`;
     return `<div class="ph-lbl-sheet"><div class="pan l">${head ? `<div class="hd">${br(head)}</div>` : ""}${box(2, b2)}</div><div class="pan r">${box(1, b1)}${print && warn ? `<div class="wn">${br(warn)}</div>` : ""}</div></div>`;
   }
