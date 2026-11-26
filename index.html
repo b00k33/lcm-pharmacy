@@ -42173,9 +42173,11 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const t = presOpenId ? PRESC.items.find(x => x.id === presOpenId) : null, k = keyOf(TODAY);
     return t && t.name ? phApptList().find(x => x && x.date === k && x.service !== "Break" && phPatientKey(x.patient || x.name) === phPatientKey(t.name)) || null : null;
   }
-  function presDispShelf() { if (phMkCtx) return phMkCtx; const a = presDispBooking(); return a ? phPlaceShelf(phApptPlaceOf(a)) : phDayShelf(keyOf(TODAY)); }
+  // her 2026-11-26 "how to change to lotus healing arts because she is a lotus patient": her pick on the open prescription (t.shelf) wins over the booking and the weekday
+  const presDispPicked = () => { const t = presOpenId ? PRESC.items.find(x => x.id === presOpenId) : null; return t && t.shelf && PH_SHELVES[t.shelf] ? t.shelf : ""; };
+  function presDispShelf() { if (phMkCtx) return phMkCtx; if (presDispPicked()) return presDispPicked(); const a = presDispBooking(); return a ? phPlaceShelf(phApptPlaceOf(a)) : phDayShelf(keyOf(TODAY)); }
   // why this clinic: "Booked at Lotus" / "Saturday" / "Friday" / "Weekday"
-  function presDispShelfWhy() { if (presDispBooking()) return "booked here today"; const d = parseKey(keyOf(TODAY)); return d ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][d.getDay()] : ""; }
+  function presDispShelfWhy() { if (presDispPicked()) return ""; if (presDispBooking()) return "booked here today"; const d = parseKey(keyOf(TODAY)); return d ? ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"][d.getDay()] : ""; }
   // each clinic's own colour, so a count or a band is never read as another's
   const phShelfColour = s => s === "pp" ? PH_LOTUS_COLOUR : s === "ac" ? PH_ACUPREG_COLOUR : "var(--ph-green)";
   // ---- ONE CLINIC AT A TIME (her 2026-11-23 approved plan): a CBD · Acupreg · Lotus · All clinics switch on every Herbs & stock page.
@@ -73596,6 +73598,11 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
           if (src && !pending) { pour(); return; }
           adopt();
         }
+        return;
+      }
+      if (e.target.closest("[data-pres-disp-shelf]")) {
+        const v = e.target.closest("[data-pres-disp-shelf]").dataset.presDispShelf, t = PRESC.items.find(x => x.id === presOpenId);
+        if (t && PH_SHELVES[v]) { delete t.shelf; if (presDispShelf() !== v) t.shelf = v; savePresc(); renderPresPanel(); }   // the clinic the day reads is no pick
         return;
       }
       if (e.target.closest("[data-pres-lastdisp-view]")) {
@@ -173512,7 +173519,8 @@ Please let me know if you have any questions.`;
     const lastRec = !dispensed ? presLastDispRecord(t, presOpenSnapshot) : null;
     const ppOut = (pending ? presPending[t.id] || [] : logged ? ((PHARMACY.log.find(x => x.id === t.lastDispenseLogId) || {}).deducted || []) : []).map(x => x && x.shelf && x.shelf !== "cbd" ? (PH_SHELVES[x.shelf] || {}).name : "").find(Boolean) || "";
     const herbOf = i => (i.code && findHerbByCode(i.code, i.herb)) || findHerbByName(i.herb || i.name || "");
-    const sh = presDispShelf(), shelfBar = `<div class="ph-dose-from">Dispensing for <b class="ph-clin-tag" style="--cl:${phShelfColour(sh)}">${PH_SHELVES[sh].name}</b><span>${esc(presDispShelfWhy())}</span></div>`;
+    // before the dispense the clinic is one joined bar, a tap picks it for this prescription (her 2026-11-26 Lotus patient); after, the clinic it went out from
+    const sh = presDispShelf(), shelfBar = `<div class="ph-dose-from">Dispensing for ${dispensed ? `<b class="ph-clin-tag" style="--cl:${phShelfColour(sh)}">${PH_SHELVES[sh].name}</b>` : `<span class="ph-tng2-seg" role="group" aria-label="Dispensing for">${["cbd", "ac", "pp"].map(k => `<button type="button" class="ph-ltr-qual${k === sh ? " on" : ""}" data-pres-disp-shelf="${k}" aria-pressed="${k === sh ? "true" : "false"}">${PH_SHELVES[k].name}</button>`).join("")}</span>`}<span>${esc(presDispShelfWhy())}</span></div>`;
 
     return `${lastRec ? `<div class="ph-lastdisp-line">
       <span><svg class=icn aria-hidden=true><use href=#i-clock></use></svg> Last dispensed · ${esc(presDispDateTimeStr(lastRec.at))}${lastRec.grams ? ` · ${phFmtG(lastRec.grams)}g` : ""}${lastRec.price != null ? ` · ${phMoney(lastRec.price)}` : ""}</span>
