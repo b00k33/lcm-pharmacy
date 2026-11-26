@@ -18616,3 +18616,7 @@ Her words, to the fault named after the Open patient build ("after you visit Gui
 - Cause: `.ph-shell-content:has(.ph-gd-room)` also matched the Guide hidden page (it stays in the DOM), so its walnut ground and inset shadow showed on Today, Patients and Settings after one visit (Herbs & stock kept the shadow). From 641px.
 - Fix: the rule counts only a shown `#phGuideWrap` (`:has(:where(#phGuideWrap:not([hidden])) .ph-gd-room)`, same weight as before).
 - Tested on the test copy at 1220: Today, Patients, Dashboard, Inventory and Settings read the same before and after a Guide visit; the Guide keeps its room on Fang Bing Ren, Cases, Compare, Tongue and Pulse. One selector only, so no tap / style / voice audit. NOT tested: on her own computer.
+
+## CBD motion (2026-11-26)
+
+Her "add more animations to the cbd view too". CSS block "CBD MOTION" before "LOTUS MOTION" (from 641px, `data-ph-th="cbd"` only): the leaf sways on the title's hover; a light runs once along the timber slats on the band's hover (`.ph-shell-topblock::after`); a new page rises into place (`ph-pg-swap`, set by `phThInd` when the pill glides to a new page, 0.45 s); a bottle's lid twists as it lifts; a shelf's dot grows on the shelf's hover; a filter card's tube tips; the main action's icon hops. No loops; none under reduced motion. Audits at 1220 on CBD Dashboard, Inventory, To order, Stocktake: empty. The phone is untouched (no pill there, the CSS from 641px).
