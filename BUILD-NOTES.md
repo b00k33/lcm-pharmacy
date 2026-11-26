@@ -18679,3 +18679,16 @@ Her words: "make it so the teapot animates and requires me to click on it to lig
 - `lcm-tea` = {d, t, lit, last}; a 60s check repaints on a new day (unlit, empty). A reload while lit stays lit with no strike.
 - Checked in the sandbox at 1280x900: start unlit, pick, swap, blow out, reload, next day; tin tap + style audits empty. At 360 the teapot is hidden (sidebar drawer). Note: in a background tab the fill transition pauses until the tab shows.
 
+## The whole Dashboard in the room (2026-11-26)
+
+Her words (PA TCM): "i want to be able to fit everything on dashboard page into the bench animation", "apply this to all locations. dashboard is fast and easy to see"; popup picks "One at a time" for the bench, then "Yes, send it". Mock: PA TCM's `mocks/zz-lcmrun/dash.js` (local). Commit only; live on her "push live".
+
+- `renderPhDashboardPage`: from 641px the body is the band + `phDashRoomHtml(sc)` at CBD, Acupreg, Lotus and All (CBD keeps the count grid above and an open stocktake card below). `renderPhDashboardPageBase` no longer draws the tool row, Do next or the table there. 640 and under: unchanged.
+- `phDashRoomHtml` draws `phRoomHtml(sc)` and rearranges it: the stock shelf (`phRmStockCbd` / `phRmStockClin`) with the tool row or clinic filter bar and the clipboard (+ `phStkNext`), the work line of jobs (`phRmJobs`, `phRmGrpHtml`, `data-ph-rm-job`, `.shift` once on a pick), ONE job on the bench (recipe card, or `phRmSlipHtml`), the Prepare panel under the bench (`.rmd-prep`), dispensed-today pickups struck (`.rmd-gone`).
+- `phDashTHtml` returns the room's stock shelf while the room is on at CBD, so `#phDashT` repaints in place (search keeps focus).
+- **New tap:** at Acupreg / Lotus a bottle on the stock shelf opens the edit drawer (`data-ph-herb-edit`, as Inventory's shelf).
+- No new store; the writes are the existing doors (`data-ph-dash-*`, `data-clin-dash-order`, `data-ph-dash-prep-open`, `data-ph-rm-make`, `data-ph-dn-order`).
+- CSS "THE WHOLE DASHBOARD IN THE ROOM" (`.rmd-*`), before the room's reduced-motion block; bottles lift 4px on hover, off under reduced motion. The pickup slip's sub line is one line (ellipsis, the full line on hover).
+- Checked in the sandbox with the mock's made-up stock at 1220x820: room ends 751 (CBD), 740 (Acupreg), 799 (Lotus), 811 (All); no sideways scroll. Bottle -> Plan line, filters, search (focus kept), job pick, Prepare open, clinic Order (lands on the pad), clinic bottle -> edit drawer. Audits 1220 (all four) and 360 (CBD, Lotus): empty except, named before: bottle labels 8.5px (a drawing label), the ring 33.2px (tilted phone), and the Prepare panel's own 16px title (`schedPrepPanelHtml`, unchanged).
+- Not in this build: Acupreg's real layout (facing the stairs), waiting on her photos.
+
