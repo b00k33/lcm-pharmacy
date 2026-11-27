@@ -18716,4 +18716,4 @@ Built to her mock `mock-habits-routines-2026-11-26.html`, relayed by the session
 - **Controls:** before, Habits 14 (27 with the week open) + Routines 58; after, 75 on one page.
 - **Height** (1240 x 900, the made-up record): before, two pages (Habits 900px, Routines 1014px); after, one page 1259px, the head row and nine rows on the first screen.
 - **Tested** on the test copy with a made-up person: tick, goal edit with Enter, clear and Undo, Skip day, routine to habit and back, pause and resume, add (needs a name and days), delete and Undo, a self-ticking habit's pop-up, a group change keeping rule and time, a monthly rule kept, week arrows, Votes, the old `routines` link, an added koala goal; tap, style, voice and title-bar audits at 1240 and 360 with the pop-up open: empty; no console errors. NOT tested: on her own computer or phone, or with her own days.
-- **Not changed:** CLAUDE.md's My day line still names Habits and Routines; it waits on her yes.
+- **Rule book:** CLAUDE.md's My day list names Habits & routines (her "yes", 2026-11-27).
