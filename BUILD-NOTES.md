@@ -18835,3 +18835,14 @@ Her words: "make a staff profile for my colleagues", then her pick "both" on the
 - **Checked** (sandbox, made-up details, 1240 and 360): add (needs name and clinic; the same name twice is refused), edit, a tap outside keeps an edited box open, Escape and the cross close it, remove and Undo, day tap and Undo, birthday add and its chip, Settings rename and day untick on a mixed list. Tap, style, voice and top-bar audits empty on both views and the box; no console errors; no sideways scroll at 360. Not tested on a real phone or on the Acupreg login.
 - The list is per login: a colleague added on one login does not show on the other.
 - Seen, not changed: in the birthday box (Appointments dialog) the Message field sits over the line under it at 1240.
+
+## Treat herb search: only the shelf you dispense from (2026-11-27)
+
+Her words: "there shouldnt be ready made formula wen dan tang in lotus" (Treat › + Herbs, Dispensing for Lotus; it listed a CBD-only ready-made with CBD's grams). Request from PA TCM. Commit only; live on her "push live".
+
+- `presPickSuggHtml`: for Acupreg or Lotus (`presDispShelf()`), Ready-made and Herbs list only what that shelf keeps (`phHasShelf` or `phShelfUnw`), with that shelf's grams (`phShelfQty`; "not weighed" when unweighed). CBD is unchanged and still shows `h.qty`. The overstocked nudge (CBD's) shows on CBD only. "Made from herbs" recipes stay listed, because the dispense shortfall check reads the shelf.
+- `presPickMatches` itself is not filtered: the Care Plan pickers share it.
+- Tapping a Dispensing for chip redraws an open herb list for the new shelf.
+- A formula only CBD keeps, searched on Lotus, shows nothing under Ready-made, with no note.
+- Checked in the sandbox with made-up stock. On Lotus, "ge gen" lists GE GEN TANG at 190 g, "da chai" (CBD-only) lists nothing, and an unweighed Lotus formula reads "not weighed". CBD lists both as before, with 0 g where empty. Acupreg lists only its own.
+- Audits: not re-run, because the change adds no elements or styles, only filters the rows and changes the stock words.

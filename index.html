@@ -76865,7 +76865,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
       }
       if (e.target.closest("[data-pres-disp-shelf]")) {
         const v = e.target.closest("[data-pres-disp-shelf]").dataset.presDispShelf, t = PRESC.items.find(x => x.id === presOpenId);
-        if (t && PH_SHELVES[v]) { delete t.shelf; if (presDispShelf() !== v) t.shelf = v; savePresc(); renderPresPanel(); }   // the clinic the day reads is no pick
+        if (t && PH_SHELVES[v]) { delete t.shelf; if (presDispShelf() !== v) t.shelf = v; savePresc(); renderPresPanel(); const sg = document.getElementById("presPickSugg"); if (sg && !sg.hidden) presPickRenderSugg(); }   // the clinic the day reads is no pick; an open herb list redraws for the new shelf
         return;
       }
       if (e.target.closest("[data-pres-lastdisp-view]")) {
@@ -178789,7 +178789,12 @@ Please let me know if you have any questions.`;
     return { jars, refills, herbs };
   }
   function presPickSuggHtml(q) {
-    const { jars, refills, herbs } = presPickMatches(q);
+    // the shelves are never mixed (her 2026-11-27 "there shouldnt be ready made formula wen dan tang in lotus"): dispensing for Acupreg or
+    // Lotus lists only the ready-mades and herbs that shelf keeps (or keeps not weighed), with that shelf's grams; CBD lists all, as before.
+    // "Made from herbs" recipes stay (the shortfall check at dispense reads the shelf). presPickMatches stays whole for the Care Plan pickers.
+    const m = presPickMatches(q), sh = presDispShelf(), kept = h => sh === "cbd" || phHasShelf(h, sh) || phShelfUnw(h, sh);
+    const jars = m.jars.filter(kept), refills = m.refills, herbs = m.herbs.filter(kept);
+    const gIn = h => { if (sh === "cbd") return phFmtG(h.qty || 0); const v = phShelfQty(h); return v == null ? null : phFmtG(v || 0); };
     if (!jars.length && !refills.length && !herbs.length) return "";
     const group = (label, list, cap, row) => !list.length ? "" :
       `<div class="ph-pick-h">${label}</div>${list.slice(0, cap).map(row).join("")}${list.length > cap
@@ -178797,9 +178802,9 @@ Please let me know if you have any questions.`;
     const jarRow = h => `<div class="ph-pick-row" data-pick-jar="${h.id}" tabindex="0">
       <span class="ph-pick-ic"><svg class=icn aria-hidden=true><use href=#i-jar></use></svg></span>
       <span class="ph-pick-main">
-        <span class="ph-pick-nm">${phHerbCode(h) ? `<span class="ph-pick-code">${esc(phHerbCode(h))}</span>` : ""}${esc(phDispName(h.name, true))}<span class="ph-pick-badge jar">READY-MADE</span><span class="ph-pick-stock">in stock ${phFmtG(h.qty || 0)} g</span></span>
+        <span class="ph-pick-nm">${phHerbCode(h) ? `<span class="ph-pick-code">${esc(phHerbCode(h))}</span>` : ""}${esc(phDispName(h.name, true))}<span class="ph-pick-badge jar">READY-MADE</span><span class="ph-pick-stock">${gIn(h) == null ? "not weighed" : `in stock ${gIn(h)} g`}</span></span>
         
-        ${phIsOverstocked(h) ? `<span class="ph-pick-nudge"><svg class=icn aria-hidden=true><use href=#i-parcel></use></svg> overstocked</span>` : ""}
+        ${sh === "cbd" && phIsOverstocked(h) ? `<span class="ph-pick-nudge"><svg class=icn aria-hidden=true><use href=#i-parcel></use></svg> overstocked</span>` : ""}
       </span></div>`;
     const refillRow = r => {
       const open = presPickViewIds.has(r.id);
@@ -178814,8 +178819,8 @@ Please let me know if you have any questions.`;
     const herbRow = h => `<div class="ph-pick-row" data-pick-herb="${h.id}" tabindex="0">
       <span class="ph-pick-ic"><svg class=icn aria-hidden=true><use href=#i-leaf></use></svg></span>
       <span class="ph-pick-main">
-        <span class="ph-pick-nm">${phHerbCode(h) ? `<span class="ph-pick-code">${esc(phHerbCode(h))}</span>` : ""}${esc(phDispName(phPinyinName(h), false))}<span class="ph-pick-stock">${phFmtG(h.qty || 0)} g in stock</span></span>
-        ${phIsOverstocked(h) ? `<span class="ph-pick-nudge"><svg class=icn aria-hidden=true><use href=#i-parcel></use></svg> overstocked</span>` : ""}
+        <span class="ph-pick-nm">${phHerbCode(h) ? `<span class="ph-pick-code">${esc(phHerbCode(h))}</span>` : ""}${esc(phDispName(phPinyinName(h), false))}<span class="ph-pick-stock">${gIn(h) == null ? "not weighed" : `${gIn(h)} g in stock`}</span></span>
+        ${sh === "cbd" && phIsOverstocked(h) ? `<span class="ph-pick-nudge"><svg class=icn aria-hidden=true><use href=#i-parcel></use></svg> overstocked</span>` : ""}
       </span></div>`;
     return group("Ready-made", jars, 6, jarRow) + group("Made from herbs", refills, 6, refillRow) + group("Herbs", herbs, 8, herbRow);
   }
