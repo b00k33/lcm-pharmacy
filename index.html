@@ -37213,6 +37213,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
 #pharmacyPage#pharmacyPage .ph-pd .ph-pd-hero .ph-sendintake-btn .ph-cc-svgic { width: 15px; height: 15px; }
 #pharmacyPage#pharmacyPage .ph-pfw-start .ph-sendintake-btn { width: auto; height: 32px; min-height: 32px; padding: 0 12px; gap: 6px; border: 1px solid var(--ph-line); border-radius: 6px; background: #fff; color: var(--ph-ink); font: 600 var(--fs-13) var(--font-body); }
 #pharmacyPage#pharmacyPage .ph-pfw-start .ph-sendintake-btn .ph-cc-svgic { width: 15px; height: 15px; }
+#pharmacyPage#pharmacyPage .ph-pfw-start .ph-pd-tag { font-size: var(--fs-11-5); }
 #pharmacyPage#pharmacyPage .ph-pfw-start .ph-pd-tag.cn-none { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-11-5); }
 #pharmacyPage#pharmacyPage .ph-pfw-start .ph-pd-tag.cn-none::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--ph-low); flex: none; }
 #pharmacyPage#pharmacyPage #presPanel:has(.ph-pfw-start) :is(.ph-pd-hero .ph-pd-seg, .ph-pd-card .ph-pd-f:has(.ph-dobt)) { display: none; }
@@ -116094,10 +116095,10 @@ Difficult to sweat|no_sweat_tend:r`;
     return `<span class="ph-pd-tag" data-pd-age${age == null ? " hidden" : ""}>${age == null ? "" : age + " yrs"}</span>${phPdConsentHtml(rec, name)}`;
   }
   // her 2026-11-20 consent (from the intake form, rec.consent) shown as her 2026-11-24 "more visible" chip: a tick, the date and only what she declined
-  // ("Consent 20 Nov 2026" and a tag "No Cupping"); a tap says the whole line (phConsentLine, a toast). None on file: the tag "No consent" with a red dot (not on her own file)
+  // ("Consent 20 Nov 2026" and a tag "No Cupping"); a tap says the whole line (phConsentLine, a toast). None on file: the tag "No consent" with a red dot (not on her own file or a past patient's)
   function phPdConsentHtml(rec, name) {
     const cn = rec.consent && rec.consent.on ? rec.consent : null;   // on file by the same test as the Visit record's (phVrCompose), so the two never disagree
-    if (!cn) return name && phFastIsMe(name) ? "" : `<span class="ph-pd-tag cn-none">No consent</span>`;
+    if (!cn) return name && (phFastIsMe(name) || phPfPastPt(rec, name)) ? "" : `<span class="ph-pd-tag cn-none">No consent</span>`;
     const SH = { acu: "Acupuncture", herb: "Herbs", cup: "Cupping" }, keys = ["acu", "herb", "cup"];
     const no = keys.filter(k => cn[k] === "no").map(k => SH[k]), anyYes = keys.some(k => cn[k] === "yes");
     return `<button type="button" class="ph-pd-cn${anyYes ? "" : " no"}" data-pd-cn="${esc(name || "")}" title="${esc(phConsentLine(cn))}"><svg class="icn" aria-hidden="true"><use href="#${anyYes ? "i-check" : "i-warn"}"/></svg>Consent ${esc(phShortDate(cn.on))}</button>${no.length ? `<span class="ph-pd-tag cn-none">No ${esc(no.join(", "))}</span>` : ""}`;
@@ -132247,7 +132248,22 @@ Difficult to sweat|no_sweat_tend:r`;
   const phPfwName = () => { const t = (PRESC.items || []).find(x => x.id === presOpenId); return t ? (presPatientFor(t) || "") : ""; };
   // her 2026-11-26 "change it to so the dob doesnt block the file anymore - replace it with consent": the one lock is sex + consent on file (rec.consent.on,
   // the intake form's, the same test as the consent chip and the Visit record); her own file needs no consent. A date of birth is still asked, never a lock.
-  const phPfGate = (rec, name) => !!(rec && rec.sex && ((rec.consent && rec.consent.on) || (name && phFastIsMe(name))));
+  // her 2026-11-27 "make it a rule that al past patients have consented and new ones are hte ones that require consent": a PAST patient (a booking, a logged
+  // visit or a herb sale dated before the day she made the rule) counts as consented. A fixed day, so a new patient seen once without consent never turns
+  // into a past one. Read when drawn, never stored; no consent or date is written for them, and a signed consent always shows as it did.
+  const PH_CONSENT_FROM = "2026-11-27";
+  const phPfBefore = d => !!d && d < PH_CONSENT_FROM;
+  let phPfPastIx = null;   // the names booked (here or at the other clinic) or sold herbs before that day, read once a moment
+  function phPfPastKeys() {
+    if (phPfPastIx && Date.now() - phPfPastIx.at < 2000) return phPfPastIx.keys;
+    const keys = new Set(), O = phOthV();
+    (PHARMACY.appointments || []).concat(O ? O.list : []).forEach(a => { if (a && phPfBefore(a.date) && phHubOkAppt(a)) keys.add(phPatientKey(a.patient)); });
+    (PHARMACY.log || []).forEach(e => { if (e && (!e.kind || e.kind === "dispense") && e.patient && phPfBefore(e.date)) keys.add(phPatientKey(e.patient)); });
+    phPfPastIx = { at: Date.now(), keys };
+    return keys;
+  }
+  const phPfPastPt = (rec, name) => !!name && (((rec && rec.acuSessions) || []).some(x => x && phPfBefore(x.date)) || ((rec && rec.clinikoVisits) || []).some(v => v && phPfBefore(v.d)) || phPfPastKeys().has(phPatientKey(name)));
+  const phPfGate = (rec, name) => !!(rec && rec.sex && ((rec.consent && rec.consent.on) || (name && (phFastIsMe(name) || phPfPastPt(rec, name)))));
   const phPfBasicsOk = name => { const r = name ? phPatientPeek(name) : null; return phPfGate(r, name); };
   const phPfwLocked = (name, id) => PH_PFW_LOCKED.includes(id) && !!name && !phPfBasicsOk(name) && !phPfwLater.has(phPatientKey(name));
   function phPfSetFor(rec) {
@@ -137994,7 +138010,7 @@ Difficult to sweat|no_sweat_tend:r`;
     const treat = [C.pts, C.herbs].filter(Boolean).join(" · ");
     const am = (C.own.am || []).map(a => `<div class="ph-vr-am">Amended ${esc(phShortDate(keyOf(new Date(a.at))))} · ${esc((PH_VR.find(p => p[0] === a.k) || [])[1] || a.k)}: ${esc(a.from || "added")} → ${esc(a.to || "removed")}</div>`).join("");
     const dot = (lb, ok) => `<span><i class="ph-vr-dot${ok ? "" : " r"}"></i>${esc(lb)}</span>`;
-    const cov = [dot("Complaint", !!C.cc), dot("Exam", !!C.found), dot("Diagnosis", !!C.dx), dot("Treatment", !!treat), dot("Consent", !!cn)].join("");
+    const cov = [dot("Complaint", !!C.cc), dot("Exam", !!C.found), dot("Diagnosis", !!C.dx), dot("Treatment", !!treat), dot("Consent", !!cn || phPfPastPt(rec, name))].join("");
     return `<div class="ph-vr" data-vr-host="rec" data-vr-n="${esc(name)}" data-vr-day="${esc(day)}"><div class="ph-vr-hd"><span>${isT ? "Today" : "Visit"} · ${esc(phShortDate(day))}</span>${cn ? `<span class="sf">Consent ${esc(phShortDate(cn.on))}</span>` : ""}</div>`
       + row("Came in for", C.cc, hx ? `History: ${hx}` : "") + row("Found", C.found) + ed("rs") + row("Diagnosis", C.dx) + ed("pr")
       + row("Treatment", treat, C.supp ? `Supplements: ${C.supp}` : "") + ed("ad") + ed("av") + ed("rf") + row("Plan", C.plan) + row("Outcome", C.out) + am
@@ -138277,7 +138293,7 @@ Difficult to sweat|no_sweat_tend:r`;
         <span class="ph-pfw-k">Date of birth</span>
         ${phDobHtml('data-pres-dob="1"', rec.dob, "presStartDob")}
         <span class="ph-pfw-k">Consent</span>
-        ${rec.consent && rec.consent.on ? `<span class="ph-pd-tag">On file</span>` : `<span class="ph-pd-tag cn-none">No consent</span>${presPfSendBtnHtml(name)}`}
+        ${rec.consent && rec.consent.on ? `<span class="ph-pd-tag">On file</span>` : phPfPastPt(rec, name) ? `<span class="ph-pd-tag">Past patient</span>` : `<span class="ph-pd-tag cn-none">No consent</span>${presPfSendBtnHtml(name)}`}
         <span class="ph-pfw-sp"></span>
         <button type="button" class="ph-pfw-link" data-pfw-later="1">Later</button>
       </div>

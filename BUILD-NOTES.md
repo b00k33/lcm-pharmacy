@@ -18757,3 +18757,16 @@ Her words on PA TCM's perspective mock: "focus on hte table space rather than in
 - `phRmAcFit()` after each render and on resize: CSS zoom = width / 924 under 924px (1220 wide with the sidebar: .9838; 1024: .7716).
 - `phRmAcBg`, `.ac-scene`, `.ac-view`, `.ac-bg`, the old `.ac-pothos`, the base `.ac-far` / `.rmd-gone` / `.rm-front` rules are gone. CSS in the same block (`@media (min-width: 641px)`); the phone is unchanged.
 - Checked at 1220x820 and 1024 with made-up stock: room ends 805; every button and link reachable (elementFromPoint); Prepare opens inside the room and closes; Order lands on the pad; no sideways scroll; CBD draws no `.ac-t`; 375 unchanged. Audits: titlebar empty; 360 tap + voice empty. At 1220, named leftovers: the cap labels 7.5 / 7px and the jar labels 6.5px (pictures, as in the stairs build), the filter bar 30.5 tall (32 x the .9838 zoom), and the seed's made-up `tel:` on the ring (sandbox data).
+
+## Past patients count as consented (2026-11-27, NOT live)
+
+Her words: "make it a rule that al past patients have consented and new ones are hte ones that require consent" (she was held at the lock on a returning patient with sex and date of birth filled).
+
+- **Past patient** (`phPfPastPt(rec, name)`): a booking (this clinic's, or the other clinic's copy; breaks and non-clinic bookings skipped), a logged visit (`acuSessions`, imported Cliniko visits) or a herb sale dated before `PH_CONSENT_FROM` = 2026-11-27, the day of the rule. A fixed day, so a new patient seen once without consent never turns into a past one. `phPfPastKeys` indexes the bookings and sales (kept 2 s).
+- `phPfGate` = sex + (consent on file, or past patient, or her own file). Read when drawn; no consent, date or stamp is written.
+- A past patient: no red "No consent" tag in the page head; Start here (shown only while sex is missing) reads Consent "Past patient", a quiet tag, no send link; the Visit record's check row counts Consent, with no consent line or date. The Details card's own Send intake link stays (it is the intake form's door, shown for everyone).
+- A signed consent still shows as before ("On file", the chip and its card). A new patient: "No consent" + Send intake link, the lock holds, Later opens the file.
+- A patient whose only earlier record is a synced calendar event (never saved as a booking, visit or sale) reads as new.
+- Start-here tags are 11.5px on a phone too (they drew at 12px).
+- **Checked** (sandbox, made-up patients): past by booking, herb sale, logged visit and Cliniko visit = open; booked today, booked later, a break only, a visit today, nothing = new; past with no sex = locked on sex only. Patient details with the Start-here card at 1240 and 360: tap, style and voice audits empty, no sideways scroll.
+- CLAUDE.md §3's Patient details row and lock line still say sex + consent on file: waiting for her word in the building session.
