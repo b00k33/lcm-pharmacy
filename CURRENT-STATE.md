@@ -845,7 +845,7 @@ round buttons. The phone keeps its chips and Scheduled line.
   "From Cliniko into <location>"; no Dismiss (Cancel). Apply (`phClkApplyExtra`): surgeries not already there, `rec.clinikoVisits` merged by
   date + time (newest first, 20 kept, only the latest 8 keep s / ex / pl), `rec.cliniko = { host, pid }`, a Cliniko mobile marked as the
   export's (phoneSrc "export").
-- **Records › Cliniko visits** (`clkvisits`, `phClkVisitsHtml`, only when the patient has some): "Full notes in Cliniko" opens the notes;
+- **Records › Visits** (`clkvisits`, `phClkVisitsHtml`, only when the patient has some; Cliniko and Zanda (Acupreg) visits in one list since 2026-11-27, a Zanda visit names "Acupreg" over its column, `phZanVisitsPut`): "Full notes in Cliniko" opens the notes;
   `.ph-clkg` = a column a visit (date + type in the head), the label column stays put while the table scrolls sideways (phone: 92px
   labels); a row only when a visit holds it; cells clamp to 4 lines (the full words on hover). Older visits as `.ph-clkv` one-line rows.
 

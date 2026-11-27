@@ -117305,7 +117305,7 @@ Difficult to sweat|no_sweat_tend:r`;
     // her 2026-11-21 IVF | Off switch: Off (phIvfOn) takes the page out of Her file; its rounds stay saved
     if (name && (phIvfCyclesSorted(peek).length || phTpPlans(name).some(p => p.templateName === "IVF Protocol") || phIsFemale(peek) || (peek && peek.sex === "M")) && phIvfOn(peek, name)) sections.push({ id: "ivf", label: peek && peek.sex === "M" && !phIvfCyclesSorted(peek).length ? "Semen analysis" : "IVF history", body: () => presBandHtml("ivf", name) + phIvfHistoryFoldHtml(name) });
     if (name) sections.push({ id: "apptshist", label: "Appointments", body: () => presApptHistoryTabHtml(name) });
-    if (name && peek && Array.isArray(peek.clinikoVisits) && peek.clinikoVisits.length) sections.push({ id: "clkvisits", label: "Cliniko visits", body: () => phClkVisitsHtml(name) });
+    if (name && peek && Array.isArray(peek.clinikoVisits) && peek.clinikoVisits.length) sections.push({ id: "clkvisits", label: "Visits", body: () => phClkVisitsHtml(name) });
     if (name) sections.push({ id: "vrec", label: "Visit record", body: () => phVrPageHtml(name) });   // her 2026-11-24 pick: one composed record a visit
     // her ask 2026-10-01 ("move this to a new tab ... in the patient profile",
     // the whole message area, from the Follow-up sheet): the full composer
@@ -176218,13 +176218,26 @@ Please let me know if you have any questions.`;
       rec.surgeries = Array.isArray(rec.surgeries) ? rec.surgeries : [];
       d.surgNew.forEach(n => rec.surgeries.push({ id: uid(), what: n.data.what, when: n.data.when || "", r: "", s: "", note: "" }));
     }
-    if ((d.visNew || []).length) {
-      const byId = new Map(((rec.clinikoVisits || []).concat(c.visits || [])).map(v => [v.id, v]));
-      // the latest 8 keep Heidi's sections (signs, tongue / pulse / abdomen, plan); older ones one line each (~6 KB a patient at most)
-      rec.clinikoVisits = [...byId.values()].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 20).map((v, i) => { if (i < 8) return v; const o = Object.assign({}, v); delete o.s; delete o.ex; delete o.pl; return o; });
-    }
+    if ((d.visNew || []).length) phVisitsMerge(rec, c.visits);
     if (c.host && c.pid) rec.cliniko = { host: c.host, pid: c.pid };
     if (row.demographics && row.demographics.mobile && rec.phone === row.demographics.mobile && rec.phoneSrc === "intake") { rec.phoneSrc = "export"; rec.phoneFrom = keyOf(TODAY); }
+  }
+  // the one visit list (rec.clinikoVisits, the name kept so every reader stays one): the latest 8 keep Heidi's sections (signs, tongue /
+  // pulse / abdomen, plan); older ones one line each (~6 KB a patient at most); the latest 20 kept
+  function phVisitsMerge(rec, visits) {
+    const byId = new Map(((rec.clinikoVisits || []).concat(visits || [])).map(v => [v.id, v]));
+    rec.clinikoVisits = [...byId.values()].sort((a, b) => b.id.localeCompare(a.id)).slice(0, 20).map((v, i) => { if (i < 8) return v; const o = Object.assign({}, v); delete o.s; delete o.ex; delete o.pl; return o; });
+  }
+  // Zanda (Acupreg) visits into an existing file (her 2026-11-27 "update treatment notes for all patients too", pick "Both" then "One Visits
+  // list"): rows shaped like a Cliniko visit ({ id "YYYY-MM-DD h:mmpm", d, ty, by, cc, dx, hb, pt, s, ex, pl }), marked src "zanda", cl
+  // "Acupreg". Never makes a file; a visit already in the list stays as it is. Returns the count added, -1 when the save failed.
+  function phZanVisitsPut(name, visits) {
+    if (!phPatientPeek(name)) return 0;
+    const rec = phPatientRec(name), seen = new Set((rec.clinikoVisits || []).map(v => v.id));
+    const fresh = (visits || []).filter(v => v && v.id && /^\d{4}-\d{2}-\d{2}$/.test(v.d) && !seen.has(v.id)).map(v => Object.assign({}, v, { src: "zanda", cl: "Acupreg" }));
+    if (!fresh.length) return 0;
+    phVisitsMerge(rec, fresh);
+    return savePharmacy() === false ? -1 : fresh.length;
   }
   async function phClkPasteTap() {
     let s = "";
@@ -176242,11 +176255,12 @@ Please let me know if you have any questions.`;
     e.preventDefault();
     phClkReviewOpen(phClkRow(p));
   });
-  // the patient's Cliniko visits page (Records): one row a visit, the Cliniko table look of Appointments
+  // the patient's Visits page (Records): one row a visit, the Cliniko table look of Appointments. Cliniko and Zanda (Acupreg) visits share
+  // the one list (her 2026-11-27 pick "One Visits list"); a visit names its clinic when it came from Zanda (v.cl).
   function phClkVisitsHtml(name) {
     const rec = phPatientPeek(name), list = (rec && rec.clinikoVisits) || [], ck = rec && rec.cliniko;
     const open = ck && ck.host && ck.pid ? `<div class="ph-appthist-bar"><button type="button" class="ph-load-btn" data-clk-open="${esc(ck.host)}|${esc(ck.pid)}"><svg class="icn" aria-hidden="true"><use href="#i-copy"></use></svg>Full notes in Cliniko</button></div>` : "";
-    if (!list.length) return open + `<div class="ph-hx-constit-note ph-tz">No Cliniko visits yet</div>`;
+    if (!list.length) return open + `<div class="ph-hx-constit-note ph-tz">No visits yet</div>`;
     // her 2026-11-20 "i need that information organised into lcm so i can see things visually": the latest visits side by side, ONE
     // table (Galcott's model): a column a visit, newest first; Came in for, then each sign Heidi wrote (A-Z), Tongue · Pulse · Abdomen,
     // then Diagnosis · Points · Herbs · Plan. A row shows only when a visit holds it. Older visits: one line each under it.
@@ -176257,7 +176271,7 @@ Please let me know if you have any questions.`;
     const row = (lbl, get, cls) => cols.some(v => get(v)) ? `<tr${cls ? ` class="${cls}"` : ""}><th scope="row">${esc(lbl)}</th>${cols.map(v => { const x = get(v); return x ? `<td title="${esc(x)}"><span>${esc(x)}</span></td>` : `<td class="none"></td>`; }).join("")}</tr>` : "";
     const grp = (lbl, rows) => rows ? `<tr class="g"><th colspan="${cols.length + 1}">${esc(lbl)}</th></tr>${rows}` : "";
     const abd = v => [v.ex && v.ex.a, v.ex && v.ex.at].filter(Boolean).join(" · ");
-    const grid = `<div class="ph-clkg-wrap"><table class="ph-clkg" style="--n: ${cols.length}"><thead><tr><th></th>${cols.map(v => `<th scope="col">${esc(phShortDate(v.d))}<small>${esc(v.ty || v.by || "")}</small></th>`).join("")}</tr></thead><tbody>
+    const grid = `<div class="ph-clkg-wrap"><table class="ph-clkg" style="--n: ${cols.length}"><thead><tr><th></th>${cols.map(v => `<th scope="col">${esc(phShortDate(v.d))}<small>${esc([v.cl, v.ty || v.by].filter(Boolean).join(" · "))}</small></th>`).join("")}</tr></thead><tbody>
       ${row("Came in for", v => v.cc, "cc")}
       ${grp("Signs", [...signs.entries()].sort((a, b) => a[1].localeCompare(b[1])).map(([k, l]) => row(l, v => sv(v, k))).join(""))}
       ${grp("Tongue · Pulse · Abdomen", row("Tongue", v => v.ex && v.ex.t) + row("Pulse", v => v.ex && v.ex.p) + row("Abdomen", abd) + row("Looks", v => v.ex && v.ex.o))}
@@ -176265,7 +176279,7 @@ Please let me know if you have any questions.`;
     </tbody></table></div>`;
     const cell = (k, v) => v ? `<span class="${k}">${esc(v)}</span>` : `<span class="${k} none">—</span>`;
     const lines = older.length ? `<div class="ph-appthist ph-clkv"><div class="ph-appthist-hd"><span>Earlier</span><span>Came in for</span><span>Herbs</span><span>Points</span></div>${older.map(v => `<div class="ph-appthist-row">
-      <span class="w">${esc(phShortDate(v.d))}<small>${esc([v.ty, v.by].filter(Boolean).join(" · "))}</small></span>
+      <span class="w">${esc(phShortDate(v.d))}<small>${esc([v.cl, v.ty, v.by].filter(Boolean).join(" · "))}</small></span>
       <span class="c">${esc(v.cc || "—")}${v.dx ? `<small>${esc(v.dx)}</small>` : ""}</span>${cell("h", v.hb)}${cell("t", v.pt)}</div>`).join("")}</div>` : "";
     return open + grid + lines;
   }

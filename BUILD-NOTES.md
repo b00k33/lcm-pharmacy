@@ -18770,3 +18770,13 @@ Her words: "make it a rule that al past patients have consented and new ones are
 - Start-here tags are 11.5px on a phone too (they drew at 12px).
 - **Checked** (sandbox, made-up patients): past by booking, herb sale, logged visit and Cliniko visit = open; booked today, booked later, a break only, a visit today, nothing = new; past with no sex = locked on sex only. Patient details with the Start-here card at 1240 and 360: tap, style and voice audits empty, no sideways scroll.
 - CLAUDE.md §3's Patient details row and the §6 lock line carry this rule (her "yes", 2026-11-27).
+
+## One Visits list: Cliniko and Zanda (Acupreg) visits (2026-11-27)
+
+Her words: "update treatment notes for all patients too"; picks "Both" (Zanda and LCM), then "One Visits list". Commit only; live on her "push live".
+
+- Records tab "Cliniko visits" is now "Visits"; empty text "No visits yet". The data stays in `rec.clinikoVisits`, the name kept so every reader (Visits table, Visit record `phVrDays` / `phVrCompose`, From last visit `phLvData`, `phPfPastPt`) stays one.
+- `phVisitsMerge(rec, visits)`: the keep rule moved out of `phClkApplyExtra` (latest 20; the latest 8 keep `s` / `ex` / `pl`).
+- `phZanVisitsPut(name, visits)`: Zanda rows shaped like a Cliniko visit, marked `src: "zanda"`, `cl: "Acupreg"`; never makes a file; an id already in the list is skipped; returns the count added, or -1 when the save fails. The column head and the Earlier line show `cl` first.
+- The Cliniko import review keeps its own "Cliniko visits" wording (it is a Cliniko import).
+- Checked in the sandbox with a made-up patient: 1 added, the same id again 0, no file 0; column head "Acupreg · Follow up"; the Visit record for the day reads the Zanda visit (Came in for, Found, Diagnosis, Points).
