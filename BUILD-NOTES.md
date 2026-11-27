@@ -18822,3 +18822,16 @@ Her words (typed in PA Coder 3D, with a picture of the home pot): "add option fo
 - The look (`.t-water`): a very pale glass blue, mostly see-through in both pots and their cups, nothing floating (`--ph-tea-lf: transparent`), a pale ripple, the home pot's inner glow pale. Candle, steam, Blow out, the saved state per pot and the new-day rule are as for any tea.
 - **Checked** (sandbox, 1240): Water picked on both pots, lit and steaming; Bohemian blue and Yin after it draw at full colour again; the pick survives a change of pot; Blow out keeps Water, unlit. Tin rows 32px; tap, style and voice audits on the tin empty, top-bar audit empty; the sidebar's own lines are not from this change; no console errors. At 360 the teapot is not shown, as before. Not tested on a real device.
 - Seen, not changed: the home tin's teas are not in A to Z order (Osmanthus red is listed above Bohemian blue).
+
+## Team page: colleagues' profiles (2026-11-27, commit only)
+
+Her words: "make a staff profile for my colleagues", then her pick "both" on the mock `mock-staff-profile-2026-11-27.html` (A name badges, B week table).
+
+- Me > Life > **Team** (id `team`, `phTeamPageHtml`), only on her own record: badges on lanyards, or one week table, switched by Badges | Week (`lcm-team-view`, this device). + Colleague, the pencil on a badge and a name in the table open one box (`phTeamSheetOpen`, the app's sheet). A day is a tap: off, In, Early, Late, with Undo. Added picture `i-sunrise`.
+- **One list**, the one Settings > Clinic > Other practitioners already keeps (`PHARMACY.practitioners`), now with `role`, `clinic`, `shift`, `phone`, `email`, `note`. The two Settings write paths copy every field (they dropped all but name and days); unticking a day there drops its early / late mark.
+- **Bookings:** `phPracHere` keeps a colleague of another clinic out of this login's practitioner labels, calendar days and Settings card (`phPracOthers`, `phOthHers`). An entry with no clinic counts for the login it is on, as before. A rename carries that colleague's cover-day bookings.
+- Colleagues' names, hours and contacts are data only; none is in the code or these notes.
+- `style-audit.js` DATA_MARK gains the badge's colour band and initial tile and the table's clinic dot. Day boxes and week cells carry `data-keep-size` (calendar days).
+- **Checked** (sandbox, made-up details, 1240 and 360): add (needs name and clinic; the same name twice is refused), edit, a tap outside keeps an edited box open, Escape and the cross close it, remove and Undo, day tap and Undo, birthday add and its chip, Settings rename and day untick on a mixed list. Tap, style, voice and top-bar audits empty on both views and the box; no console errors; no sideways scroll at 360. Not tested on a real phone or on the Acupreg login.
+- The list is per login: a colleague added on one login does not show on the other.
+- Seen, not changed: in the birthday box (Appointments dialog) the Message field sits over the line under it at 1240.
