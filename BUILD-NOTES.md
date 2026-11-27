@@ -18728,3 +18728,13 @@ Her words: "see the problem? those are elotus patients, not acupreg. why isnt th
 - `renderSchedWidget`: only the dispenses of `phClinicNow()` (the prescription's `t.shelf`, else `phDayShelf(due)`); All clinics shows all.
 - Checked in the sandbox (made-up names): a Friday booking made one draft, a second run none; Saturday (Lotus), a Break and a tombstoned id made none; import made one; search finds the new file; dispenses at Acupreg / Lotus / CBD / All showed only their own. Audits 1220 + 360 on Scheduled dispenses: no new markup; the existing rows' name link (15.5px, a link in a table row) and the 9px pickup pill (1220), the 11.5px "+ Schedule a dispense" (360) were there before.
 
+## Acupreg Dashboard: the bench faces the stairs (2026-11-27)
+
+Her pick "Yes, send it" on PA TCM's mock (`mocks/zz-lcmrun/ac.js`, local), from her own pictures of the room. Commit only; live on her "push live".
+
+- `phDashRoomHtml(sc)` draws it natively for `sc === "ac"` (`.rmd-ac`): `.ac-scene` = `.ac-cab` (the glass cabinet holding `.rmd-stock`, `phRmAcPothos` trailing over it) + `.ac-view` (`phRmAcBg`: wall, light, the stairs, balustrade, landing plant, double doors, a sage roll-up banner) with `.ac-far` at its foot (the work line `.rm-wsh`, same taps, + `PH_RM_AC_SIGN` / `PH_RM_AC_LILY`); `.rmd-gone` sits in the view. The `.rmd-wall` / `.rmd-work` rows are not drawn there.
+- `phRmStockClin("ac")`: a single herb is `.ac-cap` (pinyin + code on a white label), a formula `.rm-bt.ac-kf`; the tags, level, Order / On order are unchanged. The glass is `.rmd-bd::after` with `pointer-events: none` (elementFromPoint on every cell and Order reaches it).
+- CSS block "ACUPREG: THE BENCH FACES THE STAIRS" (inside `@media (min-width: 641px)`, `#phDashboardWrap .rmd-ac`), the bench whitewashed oak; the cap's lift off under reduced motion.
+- Drawing rules (public repo): no words on the banner or sign; no safe, key lock, wall sheet, fees, phone numbers or QR codes; no photo, place or address.
+- Checked at 1220x820 with made-up stock: room ends 676 (the mock's); Empty = 2; Order lands on the pad; Prepare opens and closes; the room stays on a redraw; no sideways scroll; CBD, Lotus, All draw no `.rmd-ac`. Audits at 1220: empty except, named: the cap labels 7.5 / 7px and the work-line bottle labels 6.5px (drawing labels, like the bottles' 8.5px), the ring 33.2px (tilted phone) and its tel: link in voice-audit (the number is read from the supplier record; made-up here). 360: all four audits empty, the table as before.
+
