@@ -18864,3 +18864,7 @@ Her words (with a screenshot of the live page): "can you make it easier for me t
 - **Moved:** the Paused fold is at the foot of Arrange (it was under the habits). The due ring is gold on every screen (the phone drew the theme's accent).
 - **Unchanged:** streaks, votes, never miss twice, the valley's rules; the banner, foot and + Add. A routine recorded before its start time counts as kept from then.
 - **Checked** (sandbox, made-up habits, 1220 / 1240, 1000 and 360): tap on past and today, Done / 2 min / Skip / clear / Undo / Done at, Escape and a tap away, meal tick and its Undo, calendar and drawer ticks, workout day, skipped days, week arrows and the phone day bar, Arrange name / kind / start / days / group / pause / resume / delete / fold / Change. Tap, style, voice and top-bar audits empty on Week, the box, Arrange, its menu, folds and Votes; no console errors; no sideways scroll. **Not tested:** a real phone or its time picker, two devices syncing a tick.
+
+## Habits: a ticked day is an orange (2026-11-27, commit only)
+
+Shown A (green ticks, as the mock drew them) and B (oranges), her pick: "b". Two CSS lines beside the other orchard rules: on `body.ph-orch` (from 641px) a habit row's tappable done day draws `--orch-fruit` and no tick mark, a meal habit's too. The two-minute half, routines, the self-ticking rows and the phone are as they were. Checked at 1220 and 360 with made-up habits: picture, audits, a tap and its box.
