@@ -18781,7 +18781,7 @@ Her words: "update treatment notes for all patients too"; picks "Both" (Zanda an
 - The Cliniko import review keeps its own "Cliniko visits" wording (it is a Cliniko import).
 - Checked in the sandbox with a made-up patient: 1 added, the same id again 0, no file 0; column head "Acupreg · Follow up"; the Visit record for the day reads the Zanda visit (Came in for, Found, Diagnosis, Points).
 
-## Patient details = a medical binder (2026-11-27, commit only)
+## Patient details = a medical binder (2026-11-27, LIVE 20261127-192400; the tab fix noted below is commit only)
 
 Her words: "i want to redesign the patient profile view. the theme is medical and i want it to feel like a big thick medical binder/file - show me mocks", then "make the medical files follow the brand colors"; her pick "B · Front sheet" (`mocks/mock-patient-binder-2026-11-27.html`, made-up patient, local). A look: every field keeps the id and data-attribute its handler reads.
 
@@ -18791,6 +18791,7 @@ Her words: "i want to redesign the patient profile view. the theme is medical an
 - On a Gynae or MSK case the file takes the case colour, as the rail does.
 - The narrower sheet makes the full Medical history about 150px taller at 1240.
 - The dividers stand in the same place on every File page (third pass): a File page always keeps the scrollbar's room (`scrollbar-gutter: stable`), the chips are 8px padded and twelve of them fit one row at 1240; narrower windows wrap, the same on every page. The clip sits at 120px with its rod; the visit count is below it.
+- Tab fix after that publish (commit only): the chips are 7px padded and the Next dot sits on its tab's corner taking no width (a darker teal so it shows on the tint). At 1220 and 1280 a new file's twelve tabs and a full file's nine hold one row at the same spot on every page; twelve with three ticks still fit at 1220. A longer set wraps to a second row, the same on every page.
 - To-fill flags: each empty one of the seven (name, sex, DOB, phone, email, height, weight) = a light-teal flag in the margin beside its row and a tinted box; a tap on the flag goes to the box; it leaves as the box is filled and returns if emptied. While the Start-here card shows, sex and DOB are asked there (as before), so their flags show after it.
 - The name in the head is a button that opens its box; the box closes back to the name when she leaves it filled.
 - One short slide (.2s) when she turns to another File tab; none on a repaint or under reduced motion.
