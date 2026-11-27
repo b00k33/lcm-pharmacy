@@ -18739,7 +18739,7 @@ Her pick "Yes, send it" on PA TCM's mock (`mocks/zz-lcmrun/ac.js`, local), from 
 - Checked at 1220x820 with made-up stock: room ends 676 (the mock's); Empty = 2; Order lands on the pad; Prepare opens and closes; the room stays on a redraw; no sideways scroll; CBD, Lotus, All draw no `.rmd-ac`. Audits at 1220: empty except, named: the cap labels 7.5 / 7px and the work-line bottle labels 6.5px (drawing labels, like the bottles' 8.5px), the ring 33.2px (tilted phone) and its tel: link in voice-audit (the number is read from the supplier record; made-up here). 360: all four audits empty, the table as before.
 
 
-## Teapot by place and time (2026-11-27, NOT live)
+## Teapot by place and time (2026-11-27, LIVE 20261127-155900)
 
 Her words: "only for acupreg", "i want the sidebar teapot is based on time of day and location of work e.g. acupreg and the home one outside of work hours". Picks: mock A (pot, warmer, cups), switch 30 minutes before the first patient, both extra teas. Mock `mocks/mock-sidebar-teapot-by-place.html`; built picture `mocks/sidebar-teapot-built-before-after.png` (both local only).
 
