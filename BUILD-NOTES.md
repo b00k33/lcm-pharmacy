@@ -18780,3 +18780,21 @@ Her words: "update treatment notes for all patients too"; picks "Both" (Zanda an
 - `phZanVisitsPut(name, visits)`: Zanda rows shaped like a Cliniko visit, marked `src: "zanda"`, `cl: "Acupreg"`; never makes a file; an id already in the list is skipped; returns the count added, or -1 when the save fails. The column head and the Earlier line show `cl` first.
 - The Cliniko import review keeps its own "Cliniko visits" wording (it is a Cliniko import).
 - Checked in the sandbox with a made-up patient: 1 added, the same id again 0, no file 0; column head "Acupreg · Follow up"; the Visit record for the day reads the Zanda visit (Came in for, Found, Diagnosis, Points).
+
+## Patient details = a medical binder (2026-11-27, commit only)
+
+Her words: "i want to redesign the patient profile view. the theme is medical and i want it to feel like a big thick medical binder/file - show me mocks", then "make the medical files follow the brand colors"; her pick "B · Front sheet" (`mocks/mock-patient-binder-2026-11-27.html`, made-up patient, local). A look: every field keeps the id and data-attribute its handler reads.
+
+- Code: `phPdPageHtml` (`.ph-pd-wrap.bnd`; `.ph-bnd-gear` spine / lever / holes, `.ph-bnd-doc` "Patient record" + the ring as a stamp, `.ph-bnd-col` l: Contact, Care team; r: Body, the appointments card), `phBndVals` / `phBndFlagHtml` / `phBndMiss` (repainted by `phPdLiveRefresh`), CSS "PATIENT BINDER" at the end of the main stylesheet.
+- From 641px: teal lever-arch file (name and visits on the spine, `phSeenDays`; "First visit" at none; no count on her own record), one punched sheet on a page stack, File's two bars drawn as divider tabs on its top edge (same `#presPartBar` chips; more than a row's worth wraps upward, the open pack nearest the sheet), her photo paper-clipped, a saved Medical alert as a red-tint sticker, the appointments on a pale-teal index card.
+- To-fill flags: each empty one of the seven (name, sex, DOB, phone, email, height, weight) = a light-teal flag in the margin beside its row and a tinted box; a tap on the flag goes to the box; it leaves as the box is filled and returns if emptied. While the Start-here card shows, sex and DOB are asked there (as before), so their flags show after it.
+- The name in the head is a button that opens its box; the box closes back to the name when she leaves it filled.
+- One short slide (.2s) when she turns to Details from another tab; none on a repaint or under reduced motion.
+- Phone (640px and under): no file, lever, holes or flags; the tabs one scrolling row of chips; a plain white card, the stamp under the photo, tinted boxes kept; order Contact · Body · Care team · Appointments.
+- Her own record (My file > Details) wears it too; Paste contact and Send intake link stay under its ⋯.
+- Fixed on the way: a height with no weight (or the other way) was saved but drawn blank and not counted. `phBodyKnown` (newest value of each box) now feeds the boxes, flags, ring and the other body card; `phBodyLatest` (needs both) still feeds BMI and the figure.
+- The appointments' Open and All n buttons are now 32px / 13px (they were 26 / 24px).
+- Unlike the mock: the right column's flags stick out of the page's right edge (the middle gutter overlapped the left boxes); the appointments card is not tilted; the sticker's words are ink with a red mark (colour law); the lever sits low, clear of the flags.
+- Only Details is dressed. The other File tabs and their bar look as before.
+- Audits: `tap-audit.js` KEEP + the divider tabs and `.ph-bnd-name`; `style-audit.js` DATA_MARK + `.ph-bnd-gear`, `.ph-bnd-flag`, NOT_CHIP + `.ph-bnd-name`.
+- **Checked** (sandbox, made-up patients: full, empty, part filled): 1240 tap / style / titlebar / voice empty on a full file (saved alert), a new file (with and without Start here), the paste box open, her own record. 360: empty except the phone header's alert chip (old gold fill and words, not this page). 900: renders, tabs in two rows; left in the audits there: the patient list's 44px edit buttons, 9px history tag and 17px title (not this page). Flag tap, fill and clear, name open and close, tab motion, long name on the spine. Not tested on a real phone or in Safari.
