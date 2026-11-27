@@ -49,6 +49,7 @@
     ".ph-vsum-ln",                                  // the visit summary card's fact lines: a row that opens its page (her 2026-11-20 "build all three")
     ".ph-sg-row",                                   // a surgery: the row opens its form to change it (her 2026-11-21 "how to edit the surgeries?")
     ".ph-vly .mk",                                  // My valley's round pins on the painting (the next thing's picture, or the count still to go): picture markers, not chips (her 2026-11-27 "build it" on the full-screen valley mock)
+    ".ph-hr-g .gl",                                  // Habits & routines: a habit's goal readout (its bar and "3 of 5 · Seeds" under it), a data cell that opens the pop-up (her 2026-11-27 "Yes, send it" on mock-habits-routines-2026-11-26)
     "[data-keep-size]"                              // a control she agreed to keep at its own size: say which in the build note
   ].join(", ");
   const TAP = "button, select, a[href], input:not([type=hidden]), textarea, [role=button], [role=tab], [role=option]";
