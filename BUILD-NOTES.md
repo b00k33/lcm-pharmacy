@@ -18790,6 +18790,7 @@ Her words: "i want to redesign the patient profile view. the theme is medical an
 - The frame (spine, tabs, sheet, clip, holes) stays on every File page, as mock B showed (second pass the same day; the first dressed Details only). The pages inside are unchanged. The spine, clip and holes are `presBndGearHtml` at the foot of `.ph-pres-stage-body`, shown only while File's dividers are the bar (CSS `:has(> #presPartBar [data-flow-prof="patient"])`). Exam, Diagnosis and Treat look as before.
 - On a Gynae or MSK case the file takes the case colour, as the rail does.
 - The narrower sheet makes the full Medical history about 150px taller at 1240.
+- The dividers stand in the same place on every File page (third pass): a File page always keeps the scrollbar's room (`scrollbar-gutter: stable`), the chips are 8px padded and twelve of them fit one row at 1240; narrower windows wrap, the same on every page. The clip sits at 120px with its rod; the visit count is below it.
 - To-fill flags: each empty one of the seven (name, sex, DOB, phone, email, height, weight) = a light-teal flag in the margin beside its row and a tinted box; a tap on the flag goes to the box; it leaves as the box is filled and returns if emptied. While the Start-here card shows, sex and DOB are asked there (as before), so their flags show after it.
 - The name in the head is a button that opens its box; the box closes back to the name when she leaves it filled.
 - One short slide (.2s) when she turns to another File tab; none on a repaint or under reduced motion.
