@@ -178597,14 +178597,18 @@ Please let me know if you have any questions.`;
       presPickAddSingle(id);
       return;
     }
-    const h = phResolvePick(pick.value);
+    // the typed Add follows the same shelf rule as the list (her 2026-11-27 "there shouldnt be ready made formula wen dan tang in lotus"):
+    // on Acupreg / Lotus it resolves only among what that shelf keeps; a name only CBD keeps falls through to a recipe, else the line below
+    const shelfOnly = presDispShelf() !== "cbd", keptCands = shelfOnly ? phResolvePickCandidates(pick.value).filter(presPickKept) : null;
+    let h = phResolvePick(pick.value);
+    if (shelfOnly && !(h && presPickKept(h))) h = keptCands.length === 1 ? keptCands[0] : null;
     if (!h) {
       // her report (2026-08-17): "Bai Shao" and "Ge Gen" used to silently add
       // whichever item happened to match first when more than one name
       // contained what she typed -- never guess, show the existing suggestion
       // list (already open as she typed) so she taps the one she means.
       // Nothing is added and nothing is cleared until she picks.
-      const amb = phResolvePickCandidates(pick.value);
+      const amb = shelfOnly ? keptCands : phResolvePickCandidates(pick.value);
       if (amb.length > 1) {
         presPickRenderSugg();
         const m = document.getElementById("presEditMatch");
@@ -179105,11 +179109,13 @@ Please let me know if you have any questions.`;
     az(jars, h => phHerbCodes(h).concat(phFormulaAbbr(h))); az(refills, r => [presAbbr(r)]); az(herbs, h => phHerbCodes(h));
     return { jars, refills, herbs };
   }
+  // what the shelf she dispenses from keeps: all on CBD; on Acupreg / Lotus only what that shelf holds (or holds not weighed)
+  const presPickKept = h => { const sh = presDispShelf(); return sh === "cbd" || phHasShelf(h, sh) || phShelfUnw(h, sh); };
   function presPickSuggHtml(q) {
     // the shelves are never mixed (her 2026-11-27 "there shouldnt be ready made formula wen dan tang in lotus"): dispensing for Acupreg or
     // Lotus lists only the ready-mades and herbs that shelf keeps (or keeps not weighed), with that shelf's grams; CBD lists all, as before.
     // "Made from herbs" recipes stay (the shortfall check at dispense reads the shelf). presPickMatches stays whole for the Care Plan pickers.
-    const m = presPickMatches(q), sh = presDispShelf(), kept = h => sh === "cbd" || phHasShelf(h, sh) || phShelfUnw(h, sh);
+    const m = presPickMatches(q), sh = presDispShelf(), kept = presPickKept;
     const jars = m.jars.filter(kept), refills = m.refills, herbs = m.herbs.filter(kept);
     const gIn = h => { if (sh === "cbd") return phFmtG(h.qty || 0); const v = phShelfQty(h); return v == null ? null : phFmtG(v || 0); };
     if (!jars.length && !refills.length && !herbs.length) return "";

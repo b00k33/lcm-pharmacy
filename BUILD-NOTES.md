@@ -18846,6 +18846,12 @@ Her words: "there shouldnt be ready made formula wen dan tang in lotus" (Treat �
 - A formula only CBD keeps, searched on Lotus, shows nothing under Ready-made, with no note.
 - Checked in the sandbox with made-up stock. On Lotus, "ge gen" lists GE GEN TANG at 190 g, "da chai" (CBD-only) lists nothing, and an unweighed Lotus formula reads "not weighed". CBD lists both as before, with 0 g where empty. Acupreg lists only its own.
 - Audits: not re-run, because the change adds no elements or styles, only filters the rows and changes the stock words.
+- **Typed Add, same rule (follow-up, same day):** `presPickKept(h)` is shared by the list and `presPickAdd`. On Acupreg or Lotus, a typed name resolves only among what that shelf keeps: an exact match that the shelf doesn't keep is dropped for the one kept candidate, if there is exactly one. The ambiguity count uses kept items only. A name only CBD keeps falls through to a Formula Refill recipe, otherwise to the existing "isn't a herb in your inventory" line. CBD and the locked-id path are unchanged. `phResolvePick` / `phResolvePickCandidates` are untouched for their other callers.
+  - Checked in the sandbox (stand-ins for the write and the recipe pour):
+    - Lotus "wen dan" + 10 g → the recipe;
+    - Lotus "ge gen tang" → GE GEN TANG;
+    - CBD "wen dan" → WEN DAN TANG as before;
+    - Acupreg "ge gen tang" (not on its shelf, no recipe) → the "isn't a herb" line.
 
 ## Habits & routines: easier to record and arrange (2026-11-27, commit only)
 
