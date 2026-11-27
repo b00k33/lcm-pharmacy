@@ -18693,7 +18693,7 @@ Her words (PA TCM): "i want to be able to fit everything on dashboard page into 
 - Not in this build: Acupreg's real layout (facing the stairs), waiting on her photos.
 
 
-## My valley, the full-screen game (2026-11-27; SAVED, not live until her "push live")
+## My valley, the full-screen game (2026-11-27; LIVE 20261127-143500, her "push live")
 Her words: "i want this page to have the animation take up the whole screen instead of me scrolling down ... usually i just want to see the present", "have some indicators or hovers ... its a game", "maybe even make things more barren", "i like both, make the b bar collapsible or able to open", "broken streak - fade", "night - brighten the stars from rewards ... use nasa to map out the correct stars and milkyway", then "build it" and "make the colours a bit more vivid so i can differentiate the success from before".
 - What it does, the ladders, what each part reads and what the device keeps: CURRENT-STATE "My valley".
 - **Code:** `phVlyE` gains `LADDER`, `gameAt`, `planted` (seeds, sprouts), the night sky (`STARS` 6 bytes a star, `MW` the Milky Way picture) and a cover-crop `paint`; the page is `phVlyHtml` + `phVlyQuests`, `phVlyLocks`, `phVlyMarksPaint`, `phVlyCardShow`, `phVlyUiPaint`, `phVlyControls`, `phVlyJourney`, `phVlyNew`. CSS "MY VALLEY, THE GAME". The small sidebar view uses the same engine.
@@ -18704,7 +18704,7 @@ Her words: "i want this page to have the animation take up the whole screen inst
 - **Tested** on the test copy with a made-up person (day one, 6 days, 80 days, one and two missed): pins, cards, hover, panel, bar, View, Journey, Replay, night, menu shown and full screen, the buttons to Fitness and Meals, a reward earned by ticking (said once), the small sidebar view, 360 wide. Tap, style, voice and title-bar audits at 1240 and 360: empty. NOT tested: on her own computer or phone, with her own days or her bird file.
 
 
-## Habits & routines, one page (2026-11-27; SAVED, not live until her "push live")
+## Habits & routines, one page (2026-11-27; LIVE 20261127-143500, her "push live")
 Built to her mock `mock-habits-routines-2026-11-26.html`, relayed by the session that drew it after her "Yes, send it": Habits and Routines become one page; habits are ticked and have a goal that grows My valley, routines are never ticked.
 - What the page, the pop-up and the goals do: CURRENT-STATE "Habits + Steps" and "My valley".
 - **Code:** the page is `phHubHabHtml` (class `ph-hub ph-hab ph-hr`) with `phHrKeyLines`, `phHrVlyMount`, `phHrRowKey`; the pop-up `#phHrSheet` is `phHrOpen`, `phHrFormInit`, `phHrFormHtml`, `phHrSave`, `phHrPause`, `phHrDelete`, with Undo by `phHrSnap` / `phHrRestore`; goals `phHabGoal`, `phHabGrow`, `phHrVly`. CSS: the `.ph-hr` rules (one grid template for head and rows, `--hr-cols`; a container query `phhr` at 640px).
