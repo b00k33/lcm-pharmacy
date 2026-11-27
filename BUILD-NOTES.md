@@ -18813,3 +18813,12 @@ Her "yes to 1 and 3" to: "a locked page still says 'Add sex and date of birth fi
 - Still asks for a date of birth, on purpose: the age questions (period or change of life, `askFirst` on starting a plan), the "Worth a look" ask for a missing detail, and the Patient details ring.
 - **Checked** (sandbox, made-up patients): new patient with nothing in, consent only missing, sex only missing; past patient with no date of birth (Tongue, Pulse, Abdomen, Pain draw; the file opens on the visit) against the build before this one (Tongue and Pain read the old line there); the Care Plan button at a computer's width and 360 (32px, no sideways scroll, no new tap line); the Guide's chart for an own record with no sex. The three colour lines on the Tongue page are in the build before this one. Not tested on a real phone.
 - Seen, not changed: for a new patient with sex, date of birth and phone but no consent, the "Came in for" step opens an empty page (it did before this build too).
+
+## Water in the tea tin (2026-11-27, commit only)
+
+Her words (typed in PA Coder 3D, with a picture of the home pot): "add option for just wanter", then "water".
+
+- One new row, `data-tea="water"`, in both tins (home and Acupreg); "water" in `TEAS.home` and `TEAS.ac`. The Acupreg list stays A to Z (after Raspberry Leaf, before Yin); in the home list it sits between Bohemian blue and Xiao rain; her last pick still leads. The swatch is a pale clear-blue circle with a fine line (both tins, no jar).
+- The look (`.t-water`): a very pale glass blue, mostly see-through in both pots and their cups, nothing floating (`--ph-tea-lf: transparent`), a pale ripple, the home pot's inner glow pale. Candle, steam, Blow out, the saved state per pot and the new-day rule are as for any tea.
+- **Checked** (sandbox, 1240): Water picked on both pots, lit and steaming; Bohemian blue and Yin after it draw at full colour again; the pick survives a change of pot; Blow out keeps Water, unlit. Tin rows 32px; tap, style and voice audits on the tin empty, top-bar audit empty; the sidebar's own lines are not from this change; no console errors. At 360 the teapot is not shown, as before. Not tested on a real device.
+- Seen, not changed: the home tin's teas are not in A to Z order (Osmanthus red is listed above Bohemian blue).
