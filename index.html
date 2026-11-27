@@ -50019,6 +50019,26 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   function phApptRepeatFlash(name, dates, rhythm) {
     return `Booked ${dates.length} ${PH_APPT_REPEAT_WORDS[rhythm]} visits for ${esc(phTitle(name))} · ${phFuDateLabel(dates[0])} to ${phFuDateLabel(dates[dates.length - 1])}`;
   }
+  // the file a booking makes (her acupreg rule below): a draft prescription with an id taken from the name, so two devices making it
+  // at once sync to ONE (prescriptions merge by id), and one she deleted (its tombstone) is never made again. true when one was made.
+  const phApctDraftId = name => "apd-" + phPatientKey(name).replace(/[^a-z0-9]+/g, "-");
+  function phApctDraft(name, date) {
+    const k = phPatientKey(name), id = phApctDraftId(name);
+    if (!k || phApptScriptFor(k) || PRESC.items.some(x => x.id === id) || (PRESC.deletedItems && PRESC.deletedItems[id])) return false;
+    PRESC.items.unshift(Object.assign(presNewDraft(), { id, name: String(name).trim(), createdAt: Date.now(), fromAppt: date || "" }));
+    const pr = phPatientRec(name);
+    if (pr) { if (!pr.sex) pr.sex = "F"; if (pr.cycleOn === undefined) pr.cycleOn = true; }
+    return true;
+  }
+  // catch-up (her 2026-11-27 "i never had to make profile before, its made when added to calendar"): every Acupreg booking whose
+  // patient has no file gets one, once the copy is fresh (after the sync catches up), like the recipe prices
+  function phAcDraftsSync() {
+    if (window.__LCM_SYNC && window.__lcmSyncFresh !== true) return 0;
+    let n = 0;
+    phApptList().forEach(a => { if (a && a.patient && a.service !== "Break" && phApptPlaceOf(a) === "Acupreg" && phApctDraft(a.patient, a.date)) n++; });
+    if (n) { savePresc(); if (PHARMACY.activeTab === "prescriptions" && typeof renderPresList === "function") { try { renderPresList(); } catch (e) {} } }
+    return n;
+  }
   function phApptImport(entries) {
     const list = phApptList();
     let added = 0;
@@ -50052,13 +50072,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       // its account made here -- a draft script (so she's in Prescriptions
       // and the Timeline) and a record with Sex F + cycle tracking on. The
       // plan (IVF vs Natural), formula and LMP stay hers to pick.
-      if (phApptAllHerbs() && !isBreak && !phApptScriptFor(k)) {
-        const t = Object.assign(presNewDraft(), { id: uid(), name: en.patient, createdAt: Date.now(), fromAppt: en.date });
-        PRESC.items.unshift(t);
-        const pr = phPatientRec(en.patient);
-        if (pr) { if (!pr.sex) pr.sex = "F"; if (pr.cycleOn === undefined) pr.cycleOn = true; }
-        phApptLastAccounts++;
-      }
+      // her 2026-11-27 (Acupreg now lives in the CBD login, so its bookings stopped making files): a booking AT Acupreg makes the file too
+      if ((phApptAllHerbs() || phApptPlaceOf(en) === "Acupreg") && !isBreak && phApctDraft(en.patient, en.date)) phApptLastAccounts++;
       const dupe = list.find(a => a.date === en.date && a.time === en.time && phPatientKey(a.patient) === k);
       // briefSrc "paste" (2026-09-07 pm): the popup and List view tag pasted
       // Focus / Goal as "Cliniko", against text she typed in the popup
@@ -181737,7 +181752,10 @@ Dosage: {dosage}
     const btnHost = document.getElementById("schedActionBtn");
     if (!host) return;
     formHost.innerHTML = schedSheet ? "" : schedFormHtml();
-    const all = schedSorted().filter(s => !(schedSheet && schedSheet.view === "list" && s.prescriptionId === schedSheet.rx));
+    // her 2026-11-27 ("those are lotus patients, not acupreg"): only the clinic she is on; All clinics shows every one.
+    // A dispense's clinic is the prescription's own pick (t.shelf), else its day (Saturday = Lotus, Friday = Acupreg), as Dispense reads it
+    const cn = phClinicNow(), schedClin = s => { const t = PRESC.items.find(x => x.id === s.prescriptionId), d = schedDueDate(s); return t && t.shelf && PH_SHELVES[t.shelf] ? t.shelf : d ? phDayShelf(d) : "cbd"; };
+    const all = schedSorted().filter(s => !(schedSheet && schedSheet.view === "list" && s.prescriptionId === schedSheet.rx) && (cn === "all" || schedClin(s) === cn));
     const active = all.filter(s => schedStatus(s) !== "completed");
     const completed = all.filter(s => schedStatus(s) === "completed");
     const overdue = schedOverdueCount();
@@ -181959,7 +181977,7 @@ Dosage: {dosage}
     phRecipePriceTid = setTimeout(phRecipePricesSync, 1200);
   }
   phAfterScripts(() => {
-    const go = () => { phRecipePriceOk = true; phRecipePricesSync(); };
+    const go = () => { phRecipePriceOk = true; phRecipePricesSync(); try { phAcDraftsSync(); } catch (e) { /* a file not made now is made on the next load */ } };
     if (!window.__LCM_SYNC) go(); else window.addEventListener("lcm-sync-caught-up", go);
   });
   // one-time backfill (her ask 2026-08-13): "In house" as a real supplier

@@ -18717,3 +18717,14 @@ Built to her mock `mock-habits-routines-2026-11-26.html`, relayed by the session
 - **Height** (1240 x 900, the made-up record): before, two pages (Habits 900px, Routines 1014px); after, one page 1259px, the head row and nine rows on the first screen.
 - **Tested** on the test copy with a made-up person: tick, goal edit with Enter, clear and Undo, Skip day, routine to habit and back, pause and resume, add (needs a name and days), delete and Undo, a self-ticking habit's pop-up, a group change keeping rule and time, a monthly rule kept, week arrows, Votes, the old `routines` link, an added koala goal; tap, style, voice and title-bar audits at 1240 and 360 with the pop-up open: empty; no console errors. NOT tested: on her own computer or phone, or with her own days.
 - **Rule book:** CLAUDE.md's My day list names Habits & routines (her "yes", 2026-11-27).
+
+## Acupreg bookings make the file again (2026-11-27)
+
+Her words: "see the problem? those are elotus patients, not acupreg. why isnt there a profile for these patients? i never had to make profil before, its made when added to calednar"; then "yes build it and push live".
+
+- Cause: the patient list is built from prescriptions only. The Acupreg login made a draft for every booking (`phApptAllHerbs`, from its name); since Acupreg moved into the CBD login that rule no longer fired, so 7 November patients (files and bookings, no prescription) could not be found.
+- `phApptImport`: `phApptAllHerbs() || phApptPlaceOf(en) === "Acupreg"` makes the draft through `phApctDraft(name, date)`: id `apd-` + the name (prescriptions merge by id, so two devices make one), skipped when one exists, when the patient has a prescription, or when that id is tombstoned (`PRESC.deletedItems`). Sex F and cycle on only when unset, as before.
+- `phAcDraftsSync()`: every Acupreg booking (not a Break) whose patient has no prescription gets the draft; runs once after the sync catches up (beside `phRecipePricesSync`), only while the copy is fresh; one `savePresc`.
+- `renderSchedWidget`: only the dispenses of `phClinicNow()` (the prescription's `t.shelf`, else `phDayShelf(due)`); All clinics shows all.
+- Checked in the sandbox (made-up names): a Friday booking made one draft, a second run none; Saturday (Lotus), a Break and a tombstoned id made none; import made one; search finds the new file; dispenses at Acupreg / Lotus / CBD / All showed only their own. Audits 1220 + 360 on Scheduled dispenses: no new markup; the existing rows' name link (15.5px, a link in a table row) and the 9px pickup pill (1220), the 11.5px "+ Schedule a dispense" (360) were there before.
+
