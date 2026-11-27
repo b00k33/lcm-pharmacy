@@ -18758,7 +18758,7 @@ Her words on PA TCM's perspective mock: "focus on hte table space rather than in
 - `phRmAcBg`, `.ac-scene`, `.ac-view`, `.ac-bg`, the old `.ac-pothos`, the base `.ac-far` / `.rmd-gone` / `.rm-front` rules are gone. CSS in the same block (`@media (min-width: 641px)`); the phone is unchanged.
 - Checked at 1220x820 and 1024 with made-up stock: room ends 805; every button and link reachable (elementFromPoint); Prepare opens inside the room and closes; Order lands on the pad; no sideways scroll; CBD draws no `.ac-t`; 375 unchanged. Audits: titlebar empty; 360 tap + voice empty. At 1220, named leftovers: the cap labels 7.5 / 7px and the jar labels 6.5px (pictures, as in the stairs build), the filter bar 30.5 tall (32 x the .9838 zoom), and the seed's made-up `tel:` on the ring (sandbox data).
 
-## Past patients count as consented (2026-11-27, NOT live)
+## Past patients count as consented (2026-11-27, LIVE 20261127-162400)
 
 Her words: "make it a rule that al past patients have consented and new ones are hte ones that require consent" (she was held at the lock on a returning patient with sex and date of birth filled).
 
