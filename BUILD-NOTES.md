@@ -18769,4 +18769,4 @@ Her words: "make it a rule that al past patients have consented and new ones are
 - A patient whose only earlier record is a synced calendar event (never saved as a booking, visit or sale) reads as new.
 - Start-here tags are 11.5px on a phone too (they drew at 12px).
 - **Checked** (sandbox, made-up patients): past by booking, herb sale, logged visit and Cliniko visit = open; booked today, booked later, a break only, a visit today, nothing = new; past with no sex = locked on sex only. Patient details with the Start-here card at 1240 and 360: tap, style and voice audits empty, no sideways scroll.
-- CLAUDE.md §3's Patient details row and lock line still say sex + consent on file: waiting for her word in the building session.
+- CLAUDE.md §3's Patient details row and the §6 lock line carry this rule (her "yes", 2026-11-27).
