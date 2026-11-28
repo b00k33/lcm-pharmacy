@@ -41113,6 +41113,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
           let out = null;
           try { const r = fn(store); if (r) r.onsuccess = () => { out = r.result; }; } catch (e) {}
           tx.oncomplete = () => resolve(out);
+          if (mode === "readwrite" && tx.commit) { try { tx.commit(); } catch (e) {} }   // asked to finish now: a window closing right after a save must not drop it
           tx.onerror = () => resolve(null);
           tx.onabort = () => resolve(null);
         });
@@ -41604,6 +41605,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   let PHARMACY = loadPharmacy();
   setTimeout(() => { phGuideBoot().catch(() => { }); }, 0);
+  // closing or hiding writes the Guide at once (2026-11-28 audit); joined one tick late, so it runs after every other flush has saved
+  setTimeout(() => {
+    const now = () => { clearTimeout(phGuideTimer); phGuideKeep(); };
+    window.addEventListener("pagehide", now);
+    document.addEventListener("visibilitychange", () => { if (document.hidden) now(); });
+  }, 0);
   if (!phGuidePc) document.documentElement.classList.add("lcm-no-guide");
   phIdSnapTake();
   // declared here, ahead of every one-time boot migration below, on purpose --
@@ -44232,8 +44239,10 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // shelf, but its grams read "—" everywhere, it is never low, empty, short or on To order there; typing its grams (the Lotus column, a clinic count, a
   // clinic Inventory cell) takes the mark off. A dispense or a batch made there still moves the number; the mark stays until she weighs it.
   const phShelfUnw = (h, s) => s !== "cbd" && !!h && !!PH_SHELVES[s] && !!h[PH_SHELVES[s].f + "Unw"];
-  // what a clinic's own shelf holds (null = not counted or not kept there): every "short" warning reads this, never CBD's jar by default
-  const phQtyOn = (h, s) => !h ? null : !s || s === "cbd" ? h.qty : phHasShelf(h, s) && !phShelfUnw(h, s) ? +h[PH_SHELVES[s].f] : null;
+  // what a clinic's own shelf holds (null = kept there but not weighed yet; a herb not kept there holds 0, so it warns before the dispense stops
+  // it, 2026-11-28 audit): every "short" warning reads this, never CBD's jar by default
+  const phNotKept = (h, s) => !!h && !!s && s !== "cbd" && !!PH_SHELVES[s] && !phHasShelf(h, s);
+  const phQtyOn = (h, s) => !h ? null : !s || s === "cbd" ? h.qty : phNotKept(h, s) ? 0 : phShelfUnw(h, s) ? null : +h[PH_SHELVES[s].f];
   const phShortOn = (x, s) => { const q = phQtyOn(x.h, s); return q != null && q < x.grams; };
   // a scheduled dispense's clinic, as Do next works it out: the prescription's pick, else that day's booking (a pickup), else the weekday
   function phSchedClin(x) {
@@ -51105,8 +51114,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const k = phPatientKey(name), id = phApctDraftId(name);
     if (!k || phApptScriptFor(k) || PRESC.items.some(x => x.id === id) || (PRESC.deletedItems && PRESC.deletedItems[id])) return false;
     PRESC.items.unshift(Object.assign(presNewDraft(), { id, name: String(name).trim(), createdAt: Date.now(), fromAppt: date || "" }));
-    const pr = phPatientRec(name);
-    if (pr) { if (!pr.sex) pr.sex = "F"; if (pr.cycleOn === undefined) pr.cycleOn = true; }
+    phPatientRec(name);   // the file is made; her sex is asked there and cycle tracking follows it (phCycleOn), never assumed from the booking (2026-11-28 audit)
     return true;
   }
   // catch-up (her 2026-11-27 "i never had to make profile before, its made when added to calendar"): every Acupreg booking whose
@@ -51149,8 +51157,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       // fertility related conditions. why cant i automatically make an
       // account?"): under the all-herbs default a name with no script gets
       // its account made here -- a draft script (so she's in Prescriptions
-      // and the Timeline) and a record with Sex F + cycle tracking on. The
-      // plan (IVF vs Natural), formula and LMP stay hers to pick.
+      // and the Timeline) and a patient record. Sex is never assumed (partners
+      // book too, 2026-11-28 audit); the plan, formula and LMP stay hers.
       // her 2026-11-27 (Acupreg now lives in the CBD login, so its bookings stopped making files): a booking AT Acupreg makes the file too
       if ((phApptAllHerbs() || phApptPlaceOf(en) === "Acupreg") && !isBreak && phApctDraft(en.patient, en.date)) phApptLastAccounts++;
       const dupe = list.find(a => a.date === en.date && a.time === en.time && phPatientKey(a.patient) === k);
@@ -52844,7 +52852,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       if (!t) return `<div class="ph-apptls-prep"><span class="nm">${esc(phTitle(a.patient))}</span><span class="fx faint">no prescription yet</span><span></span><span class="act"><button type="button" class="ph-name-link soft" data-ph-dash-patient-open="${esc(a.patient)}">Open profile</button></span></div>`;
       const done = presDispenseOnDay(k, a.date);
       const prep = phApptPrep(k, a);
-      const shortHtml = prep && prep.short.length ? prep.short.slice(0, 3).map(x => `<span class="ph-tl-chip ${phQtyOn(x.h, prep.shelf) <= 0 ? "zero" : "short"}">${esc(x.h.name || "")} ${phQtyOn(x.h, prep.shelf) <= 0 ? "out" : "low"}</span>`).join("") + (prep.short.length > 3 ? `<span class="ph-tl-chip short">+${prep.short.length - 3}</span>` : "") : "";
+      const shortHtml = prep && prep.short.length ? prep.short.slice(0, 3).map(x => `<span class="ph-tl-chip ${phQtyOn(x.h, prep.shelf) <= 0 ? "zero" : "short"}">${esc(x.h.name || "")} ${phNotKept(x.h, prep.shelf) ? "not here" : phQtyOn(x.h, prep.shelf) <= 0 ? "out" : "low"}</span>`).join("") + (prep.short.length > 3 ? `<span class="ph-tl-chip short">+${prep.short.length - 3}</span>` : "") : "";
       return `<div class="ph-apptls-prep${done ? " done" : ""}">
         <span class="nm">${esc(phTitle(a.patient))}</span>
         <span class="fx">${esc(presActualFormula(t) || t.formula || "Untitled formula")}${t.totalGrams ? ` <span class="g">· ${phFmtG(t.totalGrams)} g</span>` : ""}</span>
@@ -183199,6 +183207,7 @@ Dosage: {dosage}
       useBefore: presUseBeforeStr(now),
       items: items.map(x => ({ code: x.code, name: x.name, grams: x.grams })),
       deducted: presPending[t.id] || [],
+      ...((presPending[t.id] || []).length && presPendingAt[t.id] ? { pendAt: presPendingAt[t.id] } : {}),
       // her ask (2026-08-18): "never silent" for the same reason the deduct
       // itself isn't -- explicit sentences naming which herb went negative
       // (and by how much) or which herb substituted for which, carried over
@@ -184774,12 +184783,12 @@ Dosage: {dosage}
             <span class="ph-sched-prep-row-code">${esc(x.code || "")}</span>
             <span class="ph-sched-prep-row-name">${phNameHtml(x.name, x.h ? phIsFormula(x.h) : null)}</span>
             <span class="ph-sched-prep-row-need">${(x.grams || 0).toFixed(2)}g</span>
-            <span class="ph-sched-prep-row-stock${short ? " short" : ""}">${x.h ? sq == null ? "not counted here" : `${short ? "only " : ""}${phFmtG(sq)}g in stock` : "not in inventory"}</span>
+            <span class="ph-sched-prep-row-stock${short ? " short" : ""}">${x.h ? phNotKept(x.h, phSchedClin(s)) ? "not stocked here" : sq == null ? "not counted here" : `${short ? "only " : ""}${phFmtG(sq)}g in stock` : "not in inventory"}</span>
             <button type="button" class="ph-arr-editbtn ph-prep-edit-btn" data-sched-prep-edit-open="${esc(editKey)}" title="Edit amount" aria-label="Edit amount for ${esc(x.name)}">✎</button>
           </label>${schedPrepEditKey === editKey ? `
           <div class="ph-arr-edit ph-prep-edit-panel">
             <label class="ph-inline-label">Grams <input type="text" inputmode="decimal" id="schedPrepEditGrams" value="${phFmtG(x.grams || 0)}" aria-label="Amount for ${esc(x.name)}"></label>
-            ${short ? `<button type="button" class="btn-cancel" data-sched-prep-edit-fill="${sq}">Use available · ${phFmtG(sq)}g</button>` : ""}
+            ${short && sq > 0 ? `<button type="button" class="btn-cancel" data-sched-prep-edit-fill="${sq}">Use available · ${phFmtG(sq)}g</button>` : ""}
             <button type="button" class="btn-save" data-sched-prep-edit-save="${esc(editKey)}">Save</button>
             <button type="button" class="btn-cancel" data-sched-prep-edit-cancel="1">Cancel</button>
           </div>` : ""}`;
@@ -188626,7 +188635,7 @@ Dosage: {dosage}
       '<button id="lcmOwnerReload" style="' + F.btn + '">Reload</button>');
     var b = document.getElementById("lcmOwnerReload"); if (b) b.onclick = function () { location.reload(); };
   }
-  var HIST_COL_OK = null, histCheckedDate = null, lastNoteMsg = "";
+  var lastNoteMsg = "";
   // freshness handshake with the app (her wipe, 2026-08-22): the app's
   // boot/wake housekeeping (schedule sweep, migrations) must not WRITE the
   // prescriptions blob until this device has reconciled against the real
@@ -188941,7 +188950,7 @@ Dosage: {dosage}
     return w;
   }
   window.lcmBodyUnion = lcmBodyUnion;   // her own file in both locations (phSelfJoin) joins Body the same way
-  function mergePatientsByRecency(pickStr, lStr, cStr) {
+  function mergePatientsByRecency(pickStr, lStr, cStr, basePt) {
     var pick, l, c;
     try { pick = JSON.parse(pickStr); } catch (e) { return pickStr; }
     try { l = JSON.parse(lStr); } catch (e) { l = null; }
@@ -188977,7 +188986,11 @@ Dosage: {dosage}
           winner = ta !== tb ? (ta > tb ? a : b) : (JSON.stringify(pickPatients[key]) === strB ? b : a);
         }
       }
-      if (a && b && JSON.stringify(a) !== JSON.stringify(b)) winner = lcmBodyUnion(winner, winner === a ? b : a);
+      if (a && b && JSON.stringify(a) !== JSON.stringify(b)) {
+        var other = winner === a ? b : a;
+        if (basePt && basePt[key]) winner = merge3(basePt[key], winner, other);   // the later stamp settles a field both changed
+        winner = lcmBodyUnion(winner, other);
+      }
       if (gone[key] && (winner.updatedAt || 0) <= gone[key]) {
         if (!((window.__lcmAllowShrinkUntil || 0) > Date.now())) { if (pickPatients[key]) changedIt = true; return; }
         winner.updatedAt = Date.now();   // a deliberate restore put this record back: it outlives the tombstone
@@ -189124,6 +189137,112 @@ Dosage: {dosage}
      as "she edited her prescriptions". A deliberate section-restore
      (__lcmAllowShrinkOnce) still bypasses this and takes local wholesale --
      a restore is allowed to genuinely remove records. */
+  /* ---- three-way merge (2026-11-28, her "yes": a change made on one device is no longer lost to a change made on another before
+     they sync). base = the whole last agreement (FULL_IDB, below). Used only to settle a record both sides hold differently. A
+     field one side changed takes that side; both changed: objects merge key by key, lists whose items carry an id merge item by
+     item (a removal holds unless the other side edited that item), lists of words keep both sides' additions and removals, and
+     anything else keeps this device's. With no base copy the older rules stand. a = this device, c = the cloud. ---- */
+  function same3(a, b) { return a === b || JSON.stringify(a) === JSON.stringify(b); }
+  function isObj3(v) { return !!v && typeof v === "object" && !Array.isArray(v); }
+  function has3(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
+  function listKey3(arrs) {
+    var keys = ["id", "herbId"];
+    for (var k = 0; k < keys.length; k++) {
+      var f = keys[k];
+      if (arrs.every(function (a) { var seen = Object.create(null); return a.every(function (x) { if (!isObj3(x)) return false; var v = x[f]; if (v == null || v === "" || seen[v]) return false; seen[v] = 1; return true; }); })) return f;
+    }
+    return null;
+  }
+  function words3(a) { var seen = Object.create(null); return a.every(function (x) { if (typeof x !== "string" || seen[x]) return false; seen[x] = 1; return true; }); }
+  function merge3(b, a, c) {
+    if (same3(a, c)) return a;
+    if (b !== undefined && same3(a, b)) return c;
+    if (b !== undefined && same3(c, b)) return a;
+    if (isObj3(a) && isObj3(c) && (b === undefined || isObj3(b))) {
+      var bb = b || {}, out = {};
+      Object.keys(a).concat(Object.keys(c).filter(function (k) { return !has3(a, k); })).forEach(function (k) {
+        var inA = has3(a, k), inC = has3(c, k), inB = has3(bb, k);
+        if (inA && inC) out[k] = merge3(inB ? bb[k] : undefined, a[k], c[k]);
+        else { var x = inA ? a[k] : c[k]; if (!inB || !same3(x, bb[k])) out[k] = x; }
+      });
+      return out;
+    }
+    if (Array.isArray(a) && Array.isArray(c) && (b === undefined || Array.isArray(b))) {
+      var base = b || [], key = (a.length || c.length) ? listKey3([a, c, base]) : null;
+      if (key) {
+        var am = Object.create(null), bm = Object.create(null), cm = Object.create(null), res = [];
+        a.forEach(function (x) { am[x[key]] = x; }); base.forEach(function (x) { bm[x[key]] = x; }); c.forEach(function (x) { cm[x[key]] = x; });
+        a.forEach(function (x) { var k = x[key]; if (cm[k]) res.push(merge3(bm[k], x, cm[k])); else if (!bm[k] || !same3(x, bm[k])) res.push(x); });
+        c.forEach(function (x) { var k = x[key]; if (!am[k] && (!bm[k] || !same3(x, bm[k]))) res.push(x); });
+        return res;
+      }
+      if (words3(a) && words3(c) && words3(base)) {
+        var kept = a.filter(function (x) { return !(base.indexOf(x) >= 0 && c.indexOf(x) < 0); });
+        c.forEach(function (x) { if (base.indexOf(x) < 0 && kept.indexOf(x) < 0) kept.push(x); });
+        return kept;
+      }
+    }
+    return a;
+  }
+  /* Shelf counts: two devices that both took grams off one jar must take off both. The new count = this device's count plus the
+     movements only the cloud has (log entries, and dispenses not logged yet), read from the same fields phEntryStock moves. A
+     movement both already hold is never counted twice. */
+  function stockOf(e) {
+    var m = {}, add = function (k, v) { if (v) m[k] = (m[k] || 0) + v; };
+    var fOf = function (s) { return s === "ac" ? "qtyAC" : s === "pp" ? "qtyPP" : "qty"; };
+    var shelf = e.shelf || ((e.deducted || []).filter(function (d) { return d && d.shelf; })[0] || {}).shelf || ((e.products || []).filter(function (p) { return p && p.shelf; })[0] || {}).shelf || "cbd";
+    (e.deducted || []).forEach(function (x) { if (x) add("h|" + x.herbId + "|" + fOf(x.shelf), -(+x.grams || 0)); });
+    (Array.isArray(e.products) ? e.products : []).forEach(function (x) { if (x) add("p|" + x.pill + "|" + (x.shelf || "cbd"), -(+x.pills || 0)); });
+    (Array.isArray(e.added) ? e.added : []).forEach(function (x) { if (x) add("h|" + x.herbId + "|" + fOf(shelf), +x.grams || 0); });
+    if (e.kind === "refill" && e.targetId) add("h|" + e.targetId + "|" + fOf(shelf), +e.madeGrams || 0);
+    if (e.kind === "move") { if (!e.noFrom) add("h|" + e.herbId + "|" + fOf(e.from), -(+e.grams || 0)); add("h|" + e.herbId + "|" + fOf(e.to), +e.grams || 0); }
+    return m;
+  }
+  function stockEvents(sections) {
+    var ev = Object.create(null), log = [], pr = null;
+    try { log = JSON.parse(sections.pharmacy_log) || []; } catch (e) {}
+    try { pr = JSON.parse(sections.prescriptions); } catch (e) {}
+    log.forEach(function (e) {
+      if (!e) return;
+      var k = e.pendAt ? "pend:" + e.pendAt : "log:" + e.id, m = stockOf(e), t = ev[k] || (ev[k] = {});
+      Object.keys(m).forEach(function (s) { t[s] = (t[s] || 0) + m[s]; });
+    });
+    ((pr && pr.items) || []).forEach(function (t) {
+      if (t && t.pendingDispensedAt && Array.isArray(t.pendingDispensedItems) && !ev["pend:" + t.pendingDispensedAt]) ev["pend:" + t.pendingDispensedAt] = stockOf({ deducted: t.pendingDispensedItems });
+    });
+    return ev;
+  }
+  function mergeStock(pickStr, L, C, base) {
+    var pick, l, c, b;
+    try { pick = JSON.parse(pickStr); l = JSON.parse(L.pharmacy_core); c = JSON.parse(C.pharmacy_core); b = JSON.parse(base.pharmacy_core); } catch (e) { return pickStr; }
+    var eb = stockEvents(base), el = stockEvents(L), ec = stockEvents(C), adj = {}, keys = {};
+    Object.keys(eb).concat(Object.keys(ec)).forEach(function (k) { keys[k] = 1; });
+    Object.keys(keys).forEach(function (k) {
+      var x = eb[k] || {}, mine = el[k] || {}, theirs = ec[k] || {}, slots = {};
+      Object.keys(x).concat(Object.keys(theirs)).forEach(function (s) { slots[s] = 1; });
+      Object.keys(slots).forEach(function (s) {
+        var dc = (theirs[s] || 0) - (x[s] || 0), dl = (mine[s] || 0) - (x[s] || 0);
+        if (dc && Math.abs(dc - dl) > 1e-9) adj[s] = (adj[s] || 0) + dc;
+      });
+    });
+    var byId = function (list) { var m = Object.create(null); (list || []).forEach(function (x) { if (x && x.id) m[x.id] = x; }); return m; };
+    var changed = false;
+    function settle(target, bo, lo, co, field, slot) {
+      if (!target || !bo || !lo || !co || lo[field] == null || co[field] == null) return;
+      if (lo[field] === bo[field] || co[field] === bo[field]) return;   // one side alone: the merge already holds it
+      var v = Math.round(((+lo[field] || 0) + (adj[slot] || 0)) * 100) / 100;
+      if (target[field] !== v) { target[field] = v; changed = true; }
+    }
+    var bh = byId(b.herbs), lh = byId(l.herbs), ch = byId(c.herbs);
+    (pick.herbs || []).forEach(function (h) { if (h) ["qty", "qtyAC", "qtyPP"].forEach(function (f) { settle(h, bh[h.id], lh[h.id], ch[h.id], f, "h|" + h.id + "|" + f); }); });
+    var bp = byId(b.pills), lp = byId(l.pills), cp = byId(c.pills);
+    (pick.pills || []).forEach(function (p) {
+      if (!p) return;
+      settle(p, bp[p.id], lp[p.id], cp[p.id], "q", "p|" + p.id + "|cbd");
+      ["ac", "pp"].forEach(function (s) { var at = function (x) { return x && x.at && x.at[s]; }; settle(at(p), at(bp[p.id]), at(lp[p.id]), at(cp[p.id]), "q", "p|" + p.id + "|" + s); });
+    });
+    return changed ? JSON.stringify(pick) : pickStr;
+  }
   function mergePrescTombs(a, b) {
     var t = {};
     [a, b].forEach(function (m) {
@@ -189134,8 +189253,9 @@ Dosage: {dosage}
     Object.keys(t).forEach(function (id) { if (t[id] < cut) delete t[id]; });
     return t;
   }
-  function mergePrescStrings(lStr, cStr, preferLocal) {
-    var l, c;
+  function mergePrescStrings(lStr, cStr, preferLocal, baseStr) {
+    var l, c, b = null;
+    try { b = baseStr ? JSON.parse(baseStr) : null; } catch (e) { b = null; }
     try { l = JSON.parse(lStr); } catch (e) { l = null; }
     try { c = JSON.parse(cStr); } catch (e) { c = null; }
     if (!l || !Array.isArray(l.items)) return (c && Array.isArray(c.items)) ? cStr : lStr;
@@ -189175,8 +189295,14 @@ Dosage: {dosage}
       });
       return res;
     }
-    out.items = unionById(A.items, B.items, tombI);
-    out.scheduled = unionById(A.scheduled || [], B.scheduled || [], tombS);
+    function settled(list, key) {
+      if (!b || !Array.isArray(b[key])) return list;
+      var idx = function (o) { var m = Object.create(null); ((o && o[key]) || []).forEach(function (x) { if (x && x.id) m[x.id] = x; }); return m; };
+      var bm = idx(b), lm = idx(l), cm = idx(c);
+      return list.map(function (x) { var id = x && x.id; return id && bm[id] && lm[id] && cm[id] ? merge3(bm[id], lm[id], cm[id]) : x; });
+    }
+    out.items = settled(unionById(A.items, B.items, tombI), "items");
+    out.scheduled = settled(unionById(A.scheduled || [], B.scheduled || [], tombS), "scheduled");
     return JSON.stringify(out);
   }
 
@@ -189256,7 +189382,22 @@ Dosage: {dosage}
       }
     });
   }
-  function fetchForMerge(ifChanged) { return (ifChanged ? fetchIfChanged() : fetchCloud()).then(function (row) { return recsPrime(row).then(function () { return row; }); }); }
+  function fetchForMerge(ifChanged) { return (ifChanged ? fetchIfChanged() : fetchCloud()).then(function (row) { return recsPrime(row).then(function () { return fullPrime(); }).then(function () { return row; }); }); }
+  var FULL_IDB = "sync-base-full", fullMem = null;
+  function fullAt(b) { return String(b && b.pharmacy_core) + "|" + String(b && b.pharmacy_log) + "|" + String(b && b.prescriptions); }
+  function baseFull() { return fullMem && fullMem.at === fullAt(loadBase()) ? fullMem.s : null; }
+  function fullPrime() {   // after a reload, or another tab's sync. Nothing readable = the older merge rules, never a held sync
+    var db = window.__lcmIDB;
+    if (!db || baseFull()) return Promise.resolve();
+    return recsQueue.then(function () { return recsSoon(db.get(FULL_IDB)); }).then(function (v) { if (v && v.s && v.at === fullAt(loadBase())) fullMem = v; }, function () {});
+  }
+  function saveFull(sections) {
+    var at = fullAt({ pharmacy_core: hashStr(sections.pharmacy_core), pharmacy_log: hashStr(sections.pharmacy_log), prescriptions: hashStr(sections.prescriptions) });
+    if (fullMem && fullMem.at === at) return;
+    var rec = fullMem = { at: at, s: { pharmacy_core: sections.pharmacy_core, pharmacy_log: sections.pharmacy_log, prescriptions: sections.prescriptions } };
+    var db = window.__lcmIDB;
+    if (db && db.available) recsQueue = recsQueue.then(function () { return fullMem === rec ? recsSoon(db.set(FULL_IDB, rec)) : null; }).catch(function () {});
+  }
   function recsKeep(s) { try { _setItem.call(localStorage, REC_KEY, s); } catch (e) { try { localStorage.removeItem(REC_KEY); } catch (e2) {} } }
   function saveRecs(sections) {
     var r = {};
@@ -189281,8 +189422,9 @@ Dosage: {dosage}
     return mergePrescTombs(lo && lo[field] && lo[field][list], co && co[field] && co[field][list]);
   }
   // A = the side the section rule picked (its order is kept); B = the other side. Returns the merged array.
-  function mergeIdArray(A, B, aIsLocal, baseH, del, rev) {
-    var am = {}, bm = {}, res = [];
+  function mergeIdArray(A, B, aIsLocal, baseH, del, rev, baseList) {
+    var am = {}, bm = {}, om = {}, res = [];
+    (baseList || []).forEach(function (x) { if (x && x.id != null) om[String(x.id)] = x; });
     A.forEach(function (x) { am[String(x.id)] = x; });
     B.forEach(function (x) { bm[String(x.id)] = x; });
     function gone(id) { return !!del[id] && !((+rev[id] || 0) > +del[id]); }
@@ -189293,6 +189435,7 @@ Dosage: {dosage}
         if (ha === hb) return a;
         var loc = aIsLocal ? a : b, cl = aIsLocal ? b : a, locCh = (aIsLocal ? ha : hb) !== bh, clCh = (aIsLocal ? hb : ha) !== bh;
         if (bh !== undefined && !locCh && clCh) return cl;
+        if (om[id] && locCh && clCh) return merge3(om[id], loc, cl);
         return loc;
       }
       var x = a || b;
@@ -189303,7 +189446,11 @@ Dosage: {dosage}
     B.forEach(function (b) { var id = String(b.id); if (am[id]) return; var r = decide(id, null, b); if (r) res.push(r); });
     return res;
   }
-  function mergeCoreLists(pickStr, lStr, cStr, pickIsLocal, recs) {
+  // keys with their own rule: patients (mergePatientsByRecency), template and Guide edits (stamped per item), the delete marks
+  var OWN_RULE = { patients: 1, deletedPatients: 1, syncDel: 1, syncRev: 1, tpTemplateOverrides: 1, tpTemplateOverridesAt: 1, fbrEdits: 1, fbrEditsAt: 1, gdNoteEdits: 1, gdNoteEditsAt: 1, gdLearned: 1 };
+  function mergeCoreLists(pickStr, lStr, cStr, pickIsLocal, recs, base) {
+    var bo = null;
+    try { bo = base ? JSON.parse(base.pharmacy_core) : null; } catch (e) { bo = null; }
     var pick, l, c;
     try { pick = JSON.parse(pickStr); l = JSON.parse(lStr); c = JSON.parse(cStr); } catch (e) { return pickStr; }
     if (!pick || !l || !c || typeof pick !== "object" || typeof l !== "object" || typeof c !== "object") return pickStr;
@@ -189314,21 +189461,35 @@ Dosage: {dosage}
       Object.keys(lists).forEach(function (k) { var t = tombsOf(l, c, f, k); if (Object.keys(t).length) m[k] = t; });
       if (JSON.stringify(m) !== JSON.stringify(pick[f] || {})) { if (Object.keys(m).length) pick[f] = m; else delete pick[f]; changed = true; }
     });
-    coreIdKeys(l, c).forEach(function (k) {
+    var listed = coreIdKeys(l, c);
+    listed.forEach(function (k) {
       var A = (pickIsLocal ? l[k] : c[k]) || [], B = (pickIsLocal ? c[k] : l[k]) || [];
       var del = (pick.syncDel && pick.syncDel[k]) || {}, rev = (pick.syncRev && pick.syncRev[k]) || {};
-      var merged = mergeIdArray(A, B, pickIsLocal, recs[k], del, rev);
+      var merged = mergeIdArray(A, B, pickIsLocal, recs[k], del, rev, bo && bo[k]);
       if (JSON.stringify(merged) !== JSON.stringify(pick[k] || [])) { pick[k] = merged; changed = true; }
     });
+    // every other part of the core (settings, prices, plans ...): a part only the cloud changed is no longer dropped
+    if (bo) {
+      var keys = {};
+      [l, c].forEach(function (o) { Object.keys(o).forEach(function (k) { if (!OWN_RULE[k] && listed.indexOf(k) < 0) keys[k] = 1; }); });
+      Object.keys(keys).forEach(function (k) {
+        var one = function (o) { var x = {}; if (has3(o, k)) x[k] = o[k]; return x; };
+        var m = merge3(one(bo), one(pickIsLocal ? l : c), one(pickIsLocal ? c : l));
+        if (has3(m, k)) { if (!same3(m[k], pick[k])) { pick[k] = m[k]; changed = true; } }
+        else if (has3(pick, k)) { delete pick[k]; changed = true; }
+      });
+    }
     return changed ? JSON.stringify(pick) : pickStr;
   }
-  function mergeLogLists(pickStr, lStr, cStr, pickIsLocal, recs, coreL, coreC) {
+  function mergeLogLists(pickStr, lStr, cStr, pickIsLocal, recs, coreL, coreC, base) {
+    var bl = null;
+    try { bl = base ? JSON.parse(base.pharmacy_log) : null; } catch (e) { bl = null; }
     var l, c;
     try { l = JSON.parse(lStr); c = JSON.parse(cStr); } catch (e) { return pickStr; }
     if (!idSet(l) || !idSet(c)) return pickStr;
     var lo, co; try { lo = JSON.parse(coreL); co = JSON.parse(coreC); } catch (e) { lo = co = null; }
     var del = tombsOf(lo, co, "syncDel", "log"), rev = tombsOf(lo, co, "syncRev", "log");
-    var merged = mergeIdArray(pickIsLocal ? l : c, pickIsLocal ? c : l, pickIsLocal, recs.__log, del, rev);
+    var merged = mergeIdArray(pickIsLocal ? l : c, pickIsLocal ? c : l, pickIsLocal, recs.__log, del, rev, bl);
     var s = JSON.stringify(merged);
     return s === (pickIsLocal ? lStr : cStr) ? pickStr : s;
   }
@@ -189394,7 +189555,8 @@ Dosage: {dosage}
         // an older copy winning (see mergePrescStrings above). Per-record
         // conflicts prefer the side that actually changed since base; when
         // both did, keep what's on screen (local), same rule as before.
-        pick = mergePrescStrings(l, c, localChanged || !cloudChanged);
+        var bf = baseFull();
+        pick = mergePrescStrings(l, c, localChanged || !cloudChanged, bf && bf.prescriptions);
         if (localChanged && cloudChanged) conflicts.push(name);
       } else if (!localChanged && !cloudChanged) {
         pick = l;
@@ -189419,13 +189581,16 @@ Dosage: {dosage}
         if (eg) { pick = c; emptyGuarded.push({ name: name, from: eg.from, to: eg.to, unit: eg.unit }); } else pick = l;
         // every list item by item (see "every list merges item by item" above); never for a guarded side or a restore
         if (!eg && !allowShrink) {
-          if (name === "pharmacy_core") pick = mergeCoreLists(pick, l, c, true, loadRecs());
-          else if (name === "pharmacy_log") pick = mergeLogLists(pick, l, c, true, loadRecs(), L.pharmacy_core, C.pharmacy_core);
+          var full = baseFull();
+          if (name === "pharmacy_core") { pick = mergeCoreLists(pick, l, c, true, loadRecs(), full); if (full) pick = mergeStock(pick, L, C, full); }
+          else if (name === "pharmacy_log") pick = mergeLogLists(pick, l, c, true, loadRecs(), L.pharmacy_core, C.pharmacy_core, full);
         }
       }
       if (name === "pharmacy_core") {
         pick = preserveLocationField(pick, l, c);
-        pick = mergePatientsByRecency(pick, l, c);
+        var basePt = null;
+        try { if (!allowShrink && baseFull()) basePt = JSON.parse(baseFull().pharmacy_core).patients || null; } catch (e) {}
+        pick = mergePatientsByRecency(pick, l, c, basePt);
         pick = mergeTemplateOverrides(pick, l, c);
         pick = mergeFbrEdits(pick, l, c);
       }
@@ -189458,6 +189623,7 @@ Dosage: {dosage}
     var b = {}; SECTIONS.forEach(function (name) { b[name] = hashStr(sections[name]); });
     saveBase(b);
     saveRecs(sections);   // a hash per record, for the item-by-item merge
+    saveFull(sections);   // and the whole agreement, for the field-by-field merge
   }
   // batch 18: turns emptyGuarded's {name,from,to,unit} entries into the real
   // numbers that tripped the guard -- "pharmacy core (12 → 3 patients)"
@@ -189659,7 +189825,7 @@ Dosage: {dosage}
       // local as ahead and keeps retrying the same content instead of
       // mistaking a lagging cloud for a real remote change.
       return doUpsert(finalSnap, finalJson, row && row.updated_at).then(function (ok) {
-        if (ok) setBaseFrom(res.sections);
+        if (ok === true) setBaseFrom(res.sections);   // "superseded": the cycle that replaced this one set the base itself
         return !!ok;
       });
     }, function () {
@@ -189693,21 +189859,48 @@ Dosage: {dosage}
         assembled[PH_KEY] = JSON.stringify(merged);
       }
     } catch (e) {}
+    try {
+      if (sessionStorage.getItem("lcm-guide-adopt") === "1") {
+        var held = JSON.parse(localStorage.getItem(PH_KEY)), next = JSON.parse(assembled[PH_KEY]);
+        (window.__lcmGuideKeys || []).forEach(function (k) { if (held && held[k] != null && next[k] == null) next[k] = held[k]; });
+        assembled[PH_KEY] = JSON.stringify(next);
+      }
+    } catch (e) {}
     apply(assembled);
     refreshApp();
   }
   // resolves true only when THIS exact snap/json is confirmed saved -- the
   // caller uses that to know whether it's safe to advance base to match it
   // (see the 2026-08-13 fix note in pullMergePush above).
+  // casOn: false once a conditional write found its own version still there yet matched nothing (then the older check is used)
+  var casOn = true, casLost = 0;
   function doUpsert(snap, json, expectedVersion) {
+    // another device saved while this one was sending: merge with what it saved, then send again
+    function lostRace() {
+      return sb.from("settings").select("updated_at").maybeSingle().then(function (r) {
+        if (r.error) { onPushFail(json); return false; }
+        var now = r.data && r.data.updated_at;
+        if (now && now !== expectedVersion) {
+          if (++casLost > 4) { casLost = 0; onPushFail(json); return false; }
+          return pullMergePushImpl(true).then(function (ok) { return ok ? "superseded" : false; });
+        }
+        casOn = false;
+        return write();
+      }, function () { onPushFail(json); return false; });
+    }
     function write() {
       // last line of defence: the row this JWT unlocks must be the row this
       // data came from. false = "not landed", with no retry scheduled --
       // retrying a write that is wrong by construction would never help.
       if (!ownerOk()) return Promise.resolve(false);
-      return maybeWithHistory(snap).then(function (payload) {
-        return sb.from("settings").upsert(payload, { onConflict: "owner" }).select("updated_at").then(function (r) {
+      return Promise.resolve({ data: snap }).then(function (payload) {
+        var cas = casOn && expectedVersion != null;
+        var sending = cas ? sb.from("settings").update(payload).eq("updated_at", expectedVersion).select("updated_at")
+          : sb.from("settings").upsert(payload, { onConflict: "owner" }).select("updated_at");
+        return sending.then(function (r) {
           if (r.error) { onPushFail(json); return false; }
+          if (cas && !(r.data && r.data.length)) return lostRace();
+          casLost = 0;
           lastPushed = json;
           pushFailStreak = 0;
           lastSavedAt = (r.data && r.data[0] && r.data[0].updated_at) || new Date().toISOString();
@@ -189720,7 +189913,7 @@ Dosage: {dosage}
         }, function () { onPushFail(json); return false; });
       });
     }
-    if (expectedVersion == null) return write();
+    if (casOn || expectedVersion == null) return write();
     // item 7 (her data-safety spec 2026-08-13): optimistic concurrency check.
     // Confirm nobody else's push landed in the gap between the fetch this
     // merge was computed from and right now -- a changed updated_at means
@@ -189810,15 +190003,16 @@ Dosage: {dosage}
       // that need a guaranteed send now push through the normal (uncapped)
       // path first and await it (see window.__lcmFlushBeforeReload) instead
       // of relying on this.
-      fetch(cfg.url + "/rest/v1/settings?on_conflict=owner", {
-        method: "POST", keepalive: true,
+      if (!cloudCopy || !cloudCopy.at) return;   // no known version: the ordinary send covers it
+      fetch(cfg.url + "/rest/v1/settings?updated_at=eq." + encodeURIComponent(cloudCopy.at), {
+        method: "PATCH", keepalive: true,
         headers: {
           "Content-Type": "application/json",
           "apikey": cfg.key,
           "Authorization": "Bearer " + (curAccessToken || cfg.key),
-          "Prefer": "resolution=merge-duplicates,return=minimal"
+          "Prefer": "return=minimal"
         },
-        body: JSON.stringify([{ data: snap }])
+        body: JSON.stringify({ data: snap })
       }).then(function () { lastPushed = json; }, function () {});
     } catch (e) {}
   }
@@ -189838,33 +190032,9 @@ Dosage: {dosage}
   window.addEventListener("pagehide", flushOnHide);
 
   /* ---- requirement 6: dated cloud backups -------------------------------
-     Piggybacks on the SAME upsert that already pushes `data`, never a
-     separate write -- so there's no way a history-only save could touch
-     the live data column. Capped at 7 daily snapshots rather than her
-     original ask of 30: a month of full copies (stock + log + prescriptions)
-     would mean a multi-MB download every time the history screen opens,
-     including on her phone's data plan. A week still covers the actual goal
-     -- catching a bad merge before it's forgotten -- without that cost.
-     Needs one extra column that only SHE can add (no DDL access from here);
-     until she does, this degrades to a no-op with no other effect. */
-  var HIST_CAP = 7;
-  function isMissingColumn(err) { return !!err && (err.code === "42703" || /column .* does not exist/i.test(err.message || "")); }
-  function maybeWithHistory(snap) {
-    var payload = { data: snap };
-    if (HIST_COL_OK === false) return Promise.resolve(payload);
-    var today = new Date().toISOString().slice(0, 10);
-    if (histCheckedDate === today) return Promise.resolve(payload);
-    return sb.from("settings").select("history").maybeSingle().then(function (r) {
-      if (r.error) { if (isMissingColumn(r.error)) HIST_COL_OK = false; return payload; }
-      HIST_COL_OK = true;
-      var hist = Array.isArray(r.data && r.data.history) ? r.data.history : [];
-      if (!hist.length || String(hist[0].at || "").slice(0, 10) !== today) {
-        payload.history = [{ at: new Date().toISOString(), data: snap }].concat(hist).slice(0, HIST_CAP);
-      }
-      histCheckedDate = today;
-      return payload;
-    }, function () { return payload; });
-  }
+     The database keeps them itself (supabase/backup_setup.sql, run once by her):
+     before each day's first change it copies the row into lcm_backups and keeps
+     the newest 7. A save from here carries only the live data. */
 
   /* ---- little live indicator ------------------------------------------ */
   // her ask (2026-08-15, "move the status to a better place"): two rounds of
@@ -190013,6 +190183,8 @@ Dosage: {dosage}
     var was = recsStored(), wasAt = was && was.__at;   // and its record hashes, wherever they are kept
     ks.push(REC_KEY);
     recsMem = null;
+    fullMem = null;
+    if (window.__lcmIDB) recsQueue = recsQueue.then(function () { return recsSoon(window.__lcmIDB.del(FULL_IDB)); }).catch(function () {});
     cloudCopy = null;
     othCopy = null;
     if (wasAt && window.__lcmIDB) recsQueue = recsQueue.then(function () { return recsSoon(window.__lcmIDB.del(REC_IDB + wasAt)); }).catch(function () {});
@@ -190475,35 +190647,80 @@ Dosage: {dosage}
       document.body.appendChild(a); a.click(); a.remove();
     } catch (e) {}
   }
+  // the one-time database setup, shown here until it has been run (the same words as supabase/backup_setup.sql)
+  var BACKUP_SQL = [
+    "create table if not exists public.lcm_backups as",
+    "  select owner, current_date as day, data, now() as saved_at from public.settings with no data;",
+    "create unique index if not exists lcm_backups_owner_day on public.lcm_backups (owner, day);",
+    "alter table public.lcm_backups enable row level security;",
+    "revoke all on public.lcm_backups from anon, authenticated;",
+    "grant select on public.lcm_backups to authenticated;",
+    "drop policy if exists lcm_backups_own_read on public.lcm_backups;",
+    "create policy lcm_backups_own_read on public.lcm_backups",
+    "  for select to authenticated using (owner::text = auth.uid()::text);",
+    "create or replace function public.lcm_backup_keep()",
+    "returns trigger",
+    "language plpgsql",
+    "security definer",
+    "set search_path = public",
+    "as $$",
+    "declare d date := (now() at time zone 'Australia/Sydney')::date;",
+    "begin",
+    "  begin",
+    "    if old.data is not null and not exists (select 1 from public.lcm_backups b where b.owner = old.owner and b.day = d) then",
+    "      insert into public.lcm_backups (owner, day, data, saved_at) values (old.owner, d, old.data, now())",
+    "        on conflict (owner, day) do nothing;",
+    "      delete from public.lcm_backups b where b.owner = old.owner and b.day not in",
+    "        (select k.day from public.lcm_backups k where k.owner = old.owner order by k.day desc limit 7);",
+    "    end if;",
+    "  exception when others then",
+    "    raise warning 'lcm backup not kept: %', sqlerrm;",
+    "  end;",
+    "  return new;",
+    "end $$;",
+    "revoke all on function public.lcm_backup_keep() from public, anon, authenticated;",
+    "drop trigger if exists lcm_backup_keep on public.settings;",
+    "create trigger lcm_backup_keep before update on public.settings",
+    "  for each row execute function public.lcm_backup_keep();"
+  ].join("\n");
+  function isMissingTable(err) { return !!err && (err.code === "42P01" || err.code === "PGRST205" || /relation .*lcm_backups.* does not exist|could not find the table/i.test(err.message || "")); }
+  function backupDayLabel(day) {
+    var p = String(day || "").split("-"), d = new Date(+p[0], +p[1] - 1, +p[2]);
+    return isNaN(d.getTime()) ? String(day || "") : d.toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" });
+  }
   function screenCloudHistory() {
+    var head = '<p style="color:#BCCFD6;font-size:var(--fs-14);margin:2px 0 4px">Restore a previous cloud version.</p>';
     var closeBtn = '<button id="lcmHistClose" style="' + F.btn + '">Close</button>';
     function wireClose() { var b = document.getElementById("lcmHistClose"); if (b) b.onclick = function () { hideOverlay(); }; }
-    overlay('<p style="color:#BCCFD6;font-size:var(--fs-14);margin:2px 0 4px">Restore a previous cloud version.</p><p style="' + F.note + '">Loading…</p>');
-    sb.from("settings").select("history").maybeSingle().then(function (r) {
+    function fail(msg) { overlay(head + '<div style="' + F.err + '">' + esc(msg) + '</div>' + closeBtn); wireClose(); }
+    overlay(head + '<p style="' + F.note + '">Loading…</p>');
+    sb.from("lcm_backups").select("day,saved_at").order("day", { ascending: false }).then(function (r) {
       if (r.error) {
-        if (isMissingColumn(r.error)) {
-          overlay('<p style="color:#BCCFD6;font-size:var(--fs-14);margin:2px 0 4px">Restore a previous cloud version.</p>' +
-            '<p style="' + F.note + '">Not set up on this database yet. Run this once in Supabase → SQL Editor (safe, additive, doesn\'t touch existing data):</p>' +
-            '<pre style="background:#122C35;border:1px solid #2C5563;border-radius:10px;padding:10px;font-size:var(--fs-11);color:#9FCAD8;overflow:auto;white-space:pre-wrap;user-select:all">alter table settings add column if not exists history jsonb not null default \'[]\'::jsonb;</pre>' + closeBtn);
-        } else {
-          overlay('<p style="color:#BCCFD6;font-size:var(--fs-14);margin:2px 0 4px">Restore a previous cloud version.</p><div style="' + F.err + '">' + esc(r.error.message || "Couldn't load history.") + '</div>' + closeBtn);
-        }
+        if (!isMissingTable(r.error)) return fail(r.error.message || "Couldn't load the backups.");
+        overlay(head + '<p style="' + F.note + '">Cloud backups are not switched on yet. Run this once in Supabase → SQL Editor:</p>' +
+          '<pre style="background:#122C35;border:1px solid #2C5563;border-radius:10px;padding:10px;font-size:var(--fs-11);color:#9FCAD8;overflow:auto;max-height:34vh;white-space:pre-wrap;user-select:all">' + esc(BACKUP_SQL) + '</pre>' +
+          '<button id="lcmHistCopy" style="' + F.btn + '">Copy</button><div style="height:10px"></div>' + closeBtn);
+        var c = document.getElementById("lcmHistCopy");
+        if (c) c.onclick = function () { navigator.clipboard.writeText(BACKUP_SQL).then(function () { c.textContent = "Copied"; }, function () {}); };
         return wireClose();
       }
-      var hist = Array.isArray(r.data && r.data.history) ? r.data.history : [];
-      var rows = hist.map(function (h, i) {
-        return '<button data-hi="' + i + '" style="' + SW.item + ';border:1px solid #2C5563;margin-bottom:6px;border-radius:10px;display:block;width:100%">' + esc(phFmtTs(h.at)) + '</button>';
+      var list = Array.isArray(r.data) ? r.data : [];
+      var rows = list.map(function (b, i) {
+        return '<button data-hi="' + i + '" style="' + SW.item + ';border:1px solid #2C5563;margin-bottom:6px;border-radius:10px;display:block;width:100%">Start of ' + esc(backupDayLabel(b.day)) + '</button>';
       }).join("");
-      overlay('<p style="color:#BCCFD6;font-size:var(--fs-14);margin:2px 0 4px">Restore a previous cloud version.</p>' +
-        (hist.length ? rows : '<p style="' + F.note + '">No snapshots yet</p>') + closeBtn);
+      overlay(head + (list.length ? rows : '<p style="' + F.note + '">No backups yet. The first is kept before the next day\'s first change.</p>') + closeBtn);
       Array.prototype.forEach.call(document.querySelectorAll("[data-hi]"), function (btn) {
-        btn.onclick = function () { var h = hist[+btn.getAttribute("data-hi")]; if (h) confirmRestoreHistory(h); };
+        btn.onclick = function () {
+          var b = list[+btn.getAttribute("data-hi")]; if (!b) return;
+          overlay(head + '<p style="' + F.note + '">Loading ' + esc(backupDayLabel(b.day)) + '…</p>');
+          sb.from("lcm_backups").select("data").eq("day", b.day).maybeSingle().then(function (x) {
+            if (x.error || !x.data || !x.data.data) return fail((x.error && x.error.message) || "That backup could not be read.");
+            confirmRestoreHistory({ at: b.saved_at, data: x.data.data });
+          }, function () { fail("Couldn't reach the database."); });
+        };
       });
       wireClose();
-    }, function () {
-      overlay('<p style="color:#BCCFD6;font-size:var(--fs-14);margin:2px 0 4px">Restore a previous cloud version.</p><div style="' + F.err + '">Couldn\'t reach the database.</div>' + closeBtn);
-      wireClose();
-    });
+    }, function () { fail("Couldn't reach the database."); });
   }
   // item 11 (her data-safety spec 2026-08-13): make cloud-history restore
   // section-aware too, the same as the on-device backup restore in the main

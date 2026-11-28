@@ -51,6 +51,17 @@ and the send before a switch or sign-out download the whole row. A new cloud wri
 trigger does).
 The other clinic's calendar follows the same rule (`othPharmacy`, `othCopy`; LIVE; BUILD-NOTES
 "Other clinic's calendar").
+**Two devices at once (2026-11-28, saved, not live; BUILD-NOTES "Audit: the seven items"):** changes made on two devices
+before they sync are merged three ways against the last copy both agreed on (`merge3`; the whole copy in IndexedDB
+`sync-base-full`): different fields of one record both stay, list items join by id, a removal holds unless the other device
+edited that item, the same field changed on both = the newer stamp (else this device). Stock moved on both devices adds up
+from the log (`stockEvents`, `mergeStock`). A save lands only on the version it was merged from (`update` where
+`updated_at`); beaten to it, it merges again (4 tries), and the save on closing is skipped when the version is unknown.
+Without the full copy (first run, another login) the earlier rules apply.
+**Cloud backups (2026-11-28, saved, not live; they start only when `supabase/backup_setup.sql` has been run once):** the
+database keeps the row as it was before each day's first change, newest 7 (`lcm_backups`, trigger `lcm_backup_keep`).
+Manage locations > Cloud history lists the days and restores one; before the setup it shows the SQL with Copy. The app
+writes no `history` column.
 
 ## Appointments & calendar
 **Her own blocks: pictures only (2026-11-21, her picks A):** `phC22PicOf(x)` reads `PH_C22_PICS` (title words, first match wins:
@@ -842,6 +853,8 @@ round buttons. The phone keeps its chips and Scheduled line.
 - **Shelves:** `h.qty` = CBD, `h.qtyAC` = Acupreg, `h.qtyPP` = Lotus (`PH_SHELVES`; undefined = not kept there; `qtyACUnw` /
   `qtyPPUnw` = kept, not weighed yet). The clinic switch on every Herbs & stock page (`phClinicRowHtml`, `phClinicNow`) picks the shelf
   that page reads and writes; All clinics shows the three side by side.
+- A herb a clinic does not keep counts 0 in its warnings (`phQtyOn`, `phNotKept`): "not here" in the booking's prep list, "not
+  stocked here" in the scheduled weigh list (2026-11-28, saved, not live).
 - **Dispense:** `presDispShelf()` = the clinic picked on the prescription, else the patient's booking today, else the weekday. A herb
   that clinic does not keep stops it ("Not stocked at …"). The not-enough-stock box shows that shelf's grams and offers substitutes kept
   there (`phDispQ`). The log entry carries the clinic (`entry.shelf` / `deducted[].shelf`; Black Pearl pills `products[].shelf`).
@@ -2609,4 +2622,4 @@ its note tagged Form; a later link brings back the patient's own conditions (her
 - **Meals open pane, picker, Shopping, How did it sit** (BUILD-NOTES "Meals: the open meal, its picker ..."): the tap, style and voice audits are empty on the whole Meals page at 1240 and 360 with each open; phone Numbers' head has a Day cell and no "off head" lines.
 - **Meals, one frame** (BUILD-NOTES "Meals, one frame"; `phMplTitleHtml`, `phMplBandHtml`, `phMplMoreMenuHtml`, `phMplGoalsHtml`; saved on session-a, NOT live): the title row (Meals · n of m today · Table / Numbers / Body · More ▾ · Shop · the next meal), a Today card with the fast and four goal bars (the micros behind `Micros ▾`), the Menu strip, a week card whose band carries Plan, Today and ‹ ›; Grid, Photos, Try, Day / 3 days / Week, Copy, Recipes, Targets and Check are in More ▾. Same data and keys. Audits empty at 1240 and 360.
 
-**An Acupreg booking makes the file; Scheduled dispenses shows one clinic** (her 2026-11-27 "i never had to make profil before, its made when added to calendar", "those are elotus patients, not acupreg"; BUILD-NOTES "Acupreg bookings make the file again"): a booking at Acupreg (`phApptPlaceOf` = "Acupreg") makes a draft prescription when the patient has none (`phApctDraft`, id `apd-<name>` so two devices make one, never one she deleted), as the old Acupreg login did; `phAcDraftsSync` makes the missing ones once the copy is fresh. Patients > Scheduled dispenses lists only the clinic she is on (`phClinicNow`; the prescription's pick `t.shelf`, else its day); All clinics lists every one.
+**An Acupreg booking makes the file; Scheduled dispenses shows one clinic** (her 2026-11-27 "i never had to make profil before, its made when added to calendar", "those are elotus patients, not acupreg"; BUILD-NOTES "Acupreg bookings make the file again"): a booking at Acupreg (`phApptPlaceOf` = "Acupreg") makes a draft prescription when the patient has none (`phApctDraft`, id `apd-<name>` so two devices make one, never one she deleted), as the old Acupreg login did; `phAcDraftsSync` makes the missing ones once the copy is fresh. The booking never sets sex or cycle tracking (2026-11-28, saved, not live): the file asks sex and cycle follows it (`phCycleOn`). Patients > Scheduled dispenses lists only the clinic she is on (`phClinicNow`; the prescription's pick `t.shelf`, else its day); All clinics lists every one.

@@ -19257,3 +19257,29 @@ Her words: "i like the concept of a book design. mock me - lcm is a digital book
 - **Bands** (`phBkKeep`, `phBkBands`, `phBkBandHtml`, `phBkOverHtml`): kept = a trip, a herb dose, a clinic routine, a meal (`phMealSlot`), travel pictures (plane / car / bus / train), medical words (`PH_C22_MED`), or the words lunch / break / travel / commute. Kept ones inside the patients' hours are full width behind the visits (z 1, striped, their word top right); stacks are opened into single bands; the fold rows and the routine chips drop the rest; `phApptCalWdSpan` reads only kept ones, so Sleep no longer stretches the grid. Rest day: a Sunday column with no patients (`phBkRestHtml`).
 - **Audits** (test copy, made-up bookings "Zz …" and made-up Lunch / Travel / Sleep / Haircare): tap + style + titlebar + voice at 1220 on Appointments (Today and Week), Patients, Dashboard, Inventory, the side bar and the tabs against the base: nothing new. 360: one line (the books' gold words), fixed to white / ink; the hidden-browser re-run at 360 did not report, so the fixed line was not re-measured there. No sideways scroll.
 - **Not tested:** her real bookings and her own things (which of her routines count as kept), the narrow side bar by eye, her phone, two visits at the same time inside a band.
+
+## Audit: the seven items (2026-11-28; saved, NOT live)
+
+Her list after the whole-app audit, each marked fix. Items 1 to 6 are in the app; item 7 (opening speed) waits for her yes
+(see the end).
+
+1. **Two devices before a sync.** Was: one side could be lost, even a dispense. Now: three-way merge against the last copy
+   both agreed on, stock added up from the log, a save that only lands on the version it was merged from. Code in the sync
+   layer: `merge3`, `stockEvents`, `mergeStock`, `baseFull` / `saveFull`, `lostRace`; `presSavePrescription` marks a logged
+   pending dispense with `pendAt`.
+2. **Two earlier sync fixes + the third gap.** The base is only moved on after a push that landed (a superseded push left it
+   ahead); a restored Guide stays when a merge lands; the closing save is conditional on the version.
+3. **Cloud backups.** The app wrote to a column the database never had. Now `supabase/backup_setup.sql` (run once, by her).
+4. **Acupreg bookings.** No longer set sex F or switch cycle tracking on. Files made earlier keep what they have: any man
+   among them needs M chosen by hand.
+5. **A herb not kept at a clinic** now warns there as short, before the dispense stops it.
+6. **Guide on the PC.** Written at once on close or hide; database writes commit at once. The old build lost an edit made just
+   before closing in the same test.
+7. **Opening speed (not in this save).** Measured on the PC: about 1.1 s to open, 0.4 s for the 9 September build; reading the
+   11 MB of code is the largest part (0.6 s). Moving the code into its own file at deploy lets the browser keep it compiled:
+   about 0.45 s from the third open.
+
+**Tested** (pretend cloud and made-up people): 9 two-device cases (the build before fails 7), no write when nothing changed,
+the owner guard, a database where the conditional save never matches, a 1 MB merge; items 3 to 6 driven in the page; the 39
+earlier checks; tap, style, title-bar and voice audits on 80 pages at 1220 and 360, the same lines as before.
+**Not tested:** a real Supabase database (the SQL has not been run anywhere), her two real devices, the phone.
