@@ -18949,3 +18949,11 @@ Her words: "This is my lotus teapot" (her photo, kept private under `mocks/room-
 - **Tested** (test copy, a made-up booking on a Saturday): "pp" now, "pp" 20 minutes before, home 3 hours later, home with no booking; each of the four teas lit and coloured; the pot shows alone under `.pl-pp`.
 - **Audits:** 1220, tap / style / voice: nothing from this build. The title-bar audit run on the whole page flags the tin items and the teapot button against the sidebar rows, the same on the home pot (not from this build). 360: the teapot is hidden there; the six tap and two style lines are other parts of the page.
 - **Not tested:** her own devices and real Lotus bookings.
+
+## Stocktake clipboard: Formulas works at every clinic (2026-11-28, commit only, NOT live)
+Her words: "when i click formulas it doesnt do anything. also make the text more terse, just formulas" (her screenshot of the clipboard).
+- **Why:** at Acupreg and Lotus the tap set up a count that the room never drew, and the chip's jar count was CBD's.
+- **Now:** Formulas counts the picked clinic's own formula jars ("Lotus formula count"), Done writes that shelf only and files the clinic's own history ("Formulas"), with Undo; the cursor lands in the first box at every clinic (the room's redraw used to lose it). The red due dot and hover dates are the clinic's own.
+- **Terse:** the chips say Formulas and Herbs only.
+- **One door:** `phClinCountWrite` serves the Stocktake page and the Dashboard count.
+- **Tested** in the test copy (made-up stock): all four clinics open their count; a Lotus count changed Lotus only, CBD's numbers and history untouched; Undo put the grams back; the Stocktake page still saves. Tap, style and voice audits empty on the clipboard and the count list at 1220.

@@ -45089,7 +45089,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const rows = phShelfHerbs(sc).filter(h => !h.stopped).sort(phByName).map(h => `<tr><td class="ph-name">${phHerbCode(h) ? `<span class="ph-code">${esc(phHerbCode(h))}</span> ` : ""}<span class="ph-dash-name">${esc(phPinyinName(h))}</span></td><td class="ph-num" data-label="Was">${phShelfUnw(h, sc) ? "—" : phFmtG(+h[f]) + " g"}</td><td class="ph-num" data-label="Counted (g)"><input type="number" min="0" step="1" class="field-bare" data-clin-count="${esc(h.id)}" placeholder="${phShelfUnw(h, sc) ? "—" : phFmtG(+h[f])}" aria-label="Counted at ${nm}, grams"></td></tr>`).join("");
     const nRows = phShelfHerbs(sc).filter(h => !h.stopped).length, hist = (PHARMACY.clinStocktakes || []).filter(r => r.shelf === sc);
     // the same two cards as CBD's Stocktake page (her 2026-11-25 "why does the Lotus stocktake page look different"): What am I counting today? on the left (the herbs to check, then the counts), the clinic's own history on the right
-    const histHtml = hist.length ? `<div class="ph-stocktake-hist-list">${hist.map(r => { const d = parseKey(r.date); return `<div class="ph-stocktake-hist-row"><div class="ph-stocktake-hist-main"><div class="nm">Herbs</div><div class="sub">${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()} · ${r.checked} checked</div></div><div class="ph-stocktake-hist-adj">${r.adjusted} adjusted</div></div>`; }).join("")}</div>` : `<div class="fam-empty">No stocktakes</div>`;
+    const histHtml = hist.length ? `<div class="ph-stocktake-hist-list">${hist.map(r => { const d = parseKey(r.date); return `<div class="ph-stocktake-hist-row"><div class="ph-stocktake-hist-main"><div class="nm">${r.kind === "formulas" ? "Formulas" : "Herbs"}</div><div class="sub">${d.getDate()} ${MON_SHORT[d.getMonth()]} ${d.getFullYear()} · ${r.checked} checked</div></div><div class="ph-stocktake-hist-adj">${r.adjusted} adjusted</div></div>`; }).join("")}</div>` : `<div class="fam-empty">No stocktakes</div>`;
     return `<div class="ph-stocktake-page" style="--cl:${phShelfColour(sc)}"><section class="ph-widget ph-stocktake-page-main"><div class="section-head"><h2>Count today</h2><span class="rule"></span></div><div class="ph-stocktake-scope"><span>Herbs<span class="s">to check</span></span><span class="n">${nRows}</span></div>` + phClinicStocktakeTbl(sc, nm, rows) + `</section><section class="ph-widget ph-stocktake-page-history"><div class="section-head"><h2>Stocktake history</h2><span class="rule"></span></div>${histHtml}</section></div>`;
   }
   function phClinicStocktakeTbl(sc, nm, rows) {
@@ -73785,24 +73785,57 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
     return d;
   }
   // the jars the weekly count asks for: formula jars with a number (an empty one too), not stopped, in use this year
-  function phCountJars() {
-    return PHARMACY.herbs.filter(h => phIsFormula(h) && (!h.stopped || h.phaseOut) && h.qty != null && (phDashCover(h) || {}).monthly > 0)
+  // at Lotus and Acupreg (`sc`) the count is that clinic's own formula jars, never CBD's
+  function phCountJars(sc) {
+    return (sc ? phShelfHerbs(sc).filter(h => phIsFormula(h) && !h.stopped) : PHARMACY.herbs.filter(h => phIsFormula(h) && (!h.stopped || h.phaseOut) && h.qty != null && (phDashCover(h) || {}).monthly > 0))
       .sort((a, b) => phPinyinName(a).localeCompare(phPinyinName(b)));
   }
   function phDashCountOpen() {
-    const trust = phJarTrustMap();
-    const jars = phCountJars();
-    phDashCount = { ids: jars.map(h => h.id), vals: {}, stale: new Set(jars.filter(h => phJarStale(h, trust)).map(h => h.id)) };
+    const sc = phClinicSolo(), trust = phJarTrustMap();
+    const jars = phCountJars(sc);
+    phDashCount = { sc, ids: jars.map(h => h.id), vals: {}, stale: new Set(sc ? [] : jars.filter(h => phJarStale(h, trust)).map(h => h.id)) };
+  }
+  // the app's number for a jar in the open count (null = kept there, not weighed yet)
+  const phDashCountWas = (h, sc) => !sc ? (h.qty || 0) : phShelfUnw(h, sc) ? null : +h[PH_SHELVES[sc].f] || 0;
+  // a clinic's last count: any of them counts its formulas; a formulas-only one is no herb count
+  const phClinCntLast = (sc, formulas) => (PHARMACY.clinStocktakes || []).filter(r => r.shelf === sc && (formulas || r.kind !== "formulas")).reduce((d, r) => r.date > d ? r.date : d, "");
+  // one door for a clinic count (the Stocktake page and the Dashboard's formula count): that shelf only, its own history
+  function phClinCountWrite(sc, typed, kind) {
+    const f = PH_SHELVES[sc].f, snaps = [];
+    let chk = 0;
+    typed.forEach(([id, raw]) => {
+      if (raw == null || String(raw).trim() === "") return;
+      chk++;
+      const h = PHARMACY.herbs.find(x => x.id === id), v = Math.max(0, Math.floor(parseFloat(raw)));
+      if (h && Number.isFinite(v) && (v !== +h[f] || phShelfUnw(h, sc))) { snaps.push([h, h[f], h[f + "Unw"]]); h[f] = v; phShelfWeighed(h, sc); phAfterQtyChange(h); }
+    });
+    let rec = null;
+    if (chk) { rec = { id: uid(), shelf: sc, date: keyOf(TODAY), checked: chk, adjusted: snaps.length }; if (kind) rec.kind = kind; (PHARMACY.clinStocktakes = PHARMACY.clinStocktakes || []).unshift(rec); }   // the clinic's own history, never CBD's (CBD's last-count dates and print read PHARMACY.stocktakes)
+    return { chk, n: snaps.length, snaps, rec };
+  }
+  function phDashCountDoneClin(C) {
+    const sc = C.sc, f = PH_SHELVES[sc].f, r = phClinCountWrite(sc, C.ids.map(id => [id, C.vals[id]]), "formulas");
+    if (!r.chk) return;
+    phDashCount = null;
+    const undo = () => {
+      r.snaps.forEach(([h, q, unw]) => { h[f] = q; if (unw) h[f + "Unw"] = unw; phAfterQtyChange(h); });
+      PHARMACY.clinStocktakes = (PHARMACY.clinStocktakes || []).filter(x => x.id !== r.rec.id);
+      savePharmacy(); renderPhDashboardPage();
+    };
+    if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
+    renderPhDashboardPage();
+    presSavedToast(`✓ ${r.chk} counted${r.n ? ` · ${r.n} changed` : ""}`, { undo });
   }
   function phDashCountRowHtml(h) {
     const v = phDashCount.vals[h.id];
     const n = v == null || v === "" ? null : Math.max(0, Math.floor(parseFloat(v)));
-    const df = n == null || !Number.isFinite(n) ? null : n - (h.qty || 0);
+    const was = phDashCountWas(h, phDashCount.sc);
+    const df = n == null || !Number.isFinite(n) || was == null ? null : n - was;
     const stale = phDashCount.stale.has(h.id);
     return `<div class="ph-dash-crow">
       <span class="cd">${esc(phHerbCode(h) || "")}</span>
       <span class="nm" title="${esc(phPinyinFullLabel(h))}">${esc(phPinyinName(h))}${stale ? `<i title="Not counted in 3 weeks"></i>` : ""}</span>
-      <span class="now${df ? (df > 0 ? " up" : " dn") : ""}" data-ph-cnt-now="${h.id}" title="The app's number">${df ? `${df > 0 ? "+" : "−"}${phFmtG(Math.abs(df))} g` : `${phFmtG(h.qty || 0)} g`}</span>
+      <span class="now${df ? (df > 0 ? " up" : " dn") : ""}" data-ph-cnt-now="${h.id}" title="The app's number">${df ? `${df > 0 ? "+" : "−"}${phFmtG(Math.abs(df))} g` : was == null ? "—" : `${phFmtG(was)} g`}</span>
       <input type="text" inputmode="numeric" class="ph-dash-cnt-g field-bare" data-ph-cnt-g="${h.id}" value="${v == null ? "" : esc(String(v))}" placeholder="g" aria-label="Scale reading for ${esc(phPinyinName(h))}">
     </div>`;
   }
@@ -73811,7 +73844,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
       const jars = phDashCount.ids.map(id => PHARMACY.herbs.find(x => x.id === id)).filter(Boolean);
       const typed = jars.filter(h => phDashCount.vals[h.id] != null && String(phDashCount.vals[h.id]).trim() !== "").length;
       return `<section class="ph-widget ph-dash-card ph-dash-sec ph-dash-cnt"><div class="ph-dash-cgrid">
-        <div class="ph-dash-cgrid-hd"><h3>Formula count</h3><span class="n" data-ph-cnt-n="1">${typed} of ${jars.length}</span>
+        <div class="ph-dash-cgrid-hd"><h3>${phDashCount.sc ? esc(PH_SHELVES[phDashCount.sc].name) + " formula count" : "Formula count"}</h3><span class="n" data-ph-cnt-n="1">${typed} of ${jars.length}</span>
           <button type="button" class="ph-dash-btn" data-ph-cnt-cancel="1">Cancel</button>
           <button type="button" class="ph-dash-btn" data-ph-cnt-done="1"${typed ? "" : " disabled"}><svg class="icn" aria-hidden="true"><use href="#i-check"/></svg>Done</button></div>
         <div class="ph-dash-cgrid-list">${jars.map(phDashCountRowHtml).join("")}</div>
@@ -73829,6 +73862,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
   // Done: each typed jar becomes a count (a log entry where the number moved), one stocktake record, one Undo
   function phDashCountDone() {
     const C = phDashCount; if (!C) return;
+    if (C.sc) { phDashCountDoneClin(C); return; }
     const rec = { id: uid(), kind: "formula", date: keyOf(TODAY), finishedAt: new Date().toISOString(), grid: true, counted: [], adjustments: [], ignored: 0, queueTotal: C.ids.length };
     const snaps = [], logIds = [];
     C.ids.forEach(id => {
@@ -74213,9 +74247,9 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
     };
     const shelf = `<div class="rm-wsh"><div class="rm-line${phRmShift ? " shift" : ""}">${line.map(grp).join("")}<span class="rm-plank rest"></span></div></div>`;
     phRmShift = false;
-    const jarsN = phCountJars().length, fLast = phLastCountDate(true), hLast = phLastCountDate(false);
+    const jarsN = phCountJars(sc).length, fLast = sc ? phClinCntLast(sc, true) : phLastCountDate(true), hLast = sc ? phClinCntLast(sc, false) : phLastCountDate(false);
     const fDue = jarsN && phDaysSince(fLast) >= PH_COUNT_DUE_DAYS, hDue = phDaysSince(hLast) >= PH_HERB_COUNT_DUE_DAYS;
-    const clip = `<div class="rm-clip"><div class="rm-pap"><span class="rm-cap10">Stocktake</span>${jarsN ? `<button type="button" class="ph-dash-pc${fDue ? " due" : ""}" data-ph-cnt-open="1">Formulas<small>${jarsN} jars${fLast ? " · " + esc(phShortDate(fLast)) : ""}</small></button>` : ""}<button type="button" class="ph-dash-pc${hDue ? " due" : ""}" data-ph-tab="stocktake">Herbs<small>${hLast ? esc(phShortDate(hLast)) : "Never"}</small></button></div></div>`;
+    const clip = `<div class="rm-clip"><div class="rm-pap"><span class="rm-cap10">Stocktake</span>${jarsN ? `<button type="button" class="ph-dash-pc${fDue ? " due" : ""}" data-ph-cnt-open="1" title="${jarsN} jars${fLast ? " · counted " + esc(phShortDate(fLast)) : ""}">Formulas</button>` : ""}<button type="button" class="ph-dash-pc${hDue ? " due" : ""}" data-ph-tab="stocktake" title="${hLast ? "Counted " + esc(phShortDate(hLast)) : "Never counted"}">Herbs</button></div></div>`;
     let card = `<div class="rm-clear">Bench clear</div>`;
     if (cur) {
       const r = phRefillRecipe(cur), ing = recipe(cur), batch = r ? phRefillBatchFor(cur, r) : 0, row = phDashTRows().find(x => x.h.id === cur.id), wd = row ? phDashTWord(row) : "";
@@ -74435,8 +74469,9 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
     const wrap = document.getElementById("phDashboardWrap"), sc = phClinicSolo();
     if (!wrap) return;
     if (!phRmOn()) { if (sc) phClinicPageBody(wrap, phClinicDashHtml(sc)); return; }   // the phone keeps the plain table and list
-    phClinicPageBody(wrap, phDashRelocationLineHtml() + (!sc && phDashCount ? phDashCountHtml() : "") + phDashRoomHtml(sc) + (sc ? "" : phDashStockTaskBottomHtml()));
+    phClinicPageBody(wrap, phDashRelocationLineHtml() + (phDashCount && (phDashCount.sc || "") === sc ? phDashCountHtml() : "") + phDashRoomHtml(sc) + (sc ? "" : phDashStockTaskBottomHtml()));
     phRmAcFit();
+    phDashCountFocusFirst(wrap);
   }
   function renderPhDashboardPageBase() {
     const wrap = document.getElementById("phDashboardWrap");
@@ -74519,12 +74554,15 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
       ${phNxHtml()}
       <div class="ph-dash-t" id="phDashT">${phDashTHtml()}</div>
       ${phDashStockTaskBottomHtml()}`}`;
-    // the count grid opened from a Count button: its first empty field takes the cursor
-    if (phDashCount && phDashCountFocus) {
-      phDashCountFocus = false;
-      const f = wrap.querySelector("[data-ph-cnt-g]");
-      if (f) { f.scrollIntoView({ block: "center", behavior: phTpReduceMotion() ? "auto" : "smooth" }); f.focus({ preventScroll: true }); }
-    }
+    if (!phRmOn()) phDashCountFocusFirst(wrap);
+  }
+  // the count grid opened from a Count button: its first empty field takes the cursor
+  function phDashCountFocusFirst(wrap) {
+    if (!phDashCount || !phDashCountFocus) return;
+    const f = wrap.querySelector("[data-ph-cnt-g]");
+    if (!f) return;
+    phDashCountFocus = false;
+    f.scrollIntoView({ block: "center", behavior: phTpReduceMotion() ? "auto" : "smooth" }); f.focus({ preventScroll: true });
   }
   let phDashCountFocus = false;
   // the Dashboard's stock-truth taps (2026-10-29): Made ✓, the count grid's Count / Cancel / Done, and its fields
@@ -74554,8 +74592,9 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
       // the row's "now" cell turns into the change as she types; the head counts what is typed (in place, no repaint)
       const now = T.closest(".ph-dash-crow") && T.closest(".ph-dash-crow").querySelector("[data-ph-cnt-now]");
       const n = T.value.trim() === "" ? null : Math.max(0, Math.floor(parseFloat(T.value)));
-      const df = h && n != null && Number.isFinite(n) ? n - (h.qty || 0) : 0;
-      if (now && h) { now.textContent = df ? `${df > 0 ? "+" : "−"}${phFmtG(Math.abs(df))} g` : `${phFmtG(h.qty || 0)} g`; now.classList.toggle("up", df > 0); now.classList.toggle("dn", df < 0); }
+      const was = h ? phDashCountWas(h, phDashCount.sc) : null;
+      const df = n != null && Number.isFinite(n) && was != null ? n - was : 0;
+      if (now && h) { now.textContent = df ? `${df > 0 ? "+" : "−"}${phFmtG(Math.abs(df))} g` : was == null ? "—" : `${phFmtG(was)} g`; now.classList.toggle("up", df > 0); now.classList.toggle("dn", df < 0); }
       const typed = phDashCount.ids.filter(k => phDashCount.vals[k] != null && String(phDashCount.vals[k]).trim() !== "").length;
       const wrap = document.getElementById("phDashboardWrap");
       const hn = wrap && wrap.querySelector("[data-ph-cnt-n]"); if (hn) hn.textContent = `${typed} of ${phDashCount.ids.length}`;
@@ -87793,15 +87832,8 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
   document.addEventListener("click", e => {
     const sv = e.target instanceof Element && e.target.closest("[data-clin-count-save]");
     if (sv) {
-      const sc = sv.dataset.clinCountSave, f = PH_SHELVES[sc] && PH_SHELVES[sc].f; if (!f) return;
-      let n = 0, chk = 0;
-      sv.closest(".ph-clin-sheet").querySelectorAll("[data-clin-count]").forEach(i => {
-        if (i.value === "") return;
-        chk++;
-        const h = PHARMACY.herbs.find(x => x.id === i.dataset.clinCount), v = Math.max(0, Math.floor(parseFloat(i.value)));
-        if (h && Number.isFinite(v) && (v !== +h[f] || phShelfUnw(h, sc))) { h[f] = v; phShelfWeighed(h, sc); phAfterQtyChange(h); n++; }
-      });
-      if (chk) (PHARMACY.clinStocktakes = PHARMACY.clinStocktakes || []).unshift({ id: uid(), shelf: sc, date: keyOf(TODAY), checked: chk, adjusted: n });   // the clinic's own history, never CBD's (CBD's last-count dates and print read PHARMACY.stocktakes)
+      const sc = sv.dataset.clinCountSave; if (!PH_SHELVES[sc] || !PH_SHELVES[sc].f) return;
+      const { n, chk } = phClinCountWrite(sc, [...sv.closest(".ph-clin-sheet").querySelectorAll("[data-clin-count]")].map(i => [i.dataset.clinCount, i.value]));
       if ((n || chk) && savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
       presSavedToast(n ? `${n} count${n === 1 ? "" : "s"} saved at ${PH_SHELVES[sc].name}` : "Nothing changed");
       renderPhStocktakePage();
