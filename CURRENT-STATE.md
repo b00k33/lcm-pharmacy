@@ -652,7 +652,7 @@ symbols. No "+ transfer from these eggs": Use ▸ and "+ Transfer" stay.
   in a stock row's ⋮ menu, the shelf lid menu, the one-clinic stock row (Label chip) and the herb edit panel opens a Herb label card:
   the name straight across one sticker, a **30 mm | 15 mm** bar, a **Whole | Halves** bar (Halves: the name on each half with a dashed
   line to cut along, for a lid), Print label. **Lining up (2026-11-28):** a **− Gap n mm +** bar (the space
-  between two stickers, quarter millimetres, kept per roll on this device as a real distance, `lcm-pk-space-15` / `-30`; until set: 7.4 mm on the 15 mm roll (measured), 4.3 mm on the 30 (not measured); **the printer's feed command moves about 0.12 mm a step**, 8.25 a mm, fitted to her three prints and not yet checked on a long run (`PH_PK_STEPS`), turned into steps only in `phPkBytes`, 2026-11-28, commit only, NOT live) and a
+  between two stickers, quarter millimetres, kept per roll on this device as a real distance, `lcm-pk-space-15` / `-30`; until set: 7.4 mm on the 15 mm roll (measured), 4.5 mm on the 30 (not measured); **the printer's feed command moves 1/8 mm a step** (`PH_PK_STEPS` 8, measured on her prints at 90 and 63 steps; a long run not yet checked) (`PH_PK_STEPS`), turned into steps only in `phPkBytes`, 2026-11-28, commit only, NOT live) and a
   **▲ Move ▼** bar (higher / lower for the next print only; higher feeds on to that place on the next sticker, `phPkLead`).
   Stickers print at 95 % darkness and the small name has a thin outline (`PH_PK_THICK`). **Print labels** beside Table | Shelf ticks
   several herbs (the clinic's shelf at Lotus and Acupreg) and the

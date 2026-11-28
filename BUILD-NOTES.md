@@ -19239,3 +19239,12 @@ A first reading of her 10:09pm print (63 feed steps, 15 mm roll) called it creep
 - **The three prints** (feed steps, then the gap they moved): 36 = about 4.5 mm; 90 = about 10.6; 63 = about 7.9. No single figure fits all three exactly; 8.25 a mm is the middle, so the 15 mm roll's 89 dots now send 61 steps (`PH_PK_GAP` 52 keeps an unset 30 mm roll at 36).
 - **Still open:** a run of six or more stickers. The card's Gap bar moves it two steps a tap.
 - Tested with the byte maker in a test copy. This build has not printed on paper.
+
+## Poooli feed step settled: 8 a mm (2026-11-28, commit only, NOT live)
+Build 20261128-221600 went out with the middle figure, 8.25. Both photos were then measured the same way: each sticker's own top and bottom edge and the dashed line's spacing as the ruler, so the paper's tilt is allowed for.
+| Print | 2nd sticker lower by | Steps a mm |
+|---|---|---|
+| 90 steps | 3.6 mm | 8.16 |
+| 63 steps | 0.56 mm | 7.89 |
+Together about 8.1: `PH_PK_STEPS` 8, the 15 mm roll's 89 dots = 59 / 60 steps; `PH_PK_GAP` 54 = 36 steps. 8.5 predicts no creep at 63 steps and the measure shows some.
+- The code is the same as 5441389e's, tested with the byte maker then. A run of six or more stickers on paper is still the real proof.
