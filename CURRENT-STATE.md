@@ -656,7 +656,7 @@ symbols. No "+ transfer from these eggs": Use ▸ and "+ Transfer" stay.
   **▲ Move ▼** bar (higher / lower for the next print only; higher feeds on to that place on the next sticker, `phPkLead`).
   Stickers print at 95 % darkness and the small name has a thin outline (`PH_PK_THICK`). **Print labels** beside Table | Shelf ticks
   several herbs (the clinic's shelf at Lotus and Acupreg) and the
-  same card prints them all, in halves with a **Same herb | Two herbs** bar.
+  same card prints them all, in halves with a **Same herb | Two herbs** bar; each herb is named under the stickers and its ✕ takes it off the labels and unticks it (two rows, then they scroll; commit only, NOT live, 2026-11-28).
 - **synth22 2026-11-25 (her picks; mocks `mock-herb-label-2026-11-25.html`, `mock-label-printer-2026-11-25.html`):** **whole grams** on a
   patient's prescription: `presCalcNumbers` rounds each herb (a half up, never under 1 g; a formula's recipe keeps its grams) and returns
   the rounded sum as `gp`; the bag, Lasts, price, stock taken, the herb table's In stock column (`presBagG`), the label, Log and Copy for

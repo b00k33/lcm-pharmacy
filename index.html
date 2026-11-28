@@ -40020,6 +40020,10 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   #pharmacyPage .ph-pk-card { width: min(440px, 100%); }
   #pharmacyPage .ph-pk-card .ph-pk-roll { margin: 12px 0; min-height: 190px; align-items: center; }
   #pharmacyPage .ph-pk-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+  #pharmacyPage .ph-pk-on { display: flex; flex-wrap: wrap; gap: 8px; max-height: 72px; overflow-y: auto; margin-bottom: 12px; flex: 0 0 auto; }
+  #pharmacyPage .ph-pk-card .ph-pk-roll.is-stack.has-on { max-height: 34vh; }
+  #pharmacyPage#pharmacyPage .ph-pk-on .ph-clin-chip { display: inline-flex; align-items: center; gap: 8px; }
+  #pharmacyPage .ph-pk-on i { font-style: normal; color: var(--ph-faint); }
   #pharmacyPage .ph-pk-picks { display: flex; flex-wrap: wrap; gap: 8px; }
   #pharmacyPage#pharmacyPage .ph-pk-step .ph-ltr-qual { display: inline-flex; align-items: center; justify-content: center; width: 32px; min-width: 32px; padding: 0; }
   #pharmacyPage#pharmacyPage .ph-pk-step .ph-pk-val { display: inline-flex; align-items: center; justify-content: center; min-width: 92px; padding: 0 8px; background: var(--ph-white); border-right: 1px solid var(--ph-line); font: 600 var(--fs-13) var(--font-body); color: var(--ph-ink); white-space: nowrap; }
@@ -182254,13 +182258,16 @@ Dosage: {dosage}
     const roll = phPkRoll(), two = phPkTwo(), many = list.length > 1, mix = phPkMix(), strips = phPkHerbStrips(list, roll, two, mix);
     const seg = (label, attr, opts) => `<span class="ph-tng2-seg" role="group" aria-label="${label}">${opts.map(([v, t, on]) => `<button type="button" class="ph-ltr-qual${on ? " on" : ""}" ${attr}="${v}" aria-pressed="${on}">${t}</button>`).join("")}</span>`;
     const step = (label, attr, text, less, more) => `<span class="ph-tng2-seg ph-pk-step" role="group" aria-label="${label}"><button type="button" class="ph-ltr-qual" ${attr}="-1" aria-label="${less[1]}">${less[0]}</button><span class="ph-pk-val">${text}</span><button type="button" class="ph-ltr-qual" ${attr}="1" aria-label="${more[1]}">${more[0]}</button></span>`;
-    const was = host.querySelector(".ph-pk-roll"), at = was ? was.scrollTop : 0;
+    const was = host.querySelector(".ph-pk-roll"), at = was ? was.scrollTop : 0, wasOn = host.querySelector(".ph-pk-on"), atOn = wasOn ? wasOn.scrollTop : 0;
+    // several herbs: each one named under the stickers, its ✕ takes it off (her 2026-11-28 "how do i deselect the herbs label", "yes, add it")
+    const on = many ? `<div class="ph-pk-on" role="group" aria-label="Herbs on these labels">${list.map(h => { const n = esc(phPinyinName(h)); return `<button type="button" class="ph-clin-chip" data-pk-off="${esc(h.id)}" aria-label="Remove ${n}">${n}<i aria-hidden="true">✕</i></button>`; }).join("")}</div>` : "";
     host.innerHTML = `<div class="ph-lk-backdrop" data-pk-close="1"></div><div class="ph-lk-card ph-pk-card" role="dialog" aria-label="Herb label">
       <div class="ph-lk-card-hd"><h3>${many ? `Herb labels · ${list.length} herbs` : "Herb label"}</h3><button type="button" data-pk-close="1" aria-label="Close">✕</button></div>
-      <div class="ph-pk-roll${strips.length > 1 ? " is-stack" : ""}">${phPkStickerHtml(strips)}</div>
+      <div class="ph-pk-roll${strips.length > 1 ? " is-stack" : ""}${many ? " has-on" : ""}">${phPkStickerHtml(strips)}</div>${on}
       <div class="ph-pk-foot"><span class="ph-pk-picks">${seg("Sticker size", "data-pk-roll", [30, 15].map(r => [r, `${r} mm`, r === roll]))}${seg("Cut", "data-pk-split", [[1, "Whole", !two], [2, "Halves", two]])}${many && two ? seg("Herbs on a sticker", "data-pk-mix", [[1, "Same herb", !mix], [2, "Two herbs", mix]]) : ""}${step("Gap between stickers", "data-pk-gap", `Gap ${+(phPkGap(roll) / 12).toFixed(2)} mm`, ["−", "Smaller gap"], ["+", "Bigger gap"])}${step("Move the next print", "data-pk-move", phPkMove ? `${phPkMove < 0 ? "Up" : "Down"} ${Math.abs(phPkMove)} mm` : "Move", ["▲", "Print higher"], ["▼", "Print lower"])}</span><button type="button" class="ph-pk-go" data-pk-print="1">${strips.length > 1 ? `Print ${strips.length} labels` : "Print label"}</button></div>
     </div>`;
     host.querySelector(".ph-pk-roll").scrollTop = at;
+    const nowOn = host.querySelector(".ph-pk-on"); if (nowOn) nowOn.scrollTop = atOn;
   }
   function phPkSheetEl(id) {
     let host = document.getElementById(id);
@@ -182317,6 +182324,8 @@ Dosage: {dosage}
     if (el.closest("[data-pk-pickclose]")) { phPkPickClose(); return; }
     if (el.closest("[data-pk-next]")) { const ids = phPkPool().filter(h => phPkSel.has(h.id)).map(h => h.id); if (ids.length) { phPkPickClose(); phPkHerbCard(ids); } return; }
     if (el.closest("[data-pk-close]")) { phPkClose(); return; }
+    const off = el.closest("[data-pk-off]");
+    if (off) { const host = document.getElementById("phPkSheet"), id = off.dataset.pkOff; phPkSel.delete(id); host.dataset.herbs = phPkHerbsOf(host).map(h => h.id).filter(x => x !== id).join(","); phPkHerbPaint(); return; }   // its tick goes too
     const rl = el.closest("[data-pk-roll]");
     if (rl) { try { localStorage.setItem("lcm-herb-roll", rl.dataset.pkRoll); } catch (x) {} phPkMove = 0; phPkHerbPaint(); return; }
     const gp = el.closest("[data-pk-gap]");

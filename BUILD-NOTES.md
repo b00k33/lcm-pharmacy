@@ -19218,3 +19218,10 @@ devices, a real printer.
 (`mergePrescStrings` and the whole-record patient merge); the earlier uncommitted sync-gap patch; app size (14.6 MB page, 3.6 MB download).
 
 Screen checks (same audit, second save): the four audits found nothing new from the fixes at 1220 and 360 (compared with the build before, same made-up data). Older misses corrected in one CSS block at the end of the main stylesheet: appointment IVF label 9.5px, Messages More corners, Past appointments Open and plan chips, phone Paste appointments and Auto-move heights, Done + copy height, add-pain box line. Left as they are (her picked looks, or the checker reading a row or scale as a chip): category colours, Guide folder tab, Log's apothecary band, visit chart's navy picks and goal line, energy number cells, log rows, phone Dashboard order cards, Messages wording grid.
+
+## Herb labels: take a herb off on the label box (2026-11-28, commit only, NOT live)
+Her words, on the box with four herbs: "how do i deselect the herbs label that i wanted", then "yes, add it" to doing it on the box.
+- **Before:** close the box, Print labels again, untick, Next.
+- **Now:** with two or more herbs, a chip per herb under the stickers; its mark takes it off, unticks it, and the stickers and "Print n labels" follow. One herb left = the single "Herb label" box, no chips. The chips keep to two rows and scroll; the preview is shorter (34 % of the screen's height) so Print stays in reach on a short phone.
+- **Tested** in a test copy: 10 herbs, one removed (counts, the tick gone, the chip list stays where it was scrolled), down to one; 360 x 640, 520 x 700, 1220; tap and style audits against the base: nothing new; voice audit on the box clean.
+- **Not tested:** her devices; nothing printed on paper.
