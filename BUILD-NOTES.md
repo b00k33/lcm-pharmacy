@@ -19216,3 +19216,5 @@ wording and her herb names (read only).
 devices, a real printer.
 **Found, not fixed (need her yes):** two devices editing prescriptions or one patient before syncing can lose one side's change
 (`mergePrescStrings` and the whole-record patient merge); the earlier uncommitted sync-gap patch; app size (14.6 MB page, 3.6 MB download).
+
+Screen checks (same audit, second save): the four audits found nothing new from the fixes at 1220 and 360 (compared with the build before, same made-up data). Older misses corrected in one CSS block at the end of the main stylesheet: appointment IVF label 9.5px, Messages More corners, Past appointments Open and plan chips, phone Paste appointments and Auto-move heights, Done + copy height, add-pain box line. Left as they are (her picked looks, or the checker reading a row or scale as a chip): category colours, Guide folder tab, Log's apothecary band, visit chart's navy picks and goal line, energy number cells, log rows, phone Dashboard order cards, Messages wording grid.
