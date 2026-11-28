@@ -19292,3 +19292,11 @@ Her words, on the Today book: "i love this book layout. can you make the book bi
 - **Clipped:** the cycle day moved from the week's narrow head to beside the date on the day page; the earlier / later hour chips span the whole time column, so no half-hidden hour behind them.
 - **Tested** in a test copy with made-up bookings and made-up Lunch / Travel / Break Fast: 1440, 1280, 1220, 960, 800, 360; Today, Week, List; search typing, the booking card, ‹ ›, Add, the Update button in the row; tap, style, voice and title-bar audits at 1220 and 360 against the base: nothing new (the only changed line is the same appointment block fill, now on the larger block size).
 - **Not tested:** her real bookings and window; the phone is unchanged apart from the band pictures.
+
+## Poooli stickers: 63 steps, and room above and below (2026-11-28, commit only, NOT live)
+Her prints at 10:45 pm and 10:56 pm: the second job's top line was cut ("Dong Gua Zi"), each sticker higher than the one before.
+- **Measured** on the two photos, four stickers in order, where the ink starts against where it was drawn (edges fitted along each sticker's tilt, the dashed line as the ruler): 1.55, 2.05, 2.85 and 3.35 mm high, about half a millimetre a sticker, at 61 feed steps. 8 steps a mm (live since 20261128-222100) feeds 59 or 60 and would climb faster.
+- **Now** `PH_PK_STEPS` 8.5: the 15 mm roll takes 63 steps. A fit over today's prints at 90, 63 and 61 steps puts no creep between 62 and 63.5. Photos are good to about 0.3 mm a sticker: a run of six or more stickers is still the open test.
+- **Gap:** a gap tapped on the older feed was a correction for it, so the card now keeps its gap under `lcm-pk-gap3-*` and the old key is not read.
+- **Layout:** a half-sticker name that nearly fits one line is set smaller to stay on it (down to two thirds), instead of wrapping one short word under the large size. Clear above and below on the 15 mm roll: 2.5 mm on halves, 2 mm on a whole sticker (was 1.5), so whole-sticker names are a little smaller; the 30 mm roll is unchanged.
+- **Tested** in a test copy: 309 herb names drawn at the three sizes, none with ink within 2 mm of an edge; the feed values read from the print bytes (63 for each 15 mm sticker, 38 or 39 on the 30, 96 plain paper); the Gap buttons. **Not tested:** on paper.
