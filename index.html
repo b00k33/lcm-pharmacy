@@ -39753,7 +39753,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   #pharmacyPage .ph-pk-card { width: min(440px, 100%); }
   #pharmacyPage .ph-pk-card .ph-pk-roll { margin: 12px 0; min-height: 190px; align-items: center; }
   #pharmacyPage .ph-pk-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
-  #pharmacyPage .ph-pk-go { height: 32px; padding: 0 14px; border: 1px solid var(--ph-herb); border-radius: 6px; background: var(--ph-herb); color: #fff; font: 600 var(--fs-13) var(--font-body); cursor: pointer; }
+  #pharmacyPage .ph-pk-picks { display: flex; flex-wrap: wrap; gap: 8px; }
+  #pharmacyPage .ph-pk-go { margin-left: auto; height: 32px; padding: 0 14px; border: 1px solid var(--ph-herb); border-radius: 6px; background: var(--ph-herb); color: #fff; font: 600 var(--fs-13) var(--font-body); cursor: pointer; }
   #pharmacyPage .ph-pk-go:hover { background: var(--ph-herb-deep); }
   #pharmacyPage .ph-herbform #phHerbLabelBtn { margin-right: auto; }
 </style>
@@ -181094,6 +181095,7 @@ Dosage: {dosage}
   }
   function phPkPick(shelf, v) { phPkSwap = { ...phPkSwap, [shelf]: v === "poooli" ? "poooli" : "label" }; }
   function phPkRoll() { try { return localStorage.getItem("lcm-herb-roll") === "15" ? 15 : 30; } catch (e) { return 30; } }
+  function phPkTwo() { try { return localStorage.getItem("lcm-herb-split") === "2"; } catch (e) { return false; } }
   function phPkCanvas(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, w, h); x.fillStyle = "#000"; x.strokeStyle = "#000"; x.textBaseline = "alphabetic"; return c; }
   const phPkFont = (weight, size) => `${weight} ${size}px Arial, Helvetica, sans-serif`;
   // one paragraph as lines of runs, wrapped to the width; **words** are bold (her own mark in Settings › Label text); a word wider than the
@@ -181162,19 +181164,21 @@ Dosage: {dosage}
     const raw = String(h.name || ""), i = raw.indexOf("/");
     return { pin: phPinyinName(h).replace(/[#*]+/g, "").trim(), eng: i < 0 || phIsFormula(h) ? "" : raw.slice(i + 1).replace(/[#*]+/g, "").replace(/\s+/g, " ").trim() };
   }
-  // one sticker of her roll, read straight across: 50 mm of words, the sticker 30 or 15 mm tall with 1.5 mm clear above and below; a long
-  // name is set smaller, then wraps
-  function phPkHerbStrip(h, tall) {
-    const n = phPkHerbName(h), W = 600, H = tall * 12, room = H - 36, probe = phPkCanvas(1, 1).getContext("2d");
+  // a name laid out for a space W dots wide on a sticker H dots tall (1.5 mm clear above and below): a long name is set smaller, then wraps;
+  // a half sticker keeps the pin yin to two lines with no word broken or shrunk on its own
+  function phPkHerbBlock(n, H, W, big, small, half) {
+    const room = H - 36, probe = phPkCanvas(1, 1).getContext("2d");
     const wide = (s, weight, size) => { probe.font = phPkFont(weight, size); return probe.measureText(s).width; };
     const one = (s, weight, size, least) => { while (size > least && wide(s, weight, size) > W) size -= 2; return size; };
-    const [big, small] = tall === 15 ? [84, 40] : [120, 54];
-    let S = one(n.pin, 700, big, Math.round(big * .6)), E = n.eng ? one(n.eng, 400, small, Math.round(small * .7)) : 0, rows, used;
+    const least = Math.round(big * (half ? .75 : .6));
+    let S = half && wide(n.pin, 700, least) > W ? big : one(n.pin, 700, big, least), E = !n.eng ? 0 : half ? small : one(n.eng, 400, small, Math.round(small * .7)), rows, used;
     for (;;) {
-      rows = phPkLines(probe, n.pin, true, S, W).map(l => ({ l, s: S })).concat(n.eng ? phPkLines(probe, n.eng, false, E, W).map(l => ({ l, s: E })) : []);
+      const name = phPkLines(probe, n.pin, true, S, W);
+      rows = name.map(l => ({ l, s: S })).concat(n.eng ? phPkLines(probe, n.eng, false, E, W).map(l => ({ l, s: E })) : []);
       used = rows.reduce((t, r) => t + Math.round(r.s * 1.15), 0);
-      if (used <= room || S <= 24) break;
-      S -= 2; E = E > 20 ? E - 1 : E;
+      const tight = half && (name.length > 2 || n.pin.split(/\s+/).some(word => wide(word, 700, S) > W));
+      if ((used <= room && !tight) || S <= 24) break;
+      S -= 2; if (used > room && E > 20) E -= 1;
     }
     const c = phPkCanvas(W, H), x = c.getContext("2d");
     let y = Math.round((H - used) / 2);
@@ -181184,6 +181188,21 @@ Dosage: {dosage}
       r.l.forEach(g => { x.font = g.f; x.fillText(g.t, px, y + Math.round(r.s * .93)); px += x.measureText(g.t).width; });
       y += Math.round(r.s * 1.15);
     });
+    return c;
+  }
+  // one sticker of her roll, read straight across, 50 mm of words, the sticker 30 or 15 mm tall. two = her cut for a lid (2026-11-28 "divide
+  // in 2 in the length because the stickers go on the lid and they are too wide"): the name on each half, a dashed line down the middle
+  function phPkHerbStrip(h, tall, two) {
+    const n = phPkHerbName(h), H = tall * 12;
+    let c;
+    if (!two) c = phPkHerbBlock(n, H, 600, ...(tall === 15 ? [84, 40] : [120, 54]), false);
+    else {
+      const half = phPkHerbBlock(n, H, 264, ...(tall === 15 ? [60, 30] : [76, 36]), true);
+      c = phPkCanvas(600, H);
+      const x = c.getContext("2d");
+      x.drawImage(half, 18, 0); x.drawImage(half, 318, 0);
+      x.lineWidth = 3; x.setLineDash([10, 8]); x.beginPath(); x.moveTo(300, 4); x.lineTo(300, H - 4); x.stroke();
+    }
     c.feed = PH_PK_GAP;
     return c;
   }
@@ -181268,11 +181287,11 @@ Dosage: {dosage}
   function phPkHerbPaint() {
     const host = document.getElementById("phPkSheet"); if (!host) return;
     const h = PHARMACY.herbs.find(x => x.id === host.dataset.herb); if (!h) { host.hidden = true; return; }
-    const roll = phPkRoll();
+    const roll = phPkRoll(), two = phPkTwo();
     host.innerHTML = `<div class="ph-lk-backdrop" data-pk-close="1"></div><div class="ph-lk-card ph-pk-card" role="dialog" aria-label="Herb label">
       <div class="ph-lk-card-hd"><h3>Herb label</h3><button type="button" data-pk-close="1" aria-label="Close">✕</button></div>
-      <div class="ph-pk-roll">${phPkStickerHtml(phPkHerbStrip(h, roll))}</div>
-      <div class="ph-pk-foot"><span class="ph-tng2-seg" role="group" aria-label="Sticker size">${[30, 15].map(r => `<button type="button" class="ph-ltr-qual${r === roll ? " on" : ""}" data-pk-roll="${r}" aria-pressed="${r === roll}">${r} mm</button>`).join("")}</span><button type="button" class="ph-pk-go" data-pk-print="1">Print label</button></div>
+      <div class="ph-pk-roll">${phPkStickerHtml(phPkHerbStrip(h, roll, two))}</div>
+      <div class="ph-pk-foot"><span class="ph-pk-picks"><span class="ph-tng2-seg" role="group" aria-label="Sticker size">${[30, 15].map(r => `<button type="button" class="ph-ltr-qual${r === roll ? " on" : ""}" data-pk-roll="${r}" aria-pressed="${r === roll}">${r} mm</button>`).join("")}</span><span class="ph-tng2-seg" role="group" aria-label="Cut">${[[false, "Whole"], [true, "Halves"]].map(([v, t]) => `<button type="button" class="ph-ltr-qual${v === two ? " on" : ""}" data-pk-split="${v ? 2 : 1}" aria-pressed="${v === two}">${t}</button>`).join("")}</span></span><button type="button" class="ph-pk-go" data-pk-print="1">Print label</button></div>
     </div>`;
   }
   function phPkHerbCard(id) {
@@ -181290,9 +181309,11 @@ Dosage: {dosage}
     if (el.closest("[data-pk-close]")) { phPkClose(); return; }
     const rl = el.closest("[data-pk-roll]");
     if (rl) { try { localStorage.setItem("lcm-herb-roll", rl.dataset.pkRoll); } catch (x) {} phPkHerbPaint(); return; }
+    const sp = el.closest("[data-pk-split]");
+    if (sp) { try { localStorage.setItem("lcm-herb-split", sp.dataset.pkSplit); } catch (x) {} phPkHerbPaint(); return; }
     if (el.closest("[data-pk-print]")) {
       const host = document.getElementById("phPkSheet"), h = host && PHARMACY.herbs.find(x => x.id === host.dataset.herb);
-      if (h) phPkPrint([phPkHerbStrip(h, phPkRoll())]);
+      if (h) phPkPrint([phPkHerbStrip(h, phPkRoll(), phPkTwo())]);
     }
   });
   window.addEventListener("keydown", e => { if (e.key !== "Escape") return; const h = document.getElementById("phPkSheet"); if (h && !h.hidden) { e.preventDefault(); e.stopImmediatePropagation(); phPkClose(); } }, true);   // Esc closes the card only, never what is under it

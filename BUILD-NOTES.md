@@ -19060,3 +19060,12 @@ Her words: "move the 1-4 to the chart tabs" (with a picture of a patient's side 
   pick of the chart head), she can have it removed.
 - **Tested** in the test copy (made-up patient): each tab, File and back, the part kept between steps, a locked first visit, search counts,
   800px without sideways scroll, 360px unchanged. Tap and style audits empty on the tab bar at 1220.
+
+## Poooli herb labels in halves (2026-11-28, SAVED, not live until her "push live")
+Her words: "sometimes i need to divide the label into 2 for the herb labels. e.g, divide in 2 in the length because the stickers go on
+the lid and they are too wide for the lid, add this feature".
+- **Herb label card:** a joined **Whole | Halves** bar beside the sticker size, remembered on the device (`lcm-herb-split`). Halves
+  prints the same name twice side by side, each about 22 mm of words, with a dashed line down the middle of the sticker (`phPkHerbStrip`
+  third argument; `phPkHerbBlock` lays out one name).
+- **Assumed:** both halves carry the same herb. The cut line sits at the middle of the head, so it follows how centred her roll sits.
+- **Not tested:** a real printer and paper.

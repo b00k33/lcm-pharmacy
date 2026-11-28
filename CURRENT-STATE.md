@@ -639,7 +639,8 @@ symbols. No "+ transfer from these eggs": Use ▸ and "+ Transfer" stay.
   price; `**words**` print bold. The words shrink to fit her box widths (never under 20 dots), then the box runs wider
   (`phPkPatientFlat`). **Herb name labels:** her 15 and 30 mm rolls are **stickers on 57 mm paper** (that tall, with gaps). Print label
   in a stock row's ⋮ menu, the shelf lid menu, the one-clinic stock row (Label chip) and the herb edit panel opens a Herb label card:
-  the name straight across one sticker, a **30 mm | 15 mm** bar, Print label (then `PH_PK_GAP`, 3 mm, to the next sticker; her gap is
+  the name straight across one sticker, a **30 mm | 15 mm** bar, a **Whole | Halves** bar (Halves: the name on each half with a dashed
+  line to cut along, for a lid), Print label (then `PH_PK_GAP`, 3 mm, to the next sticker; her gap is
   not yet measured).
 - **synth22 2026-11-25 (her picks; mocks `mock-herb-label-2026-11-25.html`, `mock-label-printer-2026-11-25.html`):** **whole grams** on a
   patient's prescription: `presCalcNumbers` rounds each herb (a half up, never under 1 g; a formula's recipe keeps its grams) and returns
