@@ -19048,3 +19048,15 @@ test herb labels too".
   and phone alike. A tap on the other button lasts while that prescription is open; nothing is stored (`lcm-label-printer` retired).
 - Herb name labels are unchanged (Poooli only, 15 / 30 mm stickers).
 - **Not tested:** a real printer and paper; her phone.
+
+## Steps 1-4 are tabs on the binder (2026-11-28, commit only, NOT live)
+Her words: "move the 1-4 to the chart tabs" (with a picture of a patient's side rail).
+- **Now (641px and wider):** the four numbered steps sit as tabs on top of the binder on File and every step; the rail keeps the patient's
+  head, search, kind and File. Open step = solid clinic colour; others white with a solid number circle; ✓ when done; the Diagnosis count
+  and the Next dot moved with them; a content search's counts show on the tabs. Came in for draws no second tab under its own.
+- **Same as before:** every page and link; a step still opens on its first part not done, or the part picked this visit; locked steps still
+  say what is missing. The phone (drawer, ‹ ›) and her own record are unchanged.
+- **Height:** pages with dividers start 37px lower than before. The chart head under the tabs repeats the step's name; left as it is (her
+  pick of the chart head), she can have it removed.
+- **Tested** in the test copy (made-up patient): each tab, File and back, the part kept between steps, a locked first visit, search counts,
+  800px without sideways scroll, 360px unchanged. Tap and style audits empty on the tab bar at 1220.
