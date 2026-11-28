@@ -39748,7 +39748,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   #pharmacyPage .ph-pk-roll { display: flex; flex-wrap: wrap; justify-content: center; align-items: flex-start; gap: 16px; padding: 16px 12px; border-radius: 10px; background: var(--ph-herb-tint); }
   #pharmacyPage .ph-pk-paper { display: flex; justify-content: center; padding: 8px 0 12px; background: #fff; box-shadow: 0 1px 2px rgba(11, 59, 75, .18), 0 8px 16px rgba(11, 59, 75, .14); }
   #pharmacyPage .ph-pk-paper img { display: block; max-width: none; }
-  #pharmacyPage .ph-pk-paper.is-along { min-width: 0; padding: 0; }
+  #pharmacyPage .ph-pk-paper.is-along { min-width: 0; padding: 0; flex-direction: column; align-items: center; }
   #pharmacyPage .ph-pk-paper.is-along img { max-width: 100%; height: auto; }
   #pharmacyPage .ph-pk-card { width: min(440px, 100%); }
   #pharmacyPage .ph-pk-card .ph-pk-roll { margin: 12px 0; min-height: 190px; align-items: center; }
@@ -39757,6 +39757,18 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   #pharmacyPage .ph-pk-go { margin-left: auto; height: 32px; padding: 0 14px; border: 1px solid var(--ph-herb); border-radius: 6px; background: var(--ph-herb); color: #fff; font: 600 var(--fs-13) var(--font-body); cursor: pointer; }
   #pharmacyPage .ph-pk-go:hover { background: var(--ph-herb-deep); }
   #pharmacyPage .ph-herbform #phHerbLabelBtn { margin-right: auto; }
+  #pharmacyPage .ph-pk-card .ph-pk-roll.is-stack { max-height: 46vh; overflow-y: auto; align-items: flex-start; }
+  #pharmacyPage .ph-pk-card.ph-pk-pickcard { width: min(640px, 100%); }
+  #pharmacyPage#pharmacyPage .ph-pk-pickcard #phPkFind { display: block; width: 100%; height: 32px; box-sizing: border-box; margin: 8px 0 0; padding: 0 10px; border: 1px solid var(--ph-line); border-radius: 6px; background: #fff; color: var(--ph-ink); font: 400 var(--fs-13) var(--font-body); }
+  #pharmacyPage#pharmacyPage .ph-pk-pickcard #phPkFind:focus { border-color: var(--ph-herb); outline: none; }
+  @media (max-width: 640px) { #pharmacyPage#pharmacyPage .ph-pk-pickcard #phPkFind { font-size: 16px; } }
+  /* the grams box beside "Add a herb to Lotus / Acupreg" gets the app's field look (it showed the browser's own 2px box) */
+  #pharmacyPage#pharmacyPage .ph-clin-add input#phClinAddG { height: 32px; box-sizing: border-box; padding: 0 10px; border: 1px solid var(--ph-line); border-radius: 6px; background: #fff; color: var(--ph-ink); font: 400 var(--fs-13) var(--font-body); }
+  #pharmacyPage#pharmacyPage .ph-clin-add input#phClinAddG:focus { border-color: var(--ph-herb); outline: none; }
+  @media (max-width: 640px) { #pharmacyPage#pharmacyPage .ph-clin-add input#phClinAddG { font-size: 16px; } }
+  #pharmacyPage .ph-pk-chips { display: flex; flex-wrap: wrap; align-content: flex-start; gap: 8px; height: 46vh; overflow-y: auto; margin: 12px 0; }
+  #pharmacyPage .ph-pk-pickcard [data-pk-clear] { margin-right: auto; }
+  #pharmacyPage .ph-pk-go:disabled { opacity: .45; cursor: default; }
 </style>
 </head>
 <body>
@@ -40191,6 +40203,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         <input type="search" id="phSearch" placeholder="Search code, name or notes…" title="Separate with commas to look up several herbs at once" autocomplete="off" aria-label="Search herbs — separate with commas for several at once">
         <button class="add-btn" id="phHerbAddBtn" type="button">+ Add herb</button>
         <span class="ph-tng2-seg ph-inv-viewseg" role="group" aria-label="View"><button type="button" class="ph-ltr-qual" data-inv-view="table">Table</button><button type="button" class="ph-ltr-qual" data-inv-view="shelf">Shelf</button></span>
+        <button type="button" class="ph-load-btn" id="phPkManyBtn" data-pk-many="1" hidden>Print labels</button>
         <!-- phone only (her pick A, phone redesign 2026-09-07): the filter
              chips below sit behind this one button under 640px -->
         <button type="button" class="ph-inv-filterbtn" id="phInvFilterBtn" aria-expanded="false" aria-controls="phInvChips">Filter ▾</button>
@@ -44120,6 +44133,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   function phInvViewSeg() {
     document.querySelectorAll("#pharmacyPage [data-inv-view]").forEach(b => { const on = b.dataset.invView === phInvView; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on ? "true" : "false"); });
     const w = document.getElementById("phInvWidget"); if (w) w.classList.toggle("ph-inv-shelfon", phInvView === "shelf");
+    const many = document.getElementById("phPkManyBtn"); if (many) many.hidden = !phPkCan();
   }
   // one bottle on a shelf (her 2026-11-25 realistic shelf), shared by Inventory's Shelf and the Dashboard's shelves (her 2026-11-26 "i really like my
   // shelf inventory look, use that for the formula and herb look in dashboard"): s = the clinic's shelf, attrs = what a tap does, wrap = an optional
@@ -181192,28 +181206,41 @@ Dosage: {dosage}
   }
   // one sticker of her roll, read straight across, 50 mm of words, the sticker 30 or 15 mm tall. two = her cut for a lid (2026-11-28 "divide
   // in 2 in the length because the stickers go on the lid and they are too wide"): the name on each half, a dashed line down the middle
-  function phPkHerbStrip(h, tall, two) {
-    const n = phPkHerbName(h), H = tall * 12;
+  function phPkHerbStrip(h, tall, two, mate) {
+    const H = tall * 12, half = o => phPkHerbBlock(phPkHerbName(o), H, 264, ...(tall === 15 ? [60, 30] : [76, 36]), true);
     let c;
-    if (!two) c = phPkHerbBlock(n, H, 600, ...(tall === 15 ? [84, 40] : [120, 54]), false);
+    if (!two) c = phPkHerbBlock(phPkHerbName(h), H, 600, ...(tall === 15 ? [84, 40] : [120, 54]), false);
     else {
-      const half = phPkHerbBlock(n, H, 264, ...(tall === 15 ? [60, 30] : [76, 36]), true);
       c = phPkCanvas(600, H);
       const x = c.getContext("2d");
-      x.drawImage(half, 18, 0); x.drawImage(half, 318, 0);
+      x.drawImage(half(h), 18, 0); x.drawImage(half(mate || h), 318, 0);
       x.lineWidth = 3; x.setLineDash([10, 8]); x.beginPath(); x.moveTo(300, 4); x.lineTo(300, H - 4); x.stroke();
     }
     c.feed = PH_PK_GAP;
     return c;
   }
-  // the sticker on screen as it sits on her roll: the 57 mm backing, this sticker whole, its neighbours' edges
-  function phPkStickerHtml(c) {
-    const H = c.height, edge = 48, gap = PH_PK_GAP, back = phPkCanvas(684, H + 2 * (gap + edge)), x = back.getContext("2d");
-    x.fillStyle = "#cfe4ea"; x.fillRect(0, 0, back.width, back.height);
-    x.fillStyle = "#fff";
-    [edge - H, edge + gap, edge + gap + H + gap].forEach(y => { x.beginPath(); if (x.roundRect) x.roundRect(12, y, 660, H, 24); else x.rect(12, y, 660, H); x.fill(); });
-    x.globalCompositeOperation = "multiply"; x.drawImage(c, 42, edge + gap); x.globalCompositeOperation = "source-over";
-    return `<div class="ph-pk-paper is-along"><img src="${back.toDataURL()}" width="${back.width / 2}" height="${back.height / 2}" alt="Label as it prints"></div>`;
+  // several herbs print a sticker each; in halves she may put two herbs on one sticker (her 2026-11-28 pick "let me switch each time"), an
+  // odd last herb on both halves
+  function phPkMix() { try { return localStorage.getItem("lcm-herb-mix") === "2"; } catch (e) { return false; } }
+  function phPkHerbStrips(list, tall, two, mix) {
+    if (!two || !mix) return list.map(h => phPkHerbStrip(h, tall, two));
+    const out = [];
+    for (let i = 0; i < list.length; i += 2) out.push(phPkHerbStrip(list[i], tall, true, list[i + 1]));
+    return out;
+  }
+  // the stickers on screen as they sit on her roll: the 57 mm backing, each sticker whole, a neighbour's edge above the first and below the last
+  function phPkStickerHtml(strips) {
+    const gap = PH_PK_GAP, mid = gap / 2, edge = 48;
+    return `<div class="ph-pk-paper is-along">${strips.map((c, i) => {
+      const H = c.height, up = i ? 0 : edge + mid, down = i < strips.length - 1 ? 0 : edge + mid, back = phPkCanvas(684, up + gap + H + down), x = back.getContext("2d");
+      x.fillStyle = "#cfe4ea"; x.fillRect(0, 0, back.width, back.height); x.fillStyle = "#fff";
+      const white = y => { x.beginPath(); if (x.roundRect) x.roundRect(12, y, 660, H, 24); else x.rect(12, y, 660, H); x.fill(); };
+      if (up) white(up - mid - H);
+      white(up + mid);
+      if (down) white(up + mid + H + gap);
+      x.globalCompositeOperation = "multiply"; x.drawImage(c, 42, up + mid); x.globalCompositeOperation = "source-over";
+      return `<img src="${back.toDataURL()}" width="${back.width / 2}" height="${back.height / 2}" alt="Label as it prints">`;
+    }).join("")}</div>`;
   }
   // the patient's label on screen, held lying down as she will read it, the paper's 57 mm with its margins
   function phPkLabelHtml(text) {
@@ -181269,7 +181296,7 @@ Dosage: {dosage}
         const bytes = phPkBytes(strips), began = Date.now();
         for (let i = 0; i < bytes.length; i += 1024) await w.write(bytes.subarray(i, i + 1024));
         const rows = strips.reduce((n, c) => n + c.height + (c.feed || 96), 0);
-        await wait(Math.max(0, Math.min(180000, 800 + rows * 10 - (Date.now() - began))));   // the link stays open while the paper moves
+        await wait(Math.max(0, Math.min(900000, 800 + rows * 10 - (Date.now() - began))));   // the link stays open while the paper moves
         await w.close();
       } finally {
         try { await r.cancel(); } catch (e) { /* already closed */ }
@@ -181283,40 +181310,92 @@ Dosage: {dosage}
     }
     phPkBusy = false;
   }
-  // a herb's label card: the sticker, its size, Print label
+  // the label card: the stickers as they will print, their size, whole or halves (with several herbs: how to share them), Print
+  function phPkHerbsOf(host) { return String(host.dataset.herbs || "").split(",").map(id => PHARMACY.herbs.find(h => h.id === id)).filter(Boolean); }
   function phPkHerbPaint() {
     const host = document.getElementById("phPkSheet"); if (!host) return;
-    const h = PHARMACY.herbs.find(x => x.id === host.dataset.herb); if (!h) { host.hidden = true; return; }
-    const roll = phPkRoll(), two = phPkTwo();
+    const list = phPkHerbsOf(host); if (!list.length) { host.hidden = true; return; }
+    const roll = phPkRoll(), two = phPkTwo(), many = list.length > 1, mix = phPkMix(), strips = phPkHerbStrips(list, roll, two, mix);
+    const seg = (label, attr, opts) => `<span class="ph-tng2-seg" role="group" aria-label="${label}">${opts.map(([v, t, on]) => `<button type="button" class="ph-ltr-qual${on ? " on" : ""}" ${attr}="${v}" aria-pressed="${on}">${t}</button>`).join("")}</span>`;
+    const was = host.querySelector(".ph-pk-roll"), at = was ? was.scrollTop : 0;
     host.innerHTML = `<div class="ph-lk-backdrop" data-pk-close="1"></div><div class="ph-lk-card ph-pk-card" role="dialog" aria-label="Herb label">
-      <div class="ph-lk-card-hd"><h3>Herb label</h3><button type="button" data-pk-close="1" aria-label="Close">✕</button></div>
-      <div class="ph-pk-roll">${phPkStickerHtml(phPkHerbStrip(h, roll, two))}</div>
-      <div class="ph-pk-foot"><span class="ph-pk-picks"><span class="ph-tng2-seg" role="group" aria-label="Sticker size">${[30, 15].map(r => `<button type="button" class="ph-ltr-qual${r === roll ? " on" : ""}" data-pk-roll="${r}" aria-pressed="${r === roll}">${r} mm</button>`).join("")}</span><span class="ph-tng2-seg" role="group" aria-label="Cut">${[[false, "Whole"], [true, "Halves"]].map(([v, t]) => `<button type="button" class="ph-ltr-qual${v === two ? " on" : ""}" data-pk-split="${v ? 2 : 1}" aria-pressed="${v === two}">${t}</button>`).join("")}</span></span><button type="button" class="ph-pk-go" data-pk-print="1">Print label</button></div>
+      <div class="ph-lk-card-hd"><h3>${many ? `Herb labels · ${list.length} herbs` : "Herb label"}</h3><button type="button" data-pk-close="1" aria-label="Close">✕</button></div>
+      <div class="ph-pk-roll${strips.length > 1 ? " is-stack" : ""}">${phPkStickerHtml(strips)}</div>
+      <div class="ph-pk-foot"><span class="ph-pk-picks">${seg("Sticker size", "data-pk-roll", [30, 15].map(r => [r, `${r} mm`, r === roll]))}${seg("Cut", "data-pk-split", [[1, "Whole", !two], [2, "Halves", two]])}${many && two ? seg("Herbs on a sticker", "data-pk-mix", [[1, "Same herb", !mix], [2, "Two herbs", mix]]) : ""}</span><button type="button" class="ph-pk-go" data-pk-print="1">${strips.length > 1 ? `Print ${strips.length} labels` : "Print label"}</button></div>
     </div>`;
+    host.querySelector(".ph-pk-roll").scrollTop = at;
   }
-  function phPkHerbCard(id) {
-    let host = document.getElementById("phPkSheet");
-    if (!host) { host = document.createElement("div"); host.id = "phPkSheet"; host.className = "ph-lk-sheet"; (document.getElementById("pharmacyPage") || document.body).appendChild(host); }
-    host.dataset.herb = id; host.hidden = false; phPkHerbPaint();
+  function phPkSheetEl(id) {
+    let host = document.getElementById(id);
+    if (!host) { host = document.createElement("div"); host.id = id; host.className = "ph-lk-sheet"; (document.getElementById("pharmacyPage") || document.body).appendChild(host); }
+    return host;
   }
+  function phPkHerbCard(ids) { const host = phPkSheetEl("phPkSheet"); host.innerHTML = ""; host.dataset.herbs = [].concat(ids).join(","); host.hidden = false; phPkHerbPaint(); }
   function phPkClose() { const host = document.getElementById("phPkSheet"); if (host) host.hidden = true; }
+  // her "how to select multiple herbs to print labels?" (2026-11-28): tick herbs, then the same card prints them all. The list is the
+  // clinic's shelf at Lotus and Acupreg, elsewhere the stock list without stopped herbs; her ticks stay until Clear or a reload
+  let phPkSel = new Set(), phPkFind = "";
+  function phPkPool() { const s = phClinicSolo(); return (s ? phShelfHerbs(s) : (PHARMACY.herbs || []).filter(h => !h.stopped)).slice().sort(phByName); }
+  function phPkPickChips() {
+    const q = phPkFind.trim().toLowerCase(), list = phPkPool().filter(h => !q || (phPinyinName(h) + " " + (phHerbCode(h) || "")).toLowerCase().includes(q));
+    return list.map(h => `<button type="button" class="ph-clin-chip${phPkSel.has(h.id) ? " on" : ""}" data-pk-pick="${esc(h.id)}" aria-pressed="${phPkSel.has(h.id)}">${esc(phPinyinName(h))}</button>`).join("") || `<span class="ph-sub">No herb here</span>`;
+  }
+  function phPkPickFoot() {
+    const n = phPkSel.size;
+    return `${n ? `<button type="button" class="ph-clin-chip" data-pk-clear="1">Clear</button>` : ""}<button type="button" class="ph-pk-go" data-pk-next="1"${n ? "" : " disabled"}>${n ? `Next · ${n} herb${n === 1 ? "" : "s"}` : "Next"}</button>`;
+  }
+  function phPkPickPaint() {
+    const c = document.getElementById("phPkChips"), f = document.getElementById("phPkPickFoot");
+    if (c) c.innerHTML = phPkPickChips();
+    if (f) f.innerHTML = phPkPickFoot();
+  }
+  function phPkPickOpen() {
+    const host = phPkSheetEl("phPkPickSheet"), here = new Set(phPkPool().map(h => h.id));
+    phPkFind = ""; phPkSel = new Set([...phPkSel].filter(id => here.has(id)));
+    host.innerHTML = `<div class="ph-lk-backdrop" data-pk-pickclose="1"></div><div class="ph-lk-card ph-pk-card ph-pk-pickcard" role="dialog" aria-label="Print herb labels">
+      <div class="ph-lk-card-hd"><h3>Print herb labels</h3><button type="button" data-pk-pickclose="1" aria-label="Close">✕</button></div>
+      <input type="search" id="phPkFind" class="field-bare" placeholder="Search herbs" aria-label="Search herbs" autocomplete="off">
+      <div class="ph-pk-chips" id="phPkChips">${phPkPickChips()}</div>
+      <div class="ph-pk-foot" id="phPkPickFoot">${phPkPickFoot()}</div>
+    </div>`;
+    host.hidden = false;
+    if (window.innerWidth > 640) host.querySelector("#phPkFind").focus();
+  }
+  function phPkPickClose() { const host = document.getElementById("phPkPickSheet"); if (host) host.hidden = true; }
+  document.addEventListener("input", e => { if (e.target && e.target.id === "phPkFind") { phPkFind = e.target.value; phPkPickPaint(); } });
   document.addEventListener("click", e => {
     const el = e.target instanceof Element ? e.target : null; if (!el) return;
     const lpr = el.closest("[data-pres-lpr]");
     if (lpr) { phPkPick(presDispShelf(), lpr.dataset.presLpr); renderPresCalc(); return; }
     const hb = el.closest("[data-ph-herb-label]");
     if (hb) { const id = hb.dataset.phHerbLabel; if (hb.closest(".ph-rp-menu")) { phInvMenu = null; renderPhRows(); } if (id) phPkHerbCard(id); return; }
+    if (el.closest("[data-pk-many]")) { phPkPickOpen(); return; }
+    const tick = el.closest("[data-pk-pick]");
+    if (tick) {
+      const id = tick.dataset.pkPick; if (phPkSel.has(id)) phPkSel.delete(id); else phPkSel.add(id);
+      tick.classList.toggle("on", phPkSel.has(id)); tick.setAttribute("aria-pressed", phPkSel.has(id));
+      document.getElementById("phPkPickFoot").innerHTML = phPkPickFoot(); return;   // the list stays where she scrolled it
+    }
+    if (el.closest("[data-pk-clear]")) { phPkSel.clear(); phPkPickPaint(); return; }
+    if (el.closest("[data-pk-pickclose]")) { phPkPickClose(); return; }
+    if (el.closest("[data-pk-next]")) { const ids = phPkPool().filter(h => phPkSel.has(h.id)).map(h => h.id); if (ids.length) { phPkPickClose(); phPkHerbCard(ids); } return; }
     if (el.closest("[data-pk-close]")) { phPkClose(); return; }
     const rl = el.closest("[data-pk-roll]");
     if (rl) { try { localStorage.setItem("lcm-herb-roll", rl.dataset.pkRoll); } catch (x) {} phPkHerbPaint(); return; }
     const sp = el.closest("[data-pk-split]");
     if (sp) { try { localStorage.setItem("lcm-herb-split", sp.dataset.pkSplit); } catch (x) {} phPkHerbPaint(); return; }
+    const mx = el.closest("[data-pk-mix]");
+    if (mx) { try { localStorage.setItem("lcm-herb-mix", mx.dataset.pkMix); } catch (x) {} phPkHerbPaint(); return; }
     if (el.closest("[data-pk-print]")) {
-      const host = document.getElementById("phPkSheet"), h = host && PHARMACY.herbs.find(x => x.id === host.dataset.herb);
-      if (h) phPkPrint([phPkHerbStrip(h, phPkRoll(), phPkTwo())]);
+      const host = document.getElementById("phPkSheet"), list = host ? phPkHerbsOf(host) : [];
+      if (list.length) phPkPrint(phPkHerbStrips(list, phPkRoll(), phPkTwo(), phPkMix()));
     }
   });
-  window.addEventListener("keydown", e => { if (e.key !== "Escape") return; const h = document.getElementById("phPkSheet"); if (h && !h.hidden) { e.preventDefault(); e.stopImmediatePropagation(); phPkClose(); } }, true);   // Esc closes the card only, never what is under it
+  window.addEventListener("keydown", e => {   // Esc closes the open card only, never what is under it
+    if (e.key !== "Escape") return;
+    const open = ["phPkSheet", "phPkPickSheet"].map(id => document.getElementById(id)).find(h => h && !h.hidden);
+    if (open) { e.preventDefault(); e.stopImmediatePropagation(); open.hidden = true; }
+  }, true);
   // route 1: the whole label (heading, both boxes, warnings) on a 100 x 62 mm page in Arial, through the browser's Print (her "Label Printer", the QL-810W)
   // her 2026-11-26 "my label printer can print red": pure red (#FF0000, the colour a black and red roll prints as red) and print-color-adjust exact; the dialog's Colour and the printer's 2-colour mode are hers to set
   function presLabelPrint(text) {

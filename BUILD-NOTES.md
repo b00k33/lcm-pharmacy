@@ -19069,3 +19069,12 @@ the lid and they are too wide for the lid, add this feature".
   third argument; `phPkHerbBlock` lays out one name).
 - **Assumed:** both halves carry the same herb. The cut line sits at the middle of the head, so it follows how centred her roll sits.
 - **Not tested:** a real printer and paper.
+
+## Poooli: several herb labels at once (2026-11-28, SAVED, not live until her "push live")
+Her words: "how to select multiple herbs to print labels?", then her picks on the picture: build it; in halves "let me switch each time".
+- **Print labels** beside Table | Shelf (every clinic's stock page, both views; only where the browser can reach the Poooli) opens a tick
+  list: Lotus and Acupreg list that clinic's shelf, the other pages every herb not stopped; search narrows; Clear; "Next · N herbs".
+- **The card** (`phPkHerbCard`, one herb or many) shows the run of stickers as they print, scrolling inside the card; sticker size, Whole |
+  Halves, and with several herbs in halves **Same herb | Two herbs** (`lcm-herb-mix`; two herbs = left and right, an odd last herb on
+  both). "Print N labels" sends them in one go, A-Z.
+- **Not tested:** a real printer and paper, a long run in particular.
