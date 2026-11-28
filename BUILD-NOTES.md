@@ -19233,3 +19233,8 @@ Her 10:03pm reprint (four herbs, halves, two stickers): the first centred, the s
 - **Old stored gaps:** `lcm-pk-gap-*` is never read again (wrong unit, including a hand-set stopgap on one computer); the new key is `lcm-pk-space-*`.
 - **Plain paper (patient label):** unchanged, 96 steps. That is 12 mm, not the 8 mm the old comment said.
 - **Tested** with the byte maker in a test copy: 4 and 30 stickers, a 30 mm roll, Move up 4 mm, the patient label, old keys present and ignored. **Not tested:** on paper.
+
+## Poooli feed step proven on paper: 8.5 a mm (2026-11-28, commit only, NOT live)
+Her 10:09pm print with 63 feed steps on the 15 mm roll: both stickers sit at the same height (no creep), so 63 steps is her measured 7.4 mm gap. (Both sat about 6.4 mm low: where the earlier overfeed had left the paper.)
+- `PH_PK_STEPS` 8.5 (was the 8 estimate): the 15 mm roll's 89 dots send 63 / 64 steps. `PH_PK_GAP` 51 dots (4.25 mm = 36 steps, what an unset 30 mm roll has been fed).
+- Tested with the byte maker in a test copy: 2 stickers = 63, 63; 30 stickers total 1891 steps; 30 mm roll 36s; patient label 96; the old key present and ignored. The new build itself has not printed on paper.
