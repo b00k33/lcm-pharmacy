@@ -649,8 +649,11 @@ symbols. No "+ transfer from these eggs": Use ▸ and "+ Transfer" stay.
   (`phPkPatientFlat`). **Herb name labels:** her 15 and 30 mm rolls are **stickers on 57 mm paper** (that tall, with gaps). Print label
   in a stock row's ⋮ menu, the shelf lid menu, the one-clinic stock row (Label chip) and the herb edit panel opens a Herb label card:
   the name straight across one sticker, a **30 mm | 15 mm** bar, a **Whole | Halves** bar (Halves: the name on each half with a dashed
-  line to cut along, for a lid), Print label (then `PH_PK_GAP`, 3 mm, to the next sticker; her gap is
-  not yet measured). **Print labels** beside Table | Shelf ticks several herbs (the clinic's shelf at Lotus and Acupreg) and the
+  line to cut along, for a lid), Print label. **Lining up (2026-11-28, commit only, NOT live):** a **− Gap n mm +** bar (the space
+  between two stickers, quarter millimetres, kept per roll on this device, `lcm-pk-gap-15` / `-30`; 3 mm until set) and a
+  **▲ Move ▼** bar (higher / lower for the next print only; higher feeds on to that place on the next sticker, `phPkLead`).
+  Stickers print at 95 % darkness and the small name has a thin outline (`PH_PK_THICK`). **Print labels** beside Table | Shelf ticks
+  several herbs (the clinic's shelf at Lotus and Acupreg) and the
   same card prints them all, in halves with a **Same herb | Two herbs** bar.
 - **synth22 2026-11-25 (her picks; mocks `mock-herb-label-2026-11-25.html`, `mock-label-printer-2026-11-25.html`):** **whole grams** on a
   patient's prescription: `presCalcNumbers` rounds each herb (a half up, never under 1 g; a formula's recipe keeps its grams) and returns

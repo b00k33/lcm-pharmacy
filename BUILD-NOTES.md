@@ -19140,3 +19140,11 @@ Her "Yes, send it" in PA Game 33's session: the Saturday start-of-day and end-of
 - **Audits** (1220 and 360): tap, voice (the Dashboard) and title bar empty; style empty on Open and Close up. Dispensary has two older lines, not from this: the stock room's bottle labels at 8.5px (1220) and the phone table's Order button spilling its cell (360, the same with no routine today).
 - **Not confirmed by her:** one fan; the wide window's left pane slides.
 - **Not tested:** real devices, her record, two real devices syncing.
+
+## Poooli stickers: line them up, a bolder small name (2026-11-28, commit only, NOT live)
+Her first print on the 15 mm roll ("This is how its printing 15mm"): the name low, the second sticker at another height, white breaks in letters. Then "make the text a little bolder, the text under the large text is a bit faint".
+- **Cause:** LCM feeds 3 mm between stickers and her gap looks wider (not measured yet), so each sticker creeps; nothing told the app where the first one starts.
+- **Now (Herb label card):** Gap bar (0.25 mm steps, per roll) and Move bar (once, next print; the printer does not pull back, so up = on to the next sticker). The picture on the card uses her gap.
+- **Print:** stickers at the maker's darkest, 95 % (was 75 %); the common name drawn with a 0.6 dot outline. The patient label is unchanged.
+- **Tested** with a pretend printer in a test copy: feed = the gap (36, 63 dots), up 4 mm = 195 blank lines then the sticker, down 2 mm = 24, the move resets after a print, each roll keeps its own gap; card audits (tap, style, voice) empty at 1220 and 360.
+- **Not tested:** on paper. Whether darker closes the white breaks is a guess until she prints.

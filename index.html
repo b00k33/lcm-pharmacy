@@ -39874,6 +39874,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   #pharmacyPage .ph-pk-card .ph-pk-roll { margin: 12px 0; min-height: 190px; align-items: center; }
   #pharmacyPage .ph-pk-foot { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
   #pharmacyPage .ph-pk-picks { display: flex; flex-wrap: wrap; gap: 8px; }
+  #pharmacyPage#pharmacyPage .ph-pk-step .ph-ltr-qual { display: inline-flex; align-items: center; justify-content: center; width: 32px; min-width: 32px; padding: 0; }
+  #pharmacyPage#pharmacyPage .ph-pk-step .ph-pk-val { display: inline-flex; align-items: center; justify-content: center; min-width: 92px; padding: 0 8px; background: var(--ph-white); border-right: 1px solid var(--ph-line); font: 600 var(--fs-13) var(--font-body); color: var(--ph-ink); white-space: nowrap; }
   #pharmacyPage .ph-pk-go { margin-left: auto; height: 32px; padding: 0 14px; border: 1px solid var(--ph-herb); border-radius: 6px; background: var(--ph-herb); color: #fff; font: 600 var(--fs-13) var(--font-body); cursor: pointer; }
   #pharmacyPage .ph-pk-go:hover { background: var(--ph-herb-deep); }
   #pharmacyPage .ph-herbform #phHerbLabelBtn { margin-right: auto; }
@@ -181658,7 +181660,7 @@ Dosage: {dosage}
   // 648 dots (54 mm), 12 a mm, centred on the paper. One renderer draws the picture on screen and the dots that print. Its own
   // protocol: start, width, darkness, one packed row a command (an LZO stream stored as is), feed.
   function phPkCan() { return !!(window.navigator && navigator.serial); }
-  const PH_PK_GAP = 36;   // dots fed from one sticker to the next (3 mm): the maker lists no gap sensor; her gap is not yet measured
+  const PH_PK_GAP = 36;   // dots fed from one sticker to the next until she sets hers on the card (3 mm): the maker lists no gap sensor
   // the printer a label starts on, each time a prescription is opened: her label printer (the Brother) at CBD, the Poooli at Lotus and Acupreg
   // (her 2026-11-28 "cbd is always brother first, lotus and acupreg is pooli"); a tap on the other one lasts while that prescription is open
   var phPkSwap = {};
@@ -181670,6 +181672,13 @@ Dosage: {dosage}
   function phPkPick(shelf, v) { phPkSwap = { ...phPkSwap, [shelf]: v === "poooli" ? "poooli" : "label" }; }
   function phPkRoll() { try { return localStorage.getItem("lcm-herb-roll") === "15" ? 15 : 30; } catch (e) { return 30; } }
   function phPkTwo() { try { return localStorage.getItem("lcm-herb-split") === "2"; } catch (e) { return false; } }
+  // LINING UP HER STICKERS (her 2026-11-28 photo "This is how its printing 15mm": low, and creeping from one sticker to the next). Gap = the
+  // dots between two stickers, kept on this device for each roll, in quarter millimetres. Move = once, for the next print: the printer
+  // does not pull paper back, so "up" feeds on to that place on the next sticker
+  function phPkGap(tall) { try { const v = Math.round(+localStorage.getItem("lcm-pk-gap-" + tall)); if (v >= 3 && v <= 144) return v; } catch (e) { /* the starting gap */ } return PH_PK_GAP; }
+  var phPkMove = 0;   // mm: under 0 = higher, over 0 = lower
+  function phPkLead(tall, move) { const pitch = tall * 12 + phPkGap(tall), d = Math.round(move * 12); return d ? ((d % pitch) + pitch) % pitch : 0; }
+  function phPkLed(c, lead) { const n = phPkCanvas(c.width, lead + c.height); n.getContext("2d").drawImage(c, 0, lead); n.feed = c.feed; n.dark = c.dark; return n; }
   function phPkCanvas(w, h) { const c = document.createElement("canvas"); c.width = w; c.height = h; const x = c.getContext("2d"); x.fillStyle = "#fff"; x.fillRect(0, 0, w, h); x.fillStyle = "#000"; x.strokeStyle = "#000"; x.textBaseline = "alphabetic"; return c; }
   const phPkFont = (weight, size) => `${weight} ${size}px Arial, Helvetica, sans-serif`;
   // one paragraph as lines of runs, wrapped to the width; **words** are bold (her own mark in Settings › Label text); a word wider than the
@@ -181733,6 +181742,7 @@ Dosage: {dosage}
     return c;
   }
   function phPkPatientStrips(text) { return [phPkTurn(phPkPatientFlat(text))]; }
+  const PH_PK_THICK = 0.6;   // dots of outline on the small name, so it does not print faint
   // a herb's name label: the pin yin large, its common name under it
   function phPkHerbName(h) {
     const raw = String(h.name || ""), i = raw.indexOf("/");
@@ -181748,7 +181758,7 @@ Dosage: {dosage}
     let S = half && wide(n.pin, 700, least) > W ? big : one(n.pin, 700, big, least), E = !n.eng ? 0 : half ? small : one(n.eng, 400, small, Math.round(small * .7)), rows, used;
     for (;;) {
       const name = phPkLines(probe, n.pin, true, S, W);
-      rows = name.map(l => ({ l, s: S })).concat(n.eng ? phPkLines(probe, n.eng, false, E, W).map(l => ({ l, s: E })) : []);
+      rows = name.map(l => ({ l, s: S })).concat(n.eng ? phPkLines(probe, n.eng, false, E, W).map(l => ({ l, s: E, thick: PH_PK_THICK })) : []);
       used = rows.reduce((t, r) => t + Math.round(r.s * 1.15), 0);
       const tight = half && (name.length > 2 || n.pin.split(/\s+/).some(word => wide(word, 700, S) > W));
       if ((used <= room && !tight) || S <= 24) break;
@@ -181759,7 +181769,7 @@ Dosage: {dosage}
     rows.forEach(r => {
       const w = r.l.reduce((t, g, i) => { x.font = g.f; return t + x.measureText(i === r.l.length - 1 ? g.t.trim() : g.t).width; }, 0);
       let px = Math.round((W - w) / 2);
-      r.l.forEach(g => { x.font = g.f; x.fillText(g.t, px, y + Math.round(r.s * .93)); px += x.measureText(g.t).width; });
+      r.l.forEach(g => { x.font = g.f; x.fillText(g.t, px, y + Math.round(r.s * .93)); if (r.thick) { x.lineWidth = r.thick; x.lineJoin = "round"; x.strokeText(g.t, px, y + Math.round(r.s * .93)); } px += x.measureText(g.t).width; });
       y += Math.round(r.s * 1.15);
     });
     return c;
@@ -181776,7 +181786,7 @@ Dosage: {dosage}
       x.drawImage(half(h), 18, 0); x.drawImage(half(mate || h), 318, 0);
       x.lineWidth = 3; x.setLineDash([10, 8]); x.beginPath(); x.moveTo(300, 4); x.lineTo(300, H - 4); x.stroke();
     }
-    c.feed = PH_PK_GAP;
+    c.feed = phPkGap(tall); c.dark = true;
     return c;
   }
   // several herbs print a sticker each; in halves she may put two herbs on one sticker (her 2026-11-28 pick "let me switch each time"), an
@@ -181790,7 +181800,7 @@ Dosage: {dosage}
   }
   // the stickers on screen as they sit on her roll: the 57 mm backing, each sticker whole, a neighbour's edge above the first and below the last
   function phPkStickerHtml(strips) {
-    const gap = PH_PK_GAP, mid = gap / 2, edge = 48;
+    const gap = (strips[0] && strips[0].feed) || PH_PK_GAP, mid = gap / 2, edge = 48;
     return `<div class="ph-pk-paper is-along">${strips.map((c, i) => {
       const H = c.height, up = i ? 0 : edge + mid, down = i < strips.length - 1 ? 0 : edge + mid, back = phPkCanvas(684, up + gap + H + down), x = back.getContext("2d");
       x.fillStyle = "#cfe4ea"; x.fillRect(0, 0, back.width, back.height); x.fillStyle = "#fff";
@@ -181834,7 +181844,7 @@ Dosage: {dosage}
     if (phPkBusy || !phPkCan()) return;
     phPkBusy = true;
     const wait = ms => new Promise(r => setTimeout(r, ms));
-    let port = null;
+    let port = null, done = false;
     try {
       // the printer's serial service: Chrome can also keep other Bluetooth services of the same printer, which never answer
       const spp = "00001101-0000-1000-8000-00805f9b34fb";
@@ -181854,7 +181864,7 @@ Dosage: {dosage}
         const first = await Promise.race([r.read(), wait(3000).then(() => null)]);
         if (!first || !first.value || first.value[0] !== 0x4F) throw new Error("no reply");   // it answers "OK"
         await w.write(new Uint8Array([0x10, 0x7E, 0x68, 0x79, 0x7A, 0x85, 0x0F]));
-        await w.write(new Uint8Array([0x10, 0x7E, 0x68, 0x79, 0x6E, 0x46]));
+        await w.write(new Uint8Array([0x10, 0x7E, 0x68, 0x79, 0x6E, strips.some(c => c.dark) ? 0x52 : 0x46]));   // darkness: 95 % on stickers (white breaks in the letters), 75 % on plain paper
         const bytes = phPkBytes(strips), began = Date.now();
         for (let i = 0; i < bytes.length; i += 1024) await w.write(bytes.subarray(i, i + 1024));
         const rows = strips.reduce((n, c) => n + c.height + (c.feed || 96), 0);
@@ -181865,12 +181875,14 @@ Dosage: {dosage}
         r.releaseLock(); w.releaseLock();
       }
       await port.close();
+      done = true;
       presSavedToast("✓ Printed on the Poooli");
     } catch (e) {
       try { await port.close(); } catch (x) { /* never opened */ }
       presSavedToast("The Poooli isn't answering: nothing printed");
     }
     phPkBusy = false;
+    return done;
   }
   // the label card: the stickers as they will print, their size, whole or halves (with several herbs: how to share them), Print
   function phPkHerbsOf(host) { return String(host.dataset.herbs || "").split(",").map(id => PHARMACY.herbs.find(h => h.id === id)).filter(Boolean); }
@@ -181879,11 +181891,12 @@ Dosage: {dosage}
     const list = phPkHerbsOf(host); if (!list.length) { host.hidden = true; return; }
     const roll = phPkRoll(), two = phPkTwo(), many = list.length > 1, mix = phPkMix(), strips = phPkHerbStrips(list, roll, two, mix);
     const seg = (label, attr, opts) => `<span class="ph-tng2-seg" role="group" aria-label="${label}">${opts.map(([v, t, on]) => `<button type="button" class="ph-ltr-qual${on ? " on" : ""}" ${attr}="${v}" aria-pressed="${on}">${t}</button>`).join("")}</span>`;
+    const step = (label, attr, text, less, more) => `<span class="ph-tng2-seg ph-pk-step" role="group" aria-label="${label}"><button type="button" class="ph-ltr-qual" ${attr}="-1" aria-label="${less[1]}">${less[0]}</button><span class="ph-pk-val">${text}</span><button type="button" class="ph-ltr-qual" ${attr}="1" aria-label="${more[1]}">${more[0]}</button></span>`;
     const was = host.querySelector(".ph-pk-roll"), at = was ? was.scrollTop : 0;
     host.innerHTML = `<div class="ph-lk-backdrop" data-pk-close="1"></div><div class="ph-lk-card ph-pk-card" role="dialog" aria-label="Herb label">
       <div class="ph-lk-card-hd"><h3>${many ? `Herb labels · ${list.length} herbs` : "Herb label"}</h3><button type="button" data-pk-close="1" aria-label="Close">✕</button></div>
       <div class="ph-pk-roll${strips.length > 1 ? " is-stack" : ""}">${phPkStickerHtml(strips)}</div>
-      <div class="ph-pk-foot"><span class="ph-pk-picks">${seg("Sticker size", "data-pk-roll", [30, 15].map(r => [r, `${r} mm`, r === roll]))}${seg("Cut", "data-pk-split", [[1, "Whole", !two], [2, "Halves", two]])}${many && two ? seg("Herbs on a sticker", "data-pk-mix", [[1, "Same herb", !mix], [2, "Two herbs", mix]]) : ""}</span><button type="button" class="ph-pk-go" data-pk-print="1">${strips.length > 1 ? `Print ${strips.length} labels` : "Print label"}</button></div>
+      <div class="ph-pk-foot"><span class="ph-pk-picks">${seg("Sticker size", "data-pk-roll", [30, 15].map(r => [r, `${r} mm`, r === roll]))}${seg("Cut", "data-pk-split", [[1, "Whole", !two], [2, "Halves", two]])}${many && two ? seg("Herbs on a sticker", "data-pk-mix", [[1, "Same herb", !mix], [2, "Two herbs", mix]]) : ""}${step("Gap between stickers", "data-pk-gap", `Gap ${+(phPkGap(roll) / 12).toFixed(2)} mm`, ["−", "Smaller gap"], ["+", "Bigger gap"])}${step("Move the next print", "data-pk-move", phPkMove ? `${phPkMove < 0 ? "Up" : "Down"} ${Math.abs(phPkMove)} mm` : "Move", ["▲", "Print higher"], ["▼", "Print lower"])}</span><button type="button" class="ph-pk-go" data-pk-print="1">${strips.length > 1 ? `Print ${strips.length} labels` : "Print label"}</button></div>
     </div>`;
     host.querySelector(".ph-pk-roll").scrollTop = at;
   }
@@ -181943,14 +181956,22 @@ Dosage: {dosage}
     if (el.closest("[data-pk-next]")) { const ids = phPkPool().filter(h => phPkSel.has(h.id)).map(h => h.id); if (ids.length) { phPkPickClose(); phPkHerbCard(ids); } return; }
     if (el.closest("[data-pk-close]")) { phPkClose(); return; }
     const rl = el.closest("[data-pk-roll]");
-    if (rl) { try { localStorage.setItem("lcm-herb-roll", rl.dataset.pkRoll); } catch (x) {} phPkHerbPaint(); return; }
+    if (rl) { try { localStorage.setItem("lcm-herb-roll", rl.dataset.pkRoll); } catch (x) {} phPkMove = 0; phPkHerbPaint(); return; }
+    const gp = el.closest("[data-pk-gap]");
+    if (gp) { const t = phPkRoll(), v = Math.max(3, Math.min(144, phPkGap(t) + 3 * +gp.dataset.pkGap)); try { localStorage.setItem("lcm-pk-gap-" + t, v); } catch (x) {} phPkHerbPaint(); return; }
+    const mv = el.closest("[data-pk-move]");
+    if (mv) { phPkMove = Math.max(-30, Math.min(30, phPkMove + +mv.dataset.pkMove)); phPkHerbPaint(); return; }
     const sp = el.closest("[data-pk-split]");
     if (sp) { try { localStorage.setItem("lcm-herb-split", sp.dataset.pkSplit); } catch (x) {} phPkHerbPaint(); return; }
     const mx = el.closest("[data-pk-mix]");
     if (mx) { try { localStorage.setItem("lcm-herb-mix", mx.dataset.pkMix); } catch (x) {} phPkHerbPaint(); return; }
     if (el.closest("[data-pk-print]")) {
       const host = document.getElementById("phPkSheet"), list = host ? phPkHerbsOf(host) : [];
-      if (list.length) phPkPrint(phPkHerbStrips(list, phPkRoll(), phPkTwo(), phPkMix()));
+      if (list.length) {
+        const strips = phPkHerbStrips(list, phPkRoll(), phPkTwo(), phPkMix()), lead = phPkLead(phPkRoll(), phPkMove);
+        if (lead) strips[0] = phPkLed(strips[0], lead);
+        phPkPrint(strips).then(ok => { if (ok && phPkMove) { phPkMove = 0; phPkHerbPaint(); } });   // a move is for one print
+      }
     }
   });
   window.addEventListener("keydown", e => {   // Esc closes the open card only, never what is under it
