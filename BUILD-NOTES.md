@@ -19003,3 +19003,11 @@ Her words: "make the chart colours of files correspond to brand theme colors" (h
 - **Audits:** style-audit DATA_MARK gains the brand tab fills; its colour check skips the brand labels (`BRAND_TEXT`). Compared with the brand class on and off on all 27 parts of a return patient's steps and File, for each of the three clinics: tap, style and title bar add nothing at 1240; at 360 (Came in for, Pulse, Diagnosis, Treat, File) nothing, no sideways scroll.
 - **Shots** (local, `shots/`): binder-brand-cbd-file, -cbd-pulse, -acupreg-file, -acupreg-came-in-for, -lotus-file, -lotus-treat (1240, 2026-11-28).
 - **Not tested:** her devices and real patients.
+
+## Binder brand: to-fill flags in the clinic colour, Acupreg olive sage (2026-11-28, LIVE with this publish)
+Her words: "do both, then push", about the two points PA Coder 3D raised on the brand binder: the to-fill flags and their tinted boxes (Phone, Email, Height, Weight ...) stayed light teal on every clinic's binder, and Acupreg's sage (#4E7A63) looked almost the same as CBD's green (#2F7A45).
+- **Flags:** `.miss > .ph-bnd-flag`, the missing field's input, the sex segment and the name box read `--ph-gold` / `--ph-gold-tint` from `--bnd-card` / `--bnd-tint` on a branded binder. The app's own light teal stays everywhere else.
+- **Acupreg:** binder colour #66733A / #525D2E / #3D4622, card #9AA36C, tint #F3F5EC (olive sage, a clearly different hue from CBD's green). Only the binder; the Acupreg Herbs & stock pharmacy keeps its own sage.
+- **Audits:** brand class on vs off, all 27 parts x 3 clinics at 1240, File and Pulse at 360: nothing new; no sideways scroll at 360.
+- **Shots** (local): binder-brand2-acupreg-olive-file-1240, -cbd-flags, -lotus-flags (2026-11-28).
+- **Not tested:** her devices and real patients.
