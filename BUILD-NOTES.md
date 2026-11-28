@@ -19070,7 +19070,7 @@ the lid and they are too wide for the lid, add this feature".
 - **Assumed:** both halves carry the same herb. The cut line sits at the middle of the head, so it follows how centred her roll sits.
 - **Not tested:** a real printer and paper.
 
-## Poooli: several herb labels at once (2026-11-28, SAVED, not live until her "push live")
+## Poooli: several herb labels at once (2026-11-28, LIVE with this publish)
 Her words: "how to select multiple herbs to print labels?", then her picks on the picture: build it; in halves "let me switch each time".
 - **Print labels** beside Table | Shelf (every clinic's stock page, both views; only where the browser can reach the Poooli) opens a tick
   list: Lotus and Acupreg list that clinic's shelf, the other pages every herb not stopped; search narrows; Clear; "Next · N herbs".
