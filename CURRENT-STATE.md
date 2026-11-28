@@ -44,6 +44,11 @@ timeout had fired before the sync's own `<script>` was parsed, so the housekeepi
 (localStorage `lcm-sync-base-recs` is only a short note; `loadRecs` / `saveRecs` / `recsPrime`); if they cannot be read and both
 sides changed, sync waits. A sign's change history keeps the newest 20 lines and today's (`phTriAuditCap`), older ones cut at the
 next sync that sends.
+**Download only what changed (2026-11-28, commit only, NOT live; BUILD-NOTES "Download only what changed"):** an everyday
+pull asks the cloud for the row's stamp and uses the copy this tab holds while it is unchanged (`fetchIfChanged`,
+`cloudCopy`, memory only), once the tab has seen the stamp move. A new stamp, another login, a 6-hour-old copy, signing in
+and the send before a switch or sign-out download the whole row. A new cloud write must move `updated_at` (the database
+trigger does).
 
 ## Appointments & calendar
 **Her own blocks: pictures only (2026-11-21, her picks A):** `phC22PicOf(x)` reads `PH_C22_PICS` (title words, first match wins:

@@ -19120,3 +19120,12 @@ Her "Yes, build Step 1" (2026-11-27) and "push live" (2026-11-28), after the 5 M
   "Gone" reads the same on 3,000 random histories; a Guide restore survives a quiet cut; sign-out leaves no copy; the data's own owner
   tag saves and another's does not while open; opening offline (`off`, `lie`, `late`; fresh and expired sign-in; signed out).
 - **Not tested:** real devices, real data.
+
+## Download only what changed (2026-11-28, commit only, NOT live)
+Her "yes build it" to cutting how much data the database sends: every pull downloaded the whole `settings` row (opening, focus, coming back to the tab, the live channel, retries), about seven whole downloads for every save in a day measured.
+- **Now:** a pull (`pullMergePushImpl`) asks for `updated_at` alone (`fetchIfChanged`) and uses the row this tab already holds (`cloudCopy`: memory only, never stored) while the stamp is unchanged.
+- **The whole row is still read when:** the stamp differs; this tab has not yet seen the stamp move (`stampMoves`); a save came back with the old stamp; the copy is 6 hours old; another login; signing in (`afterAuth`); the send before a switch or sign-out (`flushPush`).
+- **Needs:** the database moving `updated_at` on every write (trigger `trg_settings_updated`, seen enabled on the live project, read-only, 2026-11-28). A new cloud write must move it.
+- **Not changed:** the merge and its guards, `ownerOk()`, `syncQueue`, the stamp check before a write; the other clinics' calendar read (`othRead`) and the `lcm_me` reads, which still download in full.
+- **Tested** (test copies, made-up data, a pretend cloud inside the page; the old build and the new side by side): one scripted day of 15 steps (own edits, five quick ones, another device saving with and without the live signal, a save landing between read and write, a hidden tab, the line down twice, both sides adding to one list) gives the same data on the device and in the cloud as the old build at every step; 35 whole-row downloads before, 14 after. Guards: a 7-hour-old copy downloads again; a stamp that stops moving, mid-use and from opening, downloads in full and loses nothing; its own owner tag saves, another's writes nothing. Opening offline (`off`, `lie`, `late`; fresh and expired sign-in): in within 1.5 s, no cover after 30 s, `late` reaches GET and POST settings.
+- **Not tested:** her devices, the real database, real data, and how far a month's use falls (read the database's usage page some days after publishing).
