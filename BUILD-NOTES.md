@@ -18957,3 +18957,24 @@ Her words: "when i click formulas it doesnt do anything. also make the text more
 - **Terse:** the chips say Formulas and Herbs only.
 - **One door:** `phClinCountWrite` serves the Stocktake page and the Dashboard count.
 - **Tested** in the test copy (made-up stock): all four clinics open their count; a Lotus count changed Lotus only, CBD's numbers and history untouched; Undo put the grams back; the Stocktake page still saves. Tap, style and voice audits empty on the clipboard and the count list at 1220.
+
+## Stock audit: dispenses and inventory separated per clinic (2026-11-28, commit only, NOT live)
+Her words: "audit the herbal pharmacy to verify that all dispenses are separated. audit the inventory to keep things up to date and
+consistent and fix bugs".
+- **Already right:** a prescription's deduction and its failed-save roll-back used the clinic's shelf; Dispense history, Stock movements
+  and the clinic pages already filtered by clinic.
+- **Fixed, stock could move on the wrong shelf:** the Undo after deleting a Stock movements line took a Lotus / Acupreg dispense from
+  CBD (and skipped pills and the empty bottle); the not-enough-stock box showed CBD grams and offered substitutes the clinic does not keep
+  (picking one wrote a broken number); the edit form opened from To order or Formula refill at a clinic showed and saved CBD's grams; the
+  refill bench and its Order buttons read and ordered CBD at a clinic; a clinic's Arrived list could open CBD's arrival fix box; merging
+  twin jars dropped the other jar's Acupreg / Lotus grams; a not-weighed clinic cell opened and left took the herb off that shelf.
+- **Fixed, counted at the wrong clinic:** CBD's cover days, overstock, usage boards, refill use, last made, counted dates, Stock
+  statistics and a herb's history included every clinic's movements; a Lotus pill dispense and a log with nothing deducted showed as CBD;
+  a clinic pickup could plan a CBD formula.
+- **Fixed, no record:** a clinic's deliveries, counts, typed numbers and moves now each write a Stock movements line (a typed CBD herb
+  number too); the movement count above the list is the picked clinic's.
+- Past movements from before today stay as recorded; nothing is rewritten and no saved grams change on update.
+- **Tested** (test copy, made-up stock): Lotus dispense, delete and Undo exact; short-stock box and substitute stay on Lotus; delivery,
+  count, typed number, move and refill each on one shelf with exact delete / Undo; CBD arrival, refill and dispense unchanged; every
+  stock page draws for CBD, Acupreg, Lotus and All. Audits at 1220 and 360: Stock movements clean. Named, as before this build: the
+  short-stock box's 16px herb name, its sentence and its 11.5px phone buttons; the bench table's 16px herb name and its text-sized Order.

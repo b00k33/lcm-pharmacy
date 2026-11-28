@@ -42449,7 +42449,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const from = new Date(TODAY.getFullYear(), TODAY.getMonth() - 6, TODAY.getDate());
     const map = new Map();
     PHARMACY.log.forEach(e => {
-      if (!((!e.kind || e.kind === "dispense") || e.kind === "refill")) return;
+      if (!((!e.kind || e.kind === "dispense") || e.kind === "refill") || phLogShelf(e) !== "cbd") return;   // CBD's jars: CBD's use only
       const d = parseKey(e.date);
       if (d < from) return;
       const ms = d.getTime();
@@ -42855,7 +42855,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const from = new Date(TODAY.getFullYear(), TODAY.getMonth() - 12, TODAY.getDate());
     const map = new Map();
     PHARMACY.log.forEach(e => {
-      if (!((!e.kind || e.kind === "dispense") || e.kind === "refill")) return;
+      if (!((!e.kind || e.kind === "dispense") || e.kind === "refill") || phLogShelf(e) !== "cbd") return;   // CBD's jars: CBD's use only
       if (parseKey(e.date) < from) return;
       (Array.isArray(e.items) ? e.items : []).forEach(i => {
         const ih = (i.code && findHerbByCode(i.code, i.name)) || findHerbByName(i.name);
@@ -42936,7 +42936,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const { start, endExclusive, monthA, monthB, monthAShort, monthBShort } = phSigWindow();
     const counts = new Map();
     PHARMACY.log.forEach(e => {
-      if (e.kind !== "dispense") return;
+      if (e.kind !== "dispense" || phLogShelf(e) !== "cbd") return;
       const d = parseKey(e.date);
       if (d < start || d >= endExclusive) return;
       const seenThisEntry = new Set();   // dedupe multiple lines of the same item within one entry
@@ -42988,7 +42988,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // other", and this one gets its own honest wording, never the other's.
   function phSigHasEnoughHistory() {
     const { start } = phSigWindow();
-    return PHARMACY.log.some(e => e.kind === "dispense" && parseKey(e.date) < start);
+    return PHARMACY.log.some(e => e.kind === "dispense" && phLogShelf(e) === "cbd" && parseKey(e.date) < start);
   }
   // ============ APP-WIDE SHELL (2026-08-24): one header, one strip
   // builder, one footer -- every page calls these three instead of writing
@@ -43539,6 +43539,15 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     });
     const grams = (go.qty || 0) > 0 ? go.qty : 0;
     if (grams) set(keep, "qty", phQty((keep.qty == null ? 0 : keep.qty) + grams));
+    ["ac", "pp"].forEach(s => {   // each clinic's own grams and order move to the kept jar, on that clinic's shelf
+      const f = PH_SHELVES[s].f;
+      if (phHasShelf(go, s)) {
+        const had = phHasShelf(keep, s), unw = (had ? keep[f + "Unw"] : true) && go[f + "Unw"];
+        set(keep, f, phRound2((had ? +keep[f] || 0 : 0) + (+go[f] || 0)));
+        if (unw) set(keep, f + "Unw", 1); else if (keep[f + "Unw"]) set(keep, f + "Unw", undefined);
+      }
+      ["ordS", "ordSd", "ordSq", "arrS"].forEach(k => { if (go[k] && go[k][s] != null && !(keep[k] && keep[k][s] != null)) set(keep, k, Object.assign({}, keep[k], { [s]: go[k][s] })); });
+    });
     if (keep.low == null && go.low != null) set(keep, "low", go.low);
     if (go.note && !(keep.note || "").includes(go.note)) set(keep, "note", keep.note ? `${keep.note}; ${go.note}` : go.note);
     const sups = (keep.suppliers || []).slice();
@@ -43769,8 +43778,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   window.addEventListener("lcm-sync-caught-up", () => setTimeout(phLotusCnx1126, 1800));
   setTimeout(phLotusCnx1126, 4600);
   // the clinic a log entry belongs to: its own shelf tag, else the shelf its dispensed herbs came off, else CBD (older entries carry none)
-  const phLogShelf = e => e.shelf || ((e.deducted || []).find(d => d && d.shelf) || {}).shelf || "cbd";
-  const phLogOfClinic = () => { const c = phClinicNow(); return c === "all" ? PHARMACY.log : PHARMACY.log.filter(e => phLogShelf(e) === c); };
+  function phLogShelf(e) { return e.shelf || ((e.deducted || []).find(d => d && d.shelf) || {}).shelf || ((e.products || []).find(p => p && p.shelf) || {}).shelf || "cbd"; }   // Black Pearl pills carry their clinic on the product line
+  const phLogOn = (e, c) => e.kind === "move" ? e.from === c || e.to === c : phLogShelf(e) === c;   // a move between shelves is in both clinics' history
+  const phLogOfClinic = () => { const c = phClinicNow(); return c === "all" ? PHARMACY.log : PHARMACY.log.filter(e => phLogOn(e, c)); };
   const phShelfLowList = s => phShelfHerbs(s).filter(h => !h.stopped && !phShelfUnw(h, s) && +h[PH_SHELVES[s].f] <= phShelfLow(h, s)).sort(phByName);
   // her 2026-11-24 "i cant add herbs to order for acupreg": a clinic's To order = what is low at its shelf + the herbs she added to it by hand (h.ordS[s] = the day it was added;
   // Arrived clears it), a herb that is not kept there yet included (its arrival puts the grams on that shelf)
@@ -43788,12 +43798,38 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       return v;
     });
   }
-  // a clinic's bottles arrive: the grams go on THAT clinic's shelf, the herb leaves its list, the arrival is kept for Undo
-  function phOsClinArrive(h, s) {
-    const g = phOrderPackFor(h) * ((h.ordSq && h.ordSq[s]) || 1);
-    phShelfAdd(h, g, s); (h.arrS = h.arrS || {})[s] = { d: keyOf(TODAY), g };
-    [h.ordS, h.ordSd, h.ordSq].forEach(o => { if (o) delete o[s]; });
-    return g;
+  // a delivery at a clinic ([herb, grams]): the grams on that shelf and one arrival in that clinic's own Stock movements (CBD's shape, tagged)
+  function phShelfArrive(list, s) {
+    const entry = { id: uid(), kind: "arrival", date: keyOf(TODAY), shelf: s, added: [] };
+    list.forEach(([h, g]) => {
+      const kept = phHasShelf(h, s), a = phActiveSupplier(h);
+      phShelfAdd(h, g, s);
+      const x = { herbId: h.id, name: h.name, grams: g, cost: phRound2(g * (h.cost || 0)), supplier: h.supplier || "", code: (a && a.code) || "", bottleCost: h.bottleCost != null ? h.bottleCost : null };
+      if (!kept) x.fresh = 1;
+      entry.added.push(x);
+      (h.arrS = h.arrS || {})[s] = { d: entry.date, g, log: entry.id };
+      [h.ordS, h.ordSd, h.ordSq].forEach(o => { if (o) delete o[s]; });
+    });
+    entry.cost = phRound2(entry.added.reduce((t, x) => t + x.cost, 0));
+    PHARMACY.log.unshift(entry);
+    return entry;
+  }
+  // that herb's last delivery at a clinic taken back: its grams, and its line in the clinic's Stock movements
+  function phShelfArriveUndo(h, s) {
+    const a = h.arrS && h.arrS[s]; if (!a) return;
+    const e = a.log && PHARMACY.log.find(x => x.id === a.log), x = e && (e.added || []).find(y => y.herbId === h.id);
+    if (x) {
+      phEntryStock({ shelf: s, added: [x] }, -1);
+      e.added = e.added.filter(y => y !== x); e.cost = phRound2(e.added.reduce((t, y) => t + (y.cost || 0), 0));
+      if (!e.added.length) PHARMACY.log = PHARMACY.log.filter(y => y !== e);
+      phAfterQtyChange(h);
+    } else phShelfAdd(h, -a.g, s);   // an arrival from before it was logged
+    delete h.arrS[s];
+  }
+  // a clinic's bottles arrive (each its order's bottles), one arrival for the lot
+  function phOsClinArrive(herbs, s) {
+    const entry = phShelfArrive(herbs.map(h => [h, phOrderPackFor(h) * ((h.ordSq && h.ordSq[s]) || 1)]), s);
+    return phRound2(entry.added.reduce((t, x) => t + x.grams, 0));
   }
   // the same taps as CBD's page, done on the clinic's own order state (caught before CBD's handlers, which write CBD's fields)
   document.addEventListener("click", e => {
@@ -43804,12 +43840,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     e.preventDefault(); e.stopPropagation();
     const now = keyOf(TODAY), nm = PH_SHELVES[s].name, find = id => PHARMACY.herbs.find(x => x.id === id), mp = (h, k) => (h[k] = h[k] || {});
     const off = h => [h.ordS, h.ordSd, h.ordSq].forEach(o => { if (o) delete o[s]; });
-    const arrive = h => phOsClinArrive(h, s);
+    const arrive = list => phOsClinArrive(list, s);
     const onSup = sup => PHARMACY.herbs.filter(h => h.ordS && h.ordS[s] && (h.supplier || "") === sup).sort(phByName);
     let msg = "";
     if (el.dataset.phStageSet) {
       const [id, st] = el.dataset.phStageSet.split(":"), h = find(id); if (!h) return;
-      if (st === "arrived") msg = `+${phFmtG(arrive(h))} g at ${nm}`;
+      if (st === "arrived") msg = `+${phFmtG(arrive([h]))} g at ${nm}`;
       else { mp(h, "ordS")[s] = (h.ordS && h.ordS[s]) || now; if (st === "ordered") mp(h, "ordSd")[s] = now; else if (h.ordSd) delete h.ordSd[s]; }
       phOsMenu = null;
     } else if (el.dataset.phOrderAdd) { const h = find(el.dataset.phOrderAdd); if (!h) return; mp(h, "ordS")[s] = now; msg = `${phPinyinName(h)} on the ${nm} order list`; }
@@ -43821,9 +43857,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       try { navigator.clipboard.writeText(txt); } catch (x) { /* the list is still marked */ }
       list.forEach(h => { mp(h, "ordSd")[s] = (h.ordSd && h.ordSd[s]) || now; });
       msg = `Copied ${list.length} · marked ordered`;
-    } else if (el.hasAttribute("data-ph-arrived-sup")) { const list = onSup(el.dataset.phArrivedSup || ""); list.forEach(arrive); msg = `${list.length} arrived at ${nm}`; }
+    } else if (el.hasAttribute("data-ph-arrived-sup")) { const list = onSup(el.dataset.phArrivedSup || ""); if (list.length) arrive(list); msg = `${list.length} arrived at ${nm}`; }
     else if (el.hasAttribute("data-ph-clear-arrived")) PHARMACY.herbs.forEach(h => { if (h.arrS) delete h.arrS[s]; });
-    else if (el.dataset.clinArrUndo) { const h = find(el.dataset.clinArrUndo), a = h && h.arrS && h.arrS[s]; if (!a) return; phShelfAdd(h, -a.g, s); delete h.arrS[s]; phOsMenu = null; msg = `Arrival undone at ${nm}`; }
+    else if (el.dataset.clinArrUndo) { const h = find(el.dataset.clinArrUndo), a = h && h.arrS && h.arrS[s]; if (!a) return; phShelfArriveUndo(h, s); phOsMenu = null; msg = `Arrival undone at ${nm}`; }
     if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
     if (msg) presSavedToast(msg);
     renderPharmacy();   // the page and the top bar's To order count
@@ -43833,6 +43869,11 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   let phMkCtx = "";   // the clinic a refill batch is being made for, while its stock check runs
   const phMkShelf = () => { const c = phClinicNow(); return c === "all" ? "" : c; };
   const phMkQ = (h, s) => s === "cbd" ? h.qty : phHasShelf(h, s) ? +h[PH_SHELVES[s].f] : 0;
+  // what a batch made now draws from (All reads CBD): null = not tracked or not weighed, 0 = not kept at that clinic
+  function phRefStock(h) { const s = phMkShelf() || "cbd"; return !h ? null : s !== "cbd" && phShelfUnw(h, s) ? null : phMkQ(h, s); }
+  function phRefOnList(h) { const s = phMkShelf() || "cbd"; return s === "cbd" ? !!(h.ordered || h.order) : !!(h.ordS && h.ordS[s]); }
+  // the bench's Order button for a short herb: CBD's order list, or the clinic's own
+  function phRefOrderBtn(h) { return phRefOnList(h) ? `<span class="ph-ref-order-tick" title="On the order list">✓ ordered</span>` : `<button type="button" class="ph-name-link" ${(phMkShelf() || "cbd") === "cbd" ? "data-ph-order" : "data-ref-clin-order"}="${h.id}"><svg class=icn aria-hidden=true><use href=#i-cart></use></svg> Order</button>`; }
   function phMkGate(items, commit) {
     const ms = phMkShelf();
     if (!ms) { phFlashShow("Choose a clinic (CBD, Acupreg or Lotus) before making a batch."); return; }
@@ -43848,6 +43889,11 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   const phShelfQty = h => { const s = presDispShelf(); return s === "cbd" ? h.qty : phShelfUnw(h, s) ? null : phHasShelf(h, s) ? +h[PH_SHELVES[s].f] : 0; };   // Not weighed = unknown (no shortfall check)
   // a herb's low line, the same at every clinic (h.low); with none set Acupreg and Lotus use 50 g, CBD none
   const phShelfLow = (h, s) => h.phaseOut ? 0 : (h.low != null && h.low > 0) ? +h.low : s === "pp" ? (+h.lowPP > 0 ? +h.lowPP : PH_PP_LOW) : s === "ac" ? (+h.lowAC > 0 ? +h.lowAC : PH_AC_LOW) : null;   // ONE low line per herb for every clinic (her 2026-11-24 "one shared low line"): the herb's own h.low; lowAC / lowPP are only the older per-clinic numbers, read while h.low is empty, never written now
+  function phShelfSet(h, s, v, sessionId) {   // one clinic shelf set to the grams she typed (weighed); a moved number is a count in that clinic's Stock movements
+    const f = PH_SHELVES[s].f, kept = phHasShelf(h, s), unw = phShelfUnw(h, s), was = kept ? +h[f] : 0;
+    h[f] = v; phShelfWeighed(h, s); phAfterQtyChange(h);
+    return kept && !unw && was === v ? null : phJarCountLog(h, was, v, sessionId, s, unw ? { unw: 1 } : kept ? null : { fresh: 1 });
+  }
   // grams back onto (or, negative, off) a shelf: a dispense's undo / roll-back puts them where they came from
   function phShelfAdd(h, grams, shelf) {
     const f = PH_SHELVES[shelf] ? PH_SHELVES[shelf].f : "qty";
@@ -43904,9 +43950,12 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     p.then(v => {
       const g = Math.floor(parseFloat(v));
       if (!(g > 0) || from === to) return;
-      if (from === "cbd") { if (h.qty != null) h.qty = phRound2(h.qty - g); } else h[f(from)] = phRound2((+h[f(from)] || 0) - g);
-      if (to === "cbd") h.qty = phRound2((+h.qty || 0) + g); else h[f(to)] = phRound2((+h[f(to)] || 0) + g);
-      phAfterQtyChange(h);
+      if (from !== "cbd" && !phHasShelf(h, from)) { presSavedToast(`Not stocked at ${nm(from)}`, 3200); return; }
+      const entry = { id: uid(), kind: "move", date: keyOf(TODAY), herbId: h.id, name: h.name, from, to, grams: g };
+      if (from === "cbd" && h.qty == null) entry.noFrom = 1;
+      if (to !== "cbd" && !phHasShelf(h, to)) entry.fresh = 1;
+      phEntryStock(entry, 1);
+      PHARMACY.log.unshift(entry);
       if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
       presSavedToast(`Moved ${phFmtG(g)} g to ${nm(to)}`);
       renderPhFlags(); renderPhStock();
@@ -46865,7 +46914,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // breakdowns. Sales & cost ride each dispense entry (price − cost = profit);
   // in-house batch makes never count as sales.
   function phProfitReportHtml() {
-    const log = PHARMACY.log;
+    const log = phLogOfClinic();
     const hasRange = !!(phProfitRange.from || phProfitRange.to);
     const fromD = phProfitRange.from ? new Date(phProfitRange.from + "T00:00")
       : new Date(TODAY.getFullYear(), TODAY.getMonth() - 5, 1);
@@ -47082,7 +47131,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   function renderPhStats() {
     if (phClinicSolo()) { const w = document.getElementById("phStatsWrap"); if (w) { w.innerHTML = phClinicStatsHtml(phClinicSolo()); return; } }
-    const { herbs, log } = PHARMACY;
+    const herbs = PHARMACY.herbs, log = phLogOfClinic();
     const singles = herbs.filter(h => !phIsFormula(h));
     const inHouse = herbs.filter(h => phIsFormula(h) && phMadeInHouse(h));
     const premade = herbs.filter(h => phIsFormula(h) && !phMadeInHouse(h));
@@ -47467,41 +47516,58 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     renderPharmacy();
   });
 
+  // the grams one log entry moved, taken back (dir -1: a delete or an Undo) or put again (dir 1: that delete undone), each on its own clinic's
+  // shelf (her 2026-11-23: stock is never mixed): herbs taken, grams delivered or counted, the batch made, a move between shelves, pills and
+  // the empty bottle it went out in
+  function phEntryStock(entry, dir) {
+    const herb = id => PHARMACY.herbs.find(hh => hh.id === id), fOf = s => PH_SHELVES[s] ? PH_SHELVES[s].f : "qty";
+    if (entry.btl) phEbtAdd(entry.btl, -dir);
+    // phShelfAdd keeps a negative: a dispense that outran stock left it there on purpose (her rule, 2026-08-06)
+    (entry.deducted || []).forEach(x => { const h = herb(x.herbId); if (h) phShelfAdd(h, -dir * x.grams, x.shelf); });
+    (Array.isArray(entry.products) ? entry.products : []).forEach(x => { const p = (PHARMACY.pills || []).find(y => y.id === x.pill), st = p && phPillSt(p, x.shelf); if (st && st.q != null) st.q = Math.round(+st.q - dir * (+x.pills || 0)); });   // Black Pearl pills
+    const s = phLogShelf(entry), f = fOf(s);
+    (Array.isArray(entry.added) ? entry.added : []).forEach(x => {
+      const h = herb(x.herbId); if (!h || (dir < 0 && h[f] == null && !x.gone)) return;
+      h[f] = phRound2((+h[f] || 0) + dir * x.grams);   // never a floor at 0: what has gone out since stays counted
+      if (s === "cbd") return;
+      if (x.unw) { if (dir < 0) h[f + "Unw"] = 1; else delete h[f + "Unw"]; }   // a first weigh taken back: not weighed again
+      if (h[f] === 0 && ((dir < 0 && x.fresh) || (dir > 0 && x.gone))) { delete h[f]; delete h[f + "Unw"]; }   // it was not kept at that clinic
+    });
+    if (entry.kind === "refill" && entry.targetId) { const t = herb(entry.targetId), tf = fOf(s); if (t && t[tf] != null) t[tf] = phRound2(t[tf] + dir * (entry.madeGrams || 0)); }
+    if (entry.kind === "move") {
+      const h = herb(entry.herbId); if (!h) return;
+      const a = fOf(entry.from), b = fOf(entry.to), g = dir * entry.grams;
+      if (!entry.noFrom) h[a] = phRound2((+h[a] || 0) - g);
+      if (dir > 0 || h[b] != null) h[b] = phRound2((+h[b] || 0) + g);
+      if (dir < 0 && entry.fresh && h[b] === 0) { delete h[b]; delete h[b + "Unw"]; }
+      phAfterQtyChange(h);
+    }
+  }
   // reverse exactly what one log entry moved, in both directions: dispense and
   // refill put their deductions back, arrivals take their packs back out,
   // refills also drain the made grams from the formula's stock. Returns true if reversed.
   function phReverseEntry(id) {
     const entry = PHARMACY.log.find(x => x.id === id);
     if (!entry) return false;
-    if (entry.btl) phEbtAdd(entry.btl, 1);   // the empty bottle it went out in is back
+    // the grams, the batch, the move, the pills and the empty bottle go back, each on its own clinic's shelf
+    phEntryStock(entry, -1);
     // the dispense this follow-up was ABOUT no longer exists -- remove it
     // rather than leave a dated reminder for an event that never happened
     if (PHARMACY.followups) PHARMACY.followups = PHARMACY.followups.filter(r => r.logId !== id);
-    (entry.deducted || []).forEach(x => {
-      const h = PHARMACY.herbs.find(hh => hh.id === x.herbId);
-      // phRound2, not phQty -- a dispense that outran stock left qty negative
-      // on purpose (her rule, 2026-08-06); flooring the restore at 0 here
-      // would silently erase a still-outstanding shortfall if an earlier,
-      // still-undispensed deduction is what's keeping qty negative
-      if (h) phShelfAdd(h, x.grams, x.shelf);
+    // an arrival's own marks go with it, or the Arrived row stays and its Undo arrival takes the grams out a second time
+    if (entry.kind === "arrival") (Array.isArray(entry.added) ? entry.added : []).forEach(x => {
+      const h = PHARMACY.herbs.find(hh => hh.id === x.herbId); if (!h) return;
+      const s = phLogShelf(entry);
+      if (s !== "cbd") { if (h.arrS && h.arrS[s] && h.arrS[s].log === entry.id) delete h.arrS[s]; return; }
+      // the row's own arrival, whatever date it was corrected to (a shared entry keeps its date, and Stock movements can move an entry's)
+      const own = phArrivalLogEntry(h) === entry, shown = h.arrivedDate;
+      if (own) { delete h.arrivedDate; delete h.arrivedGrams; }
+      const rh = h.restockHistory || [], at = rh.findIndex(r => (r.date === entry.date || (own && r.date === shown)) && r.grams === x.grams);
+      if (at >= 0) rh.splice(at, 1);
     });
-    (Array.isArray(entry.products) ? entry.products : []).forEach(x => { const p = (PHARMACY.pills || []).find(y => y.id === x.pill), st = p && phPillSt(p, x.shelf); if (st && st.q != null) st.q = Math.round(+st.q + (+x.pills || 0)); });   // Black Pearl pills
-    (Array.isArray(entry.added) ? entry.added : []).forEach(x => {
-      const h = PHARMACY.herbs.find(hh => hh.id === x.herbId);
-      if (h && h.qty != null) h.qty = phRound2(h.qty - x.grams);   // never a floor at 0: what has gone out since stays counted, and the Log's Undo lands on the same number
-      // an arrival's own marks go with it, or the Arrived row stays and its Undo arrival takes the grams out a second time
-      if (h && entry.kind === "arrival") {
-        // the row's own arrival, whatever date it was corrected to (a shared entry keeps its date, and Stock movements can move an entry's)
-        const own = phArrivalLogEntry(h) === entry, shown = h.arrivedDate;
-        if (own) { delete h.arrivedDate; delete h.arrivedGrams; }
-        const rh = h.restockHistory || [], at = rh.findIndex(r => (r.date === entry.date || (own && r.date === shown)) && r.grams === x.grams);
-        if (at >= 0) rh.splice(at, 1);
-      }
-    });
-    if (entry.kind === "refill" && entry.targetId) {
-      const t = PHARMACY.herbs.find(hh => hh.id === entry.targetId), tf = PH_SHELVES[entry.shelf] ? PH_SHELVES[entry.shelf].f : "qty";
-      if (t && t[tf] != null) t[tf] = phRound2(t[tf] - (entry.madeGrams || 0));
-      if (t && entry.planWas && !t.refill) Object.assign(t, entry.planWas);   // a plan made since then stands
+    if (entry.kind === "refill" && entry.targetId && entry.planWas) {
+      const t = PHARMACY.herbs.find(hh => hh.id === entry.targetId);
+      if (t && !t.refill) Object.assign(t, entry.planWas);   // a plan made since then stands
     }
     // a price-review entry never touched qty -- undo it by putting the OLD
     // cost back on that one supplier row (and on the herb itself, if that
@@ -47552,7 +47618,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // happen at once, the board itself repaints after its flight animation
   // the log entry of the arrival this jar's Arrived row shows (All arrived writes one entry for many herbs)
   function phArrivalLogEntry(h) {
-    const has = e => e.kind === "arrival" && (e.added || []).some(x => x.herbId === h.id);
+    const has = e => e.kind === "arrival" && phLogShelf(e) === "cbd" && (e.added || []).some(x => x.herbId === h.id);   // the CBD Arrived row's own
     return PHARMACY.log.find(e => has(e) && e.date === h.arrivedDate) || PHARMACY.log.find(has) || null;
   }
   function phArrive(list, opts) {
@@ -47727,7 +47793,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         const s = phClinicSolo();
         if (s) {   // Acupreg / Lotus: that clinic's list arrives on that clinic's shelf (never CBD's)
           const list = PHARMACY.herbs.filter(h => !h.stopped && h.ordS && h.ordS[s]); if (!list.length) return;
-          list.forEach(h => phOsClinArrive(h, s));
+          phOsClinArrive(list, s);
           if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
           presSavedToast(`${list.length} arrived at ${PH_SHELVES[s].name}`); renderPharmacy(); return;
         }
@@ -47754,7 +47820,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     refill: () => {
       // the four lists are tabs inside the card now, so the ⋯ keeps only the
       // actions (2026-10-02, her approved mock)
-      const shorts = phRefillAllShorts();
+      const shorts = phClinicSolo() ? [] : phRefillAllShorts();   // the refill plan is CBD's
       // her 2026-10-22 pick 3: the primary is "+ Plan a formula" (a labelled gold pill, her mock), and New formula
       // recipe moves into the ⋯ -- it opens as a side sheet over the page (#refPresPanel CSS), never squeezed into the card
       return [
@@ -73754,11 +73820,12 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
     phMkGate(items, (resolved, ms) => done(refMakeCommit(recipe, grams, cost, resolved, { quiet: true, jar: h, shelf: ms })));
   }
   // a count she typed (Inventory's Stock number, "Just a count"): the same log entry a stocktake writes
-  function phJarCountLog(h, before, newQty, sessionId) {
-    const diff = newQty - (before || 0);
+  function phJarCountLog(h, before, newQty, sessionId, shelf, mark) {   // shelf: a clinic's count (mark: first weigh, newly kept, taken off)
+    const diff = phRound2(newQty - (before || 0));
     const entry = { id: uid(), kind: "stocktake", date: keyOf(TODAY), herbId: h.id, name: h.name, oldQty: before || 0, newQty, diff,
-      added: [{ herbId: h.id, name: h.name, grams: diff }] };
+      added: [Object.assign({ herbId: h.id, name: h.name, grams: diff }, mark)] };
     if (sessionId) entry.sessionId = sessionId;
+    if (shelf && shelf !== "cbd") entry.shelf = shelf;
     PHARMACY.log.unshift(entry);
     return entry;
   }
@@ -73766,6 +73833,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
   function phJarTrustMap() {
     const m = new Map(), up = (id, d) => { if (id && d && !(m.get(id) >= d)) m.set(id, d); };
     (PHARMACY.log || []).forEach(e => {
+      if (phLogShelf(e) !== "cbd") return;   // CBD's jar: CBD's own history
       if (e.kind === "refill") up(e.targetId, e.date);
       else if (e.kind === "stocktake") up(e.herbId, e.date);
       else if (e.kind === "arrival") (e.added || []).forEach(a => up(a.herbId, e.date));
@@ -73801,17 +73869,17 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
   const phClinCntLast = (sc, formulas) => (PHARMACY.clinStocktakes || []).filter(r => r.shelf === sc && (formulas || r.kind !== "formulas")).reduce((d, r) => r.date > d ? r.date : d, "");
   // one door for a clinic count (the Stocktake page and the Dashboard's formula count): that shelf only, its own history
   function phClinCountWrite(sc, typed, kind) {
-    const f = PH_SHELVES[sc].f, snaps = [];
+    const f = PH_SHELVES[sc].f, snaps = [], logIds = [], rid = uid();
     let chk = 0;
     typed.forEach(([id, raw]) => {
       if (raw == null || String(raw).trim() === "") return;
       chk++;
       const h = PHARMACY.herbs.find(x => x.id === id), v = Math.max(0, Math.floor(parseFloat(raw)));
-      if (h && Number.isFinite(v) && (v !== +h[f] || phShelfUnw(h, sc))) { snaps.push([h, h[f], h[f + "Unw"]]); h[f] = v; phShelfWeighed(h, sc); phAfterQtyChange(h); }
+      if (h && Number.isFinite(v) && (v !== +h[f] || phShelfUnw(h, sc))) { snaps.push([h, h[f], h[f + "Unw"]]); const e = phShelfSet(h, sc, v, rid); if (e) logIds.push(e.id); }
     });
     let rec = null;
-    if (chk) { rec = { id: uid(), shelf: sc, date: keyOf(TODAY), checked: chk, adjusted: snaps.length }; if (kind) rec.kind = kind; (PHARMACY.clinStocktakes = PHARMACY.clinStocktakes || []).unshift(rec); }   // the clinic's own history, never CBD's (CBD's last-count dates and print read PHARMACY.stocktakes)
-    return { chk, n: snaps.length, snaps, rec };
+    if (chk) { rec = { id: rid, shelf: sc, date: keyOf(TODAY), checked: chk, adjusted: snaps.length }; if (kind) rec.kind = kind; (PHARMACY.clinStocktakes = PHARMACY.clinStocktakes || []).unshift(rec); }   // the clinic's own history, never CBD's (CBD's last-count dates and print read PHARMACY.stocktakes)
+    return { chk, n: snaps.length, snaps, rec, logIds };
   }
   function phDashCountDoneClin(C) {
     const sc = C.sc, f = PH_SHELVES[sc].f, r = phClinCountWrite(sc, C.ids.map(id => [id, C.vals[id]]), "formulas");
@@ -73820,6 +73888,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
     const undo = () => {
       r.snaps.forEach(([h, q, unw]) => { h[f] = q; if (unw) h[f + "Unw"] = unw; phAfterQtyChange(h); });
       PHARMACY.clinStocktakes = (PHARMACY.clinStocktakes || []).filter(x => x.id !== r.rec.id);
+      PHARMACY.log = PHARMACY.log.filter(e => !r.logIds.includes(e.id));
       savePharmacy(); renderPhDashboardPage();
     };
     if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
@@ -74012,8 +74081,10 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
       const t = PRESC.items.find(p => p.id === x.prescriptionId), pat = phTitle((t && (presPatientFor(t) || t.name)) || "—");
       const prog = schedPrepProgress(x), due = schedDueDate(x) || "", empty = !prog.items.length;
       const gram = prog.items.reduce((a, i) => a + (i.grams || 0), 0), when = [due ? schedDateStr(due) : "", x.method === "pickup" ? (x.pickupTime || "") : ""].filter(Boolean).join(" ");
-      prog.items.forEach(i => { const nm = i.herb || i.name, h = nm ? findHerbByName(nm) : null; if (h && phIsFormula(h) && !h.stopped && (+h.qty || 0) < (+i.grams || 0) && !need.has(h.id)) need.set(h.id, { h, d: due }); });
-      const psh = x.method === "pickup" && due ? phDayShelf(due) : "";   // a pickup's clinic comes from its day (booking override, else weekday), as Dispense does
+      // a pickup's clinic is the one its Dispense will use: the prescription's own pick, else that day's booking, else the weekday
+      const bk = x.method === "pickup" && due && t ? phApptList().find(a => a && a.date === due && a.service !== "Break" && phPatientKey(a.patient || a.name) === phPatientKey(presPatientFor(t) || t.name)) : null;
+      const psh = x.method === "pickup" && due ? (t && t.shelf && PH_SHELVES[t.shelf] ? t.shelf : bk ? phPlaceShelf(phApptPlaceOf(bk)) : phDayShelf(due)) : "";
+      if (!psh || psh === "cbd") prog.items.forEach(i => { const nm = i.herb || i.name, h = nm ? findHerbByName(nm) : null; if (h && phIsFormula(h) && !h.stopped && (+h.qty || 0) < (+i.grams || 0) && !need.has(h.id)) need.set(h.id, { h, d: due }); });   // CBD's jar: CBD's pickups and postage
       rows.push({ key: "sp:" + x.id, d: due || "9990", o: 0, sid: x.id, sh: psh, title: `${x.method === "pickup" ? "Pickup" : "Postage"}${when ? " " + when : ""} · ${pat}`,
         sub: (psh ? PH_SHELVES[psh].name + " · " : "") + (empty ? "Prescription has no herbs. Open it to finish before you prepare." : `${prog.items.length} herb${prog.items.length === 1 ? "" : "s"} · ${phFmtG(gram)} g · ${prog.items.length - prog.weighedN} to weigh, ${prog.finalN - prog.checksN} checks`),
         btns: [["Patient", `data-sched-prep-patient="${esc(t ? (presPatientFor(t) || t.name) : "")}"`], ["Edit prescription", t ? `data-sched-prep-presc="${t.id}"` : "disabled"]].concat(empty ? [] : [[prog.weighedN || prog.checksN ? "Resume" : "Prepare", `data-ph-dash-prep-open="${x.id}"`]]) });
@@ -74178,6 +74249,8 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
   }
   document.addEventListener("click", e => {
     const t = e.target instanceof Element ? e.target : null; if (!t) return;
+    const rb = t.closest("[data-ref-clin-order]");
+    if (rb) { const h = PHARMACY.herbs.find(x => x.id === rb.dataset.refClinOrder); if (h) { phRefillOrderShorts([{ herb: h, short: 0 }]); renderRefPreview(); } return; }
     const fb = t.closest("[data-clin-dash-f]");
     if (fb) { phClinDashF = fb.dataset.clinDashF; renderPhDashboardPage(); return; }
     const ob = t.closest("[data-clin-dash-order]");
@@ -83779,7 +83852,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
         // her ask (2026-08-18): re-validate the amount against the SUBSTITUTE's
         // own stock -- if it's now short too, keep the picker open with its
         // warning visible instead of quietly closing on a second shortfall
-        s.subOpen = !!(subH && subH.qty != null && amount > subH.qty);
+        s.subOpen = !!(subH && phDispQ(subH) != null && amount > phDispQ(subH));
         renderPhDispCheckModal();
         return;
       }
@@ -84469,7 +84542,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
         // tab out from under her every time she opened a herb from Restock/the
         // low list/anywhere but Inventory. Removed; same "stays put" behaviour
         // as the Dashboard path now, everywhere.
-        phHerbFormShelfNext = herbEdit.closest("#phInvWidget, #phDashboardWrap") ? phClinicSolo() : "";
+        phHerbFormShelfNext = herbEdit.closest("#phInvWidget, #phDashboardWrap, #phRestockWrap, #phRefillWrap, #phStatsWrap, #phStocktakeWrap") ? phClinicSolo() : "";
         phOpenHerbEditDrawer(h);
         return;
       }
@@ -84483,7 +84556,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
         // fixed-overlay children of #pharmacyPage, not part of Inventory's
         // own swapped-out page content, so this is safe unlike the ✎ path above
         const h = PHARMACY.herbs.find(x => x.id === dashHerbEdit.dataset.phDashHerbEdit);
-        if (h) phOpenHerbEditDrawer(h);
+        if (h) { phHerbFormShelfNext = dashHerbEdit.closest("#phInvWidget, #phDashboardWrap, #phRestockWrap, #phRefillWrap") ? phClinicSolo() : ""; phOpenHerbEditDrawer(h); }
         return;
       }
       // her ask (2026-08-27): a Formula recipe with no matching Inventory
@@ -84523,7 +84596,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
         const undoPt = pt0 ? { id: pt0.id, at: pt0.lastDispensedAt, g: pt0.lastDispensedGrams } : null;
         const undoPs = ps0 ? { id: ps0.id, at: ps0.dispensedAt } : null;
         // the Arrived row and history as they stand: an Undo puts back only what this delete took (an old arrival takes nothing from a newer row)
-        const undoArr = entry && entry.kind === "arrival" ? (entry.added || []).map(x => PHARMACY.herbs.find(hh => hh.id === x.herbId)).filter(Boolean).map(h => ({ id: h.id, date: h.arrivedDate, grams: h.arrivedGrams, hist: (h.restockHistory || []).slice() })) : [];
+        const undoArr = entry && entry.kind === "arrival" ? (entry.added || []).map(x => PHARMACY.herbs.find(hh => hh.id === x.herbId)).filter(Boolean).map(h => { const s = phLogShelf(entry); return s !== "cbd" ? { id: h.id, shelf: s, arrS: h.arrS && h.arrS[s] } : { id: h.id, date: h.arrivedDate, grams: h.arrivedGrams, hist: (h.restockHistory || []).slice() }; }) : [];
         if (entry && phReverseEntry(id)) {
           phLogUndo = { entry, idx, undoFu, undoPt, undoPs, undoArr };
           if (phLogOpen === id) phLogOpen = null;
@@ -84537,25 +84610,21 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
         if (phLogUndo) {
           const { entry, idx, undoFu, undoPt, undoPs, undoArr } = phLogUndo;
           // put the movement back exactly as it was, then the entry itself
-          (entry.deducted || []).forEach(x => {
-            const h = PHARMACY.herbs.find(hh => hh.id === x.herbId);
-            if (h && h.qty != null) { h.qty = phRound2(h.qty - x.grams); phAfterQtyChange(h); }   // as the dispense wrote it: decimals and a negative stay
-          });
+          phEntryStock(entry, 1);   // every gram on the clinic's shelf it came from or went to
           (Array.isArray(entry.added) ? entry.added : []).forEach(x => {
             const h = PHARMACY.herbs.find(hh => hh.id === x.herbId);
-            if (h) h.qty = phRound2((h.qty == null ? 0 : h.qty) + x.grams);
             const was = h && (undoArr || []).find(r => r.id === h.id);
-            if (was) {
+            if (was && was.shelf) { if (was.arrS && !(h.arrS && h.arrS[was.shelf])) (h.arrS = h.arrS || {})[was.shelf] = was.arrS; }
+            else if (was) {
               // a bottle that arrived since the delete keeps its history line and its Arrived row
               const back = new Set(was.hist.map(r => r.id));
               h.restockHistory = (h.restockHistory || []).filter(r => !back.has(r.id)).concat(was.hist);
               if (was.date && !h.arrivedDate) { h.arrivedDate = was.date; h.arrivedGrams = was.grams; }
             }
           });
-          if (entry.kind === "refill" && entry.targetId) {
+          if (entry.kind === "refill" && entry.targetId && entry.planWas) {
             const t2 = PHARMACY.herbs.find(hh => hh.id === entry.targetId);
-            if (t2 && t2.qty != null) t2.qty = phRound2(t2.qty + (entry.madeGrams || 0));
-            if (t2 && entry.planWas) phRefillClearPlan(t2);   // the batch stands again, so its plan ends again
+            if (t2) phRefillClearPlan(t2);   // the batch stands again, so its plan ends again
           }
           PHARMACY.log.splice(Math.min(idx, PHARMACY.log.length), 0, entry);
           if (undoFu && undoFu.length) PHARMACY.followups = (PHARMACY.followups || []).concat(undoFu);
@@ -84987,11 +85056,13 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
       if (shelfS) delete vals.qty;
       if (phHerbEditId) {
         const h = PHARMACY.herbs.find(x => x.id === phHerbEditId);
-        if (h && shelfS) { if (shelfQ != null && (phShelfUnw(h, shelfS) || shelfQ !== +h[PH_SHELVES[shelfS].f])) { h[PH_SHELVES[shelfS].f] = shelfQ; phShelfWeighed(h, shelfS); } }
+        if (h && shelfS && shelfQ != null) phShelfSet(h, shelfS, shelfQ);
         if (h) {
           // topping the qty up = the order arrived — clear the order flags
           if (vals.qty != null && (h.qty == null || vals.qty > h.qty)) { h.order = false; h.ordered = false; }
+          const q0 = h.qty;
           Object.assign(h, vals);
+          if (!shelfS && h.qty != null && h.qty !== q0) phJarCountLog(h, q0, h.qty);   // a typed number is a count
           delete h.restockCostComputed;   // hand-edited in the form — no longer "computed from bottle cost"
           phSetStatus(h, status === "current" ? "active" : status);
           phAfterQtyChange(h);
@@ -85720,9 +85791,13 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
           }
           if (v != null && (h.qty == null || v > h.qty)) { h.order = false; h.ordered = false; }  // restocked → off the order list
           h.qty = v == null ? null : Math.floor(v);   // shelf stock is whole grams, rounded down
+          if (h.qty != null && h.qty !== before) phJarCountLog(h, before, h.qty);   // a typed number is a count, in Stock movements
           phAfterQtyChange(h);   // a phase-out sold to 0 becomes a plain write-off
-        } else if (field === "qtyPP") { phShelfWeighed(h, "pp"); if (v == null) delete h.qtyPP; else h.qtyPP = Math.floor(v); }   // typed grams = weighed
-        else if (field === "qtyAC") { phShelfWeighed(h, "ac"); if (v == null) delete h.qtyAC; else h.qtyAC = Math.floor(v); }
+        } else if (field === "qtyPP" || field === "qtyAC") {
+          const s = field === "qtyPP" ? "pp" : "ac";
+          if (v != null) phShelfSet(h, s, Math.floor(v));   // typed grams = weighed, a count at that clinic
+          else if (phHasShelf(h, s) && !phShelfUnw(h, s)) { const was = +h[field] || 0; if (was) phJarCountLog(h, was, 0, "", s, { gone: 1 }); delete h[field]; }   // emptied box: no longer kept there; a not-weighed one opened and left stays
+        }
         else if (field === "lowPP" || field === "lowAC") { h.low = v == null || !(v > 0) ? null : Math.floor(v); delete h.lowAC; delete h.lowPP; }
         else if (field === "low") { h.low = v; delete h.lowAC; delete h.lowPP; }   // one shared low line: the older per-clinic numbers go when it is set
         // her catch (2026-08-04): "$23 a bottle should be $0.23/g, not $0.30" --
@@ -86273,7 +86348,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
         // grams edited straight in the value list — same whole-gram floor as
         // everywhere else; the row re-prices (and leaves the list at zero)
         const h = PHARMACY.herbs.find(x => x.id === statsG.dataset.phStatsg);
-        if (h) { h.qty = phQty(parseFloat(statsG.value) || 0); phAfterQtyChange(h); savePharmacy(); renderPhStats(); }
+        if (h) { const was = h.qty; h.qty = phQty(parseFloat(statsG.value) || 0); if (h.qty !== was) phJarCountLog(h, was, h.qty); phAfterQtyChange(h); savePharmacy(); renderPhStats(); }
         return;
       }
       const orderPack = e.target.closest("[data-ph-order-pack]");
@@ -87429,12 +87504,19 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
   // goes through the EXISTING order-list fields (h.order + orderPack/orderQty);
   // she orders in whole bottles, so a shortfall rounds up to the next one
   function phRefillOrderShorts(shorts) {
+    const cl = phMkShelf() || "cbd";
     let added = 0;
     shorts.forEach(s => {
       const h = s.herb;
       if (!h) return;
       const pack = phOrderPackFor(h) || PH_PACK_HERB;
       const need = Math.max(1, Math.ceil(s.short / pack));
+      if (cl !== "cbd") {   // a clinic's batch orders onto that clinic's own list, never CBD's
+        const had = (h.ordS && h.ordS[cl] && h.ordSq && h.ordSq[cl]) || 0;
+        h.ordS = h.ordS || {}; h.ordS[cl] = h.ordS[cl] || keyOf(TODAY);
+        h.ordSq = h.ordSq || {}; h.ordSq[cl] = Math.max(had, need);
+        added++; return;
+      }
       const have = (h.order && h.orderQty != null) ? h.orderQty : 0;
       h.order = true; delete h.snoozedUntil;
       h.orderQty = Math.max(have, need);
@@ -87812,8 +87894,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
     const [s, id] = b.dataset.shelfArr.split(":");
     const h = PHARMACY.herbs.find(x => x.id === id), inp = b.parentElement.querySelector("input"), g = Math.floor(parseFloat(inp && inp.value));
     if (!h || !PH_SHELVES[s] || !(g > 0)) return;
-    phShelfAdd(h, g, s);
-    if (h.ordS) delete h.ordS[s];
+    phShelfArrive([[h, g]], s);
     if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
     presSavedToast(`+${phFmtG(g)} g at ${PH_SHELVES[s].name}`);
     renderPhRestock();
@@ -87860,9 +87941,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
     const s = a.dataset.phClinAdd, sel = document.getElementById("phClinAddSel"), gi = document.getElementById("phClinAddG");
     const h = sel && PHARMACY.herbs.find(x => x.id === sel.value), g0 = parseFloat(gi && gi.value), g = Number.isFinite(g0) ? Math.floor(g0) : 0;   // no grams typed = starts at 0
     if (!h || !PH_SHELVES[s] || !(g >= 0)) return;
-    h[PH_SHELVES[s].f] = g;
-    if (Number.isFinite(g0)) phShelfWeighed(h, s);
-    phAfterQtyChange(h);
+    if (Number.isFinite(g0)) phShelfSet(h, s, g); else { h[PH_SHELVES[s].f] = g; phAfterQtyChange(h); }
     if (savePharmacy() === false) { presSavedToast("That could not be saved — check the warning at the top and try again.", 3200); return; }
     presSavedToast(`${phPinyinName(h)} now kept at ${PH_SHELVES[s].name}`);
     renderPhRows();
@@ -88073,7 +88152,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
         </div></span>`;
     };
     // an arrival's fix: grams, date, or undo (the same fields and handlers as before)
-    const osArrEdit = h => phArrEditId !== h.id ? "" : `<div class="ph-arr-edit">
+    const osArrEdit = h => osSh || phArrEditId !== h.id ? "" : `<div class="ph-arr-edit">
         ${phArrUndoConfirm === h.id ? phConfirmStrip(`Undo this arrival? −${phFmtG(h.arrivedGrams || 0)}g comes back out of stock.`, `data-ph-arr-undo-yes="${h.id}"`, "Undo") : `
         <label>Grams received<input type="number" min="0" step="1" value="${h.arrivedGrams != null ? h.arrivedGrams : 0}" data-ph-arr-grams="${h.id}" aria-label="Grams received for ${esc(h.name)}"></label>
         <label>Arrived<input type="date" value="${esc(h.arrivedDate || "")}" data-ph-arr-date="${h.id}" aria-label="Arrival date for ${esc(h.name)}"></label>
@@ -88123,7 +88202,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
       : k === "ad" ? osDay(h.arrivedDate)
       : k === "add" ? `<span class="plus">+${phFmtG(h.arrivedGrams || 0)}g</span>`
       : k === "now" ? `${phFmtG(h.qty || 0)}g` : "";
-    const osTr = (h, stage, cols, i) => `<tr class="ph-ost-r${i % 2 ? " st" : ""}${stage !== "arrived" && h.qty != null && (h.qty <= 0 || (h.low > 0 && h.qty <= h.low)) ? " short" : ""}${phOsSide === h.id ? " open" : ""}${osGlow(h)}" data-ph-os-row="${h.id}">${cols.map(k => `<td class="${osCls(k)}">${osCell(h, k, stage)}</td>`).join("")}</tr>${stage === "arrived" && phArrEditId === h.id ? `<tr class="ph-ost-sub"><td colspan="${cols.length}">${osArrEdit(h)}</td></tr>` : ""}`;
+    const osTr = (h, stage, cols, i) => `<tr class="ph-ost-r${i % 2 ? " st" : ""}${stage !== "arrived" && h.qty != null && (h.qty <= 0 || (h.low > 0 && h.qty <= h.low)) ? " short" : ""}${phOsSide === h.id ? " open" : ""}${osGlow(h)}" data-ph-os-row="${h.id}">${cols.map(k => `<td class="${osCls(k)}">${osCell(h, k, stage)}</td>`).join("")}</tr>${!osSh && stage === "arrived" && phArrEditId === h.id ? `<tr class="ph-ost-sub"><td colspan="${cols.length}">${osArrEdit(h)}</td></tr>` : ""}`;
     // the phone (her pick 7): two lines per herb -- jar, code + name, the Button and ⋮; then its facts
     const osLi = (h, stage, i) => {
       const f = stage === "toorder" ? `${osStk(h)}${osOrdTxt(h, stage)}${osOrdB(h)}`
@@ -88582,9 +88661,15 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
         `<div class="ing"><span>${esc(phDispName(phPinyinName({ name: i.name || "" })))}</span><span class="g">${i.grams != null ? phFmtG(i.grams) + "g" : ""}</span></div>`).join("")}</div>` : ""}
       ${ded ? `<div class="ings"><div class="ln">Stock deducted:</div>${ded}</div>` : ""}
       ${Array.isArray(e.stockNotes) && e.stockNotes.length ? `<div class="ph-stock-note">${e.stockNotes.join("<br>")}</div>` : ""}`;
+    if (e.kind === "move") return `
+      <div class="ln">Moved — <b>${esc(phDispName(phFixText(e.name)))}</b></div>
+      <div class="ln">Grams: <b>${phFmtG(e.grams)}g</b></div>
+      <div class="ln">From: <b>${PH_SHELVES[e.from].name}</b></div>
+      <div class="ln">To: <b>${PH_SHELVES[e.to].name}</b></div>
+      <div class="ln">Date: <b>${date}</b></div>`;
     if (e.kind === "stocktake") return `
       <div class="ln">Stocktake — <b>${esc(phDispName(phFixText(e.name)))}</b></div>
-      <div class="ln">App had: <b>${phFmtG(e.oldQty)}g</b></div>
+      <div class="ln">App had: <b>${((e.added || [])[0] || {}).unw ? "not weighed" : ((e.added || [])[0] || {}).fresh ? "not kept" : `${phFmtG(e.oldQty)}g`}</b></div>
       <div class="ln">Counted: <b>${phFmtG(e.newQty)}g</b></div>
       <div class="ln">Difference: <b>${e.diff > 0 ? "+" : "−"}${phFmtG(Math.abs(e.diff))}g</b></div>
       <div class="ln">Date: <b>${date}</b></div>`;
@@ -88616,7 +88701,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
   // entirely so a modern entry is never counted twice.
   function phHerbMovements(h) {
     const rows = [];
-    PHARMACY.log.forEach(e => {
+    phLogOfClinic().forEach(e => {
       const hasDed = Array.isArray(e.deducted) && e.deducted.length;
       if (hasDed) {
         e.deducted.forEach(d => {
@@ -88651,6 +88736,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
       if (e.kind === "refill" && e.targetId === h.id) {
         rows.push({ e, delta: e.madeGrams || 0, type: "Refill — made", detail: "Batch restocked this jar" });
       }
+      if (e.kind === "move" && e.herbId === h.id) rows.push({ e, delta: phClinicNow() === e.from ? -e.grams : e.grams, type: "Moved", detail: `${PH_SHELVES[e.from].name} → ${PH_SHELVES[e.to].name}` });
     });
     rows.sort((a, b) => (b.e.date || "").localeCompare(a.e.date || "") || (b.e.at || 0) - (a.e.at || 0));
     return rows;
@@ -88687,6 +88773,11 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
   // display only -- expand/date-edit/delete/undo below are 100% untouched,
   // same data-ph-log-* attributes on the same entry ids.
   function phLogMovementInfo(e) {
+    if (e.kind === "move") {
+      const h = phHerbByIdGet().get(e.herbId);
+      return { type: "Moved", pill: "stocktake", itemCode: h ? phHerbCode(h) : "", itemName: phDispName(phFixText(e.name)),
+        source: `${PH_SHELVES[e.from].name} → ${PH_SHELVES[e.to].name}`, change: phClinicNow() === e.from ? -e.grams : e.grams, after: null };
+    }
     if (e.kind === "refill") {
       const jar = e.targetId ? phHerbByIdGet().get(e.targetId) : null;
       return {
@@ -88818,7 +88909,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
     tmp.innerHTML = phLogDetailHtml(e);
     const left = [], right = [];
     [...tmp.children].forEach(n => (n.classList.contains("ings") || n.classList.contains("ph-stock-note") ? right : left).push(n.outerHTML));
-    const rightLabel = (!e.kind || e.kind === "dispense") ? "Formula" : e.kind === "refill" ? "Ingredients" : e.kind === "arrival" ? "Items" : "Count";
+    const rightLabel = (!e.kind || e.kind === "dispense") ? "Formula" : e.kind === "refill" ? "Ingredients" : e.kind === "arrival" ? "Items" : e.kind === "move" ? "Move" : "Count";
     return `<div class="ph-lg-col"><div class="ph-lg-h">Details</div>${left.join("")}</div>
       <div class="ph-lg-col"><div class="ph-lg-h">${rightLabel}</div>${right.join("") || `<div class="ph-lg-none">—</div>`}</div>`;
   }
@@ -88923,6 +89014,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
           <option value="refill">Refills</option>
           <option value="arrival">Arrivals</option>
           <option value="stocktake">Stocktakes</option>
+          <option value="move">Moves</option>
         </select>
         <select id="phLogRangeSel" aria-label="Date range">
           <option value="all">All time</option>
@@ -89864,7 +89956,7 @@ or changing anything in Cliniko.
     document.getElementById("phLogWrap").classList.toggle("ph-lg-sheet", phLgSheetMode());
     if (phLgSheetMode()) {
       document.getElementById("phLogCount").textContent =
-        PHARMACY.log.length !== log.length ? `${log.length} of ${PHARMACY.log.length} movement${PHARMACY.log.length === 1 ? "" : "s"}` : "";   // unfiltered = the title's number
+        phLogOfClinic().length !== log.length ? `${log.length} of ${phLogOfClinic().length} movement${phLogOfClinic().length === 1 ? "" : "s"}` : "";   // unfiltered = the title's number
       el.innerHTML = phLogSheetHtml(shown, log, totalPages);
       phDsResizeApply();
       if (phLogDateEdit) { const inp = el.querySelector("[data-ph-log-date-edit]"); if (inp) inp.focus(); }
@@ -89897,7 +89989,7 @@ or changing anything in Cliniko.
       </td></tr>` : ""}${open ? `<tr class="ph-log-detailrow"><td colspan="8"><div class="ph-log-card">${phLogDetailHtml(e)}</div></td></tr>` : ""}`;
     }).join("");
     document.getElementById("phLogCount").textContent =
-      PHARMACY.log.length !== log.length ? `${log.length} of ${PHARMACY.log.length} movement${PHARMACY.log.length === 1 ? "" : "s"}` : "";   // unfiltered = the title's number
+      phLogOfClinic().length !== log.length ? `${log.length} of ${phLogOfClinic().length} movement${phLogOfClinic().length === 1 ? "" : "s"}` : "";   // unfiltered = the title's number
     el.innerHTML = `
       ${phLogUndo ? `<div class="ph-flash">✓ Deleted "<b>${esc(phDispName(phFixText(phLogUndo.entry.what || phLogUndo.entry.name || "Order arrived")))}</b>" — its stock movement was reversed.
         <button type="button" class="ph-undo-btn" data-ph-log-undo="1">↩ Undo</button></div>` : ""}
@@ -180951,6 +181043,7 @@ Dosage: {dosage}
     const shorts = [...new Set(items.filter(x => x.h && q(x.h) != null && phRound2(q(x.h) - need.get(x.h.id)) < 0).map(x => x.h))];
     if (!shorts.length) { onCommit(items); return; }
     phDispCheck = {
+      shelf: shelfAware ? presDispShelf() : "cbd",
       allItems: items,
       shorts: shorts.map(h => ({ h, needed: need.get(h.id), subHerbId: "", subAmount: need.get(h.id), subOpen: false })),
       onCommit,
@@ -180964,10 +181057,12 @@ Dosage: {dosage}
   // A stopped / phasing-out herb that still holds enough IS offered (her ask
   // 2026-10-04: Ren Shen, 220 g on the shelf, was hidden by its Stopped flag) --
   // listed after the normal ones and tagged, so she can use up what is left.
+  // a jar's grams on the shelf this short dispense draws from (null = not tracked, not weighed or not kept there: never CBD's number elsewhere)
+  function phDispQ(h) { const s = (phDispCheck && phDispCheck.shelf) || "cbd"; return !h ? null : s === "cbd" ? h.qty : phHasShelf(h, s) && !phShelfUnw(h, s) ? +h[PH_SHELVES[s].f] : null; }
   function phDispSubEligible(short) {
     const isF = phIsFormula(short.h);
     return PHARMACY.herbs.filter(h2 => h2.id !== short.h.id && phIsFormula(h2) === isF
-      && h2.qty != null && h2.qty > 0 && h2.qty >= (parseFloat(short.subAmount) || 0))
+      && phDispQ(h2) != null && phDispQ(h2) > 0 && phDispQ(h2) >= (parseFloat(short.subAmount) || 0))
       .sort((a, b) => (a.stopped ? 1 : 0) - (b.stopped ? 1 : 0) || phByName(a, b));
   }
   function phDispSubTag(h2) { return h2.stopped ? (h2.phaseOut ? " · phasing out" : " · stopped") : ""; }
@@ -181019,13 +181114,13 @@ Dosage: {dosage}
     if (!dc) return "";
     const anyLeftNegative = dc.shorts.some(s => !s.subHerbId);
     const rows = dc.shorts.map(s => {
-      const deficit = phRound2((s.h.qty || 0) - s.needed);
+      const deficit = phRound2((phDispQ(s.h) || 0) - s.needed), at = dc.shelf && dc.shelf !== "cbd" ? " at " + PH_SHELVES[dc.shelf].name : "";
       const subH = s.subHerbId ? PHARMACY.herbs.find(hh => hh.id === s.subHerbId) : null;
-      const over = subH && subH.qty != null && (parseFloat(s.subAmount) || 0) > subH.qty;
+      const over = subH && phDispQ(subH) != null && (parseFloat(s.subAmount) || 0) > phDispQ(subH);
       return `<div class="ph-dispck-row">
         <div class="ph-dispck-main">
           <span class="ph-dispck-name">${phHerbCode(s.h) ? `<span class="ph-dispck-code">${esc(phHerbCode(s.h))}</span> ` : ""}${esc(phDispName(phPinyinName(s.h), phIsFormula(s.h)))}</span>
-          <span class="ph-dispck-math">${phFmtG(s.h.qty)}g in stock · ${phFmtG(s.needed)}g needed → <b>${phFmtG(deficit)}g</b></span>
+          <span class="ph-dispck-math">${phFmtG(phDispQ(s.h) || 0)}g in stock${at} · ${phFmtG(s.needed)}g needed → <b>${phFmtG(deficit)}g</b></span>
         </div>
         ${subH && !s.subOpen
           ? `<div class="ph-dispck-subbed">✓ Substituted — now using ${esc(phDispName(phPinyinName(subH), phIsFormula(subH)))} × ${phFmtG(s.subAmount)}g <button type="button" class="ph-dispck-change" data-dispcheck-sub-open="${s.h.id}">Change</button></div>`
@@ -181033,10 +181128,10 @@ Dosage: {dosage}
           ? `<div class="ph-dispck-picker">
               <select data-dispcheck-sub-pick="${s.h.id}">
                 <option value="">Choose a replacement herb…</option>
-                ${phDispSubEligible(s).map(h2 => `<option value="${h2.id}" ${s.subHerbId === h2.id ? "selected" : ""}>${esc(phDispName(phPinyinName(h2), phIsFormula(h2)))} (${phFmtG(h2.qty)}g${phDispSubTag(h2)})</option>`).join("")}
+                ${phDispSubEligible(s).map(h2 => `<option value="${h2.id}" ${s.subHerbId === h2.id ? "selected" : ""}>${esc(phDispName(phPinyinName(h2), phIsFormula(h2)))} (${phFmtG(phDispQ(h2))}g${phDispSubTag(h2)})</option>`).join("")}
               </select>
               <span class="ph-dispck-amtwrap"><input type="number" step="0.01" min="0" class="ph-dispck-amt" data-dispcheck-sub-amount="${s.h.id}" value="${s.subAmount}"> g</span>
-              ${over ? `<span class="ph-dispck-warn"><svg class=icn aria-hidden=true><use href=#i-warn></use></svg> only ${phFmtG(subH.qty)}g available — this will also go negative</span>` : ""}
+              ${over ? `<span class="ph-dispck-warn"><svg class=icn aria-hidden=true><use href=#i-warn></use></svg> only ${phFmtG(phDispQ(subH))}g available — this will also go negative</span>` : ""}
               <div class="ph-dispck-picker-actions">
                 <button type="button" class="btn-save" data-dispcheck-sub-commit="${s.h.id}" ${s.subHerbId ? "" : "disabled"}>Use this substitute</button>
                 <button type="button" class="btn-cancel" data-dispcheck-sub-cancel="${s.h.id}">Cancel</button>
@@ -181098,7 +181193,7 @@ Dosage: {dosage}
       // go-ahead, substituted or not.
       const actual = phRound2(x.grams);
       if (actual > 0) {
-        const sfld = PH_SHELVES[shelf].f, before = +x.h[sfld];
+        const sfld = PH_SHELVES[shelf].f, before = +x.h[sfld] || 0;
         x.h[sfld] = phRound2(before - actual);
         deducted.push(shelf !== "cbd" ? { herbId: x.h.id, grams: actual, shelf } : { herbId: x.h.id, grams: actual });
         if (x.subFor) { notes.push(`↔ ${x.subFor.code ? esc(x.subFor.code) + " " : ""}${esc(x.subFor.name)} substituted with ${phHerbCode(x.h) ? esc(phHerbCode(x.h)) + " " : ""}${esc(x.h.name)} × ${phFmtG(actual)}g for this dispense only.`); subs[(x.subFor.code || "") + "|" + (x.subFor.name || "")] = { code: phHerbCode(x.h) || "", name: x.h.name || "", grams: actual }; }
@@ -181443,6 +181538,8 @@ Dosage: {dosage}
       // from the dispense that just happened via presPendingNotes
       stockNotes: presPendingNotes[t.id] || [],
     };
+    // the clinic this sale belongs to: the shelf the herbs came off, else (nothing taken) the clinic it is dispensed at
+    { const sh = (entry.deducted.find(d => d && d.shelf) || {}).shelf || (entry.deducted.length ? "cbd" : presDispShelf()); if (sh !== "cbd") entry.shelf = sh; }
     // her ask (2026-09-03): "record which booking it was for" -- if this
     // patient has a Cliniko appointment on today's date, tag the entry with
     // its time so History can tell a booked-visit dispense from a mail-out
@@ -181503,7 +181600,7 @@ Dosage: {dosage}
     }
     if (!presIsFormula(t)) phFuCreateFromDispense(t, entry, gp);   // her §2: created at Save & log, never while drafting
     // her 2026-11-26 pick "1 per dispense": the bag goes out in one of that clinic's empty bottles (once she keeps a count there)
-    if (!presIsFormula(t) && (entry.deducted || []).length) { const bs = ((entry.deducted.find(x => x && x.shelf) || {}).shelf) || presDispShelf(); if (PH_SHELVES[bs] && (+phEbtRead(bs).n || 0) > 0) { phEbtAdd(bs, -1); entry.btl = bs; savePharmacy(); } }
+    if (!presIsFormula(t) && (entry.deducted || []).length) { const bs = phLogShelf(entry); if (PH_SHELVES[bs] && (+phEbtRead(bs).n || 0) > 0) { phEbtAdd(bs, -1); entry.btl = bs; savePharmacy(); } }
     // her 2026-09-16 pick: the dispensed formula becomes the plan phase's
     // formula, right here, after the record is safely down. Both stores are
     // touched (script link + plan phase) so save both again -- the atomic
@@ -183513,7 +183610,7 @@ Dosage: {dosage}
   // header's old 4-cell clock strip is gone -- the same counts now live on
   // the filter chips themselves.
   function phRefRecentFootHtml() {
-    const refsMonth = PHARMACY.log.filter(e => e.kind === "refill" && e.date.slice(0, 7) === keyOf(TODAY).slice(0, 7)).length;
+    const refsMonth = phLogOfClinic().filter(e => e.kind === "refill" && e.date.slice(0, 7) === keyOf(TODAY).slice(0, 7)).length;
     const monthName = esc(TODAY.toLocaleDateString("en-AU", { month: "long" }));
     return `<div class="ph-rf-recentfoot">
       <span>${refsMonth ? `Made ${refsMonth} in ${monthName}` : `None made in ${monthName} yet`}</span>
@@ -183562,7 +183659,7 @@ Dosage: {dosage}
     const startKey = keyOf(new Date(t0.getFullYear(), t0.getMonth(), t0.getDate() - PH_FU_WEEKS * 7 + 1));
     const by = new Map();
     PHARMACY.log.forEach(e => {
-      if (e.kind !== "dispense" || !e.date || e.date < startKey || e.date > today) return;
+      if (e.kind !== "dispense" || !e.date || e.date < startKey || e.date > today || phLogShelf(e) !== "cbd") return;
       // calendar days, rounded (an hour-short day across a clock change still counts as a day)
       const wi = PH_FU_WEEKS - 1 - Math.floor(Math.round((t0 - parseKey(e.date)) / 864e5) / 7);
       if (wi < 0 || wi >= PH_FU_WEEKS) return;
@@ -183936,7 +184033,7 @@ Dosage: {dosage}
     if (phRpSearchPickedId === id) { phRpSearchPickedId = null; phRpSearchRaw = ""; const inp = document.getElementById("phRpSearchInput"); if (inp) inp.value = ""; phRfcPaintAddRes(); }
   }
   function phRfcOrder(rows) {
-    const fresh = rows.filter(s => s.herb && !s.herb.order).length;
+    const fresh = rows.filter(s => s.herb && !phRefOnList(s.herb)).length;
     phRefillOrderShorts(rows);
     phRefFixOpenId = null;
     phRfcShowToast(fresh ? `Added ${fresh} herb${fresh === 1 ? "" : "s"} to To order.` : "Those herbs are already on To order.");
@@ -184321,7 +184418,7 @@ Dosage: {dosage}
         if (hit) hit.need = phRound2(hit.need + n); else need.set(src.id, { herb: src, name: src.name, need: n });
       });
     });
-    const rows = [...need.values()].map(r => { const qty = r.herb.qty; return { ...r, shelf: qty, short: qty != null && r.need > qty ? phRound2(r.need - qty) : 0 }; });
+    const rows = [...need.values()].map(r => { const qty = phRefStock(r.herb); return { ...r, shelf: qty, short: qty != null && r.need > qty ? phRound2(r.need - qty) : 0 }; });
     rows.sort((a, b) => (b.short > 0) - (a.short > 0) || String(a.name).localeCompare(String(b.name)));
     return rows;
   }
@@ -184461,7 +184558,7 @@ Dosage: {dosage}
     const fk = [...fams.keys()].sort((a, b) => fams.get(b) - fams.get(a));
     const s3 = `<section><h4><span class="q">3</span>Treating</h4>${fk.length ? `<div class="fam${grow ? " grow" : ""}">${fk.map(f => `<span class="fam-${f === "none" ? "none none" : f}" style="flex:${fams.get(f)}"></span>`).join("")}</div><div class="famk">${fk.map(f => `<span class="cnd${f === "none" ? " none" : " fam-" + f}"><i></i><span>${PH_RFC_FAM_LABEL[f] || "Other"} · ${fams.get(f)}</span></span>`).join("")}</div>` : `<p class="none">—</p>`}</section>`;
     let last = null;
-    PHARMACY.log.forEach(e => { if (e.kind === "refill" && e.targetId === h.id && (!last || e.date > last.date)) last = e; });
+    PHARMACY.log.forEach(e => { if (e.kind === "refill" && e.targetId === h.id && phLogShelf(e) === "cbd" && (!last || e.date > last.date)) last = e; });
     const batch = recipe ? phRefillBatchFor(h, recipe) : 0, res = recipe && batch ? phRefillCanMake(h, batch) : null;
     const lasts = batch && u.perWeek > 0 ? Math.max(1, Math.round(batch / u.perWeek)) : 0;
     const herbs = !res || res.noRecipe ? `<span class="none">No recipe</span>`
@@ -184567,14 +184664,14 @@ Dosage: {dosage}
   function phRfcMadeHtml() {
     if (phRefillTab !== "toRefill" || phRfcSearch.trim()) return "";
     const today = keyOf(TODAY);
-    const made = PHARMACY.log.filter(e => e.kind === "refill" && e.date === today).slice(0, 6);
+    const made = phLogOfClinic().filter(e => e.kind === "refill" && e.date === today).slice(0, 6);
     if (!made.length) return "";
     // the batch just finished in its row pops its check once (refLastMade.inRow, set by refMakeCommit)
     const fresh = refLastMade && refLastMade.inRow && !refLastMade.shelfShown ? refLastMade.logId : "";
     if (fresh) refLastMade.shelfShown = true;
     return `<div class="ph-rfc-made"><div class="h">Made today<span class="c">${made.length}</span></div>${made.map(e => {
       const jar = e.targetId ? PHARMACY.herbs.find(x => x.id === e.targetId) : null;
-      return `<div class="mrow${fresh === e.id ? " fresh" : ""}"><span class="ck">✓</span><span class="tx"><b>${esc(phRfcTitle(e.what))}</b> · +${phFmtG(e.madeGrams)} g${jar && jar.qty != null ? ` · jar now ${phFmtG(jar.qty)} g` : ""}</span><button type="button" class="ph-rfc-chipbtn" data-ref-toast-undo="${e.id}">Undo</button></div>`;
+      return `<div class="mrow${fresh === e.id ? " fresh" : ""}"><span class="ck">✓</span><span class="tx"><b>${esc(phRfcTitle(e.what))}</b> · +${phFmtG(e.madeGrams)} g${(f => jar && jar[f] != null ? ` · jar now ${phFmtG(jar[f])} g` : "")(PH_SHELVES[phLogShelf(e)].f)}</span><button type="button" class="ph-rfc-chipbtn" data-ref-toast-undo="${e.id}">Undo</button></div>`;
     }).join("")}</div>`;
   }
   // Q3 "+ Plan a formula": the search sheet (the old dashed add box, moved into a sheet)
@@ -184702,7 +184799,7 @@ Dosage: {dosage}
     if (!el) return;
     if (!recipe || !items) { el.innerHTML = ""; return; }
     const missing = items.filter(x => !x.h).length;
-    const short = scaled ? items.filter(x => x.h && x.h.qty != null && x.h.qty < x.grams).length : 0;
+    const short = scaled ? items.filter(x => x.h && phRefStock(x.h) != null && phRefStock(x.h) < x.grams).length : 0;
     el.innerHTML = `<div class="ph-ref-sum ph-ref-onestrip${whole ? "" : " bad"}">
       <span class="ph-ref-found-tx"><svg class=icn aria-hidden=true><use href=#i-jar></use></svg> ${esc(presAbbr(recipe) || phDispName(recipe.name, true))}</span>
       <button type="button" class="ph-ref-found-x" data-ref-clear="1" title="Clear this formula — writes nothing" aria-label="Clear ${esc(phTitle(recipe.name))}">✕</button>
@@ -184745,7 +184842,7 @@ Dosage: {dosage}
       </div>`;
       return;
     }
-    const tracked = items.filter(x => x.h && x.h.qty != null).length;
+    const mk = phMkShelf() || "cbd", tracked = items.filter(x => x.h && (mk === "cbd" ? x.h.qty != null : phHasShelf(x.h, mk))).length;
     const bottle = refJarForRecipe(recipe);
     // her report 2026-09-07: the table above now stays put after a make (see
     // refMakeCommit) so she can weigh against it, which means grams/recipe
@@ -184837,8 +184934,9 @@ Dosage: {dosage}
     (recipe && recipe.ingredients || []).forEach(i => {
       if (!i.grams || i.grams <= 0) return;
       const h = presFindHerb(i);
-      if (!h || h.qty == null) return;                 // untracked herbs never limit
-      const can = Math.floor((h.qty || 0) / i.grams);
+      const q = phRefStock(h);
+      if (!h || q == null) return;                     // untracked herbs never limit
+      const can = Math.floor((q || 0) / i.grams);
       if (can < ceiling) { ceiling = can; limiter = h.name || i.herb; }
     });
     return { ceiling: isFinite(ceiling) ? ceiling : Infinity, limiter };
@@ -184904,7 +185002,7 @@ Dosage: {dosage}
     const done = already ? new Set(items.map((_, i) => i)) : new Set([...refTicks.done].filter(i => i < items.length));
     const doneG = phRound2(w.reduce((s, g, i) => s + (done.has(i) ? g : 0), 0));
     const jar = refJarForRecipe(recipe);
-    const jarNow = jar && jar.qty != null ? jar.qty : 0;
+    const jarQ = jar ? phRefStock(jar) : null, jarNow = jarQ != null ? jarQ : 0;
     const jar0 = jar ? phRound2(already && refLastMade.jarAdded ? jarNow - (refLastMade.madeGrams || 0) : jarNow) : null;
     const jarG = jar ? phRound2(jar0 + doneG) : null;
     // first paint of a batch draws the numbers where they are -- motion only
@@ -184924,11 +185022,9 @@ Dosage: {dosage}
     return items.map((x, i) => {
       const d = wg.done.has(i);
       run = phRound2(run + wg.w[i]);
-      const stock = x.h && x.h.qty != null ? x.h.qty : null;
+      const stock = phRefStock(x.h);
       const short = scaled && stock != null && stock < x.grams;
-      const orderBtn = short && x.h
-        ? (x.h.ordered || x.h.order ? `<span class="ph-ref-order-tick" title="On the order list">✓ ordered</span>` : `<button type="button" class="ph-name-link" data-ph-order="${x.h.id}"><svg class=icn aria-hidden=true><use href=#i-cart></use></svg> Order</button>`)
-        : "";
+      const orderBtn = short && x.h ? phRefOrderBtn(x.h) : "";
       const tag = d ? ""
         : short ? `<em class="short" title="${phFmtG(stock)} g on the shelf"><svg class=icn aria-hidden=true><use href=#i-warn></use></svg> ${phFmtG(phRound2(x.grams - stock))} g short</em>${orderBtn}`
         : !x.h ? `<em class="look">not in inventory</em>` : "";
@@ -185170,7 +185266,7 @@ Dosage: {dosage}
         const src = (recipe.ingredients || []).find(i =>
           (i.herb || i.name) === x.name || (i.code && x.code && i.code === x.code));
         const rG = src ? (src.grams || 0) : null;
-        const stock = x.h && x.h.qty != null ? x.h.qty : null;
+        const stock = phRefStock(x.h);
         const left = stock == null ? null : phRound2(stock - x.grams);
         const short = scaled && stock != null && stock < x.grams;
         // her ask 2026-09-07 ("improve the start refill"): a short herb here
@@ -185179,14 +185275,12 @@ Dosage: {dosage}
         // data-ph-order flag/toggle the To Order list and Dashboard's cart
         // icon already use, just reachable from the exact row that shows
         // the shortage.
-        const orderBtn = short && x.h
-          ? (x.h.ordered || x.h.order ? `<span class="ph-ref-order-tick" title="On the order list">✓ ordered</span>` : `<button type="button" class="ph-name-link" data-ph-order="${x.h.id}"><svg class=icn aria-hidden=true><use href=#i-cart></use></svg> Order</button>`)
-          : "";
+        const orderBtn = short && x.h ? phRefOrderBtn(x.h) : "";
         // her §5: no decimal point at all on a whole multiple -- this is the
         // number she reads with her hands full
         const weigh = whole ? String(Math.round(x.grams)) : phFmtG(x.grams);
         const stockCell = stock == null
-          ? (x.h ? "untracked" : "not in inventory")
+          ? (x.h ? (phShelfUnw(x.h, phMkShelf() || "cbd") ? "not weighed" : "untracked") : "not in inventory")
           : `${phFmtG(stock)}g → ${left < 0 ? `<span class="ph-ref-left neg">${phFmtG(Math.abs(left))}g short</span>` : phFmtG(left) + "g"}${orderBtn}`;
         return `<tr${short ? ` class="short"` : ""}>
           <td>${phNameHtml(x.name, x.h ? phIsFormula(x.h) : null)}</td>

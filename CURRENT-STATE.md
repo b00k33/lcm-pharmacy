@@ -810,18 +810,23 @@ carry sprite icons; a row says each fact once ("never" / the amber date carry no
 hover), short condition names (2 then +N), one 18px pill look, 44px rows. Her 9/4 bones stay: fold bands, timeline rows, the two
 round buttons. The phone keeps its chips and Scheduled line.
 
-## The Potts Point shelf (2026-11-21)
-- **Stock:** `h.qtyPP` (grams at Potts Point; undefined = not kept there), `h.qty` = CBD. `phHasPP`, `phPPCount`. Orders, Low / Zero,
-  the Dashboard, To order and Stocktake read CBD only.
-- **Inventory (computer):** once a herb is kept there, the filter row leads with Both · CBD · Potts Point n (`phPPBarHtml`, `phInvPlace`;
-  Potts Point lists every herb kept there whatever its status); the Stock column reads CBD (g) and Potts Pt (g) follows it (`phPPCol`,
-  `phPPCellHtml`, typed like the stock: empty = off the shelf); a count under `PH_PP_LOW` (50 g) has the red dot. ⋮ › Move to Potts Point
-  (`phPPMoveOpen`): grams in, Now / After lines, CBD → Potts Point · Potts Point → CBD once it holds some; both counts change together.
-- **Dispense:** `presDispShelf()` = her tap (`presDispShelfPick`, reset each open) else Potts Point on a `phDayClin` day; `phShelfOf(h)`
-  is Potts Point only for a herb kept there. The step shows Take from CBD · Potts Point when the prescription holds such a herb
-  (`.ph-dose-from`); the In stock column, the shortfall check (`phDispenseGate(..., true)`, prescriptions only; a batch make stays CBD)
-  and the deduction read that shelf; `deducted[]` carries `shelf: "pp"`, and all three put-backs (`phReverseEntry`, the pending undo,
-  the failed-save roll-back) use `phShelfAdd`. The done line says "· Potts Point".
+## Stock per clinic: CBD · Acupreg · Lotus (never mixed)
+- **Shelves:** `h.qty` = CBD, `h.qtyAC` = Acupreg, `h.qtyPP` = Lotus (`PH_SHELVES`; undefined = not kept there; `qtyACUnw` /
+  `qtyPPUnw` = kept, not weighed yet). The clinic switch on every Herbs & stock page (`phClinicRowHtml`, `phClinicNow`) picks the shelf
+  that page reads and writes; All clinics shows the three side by side.
+- **Dispense:** `presDispShelf()` = the clinic picked on the prescription, else the patient's booking today, else the weekday. A herb
+  that clinic does not keep stops it ("Not stocked at …"). The not-enough-stock box shows that shelf's grams and offers substitutes kept
+  there (`phDispQ`). The log entry carries the clinic (`entry.shelf` / `deducted[].shelf`; Black Pearl pills `products[].shelf`).
+- **Stock movements:** each entry is one clinic's (`phLogShelf`), a move is both clinics' (`phLogOn`). A clinic's deliveries (To order
+  Arrived and Add, `phShelfArrive`), counts (clipboard and Stocktake, `phClinCountWrite`), typed numbers (Inventory cell, the herb's edit
+  form: `phShelfSet`; a typed CBD number logs too) and Move (kind `move`, `from` / `to`) each write a line. Delete, and the Undo of a
+  delete, go through `phEntryStock`: grams, batch, move, pills and empty bottle on the same shelf; a delivery, count or move that first
+  put a herb on a clinic takes it off again.
+- **Figures:** CBD's cover days, overstock, usage boards, refill use / last made and "counted" dates read CBD entries only; Stock
+  statistics and a herb's history read the picked clinic's.
+- **Formula refill at a clinic:** the bench's stock, batch ceiling, Plan ahead and Order read and write that clinic (`phRefStock`,
+  `phRefillOrderShorts`). The refill plan itself is CBD's.
+- Twin-jar merge keeps each clinic's grams and orders. A pickup's clinic is read the way its dispense will (`phNxRows`).
 
 ## The day's clinic (2026-11-20: Saturdays = Lotus Healing Arts)
 - `PH_DAY_CLIN0` / `phDayClinMap` / `phDayClin` / `phDayClinShort` / `phDayClinTagHtml` (by `phApptPracTagHtml`); the setting is the
