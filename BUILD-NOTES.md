@@ -19234,7 +19234,8 @@ Her 10:03pm reprint (four herbs, halves, two stickers): the first centred, the s
 - **Plain paper (patient label):** unchanged, 96 steps. That is 12 mm, not the 8 mm the old comment said.
 - **Tested** with the byte maker in a test copy: 4 and 30 stickers, a 30 mm roll, Move up 4 mm, the patient label, old keys present and ignored. **Not tested:** on paper.
 
-## Poooli feed step proven on paper: 8.5 a mm (2026-11-28, commit only, NOT live)
-Her 10:09pm print with 63 feed steps on the 15 mm roll: both stickers sit at the same height (no creep), so 63 steps is her measured 7.4 mm gap. (Both sat about 6.4 mm low: where the earlier overfeed had left the paper.)
-- `PH_PK_STEPS` 8.5 (was the 8 estimate): the 15 mm roll's 89 dots send 63 / 64 steps. `PH_PK_GAP` 51 dots (4.25 mm = 36 steps, what an unset 30 mm roll has been fed).
-- Tested with the byte maker in a test copy: 2 stickers = 63, 63; 30 stickers total 1891 steps; 30 mm roll 36s; patient label 96; the old key present and ignored. The new build itself has not printed on paper.
+## Poooli feed step: 8.25 a mm, fitted to three prints (2026-11-28, commit only, NOT live)
+A first reading of her 10:09pm print (63 feed steps, 15 mm roll) called it creep-free and set 8.5 a mm. Measured again on enlarged crops, the second sticker still sits about 0.5 mm lower than the first, so that was too confident.
+- **The three prints** (feed steps, then the gap they moved): 36 = about 4.5 mm; 90 = about 10.6; 63 = about 7.9. No single figure fits all three exactly; 8.25 a mm is the middle, so the 15 mm roll's 89 dots now send 61 steps (`PH_PK_GAP` 52 keeps an unset 30 mm roll at 36).
+- **Still open:** a run of six or more stickers. The card's Gap bar moves it two steps a tap.
+- Tested with the byte maker in a test copy. This build has not printed on paper.
