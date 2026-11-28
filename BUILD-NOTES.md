@@ -19088,3 +19088,21 @@ Her words (typed in PA Coder 3D, relayed), on a patient's Messages page: "someti
 - **Audits** (test copy, made-up patient "Zz Ing Test", made-up formula and medicines; none, Fine together, 2 hours apart, Talk first, Casual, no medicines, no prescription): tap and style at 1240 and 360 against the base: nothing new. The only lines are the app's own gold flash for a changed message (under a second) and, at 360, the message chips' square corners in their joined bar, both in the base too. No sideways scroll at 360.
 - **Shots** (local, made-up patient, headless Edge): shots/msg-ingredients-none / -fine / -apart / -talk / -casual-fine / -nomeds / -norx -1240-2026-11-28.png, msg-ingredients-none-360-2026-11-28.png.
 - **Not tested:** her devices, her phone's Messages app, real patients.
+
+## This device's storage: sync notes moved, shorter sign history (2026-11-28, LIVE with this publish)
+Her "Yes, build Step 1" (2026-11-27) and "push live" (2026-11-28), after the 5 MB storage this origin shares was measured part by part.
+- **Sync notes** (`lcm-sync-base-recs`, a hash per record) now live in IndexedDB (key `sync-base-recs:<base core|log hashes>`, through
+  `window.__lcmIDB`); localStorage keeps a short note `{ __idb, __at }`. `saveRecs` writes the full copy first and swaps to the note
+  only once IndexedDB reads back. A copy is used only for the exact base it was worked out from; no answer in 4 s counts as none. When
+  the note says a copy exists, it cannot be read and both sides have changed, the merge does not run: "Sync is waiting: this device
+  couldn't read its sync notes. Close and reopen LCM." `clearLocalData` removes both. An older build's full copy is read as before.
+- **Sign change history** (`rec.tri.audit`) keeps the newest 20 lines and all of today's, at most 100 (was 100): `phTriAuditCap`.
+  Older records are cut only on a copy a sync is already sending (`capTriAudits` in `mergeSections`), never on load; `updatedAt` is not
+  touched. When the cut is the only difference, `trimStoredAudits` cuts what is stored and the open copy, writes no merged copy and
+  redraws nothing.
+- **Updating:** an older open tab, or an older build, cannot read the short note: close other LCM tabs when taking the update.
+- **Tested** on a copy of the app with made-up data and a pretend cloud: merge results equal the previous build (5 runs of 6 rounds);
+  the notes store failing three ways gives the same results; unreadable notes with both sides changed waits and changes nothing;
+  "Gone" reads the same on 3,000 random histories; a Guide restore survives a quiet cut; sign-out leaves no copy; the data's own owner
+  tag saves and another's does not while open; opening offline (`off`, `lie`, `late`; fresh and expired sign-in; signed out).
+- **Not tested:** real devices, real data.

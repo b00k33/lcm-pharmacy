@@ -40,6 +40,10 @@ photo-text reader stays online-only. Code: `openLocalNow`, `bootFetch`, `netFail
 **Boot housekeeping waits for the cloud** (fixed 2026-10-31): the app's automatic writes (schedule sweep, migrations, made-formula
 prices) wait for "lcm-sync-caught-up". The "is sync on?" test now runs after DOMContentLoaded (`phAfterScripts`); a 0 ms
 timeout had fired before the sync's own `<script>` was parsed, so the housekeeping wrote 3 s into every boot, before any pull.
+**Room on this device (2026-11-28, BUILD-NOTES "This device's storage"):** the sync's per-record notes are kept in IndexedDB
+(localStorage `lcm-sync-base-recs` is only a short note; `loadRecs` / `saveRecs` / `recsPrime`); if they cannot be read and both
+sides changed, sync waits. A sign's change history keeps the newest 20 lines and today's (`phTriAuditCap`), older ones cut at the
+next sync that sends.
 
 ## Appointments & calendar
 **Her own blocks: pictures only (2026-11-21, her picks A):** `phC22PicOf(x)` reads `PH_C22_PICS` (title words, first match wins:

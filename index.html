@@ -40764,6 +40764,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       del(k) { return run("readwrite", s => s.delete(k)); },
     };
   })();
+  window.__lcmIDB = phIDB;   // the sync layer keeps its per-record merge base here (saveRecs, 2026-11-27)
   // In-memory mirror of the snapshot history. Kept because the corrupt-read
   // recovery inside loadPharmacy()/loadPresc() runs synchronously during boot,
   // long before an IndexedDB read could answer -- so those two keep working
@@ -41024,6 +41025,39 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const btn = r.querySelector("[data-pres-open]") || (r.hasAttribute("data-pres-open") ? r : null);   // a table row opens by itself
     if (btn) btn.click();
   });
+  // A sign's change history (rec.tri.audit) keeps her newest 20 lines (100 until 2026-11-27: the 5 MB box this origin shares).
+  // Today's lines are all kept, up to 100: phCxGoneToday reads the time of a Yes tap against a Gone rated today. True = it cut.
+  function phTriAuditCap(a) {
+    if (!Array.isArray(a) || a.length <= 20) return false;
+    const day0 = new Date().setHours(0, 0, 0, 0);
+    let from = a.length - 20;
+    while (from > 0 && ((a[from - 1] || {}).at || 0) >= day0) from--;
+    from = Math.max(from, a.length - 100);
+    if (from <= 0) return false;
+    a.splice(0, from);
+    return true;
+  }
+  // Records not tapped since are shortened ONLY on the copy a sync is about to push anyway (mergeSections). Never on load or on
+  // their own: a save or push whose only change was the cut would count this device as "changed", and it could then win settings
+  // another device edited meanwhile. updatedAt is not touched.
+  window.__lcmTriAuditTrim = function (store) {
+    let cut = false;
+    const ps = store && store.patients;
+    if (ps && typeof ps === "object") Object.keys(ps).forEach(k => { if (phTriAuditCap(ps[k] && ps[k].tri && ps[k].tri.audit)) cut = true; });
+    return cut;
+  };
+  // after a sync stored a cut without reloading, the open copy is cut the same way: else the next save (any save) would write
+  // the long histories back and count this device as "changed". A record with nothing unsaved keeps its updatedAt.
+  window.__lcmTriAuditTrimOpen = function () {
+    const ps = PHARMACY && PHARMACY.patients;
+    if (!ps || typeof ps !== "object") return;
+    Object.keys(ps).forEach(k => {
+      const rec = ps[k], a = rec && rec.tri && rec.tri.audit;
+      if (!Array.isArray(a) || a.length <= 20) return;
+      const saved = !!phPatientSig && phPatientSig.get(k) === phPatientSigOf(rec);
+      if (phTriAuditCap(a) && saved) phPatientSig.set(k, phPatientSigOf(rec));
+    });
+  };
   // updatedAt on a patient record is what mergePatientsByRecency (sync module)
   // uses to pick the fresher copy when two devices both changed the same
   // patient. Set HERE, from a content diff against what this device last had
@@ -148661,7 +148695,7 @@ Difficult to sweat|no_sweat_tend:r`;
     // tick, kept until the next new day. Written only here, on her tap; the chart reads it, never writes it.
     const old = rec.tri, prev = old && old.date && old.date !== keyOf(TODAY) ? { day: old.date, p: Object.assign({}, old.p || {}) } : (old && old.prev) || undefined;
     // `auto` / `audit` (her 2026-10-12 linked-symptoms engine): which No answers a link filled in (Bing's reset with the day, like d; Ren's
-    // lasts, like p) and the last 100 changes; carried through every write like `since`
+    // lasts, like p) and the newest changes (phTriAuditCap); carried through every write like `since`
     const sameDay = !!(old && old.date === keyOf(TODAY)), oa = (old && old.auto) || {};
     rec.tri = { d: today.d, p: today.p, prevD: today.prevD, date: keyOf(TODAY), since: Object.assign({}, (rec.tri && rec.tri.since) || {}), prev,
       auto: { d: sameDay ? Object.assign({}, oa.d || {}) : {}, p: Object.assign({}, oa.p || {}) }, audit: ((old && old.audit) || []).slice() };
@@ -148746,7 +148780,7 @@ Difficult to sweat|no_sweat_tend:r`;
   //   * Charts, history and bloods that already say Yes also rule out the opposite on the lists, Quick assess and Patterns: shown
   //     dotted ("ruled out"), computed live, never stored.
   //   * Audit: rec.tri.auto[kind][key] = { from, link } marks a No a link filled in (a day-reset Bing map, a lasting Ren map);
-  //     rec.tri.audit keeps the last 100 changes (you / a link). "Make mine" turns an automatic No into her own.
+  //     rec.tri.audit keeps her newest changes (you / a link; phTriAuditCap). "Make mine" turns an automatic No into her own.
   //   * Un-ticking a Yes takes back the automatic No answers it set, unless another Yes still supports them.
   //   * Nothing chains today because links set No only; the writer is one door (phTriSetYes / phTriSetNo / phTriClearYes) so a later
   //     "suggest" rule has one place to go.
@@ -148817,7 +148851,7 @@ Difficult to sweat|no_sweat_tend:r`;
   function phTriAuditPush(t, e) {
     const a = t.audit || (t.audit = []);
     a.push(Object.assign({ at: Date.now() }, e));
-    if (a.length > 100) a.splice(0, a.length - 100);
+    phTriAuditCap(a);
   }
   const phTriAutoMap = (t, kind) => ((t.auto || (t.auto = { d: {}, p: {} }))[kind] || (t.auto[kind] = {}));
   // The ONE exception to "a link only sets No" (her 2026-10-14: "when i cross sweat: easily, tick sweat not easily"): a pair that is one question
@@ -188127,7 +188161,7 @@ Dosage: {dosage}
      three-way merge against the base: a record on both sides takes the side that changed it since base (both changed, or no base
      yet: this device, the prescriptions rule); a record on one side only is the other side's delete when base had it (unless this
      side edited it since: an edit beats a delete) and a new record when base did not (kept, unless a delete marker says she removed
-     it: PHARMACY.syncDel / syncRev, written by savePharmacy). Base keeps a hash per record in its own key (lcm-sync-base-recs; a
+     it: PHARMACY.syncDel / syncRev, written by savePharmacy). Base keeps a hash per record (see "Where the record hashes live"; a
      failed write there only means the next merge keeps everything). Not touched: the owner guard, the location field, the
      per-record repairs after (patients, templates, Guide edits), the empty-guard (a guarded side never merges item by item) and a
      restore's shrink window. A list with a duplicate or missing id falls back to the whole-side rule. Only when both sides changed:
@@ -188154,12 +188188,68 @@ Dosage: {dosage}
     return out;
   }
   function recHashes(arr) { var m = {}; (arr || []).forEach(function (x) { m[String(x.id)] = hashStr(JSON.stringify(x)); }); return m; }
-  function loadRecs() { try { var r = JSON.parse(localStorage.getItem(REC_KEY)); return r && typeof r === "object" ? r : {}; } catch (e) { return {}; } }
+  /* Where the record hashes live (2026-11-27): in this device's IndexedDB (window.__lcmIDB), so they do not sit in the 5 MB box
+     every b00k33 app shares. They are only good for the exact agreement they were worked out from, so each copy carries that
+     base's core + log hashes (`at` / `__at`; the IndexedDB key ends in it, so a late write never covers a newer copy) and any
+     other stamp reads as none. saveRecs first writes the full copy under lcm-sync-base-recs beside the base (as before, so a
+     closed tab never leaves a base without its copy), and only once IndexedDB has been read back swaps it for a short note
+     { __idb, __at }. A full copy with no stamp is an older build's, written beside the base now there. When the note says a copy
+     is there, it cannot be read and both sides have changed, the merge does NOT run: without it this device's older records
+     would win over another device's newer ones. */
+  var REC_IDB = "sync-base-recs:", recsMem = null, recsQueue = Promise.resolve();
+  function recsAt(b) { return String(b && b.pharmacy_core) + "|" + String(b && b.pharmacy_log); }
+  function recsSoon(p) {   // IndexedDB never holds a sync up: no answer in 4 s = no answer (null)
+    return new Promise(function (res) {
+      var t = setTimeout(function () { res(null); }, 4000);
+      Promise.resolve(p).then(function (v) { clearTimeout(t); res(v); }, function () { clearTimeout(t); res(null); });
+    });
+  }
+  function recsStored() { try { var r = JSON.parse(localStorage.getItem(REC_KEY)); return r && typeof r === "object" ? r : null; } catch (e) { return null; } }
+  function loadRecs() {
+    var s = recsStored();
+    if (s && !s.__idb) return !s.__at || s.__at === recsAt(loadBase()) ? s : {};
+    return recsMem && recsMem.at === recsAt(loadBase()) ? recsMem.r : {};
+  }
+  function recsNeeded(row) {   // would merging this row be item by item (core or log changed on both sides)?
+    var L = sectionsFrom(localSnapshotObj()), C = sectionsFrom((row && row.data) || {}), b = loadBase();
+    guideCut(L, C);
+    return ["pharmacy_core", "pharmacy_log"].some(function (n) { return L[n] !== C[n] && hashStr(L[n]) !== b[n] && hashStr(C[n]) !== b[n]; });
+  }
+  function recsPrime(row) {   // before a merge: the copy for the base now in force into memory (after a reload, or another tab's sync)
+    var db = window.__lcmIDB, at = recsAt(loadBase()), s = recsStored();
+    if ((s && !s.__idb) || !db || (recsMem && recsMem.at === at)) return Promise.resolve();
+    var owed = !!(s && s.__at === at);
+    return recsQueue.then(function () { return recsSoon(db.get(REC_IDB + at)); }).then(function (v) {
+      if (recsAt(loadBase()) !== at) return recsPrime(row);   // another tab synced while this was being read
+      if (v && v.r && v.at === at) { recsMem = v; return; }
+      // phIDB answers null when it could not read, undefined when nothing is stored
+      if (owed && v === null && recsNeeded(row)) {
+        var why = "Sync is waiting: this device couldn't read its sync notes. Close and reopen LCM.";
+        showSyncNote(why);
+        var err = new Error(why); err.lcmNotes = true; throw err;
+      }
+    });
+  }
+  function fetchForMerge() { return fetchCloud().then(function (row) { return recsPrime(row).then(function () { return row; }); }); }
+  function recsKeep(s) { try { _setItem.call(localStorage, REC_KEY, s); } catch (e) { try { localStorage.removeItem(REC_KEY); } catch (e2) {} } }
   function saveRecs(sections) {
     var r = {};
     try { var core = JSON.parse(sections.pharmacy_core); coreIdKeys(core, null).forEach(function (k) { r[k] = recHashes(core[k]); }); } catch (e) {}
     try { var log = JSON.parse(sections.pharmacy_log); if (idSet(log)) r.__log = recHashes(log); } catch (e) {}
-    try { _setItem.call(localStorage, REC_KEY, JSON.stringify(r)); } catch (e) { try { localStorage.removeItem(REC_KEY); } catch (e2) {} }
+    var rec = { at: recsAt({ pharmacy_core: hashStr(sections.pharmacy_core), pharmacy_log: hashStr(sections.pharmacy_log) }), r: r };
+    var was = recsStored(), wasAt = was && was.__at;
+    recsMem = rec;
+    recsKeep(JSON.stringify(Object.assign({ __at: rec.at }, r)));
+    var db = window.__lcmIDB;
+    if (!db || !db.available) return;
+    // phIDB answers "done" even when a write failed, so the copy is read back before the full one is let go
+    recsQueue = recsQueue.then(function () {
+      return recsSoon(Promise.resolve(db.set(REC_IDB + rec.at, rec)).then(function () { return db.get(REC_IDB + rec.at); }));
+    }).then(function (back) {
+      if (!back || back.at !== rec.at || rec.at !== recsAt(loadBase())) return;
+      recsKeep(JSON.stringify({ __idb: 1, __at: rec.at }));
+      if (wasAt && wasAt !== rec.at) return recsSoon(db.del(REC_IDB + wasAt));   // the agreement before this one
+    }).catch(function () {});
   }
   function tombsOf(lo, co, field, list) {
     return mergePrescTombs(lo && lo[field] && lo[field][list], co && co[field] && co[field][list]);
@@ -188217,11 +188307,16 @@ Dosage: {dosage}
     return s === (pickIsLocal ? lStr : cStr) ? pickStr : s;
   }
 
-  // the 3-way merge itself. localData/cloudData are {daybook-pharmacy,
-  // daybook-prescriptions} string pairs (same shape gather() produces).
-  function mergeSections(localData, cloudData) {
-    var L = sectionsFrom(localData), C = sectionsFrom(cloudData), base = loadBase();
-    // the Guide on the PC only (2026-11-26): once either side carries guideOnPc, its own keys sync nowhere (the PC keeps them in IndexedDB)
+  // old sign change histories are shortened on a copy that is being pushed (window.__lcmTriAuditTrim); nothing cut = same string
+  function capTriAudits(pickStr) {
+    try {
+      var o = JSON.parse(pickStr);
+      return window.__lcmTriAuditTrim && window.__lcmTriAuditTrim(o) ? JSON.stringify(o) : pickStr;
+    } catch (e) { return pickStr; }
+  }
+
+  // the Guide on the PC only (2026-11-26): once either side carries guideOnPc, its own keys sync nowhere (the PC keeps them in IndexedDB)
+  function guideCut(L, C) {
     try {
       var gk = window.__lcmGuideKeys || [], lc = JSON.parse(L.pharmacy_core), cc = JSON.parse(C.pharmacy_core);
       if (lc && cc && (lc.guideOnPc || cc.guideOnPc)) {
@@ -188232,7 +188327,14 @@ Dosage: {dosage}
         if (cut || mk) { L.pharmacy_core = JSON.stringify(lc); C.pharmacy_core = JSON.stringify(cc); }
       }
     } catch (e) { }
-    var out = {}, changed = false, cloudStale = false, conflicts = [], emptyGuarded = [];
+  }
+
+  // the 3-way merge itself. localData/cloudData are {daybook-pharmacy,
+  // daybook-prescriptions} string pairs (same shape gather() produces).
+  function mergeSections(localData, cloudData) {
+    var L = sectionsFrom(localData), C = sectionsFrom(cloudData), base = loadBase();
+    guideCut(L, C);
+    var out = {}, changed = false, trimmed = false, cloudStale = false, conflicts = [], emptyGuarded = [];
     // item 11's loose end (her data-safety spec 2026-08-13): a deliberate
     // section-restore (e.g. "inventory only") can legitimately make a section
     // SMALLER than the cloud's copy on purpose. Without this, the very next
@@ -188302,6 +188404,8 @@ Dosage: {dosage}
         pick = mergeFbrEdits(pick, l, c);
       }
       if (pick !== l) changed = true;
+      // only when the cloud is about to be written anyway. Not "changed": on its own the cut redraws nothing (see applyMergedLocal)
+      if (name === "pharmacy_core" && pick !== c) { var cut = capTriAudits(pick); if (cut !== pick) { pick = cut; trimmed = true; } }
       // cloudStale: the truth we just landed on isn't what the cloud row
       // holds, so the cloud needs a push -- REGARDLESS of why this merge
       // cycle ran. Caught a real bug (2026-08-13): a boot-time catch-up
@@ -188314,7 +188418,7 @@ Dosage: {dosage}
       if (pick !== c) cloudStale = true;
       out[name] = pick;
     });
-    return { sections: out, changed: changed, cloudStale: cloudStale, conflicts: conflicts, emptyGuarded: emptyGuarded };
+    return { sections: out, changed: changed, trimmed: trimmed, cloudStale: cloudStale, conflicts: conflicts, emptyGuarded: emptyGuarded };
   }
   // rebuild the two real localStorage strings from merged section strings
   function assembleFromSections(sections) {
@@ -188461,7 +188565,7 @@ Dosage: {dosage}
   }
   function pullMergePushImpl(pushAfter) {
     if (!sb || !ready || switching || !ownerOk()) return Promise.resolve(false);
-    return fetchCloud().then(function (row) {
+    return fetchForMerge().then(function (row) {
       if (switching || !ownerOk()) return false;            // a location switch started mid-fetch (here or in another tab) -- abandon this cycle
       var cloudData = (row && row.data) || {};
       var isOwnEcho = row && row.updated_at && sessionStorage.getItem(APPLIED) === row.updated_at;
@@ -188476,6 +188580,7 @@ Dosage: {dosage}
       // right away -- it's only the BASE bookkeeping (below) that has to
       // wait for a real push to actually land.
       if (res.changed) applyMergedLocal(res.sections);
+      else if (res.trimmed) trimStoredAudits();
       // this device has now genuinely reconciled against the real cloud row
       // -- boot/wake housekeeping (the schedule sweep, migrations) waits for
       // this signal so a stale copy can never disguise itself as an edit
@@ -188519,6 +188624,13 @@ Dosage: {dosage}
       setLive(false);
       return false;
     });
+  }
+  // only old sign histories were cut (nothing came in from the cloud): cut them in what is stored NOW and in the open copy, and
+  // redraw nothing. The merged copy is not written: it lacks keys that never sync (a Guide being restored on this PC).
+  function trimStoredAudits() {
+    var was = localStorage.getItem(PH_KEY), cut = was && capTriAudits(was);
+    if (cut && cut !== was) { var o = {}; o[PH_KEY] = cut; apply(o); }
+    if (window.__lcmTriAuditTrimOpen) window.__lcmTriAuditTrimOpen();
   }
   function applyMergedLocal(sections) {
     var assembled = assembleFromSections(sections);
@@ -188846,6 +188958,10 @@ Dosage: {dosage}
     var ks = [];
     for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf("daybook") === 0 && !/^daybook-ph-(rxck|trip)-ntf(-sent)?$|^daybook-ph-rxck-sent$/.test(k)) ks.push(k); }   // her own reminders' switches belong to this device, not to a login
     ks.push(BASE_KEY);   // the sync merge base is this login's bookkeeping too -- must not survive a switch/sign-out
+    var was = recsStored(), wasAt = was && was.__at;   // and its record hashes, wherever they are kept
+    ks.push(REC_KEY);
+    recsMem = null;
+    if (wasAt && window.__lcmIDB) recsQueue = recsQueue.then(function () { return recsSoon(window.__lcmIDB.del(REC_IDB + wasAt)); }).catch(function () {});
     ks.push("lcm-appt-digest");
     ks.push("lcm-oth-cache");   // the other clinic as THIS login last read it (BOTH CLINICS ON ONE CALENDAR)   // the bookings handed to C22 (lcm-appt-digest, see "C22 ON THE APPOINTMENTS GRID") belong to this login too
     suppress = true;
@@ -188888,7 +189004,7 @@ Dosage: {dosage}
     // the one flush that runs right before a switch/sign-out wipes this
     // device: if the data here isn't this login's, sending it is the wipe
     if (!ownerOk()) return Promise.reject(new Error("This browser's data belongs to a different location, so nothing was sent from it."));
-    return fetchCloud().then(function (row) {
+    return fetchForMerge().then(function (row) {
       var res = mergeSections(localSnapshotObj(), (row && row.data) || {});
       var finalSnap = assembleFromSections(res.sections);
       var finalJson = JSON.stringify(finalSnap);
@@ -188905,7 +189021,8 @@ Dosage: {dosage}
         if (ok === "superseded") return true;
         throw new Error("This device's data didn't save to the cloud.");
       });
-    }, function () {
+    }, function (err) {
+      if (err && err.lcmNotes) throw err;
       throw new Error("Couldn't read the cloud, so nothing was sent from this device.");
     });
   }
