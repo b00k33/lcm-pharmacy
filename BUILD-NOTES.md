@@ -19079,7 +19079,7 @@ Her words: "how to select multiple herbs to print labels?", then her picks on th
   both). "Print N labels" sends them in one go, A-Z.
 - **Not tested:** a real printer and paper, a long run in particular.
 
-## What's in it: the herb message (2026-11-28, commit only, NOT live)
+## What's in it: the herb message (2026-11-28, LIVE in build 20261128-182600)
 Her words (typed in PA Coder 3D, relayed), on a patient's Messages page: "sometimes patients ask whats in the herbs and whether it is safe with their medication. make a communication draft here so i can send sms to them"; on the first mock "Change the wording", then "include the dosage. my sms is unlimited so im not fussed about keeping it short"; on the second mock "Yes, build it". Mock (git-ignored, made-up patient): `mocks/mock-msg-whats-in-it-2026-11-28.html`. The wording is hers as approved.
 - **The message:** a fifth Herbs moment, `ingredients` "What's in it" (`PH_CK_TMPLS` + `PH_CK_SLOT_SEEDS`, so it is a Templates row like the other four; Casual = body, Formal = bodyFormal). A moment she picks, never a Due row, never chosen by the app.
 - **Its herb block** (`phIngBody`, from the open prescription the page belongs to, read, never copied): `{{formula}}` (the formula in normal case, "Gui Pi Tang"), `{{herbRows}}` ("• <pinyin> <grams> g", the prescription's own row order, pinyin only), `{{bagGrams}}` (the dispensed grams, else the prescription's total), `{{bagDays}}` (the run-out maths' days, rounded), `{{dose}}` (`phIngDose`: "3 scoops (spoon provided), twice a day, Monday to Friday" from its own dose fields). A token with no value drops its line; no bag = "Gui Pi Tang:"; no herbs and no formula = the whole block goes.
@@ -19163,7 +19163,7 @@ Her words (to 5 PA health and wellness, relayed): "i like to organise my life in
 - **Audits** (test copy, made-up owner "Zz Test Me" in the MSK case colour like her record, made-up to-dos, a made-up person due a catch-up): style + tap on all eight Life pages at 1220 and 360 against the base: nothing new. Left: Numbers & Stars' empty line in the sky's light words (the sky's own; the base lists the same colour on its quiet chip, which now keeps the app's ink on its paper tab); Money's 27.5px date field (base). style-audit's `DATA_MARK` names the journal flags (her cream). No sideways scroll at 360.
 - **Not tested:** Home with an imported room (the test copy has none; the room is a full-width frame that sits in the sheet like a card), a trip page in the binder, her own data and devices.
 
-## What's in it: herbs, regular names, a page to read (2026-11-28, commit only, NOT live)
+## What's in it: herbs, regular names, a page to read (2026-11-28, LIVE in build 20261128-204200)
 Her words, with the draft showing only the formula's name and grams: "the patient wants to know whats in the formula"; "my formulas have in house recipes"; "i want the list of herbs inside the dose with pin yin name, regular name in (), and a link to american dragon so patient can read more".
 - **Cause:** a formula is one row on the prescription, and the message listed rows only.
 - **Recipe:** each formula row opens from her own recipe (`phIngInside`, the same link as Formula Refill, `refSuggestRecipe`), in the recipe's order, no herb twice, a formula inside a recipe too; the recipe's grams are the batch's, so none are shown. A patient's own script is never read as a recipe. The classics list is not used.
