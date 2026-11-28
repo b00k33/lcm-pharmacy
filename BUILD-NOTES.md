@@ -19173,3 +19173,16 @@ Her words, with the draft showing only the formula's name and grams: "the patien
 - **Card:** the same names, a formula's herbs grouped on a tint, an American Dragon chip to open the page and check it; "No recipe" where there is none.
 - **Tested** in a test copy with made-up patients and recipes: alone, with other herbs, nested, a recipe holding only itself, a patient script, a short-name link, a Yin formula, single herbs; tap and style audits against the base at 1220 and 360: nothing new; voice audit on the card clean.
 - **Not tested:** her real recipes and herb names, her devices, the link tapped from a real text message.
+
+## Patient page tidy (2026-11-28, commit only, NOT live)
+Her words: "the back button is ambiguous, the teapot is missing (i actually want it on the right column), and i want the file and treatment acu etc part of the binder, reduce redundant info", her 8 picks on the mock (git-ignored `mocks/mock-binder-page-tidy-2026-11-28.html`), "move the narrower button higher", "keep it on all pages", then "yes, build the patient page tidy".
+- **Side bar on a patient's page (from 901px):** `#presPanel.ph-pres-full` starts at the side bar's edge (248px, 70px collapsed) while the patient rail `#presFlowRail[data-tabs]` is drawn; the rail is hidden there. Back is the side bar's "‹ Back to …". Her own record (`[data-me]`) and Life keep the full sheet. Phone and 641-900px keep the rail (its File row hidden from 641px, File being a tab).
+- **Open patient card:** Book appt. (`phApptOpen`), the profile search and the camera, via `phSbOpenAct` (the side bar is outside `#pharmacyPage`, so a hidden stand-in button with `data-ps-ic` / `data-cap-for` is pressed inside it; search first opens the file when it is not open). Hidden when the side bar is narrow or finding.
+- **Narrower:** `#phSidebarLeafBtn` moved from the foot to right under Me in `.ph-sb-places`.
+- **Spine:** the name + age and sex small ("35F", `phPatientPeek` + `phAgeOf`); the visit count left it.
+- **Chart head:** the Patient column goes; `.kinds` between the title and Visit · Date holds the file's flags (a real medical alert only; an empty "+ Medical alert" stays on File), the kind-of-visit chip (`phVkChipHtml`, from `presFlowF`, the rail's model kept by `presFlowRailHtml`) and the herbs chip (`phHbsChipHtml`, not on a first visit). Shown from 901px only; THE LOOK chips; a brand clinic's herb tokens.
+- **File as a tab:** the binder tabs are the rail's list (`m.rail`: the steps + File, in the rail's order); File has class `ftab`, its icon in the circle, a gap before it. The old "File" caption went.
+- **Teapot:** `presTeaPlace` moves the side bar's own `#phSbTea` into `#presPartBar > .ph-tea-slot` (side bar colour) from 1180px while a patient is open, back before `#phTeaTin` otherwise; watched by two MutationObservers + resize, one rAF.
+- **Summary line:** `phTvqWords` no longer says Herbs (the chart head's chip does).
+- **Audits** (test copy, made-up patient "Zz Mia Tan"): style + tap at 1240 against the base at 1276 (the same page width): nothing new; the six lines left against the base at 1240 come only from the 36px narrower page. 360: identical, no sideways scroll. Side bar: nothing new.
+- **Not tested:** a herbs patient's chip with real herbs data, her own patients and devices, a brand clinic's colours in the head.
