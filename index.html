@@ -182024,7 +182024,8 @@ Dosage: {dosage}
   // 648 dots (54 mm), 12 a mm, centred on the paper. One renderer draws the picture on screen and the dots that print. Its own
   // protocol: start, width, darkness, one packed row a command (an LZO stream stored as is), feed.
   function phPkCan() { return !!(window.navigator && navigator.serial); }
-  const PH_PK_GAP = 36;   // dots fed from one sticker to the next until she sets hers on the card (3 mm): the maker lists no gap sensor
+  const PH_PK_GAP = 54;   // the space between two stickers until she sets hers, in dots of 1/12 mm (4.5 mm: what an unmeasured roll has been fed all along): the maker lists no gap sensor
+  const PH_PK_STEPS = 8;  // the printer's FEED command moves 1/8 mm a step, not one dot of the picture (her two prints, 2026-11-28: 36 moved about 4.5 mm, 90 about 11)
   const PH_PK_GAPS = { 15: 89 };   // her 15 mm roll, measured 2026-11-28: 112 mm from the top of one sticker to the top of the sixth = 7.4 mm between two
   // the printer a label starts on, each time a prescription is opened: her label printer (the Brother) at CBD, the Poooli at Lotus and Acupreg
   // (her 2026-11-28 "cbd is always brother first, lotus and acupreg is pooli"); a tap on the other one lasts while that prescription is open
@@ -182040,7 +182041,8 @@ Dosage: {dosage}
   // LINING UP HER STICKERS (her 2026-11-28 photo "This is how its printing 15mm": low, and creeping from one sticker to the next). Gap = the
   // dots between two stickers, kept on this device for each roll, in quarter millimetres. Move = once, for the next print: the printer
   // does not pull paper back, so "up" feeds on to that place on the next sticker
-  function phPkGap(tall) { try { const v = Math.round(+localStorage.getItem("lcm-pk-gap-" + tall)); if (v >= 3 && v <= 144) return v; } catch (e) { /* the starting gap */ } return PH_PK_GAPS[tall] || PH_PK_GAP; }
+  // kept as a real distance under its own key: a number saved as `lcm-pk-gap-*` was in the wrong unit, so it is never read again
+  function phPkGap(tall) { try { const v = Math.round(+localStorage.getItem("lcm-pk-space-" + tall)); if (v >= 3 && v <= 144) return v; } catch (e) { /* the starting gap */ } return PH_PK_GAPS[tall] || PH_PK_GAP; }
   var phPkMove = 0;   // mm: under 0 = higher, over 0 = lower
   function phPkLead(tall, move) { const pitch = tall * 12 + phPkGap(tall), d = Math.round(move * 12); return d ? ((d % pitch) + pitch) % pitch : 0; }
   function phPkLed(c, lead) { const n = phPkCanvas(c.width, lead + c.height); n.getContext("2d").drawImage(c, 0, lead); n.feed = c.feed; n.dark = c.dark; return n; }
@@ -182189,9 +182191,12 @@ Dosage: {dosage}
     const on = phPkOn();
     return `<span class="ph-tng2-seg" role="group" aria-label="Printer"><button type="button" class="ph-ltr-qual${on ? "" : " on"}" data-pres-lpr="label" aria-pressed="${!on}">Label printer</button><button type="button" class="ph-ltr-qual${on ? " on" : ""}" data-pres-lpr="poooli" aria-pressed="${on}">Poooli</button></span>`;
   }
-  // the dots: each strip centred across the head, one command a row, then its feed (a sticker: to the next one; plain paper: 8 mm to cut by)
+  // the dots: each strip centred across the head, one command a row, then its feed (a sticker: to the next one, its space turned into the
+  // printer's feed steps here and nowhere else, the part of a step left over carried to the next sticker; plain paper: 96 steps, 12 mm, to cut by)
   function phPkBytes(strips) {
     const out = [], le = (v, len) => { for (let i = 0; i < len; i++) out.push((v >>> (8 * i)) & 255); };
+    let owed = 0;
+    const steps = dots => { owed += dots * PH_PK_STEPS / 12; const n = Math.max(1, Math.round(owed)); owed -= n; return n; };
     strips.forEach(c => {
       const d = c.getContext("2d").getImageData(0, 0, c.width, c.height).data, off = Math.floor((648 - c.width) / 2);
       for (let y = 0; y < c.height; y++) {
@@ -182201,7 +182206,7 @@ Dosage: {dosage}
         out.push(0x10, 0x7B, 0x3D, 0x3D); le(81 ^ 0x0D0D, 2); le(1 ^ 0x0D0D, 2); le((packed.length ^ 0x0D0D0D0D) >>> 0, 4);
         packed.forEach(b => out.push(b ^ 0x0D));
       }
-      out.push(0x16, 0x16, 0x0C); le((c.feed || 96) ^ 0x0D0D, 2);
+      out.push(0x16, 0x16, 0x0C); le((c.feed ? steps(c.feed) : 96) ^ 0x0D0D, 2);
     });
     return new Uint8Array(out);
   }
@@ -182329,7 +182334,7 @@ Dosage: {dosage}
     const rl = el.closest("[data-pk-roll]");
     if (rl) { try { localStorage.setItem("lcm-herb-roll", rl.dataset.pkRoll); } catch (x) {} phPkMove = 0; phPkHerbPaint(); return; }
     const gp = el.closest("[data-pk-gap]");
-    if (gp) { const t = phPkRoll(), v = Math.max(3, Math.min(144, phPkGap(t) + 3 * +gp.dataset.pkGap)); try { localStorage.setItem("lcm-pk-gap-" + t, v); } catch (x) {} phPkHerbPaint(); return; }
+    if (gp) { const t = phPkRoll(), v = Math.max(3, Math.min(144, phPkGap(t) + 3 * +gp.dataset.pkGap)); try { localStorage.setItem("lcm-pk-space-" + t, v); } catch (x) {} phPkHerbPaint(); return; }
     const mv = el.closest("[data-pk-move]");
     if (mv) { phPkMove = Math.max(-30, Math.min(30, phPkMove + +mv.dataset.pkMove)); phPkHerbPaint(); return; }
     const sp = el.closest("[data-pk-split]");

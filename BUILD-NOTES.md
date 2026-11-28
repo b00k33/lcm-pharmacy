@@ -19225,3 +19225,11 @@ Her words, on the box with four herbs: "how do i deselect the herbs label that i
 - **Now:** with two or more herbs, a chip per herb under the stickers; its mark takes it off, unticks it, and the stickers and "Print n labels" follow. One herb left = the single "Herb label" box, no chips. The chips keep to two rows and scroll; the preview is shorter (34 % of the screen's height) so Print stays in reach on a short phone.
 - **Tested** in a test copy: 10 herbs, one removed (counts, the tick gone, the chip list stays where it was scrolled), down to one; 360 x 640, 520 x 700, 1220; tap and style audits against the base: nothing new; voice audit on the box clean.
 - **Not tested:** her devices; nothing printed on paper.
+
+## Poooli stickers: the feed step is 1/8 mm (2026-11-28, commit only, NOT live)
+Her 10:03pm reprint (four herbs, halves, two stickers): the first centred, the second about 3 mm low, the small names cut off.
+- **Cause:** the picture's rows are 1/12 mm, the feed command's steps are not. Pixels on her two photos give about 1/8 mm a step (36 fed about 4.5 mm and crept up; 90 about 11 mm and crept down). An estimate until a print proves it.
+- **Now:** a gap stays a real distance (card, picture, Move). `phPkBytes` alone turns it into feed steps (`PH_PK_STEPS` 8 a mm), carrying the part step to the next sticker, so 30 stickers sum to exactly 30 gaps. 15 mm roll 89 dots = 59/60 steps; 30 mm unset = 4.5 mm = 36 steps, as before.
+- **Old stored gaps:** `lcm-pk-gap-*` is never read again (wrong unit, including a hand-set stopgap on one computer); the new key is `lcm-pk-space-*`.
+- **Plain paper (patient label):** unchanged, 96 steps. That is 12 mm, not the 8 mm the old comment said.
+- **Tested** with the byte maker in a test copy: 4 and 30 stickers, a 30 mm roll, Move up 4 mm, the patient label, old keys present and ignored. **Not tested:** on paper.
