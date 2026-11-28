@@ -649,8 +649,8 @@ symbols. No "+ transfer from these eggs": Use ▸ and "+ Transfer" stay.
   (`phPkPatientFlat`). **Herb name labels:** her 15 and 30 mm rolls are **stickers on 57 mm paper** (that tall, with gaps). Print label
   in a stock row's ⋮ menu, the shelf lid menu, the one-clinic stock row (Label chip) and the herb edit panel opens a Herb label card:
   the name straight across one sticker, a **30 mm | 15 mm** bar, a **Whole | Halves** bar (Halves: the name on each half with a dashed
-  line to cut along, for a lid), Print label. **Lining up (2026-11-28, commit only, NOT live):** a **− Gap n mm +** bar (the space
-  between two stickers, quarter millimetres, kept per roll on this device, `lcm-pk-gap-15` / `-30`; 3 mm until set) and a
+  line to cut along, for a lid), Print label. **Lining up (2026-11-28):** a **− Gap n mm +** bar (the space
+  between two stickers, quarter millimetres, kept per roll on this device, `lcm-pk-gap-15` / `-30`; until set: 7.4 mm on the 15 mm roll (measured), 3 mm on the 30) and a
   **▲ Move ▼** bar (higher / lower for the next print only; higher feeds on to that place on the next sticker, `phPkLead`).
   Stickers print at 95 % darkness and the small name has a thin outline (`PH_PK_THICK`). **Print labels** beside Table | Shelf ticks
   several herbs (the clinic's shelf at Lotus and Acupreg) and the
@@ -854,7 +854,7 @@ round buttons. The phone keeps its chips and Scheduled line.
   `phRefillOrderShorts`). The refill plan itself is CBD's.
 - Twin-jar merge keeps each clinic's grams and orders. A pickup's clinic is read the way its dispense will (`phNxRows`).
 
-## Lotus open and close (the Lotus Dashboard; 2026-11-28, commit only, NOT live)
+## Lotus open and close (the Lotus Dashboard; 2026-11-28)
 - **When:** the Lotus Dashboard only, on a day the Me routine `pa-rt-lotus-open` or `pa-rt-lotus-close` falls (`phLdDay`; a trip pauses
   them, a skipped one has no side). A joined switch **Open n/6 · Dispensary · Close up n/4** heads the room; in Dispensary it sits in the
   stock room's own head row. Default (`phLdView`): Open until its jobs are done or Close up's start; from that start Close up until done;

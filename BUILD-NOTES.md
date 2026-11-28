@@ -19130,7 +19130,7 @@ Her "yes build it" to cutting how much data the database sends: every pull downl
 - **Tested** (test copies, made-up data, a pretend cloud inside the page; the old build and the new side by side): one scripted day of 15 steps (own edits, five quick ones, another device saving with and without the live signal, a save landing between read and write, a hidden tab, the line down twice, both sides adding to one list) gives the same data on the device and in the cloud as the old build at every step; 35 whole-row downloads before, 14 after. Guards: a 7-hour-old copy downloads again; a stamp that stops moving, mid-use and from opening, downloads in full and loses nothing; its own owner tag saves, another's writes nothing. Opening offline (`off`, `lie`, `late`; fresh and expired sign-in): in within 1.5 s, no cover after 30 s, `late` reaches GET and POST settings.
 - **Not tested:** her devices, the real database, real data, and how far a month's use falls (read the database's usage page some days after publishing).
 
-## Lotus open and close room (2026-11-28, commit only, NOT live)
+## Lotus open and close room (2026-11-28, LIVE in build 20261128-192500)
 Her "Yes, send it" in PA Game 33's session: the Saturday start-of-day and end-of-day jobs drawn as the Lotus room, on the Lotus Dashboard. Built to the Game 33 mock (kept local). CURRENT-STATE "Lotus open and close" has the rules.
 - **Code:** "LOTUS OPEN AND CLOSE: THE TICKS" beside `phMeMerge` (jobs, per-line ticks, merge, ahead); "THE ROOM" before `renderPhDashboardPage` (state, drawing `phLdArt`, taps, in-place refresh `phLdRefresh`, called from `phMeRepaint`). `phHrDnPut` and its Undo (`phHrDayBack`) carry the lines with a whole tick. CSS beside `.ph-dash-pc`.
 - **Look:** the switch and buttons are the app's joined bar and 32px chip; the picked side and the next job are Lotus red; the picture and the green done mark are data marks.
@@ -19141,10 +19141,13 @@ Her "Yes, send it" in PA Game 33's session: the Saturday start-of-day and end-of
 - **Not confirmed by her:** one fan; the wide window's left pane slides.
 - **Not tested:** real devices, her record, two real devices syncing.
 
-## Poooli stickers: line them up, a bolder small name (2026-11-28, commit only, NOT live)
+## Poooli stickers: line them up, a bolder small name (2026-11-28, LIVE in build 20261128-192500)
 Her first print on the 15 mm roll ("This is how its printing 15mm"): the name low, the second sticker at another height, white breaks in letters. Then "make the text a little bolder, the text under the large text is a bit faint".
 - **Cause:** LCM feeds 3 mm between stickers and her gap looks wider (not measured yet), so each sticker creeps; nothing told the app where the first one starts.
 - **Now (Herb label card):** Gap bar (0.25 mm steps, per roll) and Move bar (once, next print; the printer does not pull back, so up = on to the next sticker). The picture on the card uses her gap.
 - **Print:** stickers at the maker's darkest, 95 % (was 75 %); the common name drawn with a 0.6 dot outline. The patient label is unchanged.
 - **Tested** with a pretend printer in a test copy: feed = the gap (36, 63 dots), up 4 mm = 195 blank lines then the sticker, down 2 mm = 24, the move resets after a print, each roll keeps its own gap; card audits (tap, style, voice) empty at 1220 and 360.
 - **Not tested:** on paper. Whether darker closes the white breaks is a guess until she prints.
+
+## Poooli 15 mm roll: its measured gap (2026-11-28, commit only, NOT live)
+Her ruler: "11.2cm froms ticker 1 to 6" (top to top) = 22.4 mm a sticker, 7.4 mm between two. The 15 mm roll now starts at 89 dots (`PH_PK_GAPS`); a gap she set on a device still wins. The 30 mm roll is not measured and stays at 3 mm. Not yet printed with it.
