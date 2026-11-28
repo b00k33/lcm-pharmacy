@@ -19011,3 +19011,12 @@ Her words: "do both, then push", about the two points PA Coder 3D raised on the 
 - **Audits:** brand class on vs off, all 27 parts x 3 clinics at 1240, File and Pulse at 360: nothing new; no sideways scroll at 360.
 - **Shots** (local): binder-brand2-acupreg-olive-file-1240, -cbd-flags, -lotus-flags (2026-11-28).
 - **Not tested:** her devices and real patients.
+
+## Herb greens off: tracker, dose blocks, badge, dose buttons, Me leaf (2026-11-28, commit only, NOT live)
+Her words (typed in PA Coder 3D, relayed): first "remove the herb colour coding" (the herb cell), then, asked about the five other herb greens named in "Visit steps = binder chart sheets", "Yes, remove them".
+- **The five, now the app teal (`--ph-herb`, #165C74):** the herb tracker's formula icon (`.ph-hbt-fn .ic`) and its 7-day dots, full and half (`.ph-hbt-w7 i.f / .h`); her dose colour `PH_HB_COL` (#15803D → #165C74: a dose's card title, the Habits "Herbs" auto row; the week grid's dose marks `.ph-hbmk` were already teal); the Today rail's doses badge (`.ph-aps-bdg.hb`: its green rule removed, so it draws like its neighbours, teal count bubble); the rail's dose buttons (`.ph-tb-lv .lc`, teal on the pale tint, done = `--ph-good`); the Me drawer's leaf (`.ph-hb-mrow > .ph-me-ic`). Shapes and sizes unchanged.
+- **Other #15803D left:** two comments, and the `.ph-tx-blk.green` rules, which the 2026-11-28 herb-cell build already overrides (the same thing, already done). Left alone as asked: Inventory supplier rows, the Dispense head, the jar and bottle art, the clinic brand colours, `--ph-good`.
+- **Contrast:** white on #165C74 is 7.4:1; teal on the pale tint #EDF5F8 is 6.9:1.
+- **Audits** (test copy, made-up owner "Zz Herb Me" with one typed formula, 3 doses a day, some taken): tap, style and title bar on the Herbs page, Appointments week with the Today rail and its doses open, the Me drawer and a dose's card, at 1240 and 360, against the base: nothing added; at 1240 the green badge's off-colour line is gone. No sideways scroll at 360. No herb green left on any of those places.
+- **Shots:** not yet. The browser pane was hidden, so pictures came out cropped; to take when it is showing.
+- **Not tested:** her devices and her real doses.

@@ -1600,9 +1600,9 @@ Her own prescription's doses at clock times SHE types, nothing pre-filled ("i ne
   prescriptions + the formula list as a native list) + times a day + Add, More ▾ for the rest. Rail: "N taking". Days left green,
   ran out amber on every surface.
 - **Elsewhere**: Me drawer Herbs (a tick per dose today); each dose a leaf mark at its time on the day's right edge (`phHbMarkHtml`, a
-  20px circle that takes no lane, her 2026-11-02 pick; filled green once taken; today's tap = taken with Undo, another day's opens
+  20px circle that takes no lane, her 2026-11-02 pick; filled teal once taken; today's tap = taken with Undo, another day's opens
   its card; untimed folds above the day); the Herbs page opens from the Me drawer (it left the Appointments top bar 2026-11-02). Due = a gold glow
-  until ticked; a late tick counts any time that day; a fasting day keeps them. Code: "HERBS · HER OWN DOSES" (`phHb*`).
+  until ticked; a late tick counts any time that day; a fasting day keeps them. Code: "HERBS · HER OWN DOSES" (`phHb*`). **No herb green** (her 2026-11-28 "Yes, remove them"): the tracker's formula icon and 7-day dots, the Today rail's doses badge, its dose buttons and the Me drawer's leaf draw in the app teal; a dose's card title takes the teal too (`PH_HB_COL` = #165C74).
 - **A dose rides on the meal before it** (her pick 2026-10-29, the Me audit; `phHbMealOf`): the last meal planned at or before the
   dose's time (8:00 → Breakfast, 16:00 → Lunch; a dose before the first meal rides on that meal; untimed = none). That meal's card
   lists it with the same tick (`phMealHbHtml`, today only); the meal's Had it ticks it in the same save (the toast adds "· dose
