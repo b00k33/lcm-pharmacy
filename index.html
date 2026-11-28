@@ -43970,7 +43970,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     };
     const fs = list.filter(phIsFormula), hs = list.filter(h => !phIsFormula(h));
     const tray = (arr, big, label, n) => arr.length ? `<div class="ph-shelf-grp">${label ? `<div class="ph-shelf-hd">${label} <span>${n || arr.length}</span></div>` : ""}<div class="ph-shelf-tray${big ? " big" : ""}"><i class="ph-shelf-stars" aria-hidden="true"></i><i class="ph-apo-rail" aria-hidden="true"></i>${arr.map(h => lid(h, big)).join("")}</div><div class="ph-shelf-board" aria-hidden="true"><i class="ph-apo-deco ${big ? "f" : "h"}"></i></div></div>` : "";
-    const pt = s === "cbd" ? phPillTrayHtml(terms) : "";   // Black Pearl pills: CBD's shelf only
+    const pt = PH_PILL_SHELVES.includes(s) ? phPillTrayHtml(terms, s) : "";   // Black Pearl pills: CBD's and Lotus's shelves, each its own count
     // her 2026-11-26 "use the visual shelf system on this page. use my inventory image to build the view" (her photo of the Lotus cabinet; picks
     // Inventory + "Like the photo"): Lotus is her white cabinet, formulas on the top board, the herbs A-Z over the two boards under it
     const cab = s === "pp", half = Math.ceil(hs.length / 2);
@@ -43983,11 +43983,22 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const cnt = document.getElementById("phCount"); if (cnt) cnt.textContent = "";
   }
   // ---- BLACK PEARL PILLS (her 2026-11-25 "Yes, build as mocked", PA TCM's mock-black-pearl-pills-2026-11-25.html): the patent pills she
-  // keeps at CBD only, counted in PILLS (a box = 200). PHARMACY.pills = [{id, n name, en English name, tint + foot the box's colours, q pills
+  // keeps at CBD and at Lotus (her 2026-11-28 "there is a pill drawer for lotus", "lotus and cbd stock are separate"), counted in PILLS (a box = 200). PHARMACY.pills = [{id, n name, en English name, tint + foot the box's colours, q pills
   // on the shelf (null = not counted yet), low her low line in pills (null = none yet), sup supplier, price a box (hers to type), out [{at, n}]
   // the last dispenses, up}]. Never in PHARMACY.herbs (every herb count is grams), so a product never clashes with a granule formula of the
   // same name: it is "Wen Jing Tang (Black Pearl pills)". The five boxes are seeded once by name and colour only, no stock.
   const PH_PILL_BOX = 200;
+  // the shelves with a pill drawer. CBD's count lives on the product (q, low, out, as before); another shelf's in p.at[shelf] = { q, low, out }
+  // (never mixed: a Lotus count is never CBD's). The name, English name, colours, supplier and box price are the product's, one for both.
+  const PH_PILL_SHELVES = ["cbd", "pp"];
+  const phPillSh = sh => PH_PILL_SHELVES.includes(sh) ? sh : "cbd";
+  const phPillSt = (p, sh) => phPillSh(sh) === "cbd" ? p : (p.at && p.at[sh]) || { q: null, low: null, out: [] };   // read: never writes
+  function phPillStW(p, sh) {   // write: makes the shelf's count the first time
+    sh = phPillSh(sh); if (sh === "cbd") return p;
+    if (!p.at || typeof p.at !== "object") p.at = {};
+    if (!p.at[sh]) p.at[sh] = { q: null, low: null, out: [] };
+    return p.at[sh];
+  }
   const PH_PILL_SEED = [
     { id: "pl_jwxys", n: "Jia Wei Xiao Yao San", en: "Bupleurum & Peony Formula", tint: "#E4EEDF", foot: "#7BBF6A" },
     { id: "pl_wjt", n: "Wen Jing Tang", en: "Danggui & Evodia Formula", tint: "#E8E0EE", foot: "#9A7BB8" },
@@ -44003,13 +44014,13 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // the open box and the boxes behind it: 450 pills = x3, 50 in the open one; 400 = x2, the open one full
   // low (her 2026-11-25 "Under 1 box (200 pills)"): red when fewer than a full box is left; her own number in Stock wins (at or under it)
   const phPillOwnLow = p => p.low != null && p.low !== "";
-  const phPillIsLow = (p, q) => q != null && (phPillOwnLow(p) ? q <= +p.low : q < PH_PILL_BOX);
+  const phPillIsLow = (st, q) => q != null && (phPillOwnLow(st) ? q <= +st.low : q < PH_PILL_BOX);   // st = the shelf's count (phPillSt)
   // the supplier: her typed one, else China Books (her 2026-11-25 "chinabooks")
   const phPillSup = p => String(p.sup || "").trim() || "China Books";
-  function phPillNums(p) {
-    const q = p.q == null ? null : Math.max(0, Math.round(+p.q) || 0), nB = q > 0 ? Math.ceil(q / PH_PILL_BOX) : 0;
+  function phPillNums(p, sh) {
+    const st = phPillSt(p, sh), q = st.q == null ? null : Math.max(0, Math.round(+st.q) || 0), nB = q > 0 ? Math.ceil(q / PH_PILL_BOX) : 0;
     const open = q == null ? 0 : nB > 1 ? q - PH_PILL_BOX * (nB - 1) : q;
-    return { q, nB, open, low: phPillIsLow(p, q) };
+    return { q, nB, open, low: phPillIsLow(st, q) };
   }
   const phPillLines = (name, max) => {
     const words = String(name).split(/\s+/), out = []; let cur = "";
@@ -44019,8 +44030,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   };
   // her photo's box, front on (the pale band with the black pearl over the red scroll, the name in capitals, the coloured wave, the black
   // strip); the pills show through the box's SIDE up to the open box's level (her pick B), red there at or under her low line
-  function phPillBoxSvg(p, key) {
-    const N = phPillNums(p), x0 = 6, x1 = 66, y0 = 10, y1 = 108, sw = 9, cx = (x0 + x1) / 2, H = y1 - y0, lv = Math.max(0, Math.min(1, N.open / PH_PILL_BOX));
+  function phPillBoxSvg(p, key, sh) {
+    const N = phPillNums(p, sh), x0 = 6, x1 = 66, y0 = 10, y1 = 108, sw = 9, cx = (x0 + x1) / 2, H = y1 - y0, lv = Math.max(0, Math.min(1, N.open / PH_PILL_BOX));
     const top = y0 + 2, bot = y1 - 2, ly = bot - (bot - top) * lv, id = "phPb" + key;
     let pills = "";
     for (let y = bot - 2; y > ly + .8; y -= 3.2) for (const k of [0, 1]) { const x = x1 + 2.6 + k * 3.6, yy = y - (x - x1) * (4 / sw); pills += `<circle cx="${x.toFixed(1)}" cy="${yy.toFixed(1)}" r="1.45" fill="#141416"/>`; }
@@ -44042,13 +44053,13 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       ${N.nB > 1 ? T("×" + N.nB, 84, y0 - 3, 10.5, 700, "#5B6B70", 0, "end") : ""}</svg>`;
   }
   const phPillMatch = (p, terms) => !terms.length || terms.some(q => (phPillName(p) + " " + p.en).toLowerCase().includes(String(q).toLowerCase()));
-  // the Pills row on the CBD shelf: one box a product, A-Z, a dark plank under the row
-  function phPillTrayHtml(terms) {
+  // the Pills row on a shelf with a pill drawer (CBD, Lotus): one box a product, A-Z, a dark plank under the row, that shelf's count
+  function phPillTrayHtml(terms, sh) {
     const list = phPills().filter(p => phPillMatch(p, terms)).slice().sort((a, b) => phAz(a.n, b.n));
     if (!list.length) return "";
     return `<div class="ph-shelf-grp"><div class="ph-shelf-hd">Pills <span>${list.length}</span></div><div class="ph-pill-tray">${list.map(p => {
-      const N = phPillNums(p), on = phPillSheet && phPillSheet.id === p.id, nm = esc(phPillName(p));
-      return `<button type="button" class="ph-pbx${on ? " on" : ""}" data-ph-pill="${p.id}" aria-pressed="${on}" aria-label="${nm}, ${N.q == null ? "not counted" : `${N.q} pills${N.nB > 1 ? `, ${N.nB} boxes` : ""}`}${N.low ? ", low" : ""}" title="${nm} · ${N.q == null ? "not counted" : `${N.q} pills`}">${phPillBoxSvg(p, p.id)}</button>`;
+      const N = phPillNums(p, sh), on = phPillSheet && phPillSheet.id === p.id && phPillSheet.sh === phPillSh(sh), nm = esc(phPillName(p));
+      return `<button type="button" class="ph-pbx${on ? " on" : ""}" data-ph-pill="${p.id}" data-pill-sh="${phPillSh(sh)}" aria-pressed="${on}" aria-label="${nm}, ${N.q == null ? "not counted" : `${N.q} pills${N.nB > 1 ? `, ${N.nB} boxes` : ""}`}${N.low ? ", low" : ""}" title="${nm} · ${N.q == null ? "not counted" : `${N.q} pills`}">${phPillBoxSvg(p, p.id + phPillSh(sh), sh)}</button>`;
     }).join("")}</div></div>`;
   }
   // the prescription line, in the app's one sheet. Sold by the box only (her 2026-11-25 "they are sold by the box only"): she picks the
@@ -44056,9 +44067,9 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // patient's prescription (her "yes needs to go into patient prescription") it writes ONE dispense entry on that patient (PHARMACY.log,
   // kind "dispense", `products` beside the empty herb lists, never in `items` / `deducted`, which are herbs), with the label line as its
   // dosage; Undo in the one toast puts the pills back (phReverseEntry reads `products` too). Opened from the shelf it only takes the pills.
-  let phPillSheet = null;   // { id, rx prescription id or "", p, t, b, drop } while open (view state)
+  let phPillSheet = null;   // { id, rx prescription id or "", sh the shelf it counts from, p, t, b, drop } while open (view state)
   const PH_PILL_LIM = { p: [1, 20], t: [1, 4], b: [1, 10] };
-  function phPillOpen(id, rx) { phPillSheet = { id, rx: rx || "", p: 5, t: 3, b: 1, drop: false }; phPillSheetPaint(); phPillShelfRepaint(); }
+  function phPillOpen(id, rx, sh) { phPillSheet = { id, rx: rx || "", sh: phPillSh(sh), p: 5, t: 3, b: 1, drop: false }; phPillSheetPaint(); phPillShelfRepaint(); }
   function phPillClose() { phPillSheet = null; phPillSheetPaint(); phPillShelfRepaint(); }
   function phPillShelfRepaint() { if (phInvView === "shelf" && document.querySelector("#phStock .ph-shelf")) phInvShelfPaint(); }
   const phPillLabel = S => `Take ${S.p} pill${S.p === 1 ? "" : "s"}, ${S.t} time${S.t === 1 ? "" : "s"} a day`;
@@ -44068,22 +44079,22 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     const p = phPillSheet && phPills().find(x => x.id === phPillSheet.id);
     if (!p) { phPillSheet = null; if (host) { host.hidden = true; host.innerHTML = ""; } return; }
     if (!host) { host = document.createElement("div"); host.id = "phPillSheet"; host.className = "ph-lk-sheet"; (document.getElementById("pharmacyPage") || document.body).appendChild(host); }
-    const S = phPillSheet, N = phPillNums(p), rx = phPillRxOf(S), who = rx ? phTitle(presPatientFor(rx)) : "";
+    const S = phPillSheet, st = phPillSt(p, S.sh), N = phPillNums(p, S.sh), rx = phPillRxOf(S), who = rx ? phTitle(presPatientFor(rx)) : "";
     const tot = S.b * PH_PILL_BOX, have = N.q || 0, after = have - tot, short = N.q == null || tot > have, days = Math.floor(tot / (S.p * S.t));
-    const lowAfter = !short && phPillIsLow(p, after);
+    const lowAfter = !short && phPillIsLow(st, after);
     const step = (k, label) => `<div class="st"><span>${label}</span><div class="ctl"><button type="button" data-pill-k="${k}" data-v="-1" aria-label="${label}: fewer"${S[k] <= PH_PILL_LIM[k][0] ? " disabled" : ""}>−</button><output>${S[k]}</output><button type="button" data-pill-k="${k}" data-v="1" aria-label="${label}: more"${S[k] >= PH_PILL_LIM[k][1] ? " disabled" : ""}>+</button></div></div>`;
     const drop = S.drop && !phTpReduceMotion() ? Array.from({ length: 6 }, (_, k) => `<circle class="drop" cx="${8 + (k % 3) * 6}" cy="${18 + Math.floor(k / 3) * 5}" r="2" fill="#1C1C1E" style="animation-delay:${k * 40}ms"/>`).join("") : "";
     const fld = (k, label, v, mode) => `<label class="f"><span>${label}</span><input type="text" inputmode="${mode}" class="ph-pill-in" data-pill-f="${k}" value="${v == null ? "" : esc(String(v))}" autocomplete="off" aria-label="${label}"></label>`;
     host.innerHTML = `<div class="ph-lk-backdrop" data-pill-close="1"></div><div class="ph-lk-card ph-pill-card" role="dialog" aria-label="${esc(phPillName(p))}">
       <div class="ph-lk-card-hd"><h3>${esc(p.n)}${who ? ` · ${esc(who)}` : ""}</h3><button type="button" data-pill-close="1" aria-label="Close">✕</button></div>
-      <div class="ph-pill-rx"><div class="big">${phPillBoxSvg(p, p.id + "g")}</div><div class="rt">
-        <p class="who">Black Pearl pills · ${esc(p.en)}</p>
+      <div class="ph-pill-rx"><div class="big">${phPillBoxSvg(p, p.id + "g", S.sh)}</div><div class="rt">
+        <p class="who">Black Pearl pills${p.en ? ` · ${esc(p.en)}` : ""} · ${PH_SHELVES[S.sh].name} shelf</p>
         <div class="steps">${step("p", "Pills each time")}${step("t", "Times a day")}${step("b", "Boxes")}</div>
         <p class="sum"><b>${S.b} box${S.b === 1 ? "" : "es"}</b> · ${tot} pills · lasts ${days} day${days === 1 ? "" : "s"}</p>
         <p class="left">${N.q == null ? `<span class="low">Not counted</span>` : short ? `<span class="low">Only ${have} pills on the shelf</span>` : `Shelf after: ${after} pills${lowAfter ? ` · <span class="low">under the low line</span>` : ""}`}</p>
         <div class="go"><span class="lbl">${phPillLabel(S)}</span><button type="button" class="btn-save" data-pill-go="1"${short ? " disabled" : ""}>Dispense</button><span class="bag"><svg width="30" height="34" viewBox="0 0 30 34" aria-hidden="true"><path d="M5 10 h20 l-2 22 h-16 z" fill="#E9DFC9" stroke="#B9A887" stroke-width="1"/><path d="M5 10 l3 -6 h14 l3 6" fill="#F1E8D4" stroke="#B9A887" stroke-width="1"/>${drop}</svg></span></div>
       </div></div>
-      <details class="ph-pill-stock"${N.q == null ? " open" : ""}><summary>Stock</summary><div class="fs">${fld("q", "Pills on the shelf", N.q, "numeric")}${fld("low", "Low line (pills)", phPillOwnLow(p) ? p.low : PH_PILL_BOX, "numeric")}${fld("sup", "Supplier", phPillSup(p), "text")}${fld("price", "Box price", p.price, "decimal")}</div></details>
+      <details class="ph-pill-stock"${N.q == null ? " open" : ""}><summary>Stock</summary><div class="fs">${fld("q", "Pills on the shelf", N.q, "numeric")}${fld("low", "Low line (pills)", phPillOwnLow(st) ? st.low : PH_PILL_BOX, "numeric")}${fld("sup", "Supplier", phPillSup(p), "text")}${fld("price", "Box price", p.price, "decimal")}</div></details>
     </div>`;
     host.hidden = false;
     S.drop = false;
@@ -44091,10 +44102,10 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // on a patient's open prescription: the counted boxes (a tap opens the sheet for this prescription) and the pills it has had
   function phPillRxRowHtml(t) {
     if (!t || !t.id || presIsFormula(t)) return "";
-    const boxes = phPills().filter(p => p.q != null).slice().sort((a, b) => phAz(a.n, b.n));
+    const sh = presDispShelf(), boxes = PH_PILL_SHELVES.includes(sh) ? phPills().filter(p => phPillSt(p, sh).q != null).slice().sort((a, b) => phAz(a.n, b.n)) : [];   // the shelf it is dispensed from; Acupreg keeps no pills
     const had = (PHARMACY.log || []).filter(e => e && e.kind === "dispense" && e.presId === t.id && Array.isArray(e.products) && e.products.length).slice(0, 3);
     if (!boxes.length && !had.length) return "";
-    return `<div class="ph-pill-rxrow" id="phPillRx-${esc(t.id)}"><span class="hd">Black Pearl</span>${boxes.length ? `<div class="bxs">${boxes.map(p => { const N = phPillNums(p), nm = esc(phPillName(p)); return `<button type="button" class="ph-pbx sm" data-ph-pill="${p.id}" data-pill-rx="${esc(t.id)}" aria-label="${nm}, ${N.q} pills${N.low ? ", low" : ""}" title="${nm} · ${N.q} pills">${phPillBoxSvg(p, p.id + "r")}</button>`; }).join("")}</div>` : ""}${had.length ? `<div class="had">${had.map(e => `<span>${esc(e.products.map(x => `${x.name.replace(/ \(Black Pearl pills\)$/, "")} · ${x.boxes} box${x.boxes === 1 ? "" : "es"}`).join(", "))} · ${(d => `${d.getDate()} ${MON_SHORT[d.getMonth()]}`)(parseKey(e.date))}</span>`).join("")}</div>` : ""}</div>`;
+    return `<div class="ph-pill-rxrow" id="phPillRx-${esc(t.id)}"><span class="hd">Black Pearl</span>${boxes.length ? `<div class="bxs">${boxes.map(p => { const N = phPillNums(p, sh), nm = esc(phPillName(p)); return `<button type="button" class="ph-pbx sm" data-ph-pill="${p.id}" data-pill-rx="${esc(t.id)}" data-pill-sh="${sh}" aria-label="${nm}, ${N.q} pills${N.low ? ", low" : ""}" title="${nm} · ${N.q} pills">${phPillBoxSvg(p, p.id + "r", sh)}</button>`; }).join("")}</div>` : ""}${had.length ? `<div class="had">${had.map(e => `<span>${esc(e.products.map(x => `${x.name.replace(/ \(Black Pearl pills\)$/, "")} · ${x.boxes} box${x.boxes === 1 ? "" : "es"}`).join(", "))} · ${(d => `${d.getDate()} ${MON_SHORT[d.getMonth()]}`)(parseKey(e.date))}</span>`).join("")}</div>` : ""}</div>`;
   }
   function phPillRxRepaint(rxId) {
     const el = rxId && document.getElementById("phPillRx-" + rxId), t = rxId && PRESC.items.find(x => x.id === rxId);
@@ -44104,30 +44115,31 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   }
   document.addEventListener("click", e => {
     const t = e.target instanceof Element ? e.target : null; if (!t) return;
-    const b = t.closest("[data-ph-pill]"); if (b) { phPillOpen(b.dataset.phPill, b.dataset.pillRx); return; }
+    const b = t.closest("[data-ph-pill]"); if (b) { phPillOpen(b.dataset.phPill, b.dataset.pillRx, b.dataset.pillSh); return; }
     if (!phPillSheet || !t.closest("#phPillSheet")) return;
     if (t.closest("[data-pill-close]")) { phPillClose(); return; }
     const s = t.closest("[data-pill-k]");
     if (s) { const k = s.dataset.pillK, L = PH_PILL_LIM[k]; phPillSheet[k] = Math.max(L[0], Math.min(L[1], phPillSheet[k] + +s.dataset.v)); phPillSheetPaint(); return; }
     if (t.closest("[data-pill-go]")) {
       const S = phPillSheet, p = phPills().find(x => x.id === S.id), tot = S.b * PH_PILL_BOX, rx = phPillRxOf(S);
-      if (!p || p.q == null || tot > p.q) return;
-      const was = p.q, wasOut = (p.out || []).slice(), now = new Date();
+      const st = p && phPillStW(p, S.sh);
+      if (!p || st.q == null || tot > st.q) return;
+      const was = st.q, wasOut = (st.out || []).slice(), now = new Date();
       let entry = null;
       if (rx) {
                 entry = { id: uid(), kind: "dispense", date: keyOf(now), at: now.getTime(), patient: presPatientFor(rx), presId: rx.id, method: "Black Pearl pills",
           formula: phPillName(p), dosage: phPillLabel(S), what: phPillName(p), grams: 0, qty: S.b, cost: 0, price: 0, items: [], deducted: [], stockNotes: [],
-          products: [{ pill: p.id, name: phPillName(p), pills: tot, boxes: S.b, shelf: "cbd" }] };
+          products: [{ pill: p.id, name: phPillName(p), pills: tot, boxes: S.b, shelf: S.sh }] };
         const ap = phApptList().find(a => a.date === entry.date && phPatientKey(a.patient) === phPatientKey(entry.patient));
         if (ap) entry.visitTime = ap.time;
         PHARMACY.log.unshift(entry);
       }
-      p.q = was - tot; p.out = wasOut.concat({ at: now.getTime(), n: tot }).slice(-50); p.up = Date.now();
-      if (!savePharmacy()) { p.q = was; p.out = wasOut; if (entry) PHARMACY.log = PHARMACY.log.filter(x => x !== entry); phPillSheetPaint(); return; }
+      st.q = was - tot; st.out = wasOut.concat({ at: now.getTime(), n: tot }).slice(-50); p.up = Date.now();
+      if (!savePharmacy()) { st.q = was; st.out = wasOut; if (entry) PHARMACY.log = PHARMACY.log.filter(x => x !== entry); phPillSheetPaint(); return; }
       S.drop = true; phPillSheetPaint(); phPillShelfRepaint(); if (rx) phPillRxRepaint(rx.id);
       const rxId = rx && rx.id;
       presSavedToast(`✓ ${S.b} box${S.b === 1 ? "" : "es"} · ${p.n}${rx ? ` · ${phTitle(presPatientFor(rx))}` : ""}`, { undo: () => {
-        p.q = was; p.out = wasOut; p.up = Date.now(); if (entry) PHARMACY.log = PHARMACY.log.filter(x => x !== entry);
+        st.q = was; st.out = wasOut; p.up = Date.now(); if (entry) PHARMACY.log = PHARMACY.log.filter(x => x !== entry);
         savePharmacy(); phPillSheetPaint(); phPillShelfRepaint(); if (rxId) phPillRxRepaint(rxId);
       } });
     }
@@ -44136,11 +44148,11 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   document.addEventListener("change", e => {
     const f = e.target instanceof Element && e.target.closest("[data-pill-f]"); if (!f || !phPillSheet) return;
     const p = phPills().find(x => x.id === phPillSheet.id); if (!p) return;
-    const k = f.dataset.pillF, v = String(f.value || "").trim();
+    const k = f.dataset.pillF, v = String(f.value || "").trim(), st = phPillStW(p, phPillSheet.sh);   // the count and low line are the shelf's; supplier and price the product's
     if (k === "sup") p.sup = v;
     else if (k === "price") { const n = parseFloat(v.replace(/[$,]/g, "")); p.price = v === "" || !isFinite(n) ? null : Math.max(0, n); }
-    else if (k === "low") { const n = Math.round(parseFloat(v)); p.low = v === "" || !isFinite(n) || n === PH_PILL_BOX && !phPillOwnLow(p) ? null : Math.max(0, n); }
-    else { const n = Math.round(parseFloat(v)); p[k] = v === "" || !isFinite(n) ? null : Math.max(0, n); }
+    else if (k === "low") { const n = Math.round(parseFloat(v)); st.low = v === "" || !isFinite(n) || n === PH_PILL_BOX && !phPillOwnLow(st) ? null : Math.max(0, n); }
+    else if (k === "q") { const n = Math.round(parseFloat(v)); st.q = v === "" || !isFinite(n) ? null : Math.max(0, n); }
     p.up = Date.now(); savePharmacy(); phPillSheetPaint(); phPillShelfRepaint();
   });
   document.addEventListener("keydown", e => { if (e.key === "Escape" && phPillSheet) { e.stopPropagation(); phPillClose(); } }, true);
@@ -47446,7 +47458,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       // still-undispensed deduction is what's keeping qty negative
       if (h) phShelfAdd(h, x.grams, x.shelf);
     });
-    (Array.isArray(entry.products) ? entry.products : []).forEach(x => { const p = (PHARMACY.pills || []).find(y => y.id === x.pill); if (p && p.q != null) p.q = Math.round(+p.q + (+x.pills || 0)); });   // Black Pearl pills
+    (Array.isArray(entry.products) ? entry.products : []).forEach(x => { const p = (PHARMACY.pills || []).find(y => y.id === x.pill), st = p && phPillSt(p, x.shelf); if (st && st.q != null) st.q = Math.round(+st.q + (+x.pills || 0)); });   // Black Pearl pills
     (Array.isArray(entry.added) ? entry.added : []).forEach(x => {
       const h = PHARMACY.herbs.find(hh => hh.id === x.herbId);
       if (h && h.qty != null) h.qty = phRound2(h.qty - x.grams);   // never a floor at 0: what has gone out since stays counted, and the Log's Undo lands on the same number
