@@ -189433,7 +189433,7 @@ Dosage: {dosage}
           lastSavedAt = (r.data && r.data[0] && r.data[0].updated_at) || new Date().toISOString();
           if (r.data && r.data[0]) sessionStorage.setItem(APPLIED, r.data[0].updated_at);
           var wrote = r.data && r.data[0] && r.data[0].updated_at;
-          if (wrote && wrote === expectedVersion) stampMoves = false;   // the database kept the old stamp: never trust it
+          if (wrote && wrote === expectedVersion) { stampMoves = false; othCopy = null; }   // the database kept the old stamp: never trust it
           keepCopy(wrote, payload.data);
           setLive(true); renderSavedAt();
           return true;
@@ -189734,6 +189734,7 @@ Dosage: {dosage}
     ks.push(REC_KEY);
     recsMem = null;
     cloudCopy = null;
+    othCopy = null;
     if (wasAt && window.__lcmIDB) recsQueue = recsQueue.then(function () { return recsSoon(window.__lcmIDB.del(REC_IDB + wasAt)); }).catch(function () {});
     ks.push("lcm-appt-digest");
     ks.push("lcm-oth-cache");   // the other clinic as THIS login last read it (BOTH CLINICS ON ONE CALENDAR)   // the bookings handed to C22 (lcm-appt-digest, see "C22 ON THE APPOINTMENTS GRID") belong to this login too
@@ -190314,7 +190315,29 @@ Dosage: {dosage}
      token, so the new pair goes straight back into REG_KEY (or the next switch would ask for the password),
      and a lock across tabs (OTH_LOCK) keeps two tabs from refreshing the same token at once. Only while this
      tab is ready, online and ownerOk(); at most every 3 minutes unless forced. */
-  var OTH_LOCK = "lcm-oth-lock", othBusy = false, othLast = 0;
+  var OTH_LOCK = "lcm-oth-lock", othBusy = false, othLast = 0, othCopy = null;
+  /* the other login's pharmacy is downloaded only when its row has changed (2026-11-28, the same rule as fetchIfChanged):
+     the text last downloaded stays in memory and a round asks for the stamp alone. Trusted once this tab has seen a stamp
+     move (either row: one table, one trigger), for the same two logins, up to 6 hours; otherwise the whole row, as before.
+     The app still gets a fresh copy every round, so a hand-off waiting for this login's catch-up is taken on a later one. */
+  function othPharmacy(oc, email, me) {
+    function whole() {
+      return oc.from("settings").select("data,updated_at").maybeSingle().then(function (r) {
+        if (!r || r.error || !r.data || !r.data.data || myEmail !== me) return null;
+        var at = r.data.updated_at, ph = r.data.data[PH_KEY] || null;
+        if (othCopy && othCopy.email === email && at && at !== othCopy.at) stampMoves = true;
+        othCopy = at && ph ? { email: email, me: me, at: at, ph: ph, t: Date.now() } : null;
+        return ph;
+      });
+    }
+    var c = othCopy;
+    if (!c || !stampMoves || c.email !== email || c.me !== me || Date.now() - c.t > COPY_MAX_MS) return whole();
+    return oc.from("settings").select("updated_at").maybeSingle().then(function (r) {
+      if (!r || r.error) return null;                       // couldn't ask: the next round tries again
+      if (c === othCopy && myEmail === me && r.data && r.data.updated_at === c.at) return c.ph;
+      return whole();
+    });
+  }
   function othEntry() {
     var reg = loadReg();
     for (var i = 0; i < reg.length; i++) if (reg[i].email && reg[i].email !== myEmail && reg[i].refresh_token) return reg[i];
@@ -190338,11 +190361,11 @@ Dosage: {dosage}
         reg.forEach(function (x) { if (x.email === e.email) { x.access_token = s.access_token; x.refresh_token = s.refresh_token; } });
         saveReg(reg);
       }
-      return oc.from("settings").select("data").maybeSingle();
-    }).then(function (r) {
-      if (!r || r.error || !r.data || !r.data.data || myEmail !== me || !ownerOk()) return;   // switched meanwhile: drop it
+      return othPharmacy(oc, e.email, me);
+    }).then(function (ph) {
+      if (!ph || myEmail !== me || !ownerOk()) return;   // switched meanwhile: drop it
       var P = null;
-      try { P = JSON.parse(r.data.data[PH_KEY] || "null"); } catch (x) {}
+      try { P = JSON.parse(ph); } catch (x) {}
       if (P && typeof P === "object") window.phOthTake(e.email, P, me);
     }).catch(function () {}).then(function () {
       othBusy = false;

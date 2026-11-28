@@ -49,6 +49,8 @@ pull asks the cloud for the row's stamp and uses the copy this tab holds while i
 `cloudCopy`, memory only), once the tab has seen the stamp move. A new stamp, another login, a 6-hour-old copy, signing in
 and the send before a switch or sign-out download the whole row. A new cloud write must move `updated_at` (the database
 trigger does).
+The other clinic's calendar follows the same rule (`othPharmacy`, `othCopy`; commit only, NOT live; BUILD-NOTES
+"Other clinic's calendar").
 
 ## Appointments & calendar
 **Her own blocks: pictures only (2026-11-21, her picks A):** `phC22PicOf(x)` reads `PH_C22_PICS` (title words, first match wins:

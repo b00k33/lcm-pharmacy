@@ -19186,3 +19186,11 @@ Her words: "the back button is ambiguous, the teapot is missing (i actually want
 - **Summary line:** `phTvqWords` no longer says Herbs (the chart head's chip does).
 - **Audits** (test copy, made-up patient "Zz Mia Tan"): style + tap at 1240 against the base at 1276 (the same page width): nothing new; the six lines left against the base at 1240 come only from the 36px narrower page. 360: identical, no sideways scroll. Side bar: nothing new.
 - **Not tested:** a herbs patient's chip with real herbs data, her own patients and devices, a brand clinic's colours in the head.
+
+## Other clinic's calendar: download only when changed (2026-11-28, commit only, NOT live)
+Her "yes build it" (step two of cutting what the database sends): the other login's whole row was downloaded on opening, on coming back to the window and every 5 minutes (`othRead`).
+- **Now:** `othPharmacy` asks the other row for `updated_at` alone and hands the app the pharmacy text this tab already downloaded (`othCopy`: memory only) while the stamp is unchanged. The app still gets it every round, so a waiting hand-off is taken on a later one.
+- **The whole row is still read when:** the first round; the stamp differs; no stamp has been seen moving yet (either row); a save came back with the old stamp; the copy is 6 hours old; another login. A switch or sign-out clears the copy.
+- **Not changed:** the second client and its tokens, the tab lock, the 3-minute gap and 5-minute timer, `phOthTake`, "Bring in Acupreg" (`__lcmReadOther`, one full read). The other row is never written.
+- **Tested** (test copies, two pretend logins, a pretend cloud inside the page; old and new side by side; unchanged rounds, own saves, the other clinic adding, handing over and cancelling a booking, a failed stamp check, a 7-hour-old copy, a database that stops stamping, the owner tags): the same bookings shown at every step and the hand-off taken once; 21 whole downloads of the other row before, 6 after; no write to it; own tag flush true, foreign false with nothing taken or written. Opening offline (`off`, `lie`, `late`; fresh and expired sign-in): in within 1.8 s, no cover after 30 s, `lcm-sync-base` held.
+- **Not tested:** her devices, the real database, two real logins.
