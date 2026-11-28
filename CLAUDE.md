@@ -923,7 +923,7 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   computer every list page has a 58px top bar, its content 16px under it at the one left edge, the search a
   280px white box FIRST on the tool row, the filters ONE 32px joined bar (picked = solid teal, count inside),
   the list in ONE white card (16px corners, the soft shadow, column names inside), card titles a pale band
-  with teal capitals, an empty list one quiet line. CSS block "ONE PAGE FRAME"; a new page follows it.
+  with teal capitals, an empty list one quiet line. CSS block "ONE PAGE FRAME"; a new page follows it. **Appointments on a computer is the one exception** (her 2026-11-28 "make the book bigger and bring it to edge of screen where possible"): from 901px it has no title bar, the calendar's own row (`.ph-tbm-host`) carries the page's Update and Add, and the page runs to the window's edges.
   **Her body photos sit on her own Body card (her 2026-11-19 "put my body photos relating to my body measurements", her 8 picks of
   `mocks/body-card-photos-mock-2026-11-19.html`):** on her own record only, under the readings: the first photo beside the newest, the
   kg and fat change between them, then a column a day (photo · kg · fat, the reading within 7 days), a tap picks the day on the left;

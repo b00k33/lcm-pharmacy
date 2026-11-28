@@ -19283,3 +19283,12 @@ Her list after the whole-app audit, each marked fix. Items 1 to 6 are in the app
 the owner guard, a database where the conditional save never matches, a 1 MB merge; items 3 to 6 driven in the page; the 39
 earlier checks; tap, style, title-bar and voice audits on 80 pages at 1220 and 360, the same lines as before.
 **Not tested:** a real Supabase database (the SQL has not been run anywhere), her two real devices, the phone.
+
+## The book, bigger and to the edges (2026-11-28, commit only, NOT live)
+Her words, on the Today book: "i love this book layout. can you make the book bigger and bring it to edge of screen where possible. audit text on page to reduce redundant text."
+- **Bigger:** from 901px the "Appointments" title bar is not drawn (the right tab already says it). The calendar's row carries its buttons: `phTitlebarMerge` also takes a `.ph-tbm-host` row. Page margins 6px, the card around the book gone, the Work tabs flush on the right edge (all Work pages), the book fitted to the window (`phPinApptZones` reads the book's own foot), no page scroll at 960 to 1440.
+- **Said once:** the day page's time column is start over end (no times inside the rows), the head is "n patients" (no span), initials gone, "Open binder" is **Binder**, the kind loses "(60 mins)", a numbered prefix and "Consultation" (`phBkSvc`; the full words are its hover), "booked ahead" is the number on List, "Add appointments" reads **Add**.
+- **The week:** Travel and meals are their picture (`phBkPic`; hover says them), other bands the first part of their title, ellipsis at the end (they were cut at the start); "over" + picture; in the book a block says its start only.
+- **Clipped:** the cycle day moved from the week's narrow head to beside the date on the day page; the earlier / later hour chips span the whole time column, so no half-hidden hour behind them.
+- **Tested** in a test copy with made-up bookings and made-up Lunch / Travel / Break Fast: 1440, 1280, 1220, 960, 800, 360; Today, Week, List; search typing, the booking card, ‹ ›, Add, the Update button in the row; tap, style, voice and title-bar audits at 1220 and 360 against the base: nothing new (the only changed line is the same appointment block fill, now on the larger block size).
+- **Not tested:** her real bookings and window; the phone is unchanged apart from the band pictures.
