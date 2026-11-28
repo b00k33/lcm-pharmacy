@@ -629,6 +629,17 @@ by themselves while it has no date); **The 6–7 wk scan** (her 8 picks, 2026-11
 symbols. No "+ transfer from these eggs": Use ▸ and "+ Transfer" stay.
 
 ## Dispense, Refill & To Order
+- **The Poooli printer (2026-11-28, BUILD-NOTES "Poooli labels"; LIVE with this publish; not yet printed on paper):**
+  the browser prints straight to her Poooli over Bluetooth (Web Serial, no print window; the button and bar show only where
+  `navigator.serial` exists). **Patient label (her rules, keep them):** a joined **Label printer | Poooli** bar on the label block,
+  remembered per clinic on the device (`lcm-label-printer`; default Poooli at Lotus on a computer, else the label printer). On the
+  Poooli it is her picture of two boxes side by side, **lying along plain 57 mm paper** (57 mm short edge): left the prescription
+  (Patient to how to take it; Patient, Dosage, Take bold), right her instructions with Date and Use Before under them; no heading, no
+  price; `**words**` print bold. The words shrink to fit her box widths (never under 20 dots), then the box runs wider
+  (`phPkPatientFlat`). **Herb name labels:** her 15 and 30 mm rolls are **stickers on 57 mm paper** (that tall, with gaps). Print label
+  in a stock row's ⋮ menu, the shelf lid menu, the one-clinic stock row (Label chip) and the herb edit panel opens a Herb label card:
+  the name straight across one sticker, a **30 mm | 15 mm** bar, Print label (then `PH_PK_GAP`, 3 mm, to the next sticker; her gap is
+  not yet measured).
 - **synth22 2026-11-25 (her picks; mocks `mock-herb-label-2026-11-25.html`, `mock-label-printer-2026-11-25.html`):** **whole grams** on a
   patient's prescription: `presCalcNumbers` rounds each herb (a half up, never under 1 g; a formula's recipe keeps its grams) and returns
   the rounded sum as `gp`; the bag, Lasts, price, stock taken, the herb table's In stock column (`presBagG`), the label, Log and Copy for

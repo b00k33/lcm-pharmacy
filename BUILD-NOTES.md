@@ -19020,3 +19020,23 @@ Her words (typed in PA Coder 3D, relayed): first "remove the herb colour coding"
 - **Audits** (test copy, made-up owner "Zz Herb Me" with one typed formula, 3 doses a day, some taken): tap, style and title bar on the Herbs page, Appointments week with the Today rail and its doses open, the Me drawer and a dose's card, at 1240 and 360, against the base: nothing added; at 1240 the green badge's off-colour line is gone. No sideways scroll at 360. No herb green left on any of those places.
 - **Shots:** not yet. The browser pane was hidden, so pictures came out cropped; to take when it is showing.
 - **Not tested:** her devices and her real doses.
+
+## Poooli labels: straight from LCM (2026-11-28, LIVE with this publish)
+Her words: "is there a way to make it so when i print labels from lotus herb dispensing, it prints straight to pooli?", "use this
+format" (her two boxes), "insert a feature where i can print herb labels ... i have paper rolls that are 15mm and 30mm", "actually make
+printing from pooli an option for all locations", then "horizontal for just patient label", "keep rules for label", "like this but
+57mm on the shorter edge" and a photo of her sticker rolls; then "push live LCM". Popup picks: patient label and herb names; add Date and Use Before, no price.
+- **Code:** one block before `presLabelPrint` ("THE POOOLI"): `phPkOn` / `phPkPick`, `phPkBox` / `phPkPatientFlat` (turned for the head
+  by `phPkTurn`), `phPkHerbStrip` / `phPkStickerHtml`, `phPkBytes`, `phPkPrint`, the Herb label card (`#phPkSheet`, the `.ph-lk-sheet`
+  shell). `presLabelPrint` and `presPrintAnim` hand over to it when the clinic prints to the Poooli. The label printer warnings print
+  `**words**` bold too.
+- **Printer facts:** Poooli L2, Bluetooth serial, head 648 dots (12 a mm, 54 mm), paper central. Start
+  `1B 1C 73 65 74 20 6D 6D 05 08` (replies "OK"), width `10 7E 68 79 7A 85 0F`, darkness `10 7E 68 79 6E 46`; each dot row
+  `10 7B 3D 3D` + lengths and data XOR 0x0D (81 bytes as one literal LZO run); feed `16 16 0C` + dots XOR 0x0D0D. The maker lists no
+  gap sensor (door and paper end only).
+- **Assumed, unchecked on paper:** sticker gap 3 mm; a sticker takes 50 mm of words, centred.
+- **Tested** (test copy, made-up data, a pretend printer): the patient label and both sticker sizes decode to exactly the picture on
+  screen; Esc, backdrop and the close button close the card; switching to Label printer brings the old picture back. Tap, style and
+  voice audits add nothing at 360 and desktop on the card, menus, stock rows and label block (older items left: the herb panel's
+  "Combine bottles" and fold head, the shelf menu's 400 words).
+- **Not tested:** a real printer and paper; her devices (Chrome on Android over Bluetooth is untried).
