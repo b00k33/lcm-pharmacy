@@ -18919,3 +18919,8 @@ Her words: "improve the table display" (her screenshot: the Lotus table beside t
 - **Rows:** 40px, middle-aligned; the numbers, Make and "no recipe" never wrap; the name column may wrap (`min-width: 0`); 8px each side (6px under 900, where the cells no longer repeat the head's words).
 - **Fits** with no sideways scroll beside the bench at 1440 (504 of 504) and 1220 (360 of 360), and on the phone at 360 (320 of 320).
 - **Audits:** tap, style and voice empty on the table at 1440, 1220 and 360.
+
+## A pill dispense shows in Visit history at once (2026-11-28, commit only, NOT live)
+Her words: "i just prescribed 10pills 3 times a day for this patient with wen dan tang ... and the log is not there". The dispense had been saved (one `kind: "dispense"` entry on the patient, dosage "Take 10 pills, 3 times a day", `products[0].shelf` "pp", Lotus count down one box), but only the Black Pearl row redrew, so the Dispense tiles' "Visit history · 0" stayed until the next page change.
+- `phPillRxRedraw(rxId)`: after a Dispense or its Undo, the whole prescription panel redraws (`renderPresPanel`) when that prescription is the open one; otherwise just the row (`phPillRxRepaint`). The pill sheet stays open.
+- **Tested** in the test copy: Visit history 0 → 1 → 0 across Dispense and Undo, the Lotus count 800 → 600 → 800, the sheet still open.
