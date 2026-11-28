@@ -49,7 +49,7 @@ pull asks the cloud for the row's stamp and uses the copy this tab holds while i
 `cloudCopy`, memory only), once the tab has seen the stamp move. A new stamp, another login, a 6-hour-old copy, signing in
 and the send before a switch or sign-out download the whole row. A new cloud write must move `updated_at` (the database
 trigger does).
-The other clinic's calendar follows the same rule (`othPharmacy`, `othCopy`; commit only, NOT live; BUILD-NOTES
+The other clinic's calendar follows the same rule (`othPharmacy`, `othCopy`; LIVE; BUILD-NOTES
 "Other clinic's calendar").
 
 ## Appointments & calendar

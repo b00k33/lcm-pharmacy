@@ -19187,7 +19187,7 @@ Her words: "the back button is ambiguous, the teapot is missing (i actually want
 - **Audits** (test copy, made-up patient "Zz Mia Tan"): style + tap at 1240 against the base at 1276 (the same page width): nothing new; the six lines left against the base at 1240 come only from the 36px narrower page. 360: identical, no sideways scroll. Side bar: nothing new.
 - **Not tested:** a herbs patient's chip with real herbs data, her own patients and devices, a brand clinic's colours in the head.
 
-## Other clinic's calendar: download only when changed (2026-11-28, commit only, NOT live)
+## Other clinic's calendar: download only when changed (2026-11-28, LIVE in build 20261128-212800)
 Her "yes build it" (step two of cutting what the database sends): the other login's whole row was downloaded on opening, on coming back to the window and every 5 minutes (`othRead`).
 - **Now:** `othPharmacy` asks the other row for `updated_at` alone and hands the app the pharmacy text this tab already downloaded (`othCopy`: memory only) while the stamp is unchanged. The app still gets it every round, so a waiting hand-off is taken on a later one.
 - **The whole row is still read when:** the first round; the stamp differs; no stamp has been seen moving yet (either row); a save came back with the old stamp; the copy is 6 hours old; another login. A switch or sign-out clears the copy.
