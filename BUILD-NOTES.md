@@ -19194,3 +19194,25 @@ Her "yes build it" (step two of cutting what the database sends): the other logi
 - **Not changed:** the second client and its tokens, the tab lock, the 3-minute gap and 5-minute timer, `phOthTake`, "Bring in Acupreg" (`__lcmReadOther`, one full read). The other row is never written.
 - **Tested** (test copies, two pretend logins, a pretend cloud inside the page; old and new side by side; unchanged rounds, own saves, the other clinic adding, handing over and cancelling a booking, a failed stamp check, a 7-hour-old copy, a database that stops stamping, the owner tags): the same bookings shown at every step and the hand-off taken once; 21 whole downloads of the other row before, 6 after; no write to it; own tag flush true, foreign false with nothing taken or written. Opening offline (`off`, `lie`, `late`; fresh and expired sign-in): in within 1.8 s, no cover after 30 s, `lcm-sync-base` held.
 - **Not tested:** her devices, the real database, two real logins.
+
+## Whole-app audit: bugs, wording and herb names (2026-11-28, her "audit the app to check for bugs, issues" + "also audit wording to correct typos foreign letters ... add common names to chinese herbs using sacred lotus")
+**Run:** every page on made-up data at 1220 and 360 (no errors, no sideways overflow, no "undefined / NaN" on screen), every control tapped once
+(one crash, the Journey page with no patient), two read-only code reviews (data safety; the last three days' builds), the live app's
+wording and her herb names (read only).
+**Fixed:**
+- Dispense "Not enough stock" box: after a sync, grams now come off the current jar and prescription (they came off a copy nothing saved).
+- Backup file: one unreadable photo is left out and counted in a toast (it emptied every photo while saying Saved).
+- `phIDB.set` answers false when the write fails.
+- Sign-out / location switch keeps `daybook-ph-bdp`, `-bdp-bak`, `-ppl`, `-own` (they live on this device only and were wiped).
+- What's in it: a draft with the red gap cannot be copied, sent or planned; no Save mine on it; herb grams add up to the bag.
+- Short-stock warnings (Dispense, plan band, scheduled weigh list, booking prep) read the dispensing clinic's shelf (`phQtyOn`, `phShortOn`);
+  the scheduled list and Do next share one clinic rule (`phSchedClin`). A herb not kept at that clinic raises no "short" (the Dispense gate still stops it).
+- A pills-only label prints. The Journey page with no patient goes to the patient list.
+- Garbled characters in herb notes are put right where shown and edited (`phFixText`, now any UTF-8 read as Windows-1252). Stored notes untouched.
+- Labels and herb stickers: the name in brackets is HER typed one, unless it is on `PH_EN_WRONG` (wrong, misspelt or Latin), then or when none is
+  typed it comes from `PH_ING_HERB_EN`, the What's in it table (checked against Sacred Lotus's letter indexes). Stored herb names untouched.
+- "eczma" -> "eczema" (Guide teaching notes).
+**Checked on:** 39 driven tests on made-up data (all pass); the page sweep again after the fixes. **Not tested:** real data, a real sync between two
+devices, a real printer.
+**Found, not fixed (need her yes):** two devices editing prescriptions or one patient before syncing can lose one side's change
+(`mergePrescStrings` and the whole-record patient merge); the earlier uncommitted sync-gap patch; app size (14.6 MB page, 3.6 MB download).

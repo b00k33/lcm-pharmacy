@@ -41035,7 +41035,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
     return {
       available: typeof indexedDB !== "undefined",
       get(k) { return run("readonly", s => s.get(k)); },
-      set(k, v) { return run("readwrite", s => s.put(v, k)).then(() => true, () => false); },
+      set(k, v) { return run("readwrite", s => s.put(v, k)).then(r => r !== null, () => false); },   // run answers null when the write failed
       del(k) { return run("readwrite", s => s.delete(k)); },
     };
   })();
@@ -43714,7 +43714,16 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // seen in her History card 2026-09-04. Repaired at display time only; the
   // stored record is left as it is.
   const PH_MOJIBAKE = [["â€“", "–"], ["â€”", "—"], ["â€™", "'"], ["â€˜", "'"], ["â€œ", "“"], ["â€", "”"], ["â€¦", "…"], ["Â·", "·"], ["Â ", " "], ["Ã©", "é"]];
-  const phFixText = s => { let t = String(s == null ? "" : s); if (!/[Ââ]/.test(t)) return t; PH_MOJIBAKE.forEach(([a, b]) => { t = t.split(a).join(b); }); t = t.split("\u009d").join(""); return t; };
+  const PH_CP1252 = "€\u0081‚ƒ„…†‡ˆ‰Š‹Œ\u008dŽ\u008f\u0090‘’“”•–—˜™š›œ\u009džŸ";
+  const phByteOf = c => { const n = c.charCodeAt(0); if (n < 256) return n; const i = PH_CP1252.indexOf(c); return i < 0 ? -1 : 128 + i; };
+  const PH_MOJI_RE = (() => { const x = "[\\u0080-\\u00bf" + PH_CP1252 + "]"; return new RegExp("[\\u00c2-\\u00df]" + x + "|[\\u00e0-\\u00ef]" + x + "{2}|[\\u00f0-\\u00f4]" + x + "{3}", "g"); })();
+  const phFixText = s => {
+    let t = String(s == null ? "" : s); if (!/[Â-ô]/.test(t)) return t;
+    // any UTF-8 text read back as Windows-1252 is turned back, only where its bytes really are UTF-8
+    t = t.replace(PH_MOJI_RE, run => { try { return new TextDecoder("utf-8", { fatal: true }).decode(new Uint8Array([...run].map(phByteOf))); } catch (e) { return run; } });
+    PH_MOJIBAKE.forEach(([a, b]) => { t = t.split(a).join(b); });
+    return t.replace(/Ã (?=[a-zü])/g, "à").split("\u009d").join("");
+  };
   // her ask (2026-08-06, extended STEP 8g 2026-08-11): a herb can now carry
   // more than one supplier, each with its own bottle price AND their own code
   // for this herb (folded in from the old flat Koda/Evergreen/GMP/LYT/HH/MIC
@@ -44137,6 +44146,16 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // shelf, but its grams read "—" everywhere, it is never low, empty, short or on To order there; typing its grams (the Lotus column, a clinic count, a
   // clinic Inventory cell) takes the mark off. A dispense or a batch made there still moves the number; the mark stays until she weighs it.
   const phShelfUnw = (h, s) => s !== "cbd" && !!h && !!PH_SHELVES[s] && !!h[PH_SHELVES[s].f + "Unw"];
+  // what a clinic's own shelf holds (null = not counted or not kept there): every "short" warning reads this, never CBD's jar by default
+  const phQtyOn = (h, s) => !h ? null : !s || s === "cbd" ? h.qty : phHasShelf(h, s) && !phShelfUnw(h, s) ? +h[PH_SHELVES[s].f] : null;
+  const phShortOn = (x, s) => { const q = phQtyOn(x.h, s); return q != null && q < x.grams; };
+  // a scheduled dispense's clinic, as Do next works it out: the prescription's pick, else that day's booking (a pickup), else the weekday
+  function phSchedClin(x) {
+    const t = PRESC.items.find(p => p.id === x.prescriptionId), d = schedDueDate(x) || "";
+    if (t && t.shelf && PH_SHELVES[t.shelf]) return t.shelf;
+    const b = x.method === "pickup" && d && t ? phApptList().find(a => a && a.date === d && a.service !== "Break" && phPatientKey(a.patient || a.name) === phPatientKey(presPatientFor(t) || t.name)) : null;
+    return b ? phPlaceShelf(phApptPlaceOf(b)) : d ? phDayShelf(d) : "cbd";
+  }
   const phShelfWeighed = (h, s) => { if (h && s !== "cbd" && PH_SHELVES[s]) delete h[PH_SHELVES[s].f + "Unw"]; };
   // EMPTY BOTTLES (her 2026-11-26 "add option to count empty herbal bottles because sometimes i need to order them or if i transfer 20g from da zao
   // koda bottle to a new 100g da zao koda bottle, my shelf bottle has 120 and i have an empty bottle to use"; her picks: each clinic, 1 per dispense,
@@ -46662,7 +46681,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       // every editable number (and the note) is locked until clicked —
       // no spinners, no wheel accidents, no stray keystrokes over real stock
       const lock = (field, display, aria) => phCellEdit && phCellEdit.id === h.id && phCellEdit.field === field
-        ? `<input type="text" inputmode="${field === "note" ? "text" : "decimal"}" class="ph-qty-input${field === "note" ? " ph-note-input" : ""}" data-ph-edit="${h.id}:${field}" value="${esc(field === "note" ? (h.note || "") : h[field] == null ? "" : String(h[field]))}" placeholder="—" aria-label="${aria}">`
+        ? `<input type="text" inputmode="${field === "note" ? "text" : "decimal"}" class="ph-qty-input${field === "note" ? " ph-note-input" : ""}" data-ph-edit="${h.id}:${field}" value="${esc(field === "note" ? phFixText(h.note || "") : h[field] == null ? "" : String(h[field]))}" placeholder="—" aria-label="${aria}">`
         : `<button type="button" class="ph-qty-lock${field === "note" ? " ph-note-lock" : ""}" data-ph-unlock="${h.id}:${field}" title="Click to edit">${display}</button>`;
       const priceMore = h.prices && h.prices.length
         ? `<span class="ph-sub" title="${esc(h.prices.map(p => `${p.brand} — ${p.price}`).join("\n"))}"> +${h.prices.length}</span>` : "";
@@ -46740,7 +46759,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
         // Plan ▾ menu, not just a flag icon -- phOrderMenuHtml already runs
         // the identical stopped/in-house gate internally.
         cart: `<td class="ph-cart-cell" data-col="cart">${phOrderMenuHtml(h)}</td>`,
-        note: `<td class="ph-note-cell" data-col="note" title="${esc(h.note || "")}">${lock("note", h.note ? esc(h.note.split("\n")[0]) : "—", `Notes for ${esc(h.name)}`)}</td>`,
+        note: `<td class="ph-note-cell" data-col="note" title="${esc(phFixText(h.note || ""))}">${lock("note", h.note ? esc(phFixText(h.note).split("\n")[0]) : "—", `Notes for ${esc(h.name)}`)}</td>`,
       };
       // the row opens the edit form (her lean-table pick, 2026-10-29): the name is plain text, the cells that are fields keep their own tap
       return `<tr data-ph-row="${h.id}"${phBulkMode ? "" : ` data-ph-inv-open="${h.id}" role="button" tabindex="0" aria-label="Open ${esc(h.name)}"`}${rowCls ? ` class="${rowCls}"` : ""}>
@@ -51114,15 +51133,18 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   // the exact presCalcNumbers the label/dispense flows use -- no second
   // calculator -- each ingredient against the shelves. Null = no script to
   // check (a new name imports fine, it just gets no prep chip).
-  function phApptPrep(patientKey) {
+  function phApptPrep(patientKey, a) {
     const t = phApptScriptFor(patientKey);
     if (!t || !(t.ingredients || []).length) return null;
     const gp = t.totalGrams || 0;
     if (!gp) return { t, short: [] };
     let items;
     try { items = presCalcNumbers(t, gp).items; } catch (e) { return null; }
-    const short = items.filter(x => x.h && !x.h.stopped && x.h.qty != null && x.h.qty < x.grams);
-    return { t, short };
+    // the shelf this will be weighed from: her pick on the prescription, else that booking's clinic (the next one on file when none is given)
+    const bk = a || phApptList().filter(q => q && q.service !== "Break" && q.date >= keyOf(TODAY) && phPatientKey(q.patient) === patientKey).sort((p, q) => p.date.localeCompare(q.date))[0];
+    const shelf = t.shelf && PH_SHELVES[t.shelf] ? t.shelf : bk ? phPlaceShelf(phApptPlaceOf(bk)) : phDayShelf(keyOf(TODAY));
+    const short = items.filter(x => x.h && !x.h.stopped && phShortOn(x, shelf));
+    return { t, short, shelf };
   }
   function phApptFuDue(patientKey, dayKey) {
     return phFuContactRows().some(r => !r.done && r.on <= dayKey && phPatientKey(r.rec.patient) === patientKey);
@@ -51132,7 +51154,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   function phApptOrderShort(apptId) {
     const a = phApptList().find(x => x.id === apptId);
     if (!a) return;
-    const prep = phApptPrep(phPatientKey(a.patient));
+    const prep = phApptPrep(phPatientKey(a.patient), a);
     if (!prep || !prep.short.length) return;
     prep.short.forEach(x => { x.h.order = true; delete x.h.orderSnoozedUntil; delete x.h.snoozedUntil; });
     savePharmacy();
@@ -52162,7 +52184,7 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
   function phApptStatusChipHtml(a, opts) {
     const k = phPatientKey(a.patient), kind = phApptKind(a.service), script = phApptScriptFor(k);
     const done = presDispenseOnDay(k, a.date);
-    const prep = script && a.date >= keyOf(TODAY) ? phApptPrep(k) : null;
+    const prep = script && a.date >= keyOf(TODAY) ? phApptPrep(k, a) : null;
     if (done) return `<span class="ph-tl-chip done">✓ ${esc(presTimeStr(new Date(done.at || 0)))}</span>`;
     // her pick 2026-09-18 (fix 2): a written-up visit says so on the List
     // and the popup -- unless herbs are short, which is the more urgent fact
@@ -52734,8 +52756,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       const t = phApptScriptFor(k);
       if (!t) return `<div class="ph-apptls-prep"><span class="nm">${esc(phTitle(a.patient))}</span><span class="fx faint">no prescription yet</span><span></span><span class="act"><button type="button" class="ph-name-link soft" data-ph-dash-patient-open="${esc(a.patient)}">Open profile</button></span></div>`;
       const done = presDispenseOnDay(k, a.date);
-      const prep = phApptPrep(k);
-      const shortHtml = prep && prep.short.length ? prep.short.slice(0, 3).map(x => `<span class="ph-tl-chip ${x.h.qty <= 0 ? "zero" : "short"}">${esc(x.h.name || "")} ${x.h.qty <= 0 ? "out" : "low"}</span>`).join("") + (prep.short.length > 3 ? `<span class="ph-tl-chip short">+${prep.short.length - 3}</span>` : "") : "";
+      const prep = phApptPrep(k, a);
+      const shortHtml = prep && prep.short.length ? prep.short.slice(0, 3).map(x => `<span class="ph-tl-chip ${phQtyOn(x.h, prep.shelf) <= 0 ? "zero" : "short"}">${esc(x.h.name || "")} ${phQtyOn(x.h, prep.shelf) <= 0 ? "out" : "low"}</span>`).join("") + (prep.short.length > 3 ? `<span class="ph-tl-chip short">+${prep.short.length - 3}</span>` : "") : "";
       return `<div class="ph-apptls-prep${done ? " done" : ""}">
         <span class="nm">${esc(phTitle(a.patient))}</span>
         <span class="fx">${esc(presActualFormula(t) || t.formula || "Untitled formula")}${t.totalGrams ? ` <span class="g">· ${phFmtG(t.totalGrams)} g</span>` : ""}</span>
@@ -85592,7 +85614,7 @@ return {html, mount, mountMini, stop, act, input, setDays, setConfig, redraw, ch
       // a code from before this Kind rule existed, and an edit shouldn't
       // silently erase it just by opening the form
       phHerbApplyKindVisibility(false);
-      document.getElementById("phHerbNote").value = h.note || "";
+      document.getElementById("phHerbNote").value = phFixText(h.note || "");
       document.getElementById("phHerbClinicalNotes").value = h.clinicalNotes || "";
       document.getElementById("phHerbSubmitBtn").textContent = "Save changes";
       document.getElementById("phHerbFormTitle").textContent = "Edit herb";
@@ -91373,7 +91395,7 @@ or changing anything in Cliniko.
     const q = (presTlQ || "").trim().toLowerCase();
     const rows = appts.map(a => {
       const k = phPatientKey(a.patient), kind = phApptKind(a.service), script = phApptScriptFor(k), done = presDispenseOnDay(k, dayKey);
-      const prep = script && dayKey >= todayKey ? phApptPrep(k) : null;
+      const prep = script && dayKey >= todayKey ? phApptPrep(k, a) : null;
       const status = done ? "done" : !script ? (kind === "acu" ? "acu" : "noscript") : prep && prep.short.length ? "short" : "ready";
       return { sort: a.time, a, k, kind, script, done, prep, status };
     }).filter(r => (presTlType === "all" || (presTlType === "chm" ? r.kind !== "acu" : r.kind === "acu"))
@@ -94088,7 +94110,7 @@ or changing anything in Cliniko.
     const out = all.filter((x, n) => all.findIndex(y => y.name === x.name) === n);
     return out.length > 1 ? out : [];
   }
-  const phIngHerbs = t => ((t && t.ingredients) || []).map(i => { const inside = phIngInside(i, [t]), e = phIngEntry(i); return { ...e, g: phIngG(i.grams), inside, bare: !inside.length && e.fm }; }).filter(h => h.name);
+  const phIngHerbs = (t, bag) => { const sum = ((t && t.ingredients) || []).reduce((a, i) => a + (+i.grams || 0), 0), k = bag > 0 && sum > 0 && Math.abs(bag - sum) >= 1 ? bag / sum : 1; return ((t && t.ingredients) || []).map(i => { const inside = phIngInside(i, [t]), e = phIngEntry(i); return { ...e, g: phIngG(k === 1 || !(+i.grams > 0) ? i.grams : Math.max(1, Math.round(i.grams * k))), inside, bare: !inside.length && e.fm }; }).filter(h => h.name); };
   // one formula, already named on the line above: its herbs stand alone under it
   const phIngAlone = (hs, formula) => hs.length === 1 && hs[0].inside.length > 0 && phIngKey(formula) === phIngKey(hs[0].name);
   const phIngBag = c => { const r = c && c.rec, t = c && c.t, g = (r && +r.gramsDispensed) || (t && +t.totalGrams) || 0; return g > 0 ? Math.round(g) : 0; };
@@ -94118,7 +94140,7 @@ or changing anything in Cliniko.
   }
   // the herb block and the medicines sentence; a token with no value drops its line, no prescription drops the block
   function phIngBody(body, c, tone, pick) {
-    const t = c && c.t, hs = phIngHerbs(t), formula = phIngFormula(c), bag = phIngBag(c), days = phIngDays(c), dose = phIngDose(t);
+    const t = c && c.t, bag = phIngBag(c), hs = phIngHerbs(t, (t && +t.totalGrams) || bag), formula = phIngFormula(c), days = phIngDays(c), dose = phIngDose(t);
     const name = c && c.rec ? c.rec.patient : "", meds = phIngMeds(name);
     const has = !!(t && (hs.length || formula));
     const lines = String(body || "").split("\n").flatMap(l => {
@@ -94144,7 +94166,7 @@ or changing anything in Cliniko.
   const phIngGo = id => { try { const p = (presNavCur ? presNavCur.steps.concat(presNavCur.subs || []).flatMap(s => s.parts || [s]) : []).find(x => x && x.id === id); return p && p.attr ? p.attr : ""; } catch (e) { return ""; } };
   // the card under the Herbs group while What's in it is picked
   function phIngCardHtml(c, f) {
-    const t = c && c.t, hs = phIngHerbs(t), formula = phIngFormula(c), bag = phIngBag(c), dose = phIngDose(t);
+    const t = c && c.t, bag = phIngBag(c), hs = phIngHerbs(t, (t && +t.totalGrams) || bag), formula = phIngFormula(c), dose = phIngDose(t);
     const name = c && c.rec ? c.rec.patient : "", meds = phIngMeds(name), has = !!(t && (hs.length || formula));
     const go = (id, label) => { const a = phIngGo(id); return a ? `<button type="button" class="ph-mc-chip ph-ing-go" ${a}>${label}</button>` : ""; };
     const count = new Set(hs.flatMap(h => h.inside.length ? h.inside.map(x => x.name) : [h.name])).size;
@@ -94165,6 +94187,12 @@ or changing anything in Cliniko.
   }
   // the message mirror: her words, with the gap she still has to fill lit
   const phMcMirHtml = s => esc(s).replace(PH_ING_GAP_RE, m => `<mark class="gap">${m}</mark>`);
+  // a draft still holding the red gap is never copied, sent or planned: her answer on the medicines goes in first
+  document.addEventListener("click", e => {
+    const b = e.target.closest && e.target.closest("[data-ck-copy],[data-ck-gmsg],#phCkSms,#phCkMail,[data-pres-msg-copy],[data-pres-msg-gmsg],#presFuMsgSms,#presFuMsgMail,[data-pres-msg-schedule]");
+    if (!b || ![...document.querySelectorAll("#pharmacyPage [data-mc-ta] textarea")].some(t => PH_ING_GAP_RE.test(t.value))) return;
+    e.preventDefault(); e.stopImmediatePropagation(); presSavedToast("Pick how it sits with the medicines first");
+  }, true);
   const phCkTemplate = (moment, c, tone, sup, bbt, sym, ing) => {
     const t = phCkResolveTemplate(moment, tone, sup);
     if (!t) return "";
@@ -94469,7 +94497,7 @@ or changing anything in Cliniko.
   }
   function phMcMetaHtml(tmplRow, msg) {
     const n = msg ? msg.length : 0;
-    return `<div class="ph-mc-meta"><button type="button" class="ph-mc-chip mine" data-ck-save-tmpl="1" title="Keep this wording as your own ${esc(tmplRow ? tmplRow.name : "")} message">＋ Save mine</button><div class="ph-mc-long${n > 400 ? " on" : ""}" data-mc-long><div><span>Long message · <b>${n}</b> characters</span></div></div></div>`;
+    return `<div class="ph-mc-meta">${tmplRow && tmplRow.slot === "ingredients" ? "" : `<button type="button" class="ph-mc-chip mine" data-ck-save-tmpl="1" title="Keep this wording as your own ${esc(tmplRow ? tmplRow.name : "")} message">＋ Save mine</button>`}<div class="ph-mc-long${n > 400 ? " on" : ""}" data-mc-long><div><span>Long message · <b>${n}</b> characters</span></div></div></div>`;
   }
   const phMcFormDefaults = () => ({ tabKey: null, phase: null, driver: "", symOn: false, symOff: [], view: "pick", chooser: null, tplOpen: {}, otherOpen: false, allOpen: false, justPlanned: [] });
   // the message text for a form: the wording, tone, layers, and (when the layer is on) the symptoms sentence
@@ -95824,6 +95852,7 @@ or changing anything in Cliniko.
   // the same save, for whichever composer is asking -- the check-in panel
   // (phCkForm) or the Follow-up stage's embedded one (presMsgForm, 2026-09-14)
   function phCkSaveTemplateWith(row, form, currentText, rerender) {
+    if (form.tmpl === "ingredients") return;   // it holds one patient's herbs and medicines
     const t = phCkResolveTemplate(form.tmpl, form.tone, form.sup);
     if (!t) return;
     const text = phCkTokenise(currentText, phCkContext(row));
@@ -98247,6 +98276,7 @@ or changing anything in Cliniko.
       </div>${pastHtml}`;
   }
   function renderPhJourneyPage() {
+    if (!phJourneyKey) { PHARMACY.activeTab = "prescriptions"; renderPharmacy(); return; }   // no patient held (a reload): the patient list
     const key = phJourneyKey;
     const name = phMsgDisplayName(key);
     const { rec, rows, nextAppt } = phMsgPatientTimeline(key);
@@ -106117,7 +106147,7 @@ or changing anything in Cliniko.
   const PH_GDF_TEACH_JN = {
     baihedihuang: [["F", "Bai He Di Huang Tang: good appetite or ok appetite, no stomach distension, have some blood vessel or haematology issue, anaemia, bleeding issues like spotting"], ["I", "BaiheDihuangtang: estrogenic effect, like a female steroid type, constipation"]],
     baihefang: [["F", "4. Bai He fang - for those female people who have anxiety and complain about a lot of formulas - like clearing heat, boosting etc, and complain of a lot of discomfort"], ["F", "Bai He formulas recently used a lot, add Zhi Mu, or Di Huang, Hua Shi formulas, adding GMDZT"], ["F", "What about for men? Rarely use Bai He Fang"], ["I", "Anxiety in older women - Bai He formulas, do not use this in younger women, or male. These people have a lot of symptoms, lots of formulas don't have any benefit, yellow urine, dry mouth, dry stools, appetite ok - they can have a lot of symptoms"]],
-    baihujiarenshen: [["B", "Bai hu jia ren shen tang, shen qi wan, huangqiguizhiwwtang, gz w: diabetes formula"], ["D", "BHJRST: these people look like ZYSGT but the application is different: 46yo F, palpitations, very skinny, sweating a lot - rapid heart rate, tremoring when holding something, palpitations, skinny - BHJRST is used for those with aversion to heat with lots of sweating, she is skinny (add RS) - hyperthyroidism can think of BHJRST - these people like to drink cold drinks"], ["D", "ZYSGT is more weak and deficient (has RS, MD, BX) lower appetite (BX helps), BHJRST is not that weak, plus more thirsty (has ZM & SG), big appetite (these people can eat a lot but stay skinny: hyperthyroidism)"], ["F", "Sweating: BHJRST, Gui Ling Gan Lu (adding shigao into WLS)"], ["H", "BHT/BHJST/XCHT+BHT: hyperthyroid type"], ["I", "BHJRST - esp good for Type 1 diabetes, atopic dermatitis in children, hyperthyroidism, summer stroke - this person needs to be tall and skinny typically, lots of sweating thirsty mouth, weak pulse, anxiety - these people cannot tolerate CH formulas - they will feel really dry & heat. This formula also fits thin hair"], ["I", "T1DM: BHRST, Zhu Ye Shi Gao Tang ZYSGT"], ["K", "HQT, BHJRST, ZYSGT, GZT cannot exclude a single herb"], ["K", "Research that BHJSRT can help reduce blood sugar (Japanese study). Especially for those with extreme mouth dryness"], ["K", "BHJRST: 1. T1DM 2. Hyperthyroidism 3. Skin issues especially in kids eczma 4. Summer stroke. Usually look skinny, constipation, rapid heart rate, dry tongue"]],
+    baihujiarenshen: [["B", "Bai hu jia ren shen tang, shen qi wan, huangqiguizhiwwtang, gz w: diabetes formula"], ["D", "BHJRST: these people look like ZYSGT but the application is different: 46yo F, palpitations, very skinny, sweating a lot - rapid heart rate, tremoring when holding something, palpitations, skinny - BHJRST is used for those with aversion to heat with lots of sweating, she is skinny (add RS) - hyperthyroidism can think of BHJRST - these people like to drink cold drinks"], ["D", "ZYSGT is more weak and deficient (has RS, MD, BX) lower appetite (BX helps), BHJRST is not that weak, plus more thirsty (has ZM & SG), big appetite (these people can eat a lot but stay skinny: hyperthyroidism)"], ["F", "Sweating: BHJRST, Gui Ling Gan Lu (adding shigao into WLS)"], ["H", "BHT/BHJST/XCHT+BHT: hyperthyroid type"], ["I", "BHJRST - esp good for Type 1 diabetes, atopic dermatitis in children, hyperthyroidism, summer stroke - this person needs to be tall and skinny typically, lots of sweating thirsty mouth, weak pulse, anxiety - these people cannot tolerate CH formulas - they will feel really dry & heat. This formula also fits thin hair"], ["I", "T1DM: BHRST, Zhu Ye Shi Gao Tang ZYSGT"], ["K", "HQT, BHJRST, ZYSGT, GZT cannot exclude a single herb"], ["K", "Research that BHJSRT can help reduce blood sugar (Japanese study). Especially for those with extreme mouth dryness"], ["K", "BHJRST: 1. T1DM 2. Hyperthyroidism 3. Skin issues especially in kids eczema 4. Summer stroke. Usually look skinny, constipation, rapid heart rate, dry tongue"]],
     banxiahoupotang: [["A", "BX formula for those with car sickness, - think of WDT, BXHPT, LGZGT"], ["A", "help depression, reorganise your qi, eliminate bloating"], ["A", "Stomach problems, functional dx"], ["A", "Chest fullness, meiheqi, sticky greasy tongue coating"], ["C", "Sensation in anus - we can apply to BXHPT - it's like a foreign sensation in the throat"], ["C", "Xuan Mai Gan Jie tang - often add to BXHPT to help with throat disease - XMGJT is not a JGYL"], ["C", "BSHPT usually chest tightness and distension"], ["D", "ZZCT, BXHPT, HLT, MMDT for oesophageal cancer issues to help their swelling throat issues"], ["D", "SNS helps his muscles relax, BXHPT helps his mind relax"], ["M4", "DCHT, FLY, BXHPT also good for GI and good effect for skin diseases"], ["M4", "Neurodermatitis: DCPT (DCHT + BXHPT), BWJYT + JJFF"], ["F", "BXHPT very good to partner with other formulas"], ["F", "BXHPT; for those with foreign sensation of throat for cervical spondylosis / cervical, neck soreness, then their neck is better"], ["F", "Foreign sensation of throat can be extended to the neck or whole body discomfort, and also help jiejie, can also combined with XCHT and also WLS, BXHPT + WLS it is called Tong Yang San, combined often with BXXXT and WDT. THEIR GAS SOUND IS ALSO VERY OBVIOUS"], ["I", "BXHPT is used often for chest and back pain, difficulty breathing, but must have good nutrition state, no underlying diseases like high blood sugar or hypertension"], ["I", "BXHPT - soft stomach"], ["I", "BXHPT + FLY (these actually use both SJ - Dr HH probably just did GJ bc convenient)"], ["J", "BXHPT also helps stomach and intestinal inflammation, if feels better by farting or passing air / burping, can also help itchy skin (neurodermatitis), poor sleep"], ["J", "BXHPT can also manifest on skin, digestive, frequent urination - shows differently in people"], ["J", "BXHPT: thick hair"]],
     banxiaxiexintang: [["A", "Mouth ulcers - BXXXT, GCXXT, HLJDT considerations"], ["A", "Middle aged woman who has acne is not normal - consider GZFLW, hqintang, BXXXT"], ["A", "Sometimes those BXXXT can also have skin disease, mouth ulcers, intestinal symptoms"], ["A", "Getting rid of nodules approach: treat the stomach i.e. BXXXT (younger people reflux), DCHT, HLT"], ["D", "BXXXT, DCHT, HQinT: symptoms more on the upper part of body: bloating, hiccups, chest pain behind the sternum, hard time swallowing"], ["D", "BXXXT + RG - difference between that and HLT 1. very yellow coating (heat), more red lips, mucosal lining is more red (this formula has Huang Qin)"], ["D", "Note BXXXT can treat vertigo / dizziness from anxiety"], ["D", "GCXXT, BXXXT - for women, their palms & soles are yellow"], ["D", "BXXXT can also treat skin disorders, not just GI stuff, and also for anxiety"], ["M4", "Mouth ulcer commonly also: GCXXT - easy diarrhoea, Behcets syndrome, belching, acid reflux, or BXXXT"], ["M4", "BXXXT & GCXXXT have good effects for eczema, psoriasis"], ["F", "BXXXT GI problems"], ["F", "Stop smoking/alcohol formulas; BXXXT GGQLT, DCHT, CHGZGJT - all of these calm anxiety"], ["F", "Nodule formulas: DCHT, XCHT, BXXXT, CFT, MH: FFTSS (can take for a long time), MXSGT, YBT, GZ: not as common, but you could do GZFLW combined with others"], ["F", "BXXXT belly: will have pi syndrome - not painful but feel a bit distension or uncomfortable. CFT will have soft belly with bit of gas sound"], ["G", "BXXXT, HLT, DCHT (difficulty falling asleep, late night snacks) these people can also having coughing during night or feel anxious early in the morning, ?hard for breast milk to come out? Feels more comfortable after drinking water - need to drink water before peeing in the early morning) - these people easy wake up, tight hypochondriac region (DCHT) but soft hypochondria for BXXXT & HLT"], ["H", "BXXXT: young typically, irregular lifestyle, anxiety, love late night snacks like crayfish with beer, hotpot, skewers"], ["H", "BXXXT has also been used to reduce thyroid nodule size"], ["I", "After stomach cancer surgery: HLT, BXXXT (these 2 are most common), MMDT, DCHT, SHXXT"], ["I", "BXXXT: better nutritional state, more hair, bitter dry mouth with acid reflux, tongue coating is bit yellow greasy, insomnia, chest tightness, palpitations, can also just be red tongue, typically more common with yellow"], ["I", "lots of nodules - this tend to be from heat pattern: lung nodules with heat pattern consider DCHT (good for lung nodules, breast nodules), HLJDT (uterine fibroids), HQT (intestine polyps), BXXXT (thyroid, lung nodules)"], ["J", "BXXXT can have bleeding from the gums"], ["L", "BXXXT slippery pulse, common in young women"]],
     baweichufan: [["D", "CFT - common nosebleed, red eyes, bad temper - but don't suit it that much for long duration intake"], ["D", "CFT: can help tight chest, foreign object in throat, heat stuff i.e. red eyelids, red throat, redness over time"], ["F", "BWCFT helps heat on the upper body, like thyroid nodules, breast nodules, lung nodules, heat on the top"], ["F", "Nodule formulas: DCHT, XCHT, BXXXT, CFT, MH: FFTSS (can take for a long time), MXSGT, YBT, GZ: not as common, but you could do GZFLW combined with others"], ["F", "CFT has more upper problems"], ["F", "Also other times can add BWJYT + CFT together"], ["F", "Can add up to LQ up to 30"], ["F", "3. Chu Fan Tang - throat, chest symptoms & abdominal distension"], ["F", "Similar to WDT - more facial expression, blinking but their upper body fire is more obvious than WDT - like red throat, red lips, red tongue tip - but doesn't this also apply to BXXXT? But these CFT don't have much GI problems or intestine problems such as sticky stools"], ["F", "BXXXT belly: will have pi syndrome - not painful but feel a bit distension or uncomfortable. CFT will have soft belly with bit of gas sound"], ["F", "Chufan: for qi and fire stagnation more in the expressive facial expression, furrowed brows, red tip, greasy tongue, red throat, hollow sound in abdo, slippery rapid pulse"], ["F", "treat nodules in upper body, lymph node sweating"], ["F", "Tummy is soft abdomen"]],
@@ -119322,8 +119352,8 @@ Difficult to sweat|no_sweat_tend:r`;
     const gp = (gEl && parseFloat(gEl.value)) || parseFloat(t.totalGrams) || 0;
     const cnR = presCalcNumbers(t, gp), { items, cost, price } = cnR, gpR = cnR.gp;
     const fu = gp ? phFollowupCalc(t, keyOf(TODAY), gpR) : { ok: false };
-    const short = items.filter(x => x.h && x.h.qty != null && x.h.qty < x.grams);
-    const low = items.filter(x => x.h && !short.includes(x) && herbIsLow(x.h));
+    const sh = presDispShelf(), short = items.filter(x => phShortOn(x, sh));
+    const low = items.filter(x => x.h && !short.includes(x) && (sh === "cbd" ? herbIsLow(x.h) : phQtyOn(x.h, sh) != null && phQtyOn(x.h, sh) <= phShelfLow(x.h, sh)));
     const fSm = fu.ok ? `lasts ${fu.lastsDays.toFixed(1)} days · empty ~${presBandDay(fu.emptyOn)}` : gp ? "set the dose to count the days" : "set the grams";
     const profit = price - cost;
     const stNames = (short.length ? short : low).map(x => x.name).filter(Boolean);
@@ -181304,10 +181334,30 @@ Dosage: {dosage}
   // label line is its pinyin, then its common name in brackets ("Bai Shao (Shao Yao)/ White Peony Root" = "Bai Shao (White Peony Root)"); a second
   // pinyin name in brackets goes, a one-word preparation stays ("Ban Xia (Zhi) (Pinellia Prepared)"), the * marks go
   function presLabelHerbName(name) {
-    const s = String(name || "").replace(/\*/g, ""), i = s.indexOf("/");
-    if (i < 0) return phDispName(s.trim(), false);
-    const pin = s.slice(0, i).replace(/\s*\(\s*\S+(\s+\S+)+\s*\)/g, "").replace(/\s+/g, " ").trim(), eng = s.slice(i + 1).replace(/\s+/g, " ").trim();
+    const { pin, eng } = phHerbNameEn(name);
     return eng ? `${phDispName(pin, false)} (${eng})` : phDispName(pin, false);
+  }
+  // the pin yin and the name in brackets, for labels and stickers (her 2026-11-28 "add common names to chinese herbs using sacred lotus",
+  // "correct typos"): HER typed name wins unless it is on this list of wrong, misspelt or Latin ones; none typed = the one table the
+  // What's in it message reads (PH_ING_HERB_EN), so every place says the same name
+  const PH_EN_WRONG = new Set(("taoren|walnut huainiuxi|cyathularoot fenfangji|ledebouriellaroot beishashen|radixbenincasae danshen|salivaroot " +
+    "baiguo|gingko jianghuang|tumeric ruxiang|frankicensemastic zhebeimu|frittilariathunbergii jixueteng|milettia kushengen|sophoraflavenscensroot " +
+    "sharen|cardamon muxiang|vladimira qianghuo|rhizomanotopterygil maimendong|ophiopogonis sanqi|notoginseng longgu|fossiliaossismastodicalcined " +
+    "ejiao|gelatinum wulingzhi|pteropus congbai|bulbus lujiaoshuang|cornus baizhu|atractylodesalba hezi|fructuschebulae niubangzi|fructusarctii " +
+    "pugongying|herbataraxaci xixin|radixasari mutong|caulisakebiae dongguazi|semenbenincasae huzhang|polygonumcuspidatum shuizhi|hirudo " +
+    "heshouwu|polygonum shanzhuyu|shanyurou zhenzhumu|zhenzhufen").split(" "));
+  function phHerbNameEn(name) {
+    const s = String(name || "").replace(/[*#]+/g, ""), i = s.indexOf("/");
+    let pin = (i < 0 ? s : s.slice(0, i)).replace(/\s*\(\s*\S+(\s+\S+)+\s*\)/g, "").replace(/\s+/g, " ").trim();
+    const own = i < 0 ? "" : s.slice(i + 1).replace(/\s+/g, " ").trim();
+    let eng = own && !PH_EN_WRONG.has(phIngKey(pin) + "|" + phIngKey(own)) ? own : "";
+    if (!eng) {
+      const bare = pin.replace(/\s+-\s+.*$/, ""), found = phIngHerbEn(bare);
+      // a one-word Latin bracket gives way to the English name; a preparation bracket stays
+      if (found) { eng = found; pin = bare.replace(/\s*\((?!\s*(?:zhi|chao|shu|sheng|jiu|cu|duan|yan|mi|fa|ye)\s*\))[^)]*\)/gi, "").trim(); }
+      else eng = own;
+    }
+    return { pin, eng };
   }
   function presLabelValuesCore({ name, formulaLine, objective, items, gp, price, dosage, instr, now }) {
     const dateStr = `${now.getDate()}/${now.getMonth() + 1}/${now.getFullYear()}`;
@@ -181820,7 +181870,7 @@ Dosage: {dosage}
     const gp = parseFloat((document.getElementById("presGrams") || {}).value) || (presIsFormula(t) ? (t.totalGrams || 0) : 0);
     const cnR = presCalcNumbers(t, gp), { items, cost, price, method } = cnR, gpR = cnR.gp;
     const profitPct = cost > 0 ? phRound2(((price - cost) / cost) * 100) : null;
-    const shortN = items.filter(x => x.h && x.h.qty != null && x.h.qty < x.grams).length;
+    const shortN = items.filter(x => phShortOn(x, presDispShelf())).length;
     const profitStr = profitPct == null ? "—" : `${phMoney(price - cost)} · ${profitPct}%`;
     // the live price line in the Dosage & price panel
     const strip = document.getElementById("presDoseStrip");
@@ -182046,8 +182096,9 @@ Dosage: {dosage}
   const PH_PK_THICK = 0.6;   // dots of outline on the small name, so it does not print faint
   // a herb's name label: the pin yin large, its common name under it
   function phPkHerbName(h) {
-    const raw = String(h.name || ""), i = raw.indexOf("/");
-    return { pin: phPinyinName(h).replace(/[#*]+/g, "").trim(), eng: i < 0 || phIsFormula(h) ? "" : raw.slice(i + 1).replace(/[#*]+/g, "").replace(/\s+/g, " ").trim() };
+    if (phIsFormula(h)) return { pin: phPinyinName(h).replace(/[#*]+/g, "").trim(), eng: "" };
+    const n = phHerbNameEn(h.name);
+    return { pin: phDispName(n.pin, false), eng: n.eng };
   }
   // a name laid out for a space W dots wide on a sticker H dots tall (1.5 mm clear above and below): a long name is set smaller, then wraps;
   // a half sticker keeps the pin yin to two lines with no word broken or shrunk on its own
@@ -182330,7 +182381,8 @@ Dosage: {dosage}
     if (el.closest("[data-pres-print]")) {
       const t = PRESC.items.find(x => x.id === presOpenId); if (!t || presIsFormula(t) || document.querySelector(".ph-prn")) return;
       const gp = parseFloat((document.getElementById("presGrams") || {}).value) || 0;
-      if (!gp || !presEffectiveIngs(t).length) { presSavedToast(!gp ? "Enter the grams first" : "Add a herb first"); return; }
+      const pills = !presEffectiveIngs(t).length && presLabelPillEntry(t);   // a pills-only dispense has no grams: its label still prints
+      if (!pills && (!gp || !presEffectiveIngs(t).length)) { presSavedToast(!gp ? "Enter the grams first" : "Add a herb first"); return; }
       const lt = presLabelText(t, gp); presPrintAnim(lt, () => presLabelPrint(lt));
       return;
     }
@@ -182486,14 +182538,16 @@ Dosage: {dosage}
     if (!phDispCheck) return;
     const dc = phDispCheck;
     const shortMap = new Map(dc.shorts.map(s => [s.h.id, s]));
+    // a sync may have swapped the stock list in while this box was open: take each jar as it is now, or the grams come off a copy nothing saves
+    const jarNow = q => (q && PHARMACY.herbs.find(z => z.id === q.id)) || q;
     const resolved = dc.allItems.map(x => {
       const s = x.h && shortMap.get(x.h.id);
-      if (!s) return x;
+      if (!s) return x.h ? { ...x, h: jarNow(x.h) } : x;
       if (s.subHerbId) {
         const subH = PHARMACY.herbs.find(hh => hh.id === s.subHerbId);
         if (subH) return { ...x, h: subH, grams: phRound2((parseFloat(s.subAmount) || 0) * x.grams / (s.needed || 1)) || 0, subFor: { code: phHerbCode(s.h), name: s.h.name } };
       }
-      return x;   // left as-is -- goes negative in the commit loop below
+      return { ...x, h: jarNow(x.h) };   // left as-is -- goes negative in the commit loop below
     });
     const onCommit = dc.onCommit;
     phDispCheck = null;
@@ -182563,7 +182617,8 @@ Dosage: {dosage}
       renderPharmacy();
       return;
     }
-    phDispenseGate(items, resolved => { presDispenseCommit(t, resolved); if (onDone) onDone(); }, true);
+    const stored = PRESC.items.includes(t);   // a sync can replace the prescription too while the box is open
+    phDispenseGate(items, resolved => { presDispenseCommit(stored && !PRESC.items.includes(t) ? PRESC.items.find(q => q.id === t.id) || t : t, resolved); if (onDone) onDone(); }, true);
   }
   function presDispenseCommit(t, items) {
     // her split: 💊 Dispense Stock deducts inventory ONLY — the record is
@@ -184489,7 +184544,7 @@ Dosage: {dosage}
         ${prog.items.map(x => {
           const key = schedPrepItemKey(x);
           const on = !!p.weighed[key];
-          const short = x.h && x.h.qty != null && x.h.qty < x.grams;
+          const sq = phQtyOn(x.h, phSchedClin(s)), short = sq != null && sq < x.grams;
           const editKey = `${s.id}:${key}`;
           return `<label class="ph-prep-weigh-row${on ? " done" : ""}">
             <input type="checkbox" class="ph-prep-toggle-input" data-sched-prep-item="${s.id}:${esc(key)}"${on ? " checked" : ""} aria-label="Weighed ${esc(x.name)}">
@@ -184497,12 +184552,12 @@ Dosage: {dosage}
             <span class="ph-sched-prep-row-code">${esc(x.code || "")}</span>
             <span class="ph-sched-prep-row-name">${phNameHtml(x.name, x.h ? phIsFormula(x.h) : null)}</span>
             <span class="ph-sched-prep-row-need">${(x.grams || 0).toFixed(2)}g</span>
-            <span class="ph-sched-prep-row-stock${short ? " short" : ""}">${x.h ? `${short ? "only " : ""}${phFmtG(x.h.qty)}g in stock` : "not in inventory"}</span>
+            <span class="ph-sched-prep-row-stock${short ? " short" : ""}">${x.h ? sq == null ? "not counted here" : `${short ? "only " : ""}${phFmtG(sq)}g in stock` : "not in inventory"}</span>
             <button type="button" class="ph-arr-editbtn ph-prep-edit-btn" data-sched-prep-edit-open="${esc(editKey)}" title="Edit amount" aria-label="Edit amount for ${esc(x.name)}">✎</button>
           </label>${schedPrepEditKey === editKey ? `
           <div class="ph-arr-edit ph-prep-edit-panel">
             <label class="ph-inline-label">Grams <input type="text" inputmode="decimal" id="schedPrepEditGrams" value="${phFmtG(x.grams || 0)}" aria-label="Amount for ${esc(x.name)}"></label>
-            ${short ? `<button type="button" class="btn-cancel" data-sched-prep-edit-fill="${x.h.qty}">Use available · ${phFmtG(x.h.qty)}g</button>` : ""}
+            ${short ? `<button type="button" class="btn-cancel" data-sched-prep-edit-fill="${sq}">Use available · ${phFmtG(sq)}g</button>` : ""}
             <button type="button" class="btn-save" data-sched-prep-edit-save="${esc(editKey)}">Save</button>
             <button type="button" class="btn-cancel" data-sched-prep-edit-cancel="1">Cancel</button>
           </div>` : ""}`;
@@ -184589,7 +184644,7 @@ Dosage: {dosage}
     formHost.innerHTML = schedSheet ? "" : schedFormHtml();
     // her 2026-11-27 ("those are lotus patients, not acupreg"): only the clinic she is on; All clinics shows every one.
     // A dispense's clinic is the prescription's own pick (t.shelf), else its day (Saturday = Lotus, Friday = Acupreg), as Dispense reads it
-    const cn = phClinicNow(), schedClin = s => { const t = PRESC.items.find(x => x.id === s.prescriptionId), d = schedDueDate(s); return t && t.shelf && PH_SHELVES[t.shelf] ? t.shelf : d ? phDayShelf(d) : "cbd"; };
+    const cn = phClinicNow(), schedClin = phSchedClin;
     const all = schedSorted().filter(s => !(schedSheet && schedSheet.view === "list" && s.prescriptionId === schedSheet.rx) && (cn === "all" || schedClin(s) === cn));
     const active = all.filter(s => schedStatus(s) !== "completed");
     const completed = all.filter(s => schedStatus(s) === "completed");
@@ -186851,17 +186906,19 @@ Dosage: {dosage}
     // on-device auto-backup snapshots never carried photos in the first
     // place (they only ever stored .ph/.pr), so that restore path is
     // unaffected and stays photo-less.
-    let renPhotos = [];
+    let renPhotos = [], photoLost = 0;
     try {
       const raw = await phRenPhotoGetAll();
       // her 2026-10-29 "Yes, fix it too": each photo's own fields ride along (until now a file restore dropped every photo's date,
       // tongue shot, profile mark and file name: the 27 Oct backup's 398 tongue photos all came back unlabelled)
-      renPhotos = await Promise.all(raw.map(async r => ({
+      // one photo that cannot be read is left out and counted (it used to empty the whole list while the app said "Saved")
+      renPhotos = (await Promise.all(raw.map(async r => { try { return {
         id: r.id, patientKey: r.patientKey, kind: r.kind, mime: r.mime, createdAt: r.createdAt,
         ...phRenBackupFields(r),
         dataUrl: await phRenBlobToDataUrl(r.blob),
-      })));
-    } catch (e) {}
+      }; } catch (e) { return null; } }))).filter(Boolean);
+      photoLost = raw.length - renPhotos.length;
+    } catch (e) { photoLost = -1; }
     // her pick 2026-11-05 ("Your trips, trip notes and meals join the backup file"): her own things (the Me store, lcm-me)
     // ride along too. It is not a daybook key, so until now no file carried them. A SIBLING key like the photos, for the
     // same reason (a restore writes every key in `data` straight to localStorage); only the data, never this device's
@@ -186873,6 +186930,7 @@ Dosage: {dosage}
     try { if (PHARMACY.guideOnPc && phGuidePc && phGuideReady) guide = phGuidePick(PHARMACY); } catch (e) { }
     const json = JSON.stringify({ app: "LCM - Linh Chinese Medicine", exported: new Date().toISOString(), data, renPhotos, ...(me ? { me } : {}), ...(guide ? { guide } : {}) }, null, 1);
     const fname = `LCM-pharmacy-${keyOf(new Date())}${suffix ? "-" + suffix : ""}.json`;
+    if (photoLost) setTimeout(() => presSavedToast(photoLost < 0 ? "Photos could not be read: this backup has none" : `${photoLost} photo${photoLost === 1 ? "" : "s"} could not be read: not in this backup`), 600);
     try { localStorage.setItem(PH_EXPORT_AT_KEY, new Date().toISOString()); } catch (e) {}
     const dl = window.claude && window.claude.downloads;
     if (dl) {
@@ -189728,7 +189786,7 @@ Dosage: {dosage}
   }
   function clearLocalData() {
     var ks = [];
-    for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf("daybook") === 0 && !/^daybook-ph-(rxck|trip)-ntf(-sent)?$|^daybook-ph-rxck-sent$/.test(k)) ks.push(k); }   // her own reminders' switches belong to this device, not to a login
+    for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k && k.indexOf("daybook") === 0 && !/^daybook-ph-(rxck|trip)-ntf(-sent)?$|^daybook-ph-rxck-sent$|^daybook-ph-(bdp|bdp-bak|ppl|own)$/.test(k)) ks.push(k); }   // her own reminders' switches belong to this device, not to a login
     ks.push(BASE_KEY);   // the sync merge base is this login's bookkeeping too -- must not survive a switch/sign-out
     var was = recsStored(), wasAt = was && was.__at;   // and its record hashes, wherever they are kept
     ks.push(REC_KEY);
