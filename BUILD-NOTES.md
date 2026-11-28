@@ -19041,7 +19041,7 @@ printing from pooli an option for all locations", then "horizontal for just pati
   "Combine bottles" and fold head, the shelf menu's 400 words).
 - **Not tested:** a real printer and paper; her devices (Chrome on Android over Bluetooth is untried).
 
-## Poooli labels: each clinic starts on its own printer (2026-11-28, SAVED, not live until her "push live")
+## Poooli labels: each clinic starts on its own printer (2026-11-28, LIVE with this publish)
 Her words: "cbd is always brother first, lotus and acupreg is pooli", then "i want to test in lotus and acupreg first", "i also want to
 test herb labels too".
 - **Now:** every opened prescription starts on the Brother (Label printer) at CBD and on the Poooli at Lotus and Acupreg, on computer
