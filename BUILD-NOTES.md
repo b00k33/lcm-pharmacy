@@ -19089,7 +19089,7 @@ Her words (typed in PA Coder 3D, relayed), on a patient's Messages page: "someti
 - **Shots** (local, made-up patient, headless Edge): shots/msg-ingredients-none / -fine / -apart / -talk / -casual-fine / -nomeds / -norx -1240-2026-11-28.png, msg-ingredients-none-360-2026-11-28.png.
 - **Not tested:** her devices, her phone's Messages app, real patients.
 
-## Tabs on the right of the binder (2026-11-28, commit only, NOT live)
+## Tabs on the right of the binder (2026-11-28, LIVE in build 20261128-183800)
 Her words: "put both on RHS", then from the mock "1 - make it so the tabs show underneath 1 2 or 3 accordingly".
 - **Now (1180px and wider):** the four steps are one column right of the binder and the open step's pages open under its tab; on File the steps
   stay and File's pages sit below the word File. Words level, spine kept on the left. The column stays in view on a long page.
