@@ -18924,3 +18924,9 @@ Her words: "improve the table display" (her screenshot: the Lotus table beside t
 Her words: "i just prescribed 10pills 3 times a day for this patient with wen dan tang ... and the log is not there". The dispense had been saved (one `kind: "dispense"` entry on the patient, dosage "Take 10 pills, 3 times a day", `products[0].shelf` "pp", Lotus count down one box), but only the Black Pearl row redrew, so the Dispense tiles' "Visit history · 0" stayed until the next page change.
 - `phPillRxRedraw(rxId)`: after a Dispense or its Undo, the whole prescription panel redraws (`renderPresPanel`) when that prescription is the open one; otherwise just the row (`phPillRxRepaint`). The pill sheet stays open.
 - **Tested** in the test copy: Visit history 0 → 1 → 0 across Dispense and Undo, the Lotus count 800 → 600 → 800, the sheet still open.
+
+## The label shows the pill dose; a pill dispense carries its box price (2026-11-28, commit only, NOT live)
+Her words: "yes show the pill dose on the label", "price for black pearl pills is $20 a box".
+- **Label:** `presLabelValues` on a prescription with no herbs takes today's newest Black Pearl dispense on it (`presLabelPillEntry`): the herb lines become "Wen Dan Tang (Black Pearl pills) · 1 box (200 pills)", Dosage is the pill dose ("Take 10 pills, 3 times a day"), the Total grams and take-days lines drop, the price is the box price × boxes when one is set. The screen label, Copy prescription and Print label all read it. A herb prescription's label is unchanged.
+- **Price:** the dispense entry's `price` is the box price × boxes (was always 0), so Visit history shows it.
+- **Tested** in the test copy: before, "$NaN · Total 0.00g · 3 spoons provided"; after a 1-box dispense at 10 pills 3 a day, "$20.00 · Wen Jing Tang (Black Pearl pills) · 1 box (200 pills) · Take 10 pills, 3 times a day"; the entry's price 20.

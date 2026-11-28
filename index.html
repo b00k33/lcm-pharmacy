@@ -44153,7 +44153,8 @@ body.ph-eg-printing #phEg .eg-go { display: none; }
       let entry = null;
       if (rx) {
                 entry = { id: uid(), kind: "dispense", date: keyOf(now), at: now.getTime(), patient: presPatientFor(rx), presId: rx.id, method: "Black Pearl pills",
-          formula: phPillName(p), dosage: phPillLabel(S), what: phPillName(p), grams: 0, qty: S.b, cost: 0, price: 0, items: [], deducted: [], stockNotes: [],
+          formula: phPillName(p), dosage: phPillLabel(S), what: phPillName(p), grams: 0, qty: S.b, cost: 0, price: p.price > 0 ? phRound2(+p.price * S.b) : 0,   // her box price (her 2026-11-28 "$20 a box")
+          items: [], deducted: [], stockNotes: [],
           products: [{ pill: p.id, name: phPillName(p), pills: tot, boxes: S.b, shelf: S.sh }] };
         const ap = phApptList().find(a => a.date === entry.date && phPatientKey(a.patient) === phPatientKey(entry.patient));
         if (ap) entry.visitTime = ap.time;
@@ -180051,10 +180052,27 @@ Dosage: {dosage}
     // for a script where she never typed an objective.
     const objective = ((document.getElementById("presFormulaText") || {}).value || t.formula || "").trim() || formulaLine;
     const { items, price, gp: gpR } = presCalcNumbers(t, gp);
-    return presLabelValuesCore({
+    const v = presLabelValuesCore({
       name, formulaLine, objective, items, gp: gpR, price,
       dosage: presDosageText(), instr: presInstructionText(), now: new Date(),
     });
+    // a prescription of Black Pearl pills only (her 2026-11-28 "yes show the pill dose on the label"): today's pill dispense on this
+    // prescription fills the label: the pills and boxes where the herbs go, its dose ("Take 10 pills, 3 times a day"), its box price when
+    // she has typed one; no grams line, no herb dose
+    const pe = !items.length && presLabelPillEntry(t);
+    if (pe) {
+      const boxPrice = pe.products.reduce((s, x) => { const p = (PHARMACY.pills || []).find(y => y.id === x.pill); return s + (p && p.price > 0 ? +p.price * (x.boxes || 0) : 0); }, 0);
+      v.ingredients = pe.products.map(x => `${x.name} · ${x.boxes} box${x.boxes === 1 ? "" : "es"} (${x.pills} pills)`).join("\n");
+      v.total = ""; v.dosage = pe.dosage || ""; v.takeDays = "";
+      if (boxPrice > 0) v.price = `${phMoney(boxPrice)} (incl. GST)`;
+    }
+    return v;
+  }
+  // today's Black Pearl dispense on this prescription (the newest), or null
+  function presLabelPillEntry(t) {
+    const today = keyOf(TODAY);
+    return t && t.id ? (PHARMACY.log || []).filter(e => e && e.kind === "dispense" && e.presId === t.id && e.date === today && Array.isArray(e.products) && e.products.length)
+      .sort((a, b) => (b.at || 0) - (a.at || 0))[0] || null : null;
   }
   function presLabelText(t, gp) {
     return presLabelFinalize(presLabelValues(t, gp)).text;
