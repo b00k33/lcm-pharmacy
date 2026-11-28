@@ -19149,5 +19149,5 @@ Her first print on the 15 mm roll ("This is how its printing 15mm"): the name lo
 - **Tested** with a pretend printer in a test copy: feed = the gap (36, 63 dots), up 4 mm = 195 blank lines then the sticker, down 2 mm = 24, the move resets after a print, each roll keeps its own gap; card audits (tap, style, voice) empty at 1220 and 360.
 - **Not tested:** on paper. Whether darker closes the white breaks is a guess until she prints.
 
-## Poooli 15 mm roll: its measured gap (2026-11-28, commit only, NOT live)
+## Poooli 15 mm roll: its measured gap (2026-11-28, LIVE in build 20261128-193600)
 Her ruler: "11.2cm froms ticker 1 to 6" (top to top) = 22.4 mm a sticker, 7.4 mm between two. The 15 mm roll now starts at 89 dots (`PH_PK_GAPS`); a gap she set on a device still wins. The 30 mm roll is not measured and stays at 3 mm. Not yet printed with it.
