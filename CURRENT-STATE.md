@@ -632,7 +632,8 @@ symbols. No "+ transfer from these eggs": Use ▸ and "+ Transfer" stay.
 - **The Poooli printer (2026-11-28, BUILD-NOTES "Poooli labels"; LIVE with this publish; not yet printed on paper):**
   the browser prints straight to her Poooli over Bluetooth (Web Serial, no print window; the button and bar show only where
   `navigator.serial` exists). **Patient label (her rules, keep them):** a joined **Label printer | Poooli** bar on the label block,
-  remembered per clinic on the device (`lcm-label-printer`; default Poooli at Lotus on a computer, else the label printer). On the
+  each opened prescription starts on her printer for the clinic: the label printer (Brother) at
+  CBD, the Poooli at Lotus and Acupreg; a tap on the other lasts while that prescription is open (`phPkSwap`). On the
   Poooli it is her picture of two boxes side by side, **lying along plain 57 mm paper** (57 mm short edge): left the prescription
   (Patient to how to take it; Patient, Dosage, Take bold), right her instructions with Date and Use Before under them; no heading, no
   price; `**words**` print bold. The words shrink to fit her box widths (never under 20 dots), then the box runs wider
