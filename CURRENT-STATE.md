@@ -851,6 +851,19 @@ round buttons. The phone keeps its chips and Scheduled line.
   `phRefillOrderShorts`). The refill plan itself is CBD's.
 - Twin-jar merge keeps each clinic's grams and orders. A pickup's clinic is read the way its dispense will (`phNxRows`).
 
+## Lotus open and close (the Lotus Dashboard; 2026-11-28, commit only, NOT live)
+- **When:** the Lotus Dashboard only, on a day the Me routine `pa-rt-lotus-open` or `pa-rt-lotus-close` falls (`phLdDay`; a trip pauses
+  them, a skipped one has no side). A joined switch **Open n/6 · Dispensary · Close up n/4** heads the room; in Dispensary it sits in the
+  stock room's own head row. Default (`phLdView`): Open until its jobs are done or Close up's start; from that start Close up until done;
+  otherwise Dispensary. Her tap holds while she stays on the Dashboard.
+- **Jobs** = the routine's note, one line a job (`phLdJobs`). A line's words pick the thing in the picture (`phLdKind`: bin, power, fan,
+  blind, window, curtain, work space / desk; none = a yellow note on the desk wall). The chip or the thing ticks it, the next job glows,
+  Finish all and Undo. Computer: one picture fitted to the screen's height (`phLdFit`); phone: a two-column picture tile a job. The change
+  moves once (.2s), a draw never, none under reduced motion.
+- **Ticks:** `items[id].jt[day][line words]` = +ms ticked / -ms taken back, 60 days. All lines = the routine's own tick (`phHrDnPut`);
+  a tick or clear on Habits & routines or the calendar sets every line; unticking one line clears the routine's tick. Two devices join
+  line by line (`phLdMergeJt` in `phMeMerge`, `phLdAhead` in `phMeAhead`).
+
 ## The day's clinic (2026-11-20: Saturdays = Lotus Healing Arts)
 - `PH_DAY_CLIN0` / `phDayClinMap` / `phDayClin` / `phDayClinShort` / `phDayClinTagHtml` (by `phApptPracTagHtml`); the setting is the
   shared Me row's `hubset.dayClin = {id, v: {weekday: clinic name}, up}`, an input "Saturdays at" beside the Hub rates (empty = off).
