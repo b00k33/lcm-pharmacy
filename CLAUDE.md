@@ -750,8 +750,10 @@ rule in it, update STYLE-LCM.md in the same pass so future builds don't undo it.
   follicular segment's pale fill on the cycle bars and calendars, and the
   pale outline of the visit table's square action buttons all read it. Never a raw
   green hex for any of those again. Kept raw on purpose: the Dispense
-  head and jar art above (the visit table's herb cell lost its green `#15803D`
-  on her 2026-11-28 "remove the herb colour coding": it is THE LOOK now), Acupreg's `#8AAB99`, the Cliniko type colours and
+  head and jar art above. **No herb colour coding** (her 2026-11-28 "remove the herb colour coding", then
+  "Yes, remove them"): the herb green `#15803D` is gone from the visit table's herb cell (THE LOOK), the herb tracker,
+  her dose blocks (`PH_HB_COL`), the appointment herb badge and the herb icons, all the app teal now; never a herb
+  green again without her word (a clinic's brand colour is not herb coding), Acupreg's `#8AAB99`, the Cliniko type colours and
   the Cycle page's own palette (`--cp-*`; her 2026-11-19 pick C "reduce colours":
   red for the period, teal for fertile + ovulation, a pale grey luteal, white other days, the band and boxes white).
 - **Case / category colour families**, one per condition, each with `-tint` /
