@@ -19121,7 +19121,7 @@ Her "Yes, build Step 1" (2026-11-27) and "push live" (2026-11-28), after the 5 M
   tag saves and another's does not while open; opening offline (`off`, `lie`, `late`; fresh and expired sign-in; signed out).
 - **Not tested:** real devices, real data.
 
-## Download only what changed (2026-11-28, commit only, NOT live)
+## Download only what changed (2026-11-28, LIVE with this publish)
 Her "yes build it" to cutting how much data the database sends: every pull downloaded the whole `settings` row (opening, focus, coming back to the tab, the live channel, retries), about seven whole downloads for every save in a day measured.
 - **Now:** a pull (`pullMergePushImpl`) asks for `updated_at` alone (`fetchIfChanged`) and uses the row this tab already holds (`cloudCopy`: memory only, never stored) while the stamp is unchanged.
 - **The whole row is still read when:** the stamp differs; this tab has not yet seen the stamp move (`stampMoves`); a save came back with the old stamp; the copy is 6 hours old; another login; signing in (`afterAuth`); the send before a switch or sign-out (`flushPush`).
