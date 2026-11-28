@@ -19049,7 +19049,7 @@ test herb labels too".
 - Herb name labels are unchanged (Poooli only, 15 / 30 mm stickers).
 - **Not tested:** a real printer and paper; her phone.
 
-## Steps 1-4 are tabs on the binder (2026-11-28, commit only, NOT live)
+## Steps 1-4 are tabs on the binder (2026-11-28, LIVE in build 20261128-173800)
 Her words: "move the 1-4 to the chart tabs" (with a picture of a patient's side rail).
 - **Now (641px and wider):** the four numbered steps sit as tabs on top of the binder on File and every step; the rail keeps the patient's
   head, search, kind and File. Open step = solid clinic colour; others white with a solid number circle; ✓ when done; the Diagnosis count
@@ -19088,3 +19088,17 @@ Her words (typed in PA Coder 3D, relayed), on a patient's Messages page: "someti
 - **Audits** (test copy, made-up patient "Zz Ing Test", made-up formula and medicines; none, Fine together, 2 hours apart, Talk first, Casual, no medicines, no prescription): tap and style at 1240 and 360 against the base: nothing new. The only lines are the app's own gold flash for a changed message (under a second) and, at 360, the message chips' square corners in their joined bar, both in the base too. No sideways scroll at 360.
 - **Shots** (local, made-up patient, headless Edge): shots/msg-ingredients-none / -fine / -apart / -talk / -casual-fine / -nomeds / -norx -1240-2026-11-28.png, msg-ingredients-none-360-2026-11-28.png.
 - **Not tested:** her devices, her phone's Messages app, real patients.
+
+## Tabs on the right of the binder (2026-11-28, commit only, NOT live)
+Her words: "put both on RHS", then from the mock "1 - make it so the tabs show underneath 1 2 or 3 accordingly".
+- **Now (1180px and wider):** the four steps are one column right of the binder and the open step's pages open under its tab; on File the steps
+  stay and File's pages sit below the word File. Words level, spine kept on the left. The column stays in view on a long page.
+- **Unchanged:** 641-1179px (tabs on top), the phone, her own record, every page and link.
+- **Width:** the sheet is 136px narrower than with top tabs (761px in a 1220px window). Fitted for it: Came in for stays the table, the
+  one-screen Dispense, History, the Pulse labels, Food diary, Medicines and supplements, the Treat visit table, and words that would have been cut.
+- **Also fixed:** the visit-type button ran past the rail's edge and gave the rail a sideways scrollbar.
+- **Still wraps or cuts:** one long History question and "Diaphragm" on Pulse (both as before), a long therapy name on Treat, Acupuncture;
+  on Ren the area tabs take two rows; in the narrowest windows a long herb name takes two lines.
+- **Tested** in the test copy (made-up patient) at 1000, 1180, 1220, 1440 and 360: every step, page and File page; the Care Plan session grid
+  fits and is not changed; a page by page layout comparison with the live build. Tap, style and voice audits empty on the tab column and rail.
+  Not tested: her devices, Safari.
